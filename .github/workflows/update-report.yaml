@@ -39,7 +39,7 @@ jobs:
         run: |
           curl -L "$BUG_STATS_URL" -o bug-stats.tar.gz
           mkdir bug-stats
-          tar -xzf bug-stats.tar.gz -C bug-stats --strip-components=1
+          tar -xzf bug-stats.tar.gz -C bug-stats
 
       - name: Generate report
         run: Rscript R/update-report.R bug-stats
