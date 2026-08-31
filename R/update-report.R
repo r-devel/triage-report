@@ -20,7 +20,11 @@ triaged <- classify_triaged(
   cache_path = "data/ai-cache.csv",
   prompt_path = "prompts/classify-triaged-bug.md"
 ) |>
-  arrange(factor(category, levels = TRIAGE_CATEGORIES), last_comment, bug_id)
+  arrange(
+    factor(category, levels = TRIAGE_CATEGORIES), 
+    last_triager_comment, 
+    bug_id
+  )
 
 patches <- additional_team_patches(bugs) |>
   arrange(component, patch_date, bug_id)

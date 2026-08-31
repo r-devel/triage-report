@@ -442,7 +442,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
   for (category in TRIAGE_CATEGORIES) {
     x <- triaged |>
       filter(.data$category == .env$category) |>
-      arrange(last_comment, bug_id)
+      arrange(last_triager_comment, bug_id)
     
     write(paste0("### ", category), "")
     
@@ -451,7 +451,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
       next
     }
     
-    lines <- markdown_bug(x$bug_id, x$summary, x$last_comment)
+    lines <- markdown_bug(x$bug_id, x$summary, x$last_triager_comment)
     write(lines, "")
   }
   
