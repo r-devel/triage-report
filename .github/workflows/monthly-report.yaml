@@ -18,9 +18,13 @@ jobs:
           extra-packages: |
             any::curl
             any::dplyr
+            any::httr2
+            any::jsonlite
+            any::purrr
             any::readr
             any::stringr
             any::tibble
+            any::xml2
 
       - name: Generate email
         run: Rscript R/render-email.R
