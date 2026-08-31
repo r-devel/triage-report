@@ -5,14 +5,29 @@ body <- readLines("monthly-email.txt", warn = FALSE, encoding = "UTF-8")
 from <- Sys.getenv("EMAIL_FROM")
 to <- Sys.getenv("EMAIL_TO")
 
-message <- c(
-  paste0("From: ", from),
-  paste0("To: ", to),
-  "Subject: Current TRIAGED bugs and patches from Triage Team",
-  "Content-Type: text/plain; charset=UTF-8",
-  "",
-  body
+message <- paste(
+  c(
+    paste0("From: ", from),
+    paste0("To: ", to),
+    "Subject: Current TRIAGED bugs and patches from Triage Team",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    body
+  ),
+  collapse = "\r\n"
 )
+
+pos <- 1L
+raw_message <- charToRaw(message)
+
+read_fun <- function(nbytes, ...) {
+  if (pos > length(raw_message)) return(raw(0))
+  
+  end <- min(pos + nbytes - 1L, length(raw_message))
+  out <- raw_message[pos:end]
+  pos <<- end + 1L
+  out
+}
 
 handle <- new_handle(
   username = Sys.getenv("SMTP_USERNAME"),
@@ -20,7 +35,7 @@ handle <- new_handle(
   mail_from = from,
   mail_rcpt = to,
   upload = TRUE,
-  readfunction = charToRaw(paste(message, collapse = "\r\n"))
+  readfunction = read_fun
 )
 
 smtp_url <- paste0(
