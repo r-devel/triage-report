@@ -429,7 +429,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     "",
     paste0(
       "_Automatically generated from the R Bugzilla dump updated ",
-      dump_date,
+      format(as.POSIXct(dump_date, tz = "UTC"), "%Y-%m-%d"),
       "._"
     ),
     "",
