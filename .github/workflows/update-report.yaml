@@ -15,7 +15,7 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
-      BUG_STATS_URL: ${{ vars.BUG_STATS_URL }}
+      BUG_STATS_URL: ${{ secrets.BUG_STATS_URL }}
 
     steps:
       - uses: actions/checkout@v6
