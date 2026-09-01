@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-08-28 16:32:00 +0000._
+_Automatically generated from the R Bugzilla dump updated 2026-08-31._
 
 ## Triaged bugs
 
