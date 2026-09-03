@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-01._
+_Automatically generated from the R Bugzilla dump updated 2026-09-02._
 
 ## Triaged bugs
 
@@ -93,7 +93,6 @@ _Dates show when the patch was submitted._
 * [Bug 18944](https://bugs.r-project.org/show_bug.cgi?id=18944) — Add a preparsing filter step to aspell() in order to make LaTex spell checking more robust (2025-09-05)
 * [Bug 18958](https://bugs.r-project.org/show_bug.cgi?id=18958) — 'methods_message' component of 'check_packages_used' internal class should be character(), not "", when empty (2025-10-16)
 * [Bug 18959](https://bugs.r-project.org/show_bug.cgi?id=18959) — undoc(dir=) differs from undoc(package=) (2026-08-21)
-* [Bug 18960](https://bugs.r-project.org/show_bug.cgi?id=18960) — tools::undoc(dir=) errors unless dir="." in the presence of Rd with \packageDescription macro (2026-08-21)
 
 ### S4methods
 
