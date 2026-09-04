@@ -35,6 +35,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18944,Add a preparsing filter step to aspell() in order to make LaTex spell checking more robust,Misc,gabembecker,UNCONFIRMED,2025-09-05 09:08:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18944
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18958
 18959,undoc(dir=) differs from undoc(package=),Misc,michaelchirico4,UNCONFIRMED,2026-08-21 17:24:06 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18959
+19156,"MASS, boot are Suggests for parallel",Misc,michaelchirico4,NEW,2026-09-03 17:40:59 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19156
 18833,methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments,S4methods,jaganmn2,UNCONFIRMED,2024-12-07 01:20:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18833
 19079,"S4 packages with group methods error with ""subscript out of bounds"" under unloadNamespace with Imports: methods",S4methods,michaelchirico4,NEW,2026-05-28 23:30:22 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19079
 19083,"setGeneric(""f"", \(x) { standardGeneric(""x"") }) makes generic with class 'nonstandardGenericFunction'",S4methods,michaelchirico4,CONFIRMED,2026-06-05 07:49:36 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19083
