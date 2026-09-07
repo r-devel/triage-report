@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-05._
+_Automatically generated from the R Bugzilla dump updated 2026-09-06._
 
 ## Triaged bugs
 
@@ -94,6 +94,7 @@ _Dates show when the patch was submitted._
 * [Bug 18958](https://bugs.r-project.org/show_bug.cgi?id=18958) — 'methods_message' component of 'check_packages_used' internal class should be character(), not "", when empty (2025-10-16)
 * [Bug 18959](https://bugs.r-project.org/show_bug.cgi?id=18959) — undoc(dir=) differs from undoc(package=) (2026-08-21)
 * [Bug 19156](https://bugs.r-project.org/show_bug.cgi?id=19156) — MASS, boot are Suggests for parallel (2026-09-03)
+* [Bug 19160](https://bugs.r-project.org/show_bug.cgi?id=19160) — R CMD check should throw a NOTE for standard packages marked optional in DESCRIPTION but in NAMESPACE (2026-09-06)
 
 ### S4methods
 
