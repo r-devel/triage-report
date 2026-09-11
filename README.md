@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-08._
+_Automatically generated from the R Bugzilla dump updated 2026-09-10._
 
 ## Triaged bugs
 
@@ -94,7 +94,6 @@ _Dates show when the patch was submitted._
 * [Bug 18958](https://bugs.r-project.org/show_bug.cgi?id=18958) — 'methods_message' component of 'check_packages_used' internal class should be character(), not "", when empty (2025-10-16)
 * [Bug 18959](https://bugs.r-project.org/show_bug.cgi?id=18959) — undoc(dir=) differs from undoc(package=) (2026-08-21)
 * [Bug 19156](https://bugs.r-project.org/show_bug.cgi?id=19156) — MASS, boot are Suggests for parallel (2026-09-03)
-* [Bug 19160](https://bugs.r-project.org/show_bug.cgi?id=19160) — R CMD check should throw a NOTE for standard packages marked optional in DESCRIPTION but in NAMESPACE (2026-09-06)
 
 ### S4methods
 
@@ -112,7 +111,6 @@ _Dates show when the patch was submitted._
 * [Bug 17824](https://bugs.r-project.org/show_bug.cgi?id=17824) — tools::update_pkg_po doesn't detect string literals from stopifnot('msg'=test) form (2020-06-07)
 * [Bug 17957](https://bugs.r-project.org/show_bug.cgi?id=17957) — Missing translations of some messages (2020-10-25)
 * [Bug 18025](https://bugs.r-project.org/show_bug.cgi?id=18025) — xgettext/xngettext miss messages when supplied with qualified namespace (2021-01-04)
-* [Bug 18478](https://bugs.r-project.org/show_bug.cgi?id=18478) — Bad pluralization in QC.R for internationalization (2023-03-01)
 * [Bug 18793](https://bugs.r-project.org/show_bug.cgi?id=18793) — checkPoFile() has a really strong assumption of no blank lines between msgid and msgstr entries (2024-09-09)
 * [Bug 18091](https://bugs.r-project.org/show_bug.cgi?id=18091) — tools::xgettext fails on a wrapper of a gettextf (2024-09-14)
 * [Bug 18988](https://bugs.r-project.org/show_bug.cgi?id=18988) — Unifying similar messages for translation (2026-01-02)
