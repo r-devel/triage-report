@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-11._
+_Automatically generated from the R Bugzilla dump updated 2026-09-18._
 
 ## Triaged bugs
 
@@ -79,6 +79,7 @@ _Dates show when the patch was submitted._
 * [Bug 19121](https://bugs.r-project.org/show_bug.cgi?id=19121) — re-entrant calls to parse_Rd can crash R (2026-08-03)
 * [Bug 19117](https://bugs.r-project.org/show_bug.cgi?id=19117) — strptime() parses shortest prefix of localised month name (2026-08-03)
 * [Bug 19123](https://bugs.r-project.org/show_bug.cgi?id=19123) — Memory leak in `scan()` when a field fails type conversion (2026-08-04)
+* [Bug 19124](https://bugs.r-project.org/show_bug.cgi?id=19124) — strptime() fails to parse %w of '0' in LC_CTYPE=C (2026-08-04)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
 

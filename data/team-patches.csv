@@ -27,6 +27,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19121,re-entrant calls to parse_Rd can crash R,Low-level,kevinushey,NEW,2026-08-03 23:26:28 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19121
 19117,strptime() parses shortest prefix of localised month name,Low-level,ikrylov,NEW,2026-08-03 23:45:51 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19117
 19123,Memory leak in `scan()` when a field fails type conversion,Low-level,kevinushey,NEW,2026-08-04 14:45:42 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19123
+19124,strptime() fails to parse %w of '0' in LC_CTYPE=C,Low-level,michaelchirico4,REOPENED,2026-08-04 16:49:03 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19124
 19125,Integer arithmetic means '%z' for minute-level offsets is incorrect,Low-level,michaelchirico4,NEW,2026-08-04 17:34:22 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19125
 19145,MSan issue in context.c reading uninitialized state,Low-level,michaelchirico4,NEW,2026-09-01 05:28:47 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19145
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19092
