@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "summary": "setMethod(<implicit>) can duplicate message from setGeneric",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2024-12-07T15:39:16Z",
+        "flags": [],
+        "platform": "Other",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "alias": [],
+        "status": "CONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "jaganmn2",
+          "id": 3462,
+          "real_name": "Mikael Jagan"
+        },
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-12-06T21:53:57Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 18831,
+        "cc": [
+          "maechler"
+        ],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "S4methods"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18831": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 101409,
+            "time": "2024-12-06T21:53:57Z",
+            "is_private": false,
+            "creation_time": "2024-12-06T21:53:57Z",
+            "creator": "jaganmn2",
+            "bug_id": 18831,
+            "text": "This bug is visible in the installation output of **Matrix**, but we can reproduce it more easily like so:\n\n```\n> args(rcond)\nfunction (x, norm = c(\"O\", \"I\", \"1\"), triangular = FALSE, uplo = \"U\", \n    ...) \nNULL\n> args(methods:::.implicitTable[[\"rcond\"]])\nfunction (x, norm, ...) \nNULL\n> setClass(\"zzz\")\n> setMethod(\"rcond\", c(x = \"zzz\", norm = \"missing\"), function(x, norm, ...) NULL)\nCreating a generic function for 'rcond' from 'base' in the global environment\n    (from the saved implicit definition)\nCreating a generic function for 'rcond' from package 'base' in the global environment\n>\n```\n\nThe first message is from `setGeneric` (called by `setMethod`).  The second message is from `setMethod` itself.  The latter is clearly redundant.\n\nThe first message is not signaled for all implicit generic functions.  It is signaled only those whose signature differs (modulo the existence of `\"...\"`) from the original function, as determined by a call to `methods:::.identicalGeneric` inside of `setGeneric`.  Hence, for `colSums`, there is no duplication:\n\n```\n> args(colSums)\nfunction (x, na.rm = FALSE, dims = 1L) \nNULL\n> args(methods:::.implicitTable[[\"colSums\"]])\nfunction (x, na.rm = FALSE, dims = 1, ...) \nNULL\n> setClass(\"zzz\")\n> setMethod(\"colSums\", c(x = \"zzz\"), function(x, na.rm = FALSE, dims = 1, ...) NULL)\nCreating a generic function for 'colSums' from package 'base' in the global environment\n>\n```\n\n(Actually, whether `\"...\"` is ignored depends on the third argument of `methods:::.identicalGeneric`.  `setGeneric` passes `!nzchar(Sys.getenv(\"R_SETGENERIC_PICKY_DOTS\"))` which is typically `TRUE`.)\n\nI can think of two ways to avoid duplication:\n\n* Have `setGeneric` signal a message with a special class.  Then have `setMethod` catch messages of that class, in order to know whether its own message would be redundant.\n\n* Have `setGeneric` gain a `verbose` argument with options like `0=never`, `1=only for non-identical implicit`, `2=also for identical implicit`, `3=always`.  Then have `setMethod` call `setGeneric` with a suitable value for `verbose`.  Then `setMethod` would not need to signal its own message.\n\nNeither is particularly trivial, so I'll wait for comments before devising a patch.",
+            "count": 0,
+            "is_markdown": true
+          },
+          {
+            "is_private": false,
+            "id": 101410,
+            "time": "2024-12-06T22:30:09Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 18831,
+            "text": "I didn't notice that `formals(colSums)$dims` is `1L`, whereas `formals(methods:::.implicitTable[[\"colSums\"]])` is `1` (i.e., of type `\"double\"` rather than `\"integer\"`).  The signatures of `colSums` and `methods:::.implicitTable[[\"colSums\"]]` differ beyond the existence of `\"...\"`, yet `methods:::.identicalGeneric` reports that they are identical.  That suggests to me that there are other bugs here.  I'll report them separately ...",
+            "creation_time": "2024-12-06T22:30:09Z",
+            "creator": "jaganmn2"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2024-12-07T15:39:16Z",
+            "id": 101418,
+            "creator": "maechler",
+            "creation_time": "2024-12-07T15:39:16Z",
+            "count": 2,
+            "is_markdown": true,
+            "text": "Thank you, Mikael!\n\n(In reply to Mikael Jagan from comment #1)\n> I didn't notice that `formals(colSums)$dims` is `1L`, whereas\n> `formals(methods:::.implicitTable[[\"colSums\"]])` is `1` (i.e., of type\n> `\"double\"` rather than `\"integer\"`).  The signatures of `colSums` and\n> `methods:::.implicitTable[[\"colSums\"]]` differ beyond the existence of\n> `\"...\"`, yet `methods:::.identicalGeneric` reports that they are identical. \n> That suggests to me that there are other bugs here.  I'll report them\n> separately ...\n\nAs I suggested in another thread, I disagree:  identicalGeneric() rather should not hick up on the difference between `1` and `1L` ..\n\n(In reply to Mikael Jagan from comment #0)\n.............\n> I can think of two ways to avoid duplication:\n> \n> * Have `setGeneric` signal a message with a special class.  Then have\n> `setMethod` catch messages of that class, in order to know whether its own\n> message would be redundant.\n> \n> * Have `setGeneric` gain a `verbose` argument with options like `0=never`,\n> `1=only for non-identical implicit`, `2=also for identical implicit`,\n> `3=always`.  Then have `setMethod` call `setGeneric` with a suitable value\n> for `verbose`.  Then `setMethod` would not need to signal its own message.\n\nWithout delving into the code, I'd clearly favour the 2nd way, possibly with argument name `notify` or similar (instead of `verbose`), using string values rather than integer codes, and then use `match.arg()`",
+            "bug_id": 18831
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18831": []
+    }
+  },
+  "source_changed": "2024-12-07 15:39:16"
+}

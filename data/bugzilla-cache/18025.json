@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Translations",
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2021-01-04T15:09:49Z",
+        "whiteboard": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 18025,
+        "qa_contact": "",
+        "cc": [],
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "xgettext/xngettext miss messages when supplied with qualified namespace",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2021-01-04T16:17:57Z"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18025": {
+        "comments": [
+          {
+            "creation_time": "2021-01-04T15:09:49Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18025,
+            "text": "Sample package:\n\n```\ndir <- file.path(tempdir(), \"testPkg\")\ndir.create(file.path(dir, \"R\"), recursive = TRUE)\nwriteLines(\"Package: testPkg\\nVersion: 0.0.1\", file.path(dir, \"DESCRIPTION\"))\nwriteLines(\"foo = function() base::message('hi')\", file.path(dir, \"R\", \"foo.R\"))\nwriteLines(\"export(foo)\", file.path(dir, \"NAMESPACE\"))\n```\n\nAnd try to extract messages:\n\n```\ntools::xgettext(dir)\n# list()\n```\n\nc.f. if `base::` is removed:\n\n```\n# $`/tmp/RtmpR0ZIwk/testPkg/R/foo.R`\n# hi\n```\n\nI see ~200 such uses on CRAN, e.g. for stop:\n\nhttps://github.com/search?l=R&q=%22base%3A%3Astop%22+org%3Acran&type=Code\n\nSo it's not the most crucial thing in the world, however, IINM, the fix is not particularly involved.",
+            "is_markdown": true,
+            "count": 0,
+            "attachment_id": {},
+            "tags": [],
+            "id": 96971,
+            "time": "2021-01-04T15:09:49Z",
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "attachment_id": 2790,
+            "time": "2021-01-04T16:17:57Z",
+            "id": 96972,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "creation_time": "2021-01-04T16:17:57Z",
+            "text": "Created attachment 2790\nExtend xgettext/xngettext to include namespace-qualified calls\n\nAn implementation is here.\n\nAdded new helper functions to src/library/tools/R/utils.R which greatly simplify things. Happy to reorganize but I think the basic idea of the patch is pretty straightforward -- instead of only looking for plain calls (`is.name(e) && as.character(e) %in% list_of_calls`), we also check if it's a qualified namespace call from base to `list_of_calls`, which means `is.call(e)` and `e[[1]]` is `::`, `e[[2]]` is `base`, and `e[[3]] %in% list_of_calls`.\n\nConfirmed this works locally & didn't notice any issues from `make check`.",
+            "bug_id": 18025,
+            "is_markdown": true,
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18025": [
+        {
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IvdXRpbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL3V0aWxzLlIJKHJldmlzaW9uIDc5Nzg3KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi91dGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC02MTEsNiArNjExLDI1IEBACiBmdW5jdGlvbih4LCB5KQogICAgIHhbaXMubmEobWF0Y2goeCwgeSkpXQogCisjIyMgKiogJWlzTmFtZSUKKworIyMgY2hlY2sgaWYgYSBsYW5ndWFnZSBvYmplY3QgaXMgYSBwbGFpbiBjYWxsIHRvIHNvbWUgZnVuY3Rpb25zLAorIyMgICBpLmUuLCBsaWtlIGYoLi4uKSBmb3Igc29tZSBzZXQgb2YgZgorYCVpc05hbWUlYCA8LSBmdW5jdGlvbihlLCBmKSB7CisgICAgcmV0dXJuKGlzLm5hbWUoZSkgJiYgKGFzLmNoYXJhY3RlcihlKSAlaW4lIGYpKQorfQorCisjIyMgKiogJWlzQ2FsbFRvJQorCisjIyBjaGVjayBpZiBhIGxhbmd1YWdlIG9iamVjdCBpcyBhIGNhbGwgdG8gc29tZSBmdW5jdGlvbnMgaW4gYmFzZSwKKyMjICAgcG9zc2libHkgd2l0aCBxdWFsaWZpZWQgbmFtZXNwYWNlCitgJWlzQ2FsbFRvJWAgPC0gZnVuY3Rpb24oZSwgZikgeyAgICAgICAKKyAgICBpZiAoZSAlaXNOYW1lJSBmKSByZXR1cm4oVFJVRSkKKyAgICBpZiAoIWlzLmNhbGwoZSkgfHwgbGVuZ3RoKGUpICE9IDNMKSByZXR1cm4oRkFMU0UpCisgICAgcmV0dXJuKChlW1sxTF1dICVpc05hbWUlICI6OiIpICYmIChlW1syTF1dICVpc05hbWUlICJiYXNlIikgJiYgKGVbWzNMXV0gJWlzTmFtZSUgZikpCit9CisKKwogIyMjICoqIC5PU3R5cGUKIAogLk9TdHlwZSA8LSBmdW5jdGlvbigpIHsKSW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IveGdldHRleHQuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL3hnZXR0ZXh0LlIJKHJldmlzaW9uIDc5Nzg3KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi94Z2V0dGV4dC5SCSh3b3JraW5nIGNvcHkpCkBAIC00MiwxNSArNDIsMTMgQEAKICAgICAgICAgICAgIGlmKGlzLmNoYXJhY3RlcihlKSkgewogICAgICAgICAgICAgICAgIGlmKCFzdXBwcmVzcykgc3RyaW5ncyA8PC0gYyhzdHJpbmdzLCBlKQogICAgICAgICAgICAgfSBlbHNlIGlmKGlzLmNhbGwoZSkpIHsKLSAgICAgICAgICAgICAgICBpZihpcy5uYW1lKGVbWzFMXV0pCi0gICAgICAgICAgICAgICAgICAgJiYgKGFzLmNoYXJhY3RlcihlW1sxTF1dKSAlaW4lIGMoImdldHRleHQiLCAiZ2V0dGV4dGYiKSkpIHsKKyAgICAgICAgICAgICAgICBpZihlW1sxTF1dICVpc0NhbGxUbyUgYygiZ2V0dGV4dCIsICJnZXR0ZXh0ZiIpKSB7CiAgICAgICAgICAgICAgICAgICAgIGRvbWFpbiA8LSBlW1siZG9tYWluIl1dCiAgICAgICAgICAgICAgICAgICAgIHN1cHByZXNzIDwtICFpcy5udWxsKGRvbWFpbikgJiYgIWlzLm5hbWUoZG9tYWluKSAmJiBpcy5uYShkb21haW4pCi0gICAgICAgICAgICAgICAgICAgIGlmKGFzLmNoYXJhY3RlcihlW1sxTF1dKSA9PSAiZ2V0dGV4dGYiKSB7CisgICAgICAgICAgICAgICAgICAgIGlmKGVbWzFMXV0gJWlzQ2FsbFRvJSAiZ2V0dGV4dGYiKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICBlIDwtIG1hdGNoLmNhbGwoZ2V0dGV4dGYsIGUpCiAgICAgICAgICAgICAgICAgICAgICAgICBlIDwtIGVbImZtdCJdICMganVzdCBsb29rIGF0IGZtdCBhcmcKLSAgICAgICAgICAgICAgICAgICAgfSBlbHNlIGlmKGFzLmNoYXJhY3RlcihlW1sxTF1dKSA9PSAiZ2V0dGV4dCIgJiYKLSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICFpcy5udWxsKG5hbWVzKGUpKSkgeworICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYoZVtbMUxdXSAlaXNDYWxsVG8lICJnZXR0ZXh0IiAmJiAhaXMubnVsbChuYW1lcyhlKSkpIHsKICAgICAgICAgICAgICAgICAgICAgICAgIGUgPC0gZVshKG5hbWVzKGUpID09ICJkb21haW4iKV0gIyByZW1vdmUgZG9tYWluIGFyZwogICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgfSBlbHNlIGlmIChpZGVudGljYWwoZVtbMUxdXSwgcXVvdGUobmdldHRleHQpKSkKQEAgLTU5LDEwICs1Nyw3IEBACiAgICAgICAgICAgICB9CiAgICAgICAgIH0KICAgICAgICAgaWYoaXMuY2FsbChlKQotICAgICAgICAgICAmJiBpcy5uYW1lKGVbWzFMXV0pCi0gICAgICAgICAgICYmIChhcy5jaGFyYWN0ZXIoZVtbMUxdXSkKLSAgICAgICAgICAgICAgICVpbiUgYygid2FybmluZyIsICJzdG9wIiwgIm1lc3NhZ2UiLCAicGFja2FnZVN0YXJ0dXBNZXNzYWdlIiwKLSAgICAgICAgICAgICAgICAgICAgICAiZ2V0dGV4dCIsICJnZXR0ZXh0ZiIpKSkgeworICAgICAgICAgICAmJiBlW1sxTF1dICVpc0NhbGxUbyUgYygid2FybmluZyIsICJzdG9wIiwgIm1lc3NhZ2UiLCAicGFja2FnZVN0YXJ0dXBNZXNzYWdlIiwgImdldHRleHQiLCAiZ2V0dGV4dGYiKSkgewogICAgICAgICAgICAgIGRvbWFpbiA8LSBlW1siZG9tYWluIl1dCiAgICAgICAgICAgICAgc3VwcHJlc3MgPC0gIWlzLm51bGwoZG9tYWluKSAmJiAhaXMubmFtZShkb21haW4pICYmIGlzLm5hKGRvbWFpbikKICAgICAgICAgICAgICAjIyByZW1vdmUgbmFtZWQgYXJncwpAQCAtNzEsNyArNjYsNyBAQAogICAgICAgICAgICAgIGlmKGFzQ2FsbCkgewogICAgICAgICAgICAgICAgICBpZighc3VwcHJlc3MpIHN0cmluZ3MgPDwtIGMoc3RyaW5ncywgYXMuY2hhcmFjdGVyKGUpWy0xTF0pCiAgICAgICAgICAgICAgfSBlbHNlIHsKLSAgICAgICAgICAgICAgICAgaWYoYXMuY2hhcmFjdGVyKGVbWzFMXV0pID09ICJnZXR0ZXh0ZiIpIHsKKyAgICAgICAgICAgICAgICAgaWYoZVtbMUxdXSAlaXNDYWxsVG8lICJnZXR0ZXh0ZiIpIHsKICAgICAgICAgICAgICAgICAgICAgIGUgPC0gbWF0Y2guY2FsbChnZXR0ZXh0ZiwgZSkKICAgICAgICAgICAgICAgICAgICAgIGUgPC0gZVsiZm10Il0gIyBqdXN0IGxvb2sgYXQgZm10IGFyZwogICAgICAgICAgICAgICAgICB9CkBAIC0xMjYsOCArMTIxLDcgQEAKICAgICBuYW1lcyhvdXQpIDwtIFJfZmlsZXMKIAogICAgIGZpbmRfc3RyaW5ncyA8LSBmdW5jdGlvbihlKSB7Ci0gICAgICAgIGlmKGlzLmNhbGwoZSkgJiYgaXMubmFtZShlW1sxTF1dKQotICAgICAgICAgICAmJiBhcy5jaGFyYWN0ZXIoZVtbMUxdXSkgJWluJSAibmdldHRleHQiKSB7CisgICAgICAgIGlmKGlzLmNhbGwoZSkgJiYgZVtbMUxdXSAlaXNDYWxsVG8lICJuZ2V0dGV4dCIpIHsKIAkgICAgZSA8LSBtYXRjaC5jYWxsKG5nZXR0ZXh0LCBlKQogICAgICAgICAgICAgZG9tYWluIDwtIGVbWyJkb21haW4iXV0KICAgICAgICAgICAgIHN1cHByZXNzIDwtICFpcy5udWxsKGRvbWFpbikgJiYgIWlzLm5hbWUoZG9tYWluKSAmJiBpcy5uYShkb21haW4pCg==",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true,
+          "summary": "Extend xgettext/xngettext to include namespace-qualified calls",
+          "creation_time": "2021-01-04T16:17:57Z",
+          "bug_id": 18025,
+          "file_name": "patch",
+          "size": 3481,
+          "last_change_time": "2021-01-04T16:17:57Z",
+          "id": 2790,
+          "is_private": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2021-01-04 16:17:57"
+}

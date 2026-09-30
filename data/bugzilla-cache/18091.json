@@ -1,0 +1,121 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Linux",
+        "is_confirmed": false,
+        "last_change_time": "2024-09-14T18:32:20Z",
+        "cc_detail": [
+          {
+            "id": 3307,
+            "name": "ikrylov",
+            "real_name": "Ivan Krylov"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "tools::xgettext fails on a wrapper of a gettextf",
+        "url": "",
+        "blocks": [],
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Translations",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [
+          "ikrylov"
+        ],
+        "dupe_of": {},
+        "severity": "enhancement",
+        "deadline": {},
+        "id": 18091,
+        "version": "R-devel (trunk)",
+        "creation_time": "2021-05-02T07:45:22Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18091": {
+        "comments": [
+          {
+            "creation_time": "2021-05-02T07:45:22Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18091,
+            "text": "Context: I'd like to be able to write a wrapper to `stop()` + `gettextf()` that would facilitate translation without as much boilerplate:\n\n```\nstopf = function(fmt, ..., domain = NULL, call. = TRUE) {\n  stop(domain = NA, gettextf(fmt, ..., domain = domain), call. = call.)\n}\n```\n\nSo that frequent calls like\n\n```\nstop(domain = NA, gettextf(\"here is an error on element %d\", ii, domain = \"R-pkg\"))\n```\n\nCan be replaced by the more concise:\n\n```\nstopf(\"here is an error on element %d\", ii, domain = \"R-pkg\")\n```\n\nI don't expect `tools::xgettext` to be able to find the string `\"here is an error on element %d\"` here, but I do expect `tools::update_pkg_po()` to work on my package, however, `tools::xgettext` fails because it tries to run the following:\n\n```\nmatch.call(gettextf, substitute(gettextf(fmt, ..., domain = domain)))\n```\n\nWhich is an error:\n\n```\n  ... used in a situation where it does not exist\n```\n\nIINM we _could_ \"trick\" `xgettext` into working by adding `...` as an argument and passing `expand.dots = FALSE` to `match.call()` but this feels hacky. Otherwise, I think we need to iterate over the call and delete `...` by checking `is.symbol(e[[ii]]) && e[[ii]] == \"...\"`?\n\nHappy to help file a patch but I don't know what's the best solution here.\n\nPS this also affects `xngettext` IINM",
+            "count": 0,
+            "is_markdown": true,
+            "attachment_id": {},
+            "tags": [],
+            "id": 97269,
+            "time": "2021-05-02T07:45:22Z",
+            "is_private": false
+          },
+          {
+            "time": "2024-09-14T18:32:20Z",
+            "attachment_id": 3403,
+            "is_markdown": true,
+            "creator": "ikrylov",
+            "is_private": false,
+            "id": 101201,
+            "tags": [],
+            "count": 1,
+            "text": "Created attachment 3403\nOne more possible fix\n\nHere's one more hack that can be applied. `match.call()` performs the matching (including searching for a valid `...`) in the grandparent frame. Since there's no hope of substituting the ellipsis for real because the code under inspection is not running (and the grandparent frame is not where anything should be looked up), we can construct an environment with an empty ellipsis list inside and give it to `match.call` instead. With this patch applied, R survives `LC_ALL=C.UTF-8 make check-devel` and `xgettext('data.table')`... although it's still a hack.\n\nAnother reasonable solution would be to detect and skip calls with ellipsis in them because they cannot be safely matched.",
+            "bug_id": 18091,
+            "creation_time": "2024-09-14T18:32:20Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18091": [
+        {
+          "last_change_time": "2024-09-14T18:32:20Z",
+          "size": 2566,
+          "is_private": false,
+          "id": 3403,
+          "creation_time": "2024-09-14T18:32:20Z",
+          "summary": "One more possible fix",
+          "file_name": "file_18091.txt",
+          "bug_id": 18091,
+          "is_patch": true,
+          "creator": "ikrylov",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IveGdldHRleHQuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9saWJyYXJ5L3Rvb2xzL1IveGdldHRleHQuUgkocmV2aXNpb24gODcxNDgpDQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi94Z2V0dGV4dC5SCSh3b3JraW5nIGNvcHkpDQpAQCAtMzcsNiArMzcsOSBAQA0KICAgICBvdXQgPC0gdmVjdG9yKCJsaXN0IiwgbGVuZ3RoID0gbGVuZ3RoKFJfZmlsZXMpKQ0KICAgICBuYW1lcyhvdXQpIDwtIFJfZmlsZXMNCiANCisgICAgY2FsbGVudiA8LSBuZXcuZW52KHBhcmVudCA9IGVtcHR5ZW52KCkpDQorICAgIGNhbGxlbnYkYC4uLmAgPC0gTlVMTA0KKw0KICAgICBmaW5kX3N0cmluZ3MgPC0gZnVuY3Rpb24oZSkgew0KICAgICAgICAgZmluZF9zdHJpbmdzMiA8LSBmdW5jdGlvbihlLCBzdXBwcmVzcykgew0KICAgICAgICAgICAgIGlmKGlzLmNoYXJhY3RlcihlKSkgew0KQEAgLTQ1LDEzICs0OCwxNCBAQA0KICAgICAgICAgICAgICAgICBpZihpcy5uYW1lKGVbWzFMXV0pKSB7DQogICAgICAgICAgICAgICAgICAgICBmbmFtZSA8LSBhcy5jaGFyYWN0ZXIoZVtbMUxdXSkNCiAgICAgICAgICAgICAgICAgICAgIGlmKGZuYW1lICVpbiUgYygid2FybmluZ0NvbmRpdGlvbiIsICJlcnJvckNvbmRpdGlvbiIpKSB7DQotICAgICAgICAgICAgICAgICAgICAgICAgZSA8LSBtYXRjaC5jYWxsKGJhc2VlbnYoKVtbZm5hbWVdXSwgZSkNCisgICAgICAgICAgICAgICAgICAgICAgICBlIDwtIG1hdGNoLmNhbGwoYmFzZWVudigpW1tmbmFtZV1dLCBlLA0KKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBlbnZpciA9IGNhbGxlbnYpDQogICAgICAgICAgICAgICAgICAgICAgICAgZSA8LSBlWyJtZXNzYWdlIl0gIyBpZ25vcmUgY29uZGl0aW9uIGNsYXNzIGV0Yw0KICAgICAgICAgICAgICAgICAgICAgfSBlbHNlIGlmKGZuYW1lICVpbiUgYygiZ2V0dGV4dCIsICJnZXR0ZXh0ZiIpKSB7DQogICAgICAgICAgICAgICAgICAgICAgICAgZG9tYWluIDwtIGVbWyJkb21haW4iXV0NCiAgICAgICAgICAgICAgICAgICAgICAgICBzdXBwcmVzcyA8LSAhaXMubnVsbChkb21haW4pICYmICFpcy5uYW1lKGRvbWFpbikgJiYgaXMubmEoZG9tYWluKQ0KICAgICAgICAgICAgICAgICAgICAgICAgIGlmKGZuYW1lID09ICJnZXR0ZXh0ZiIpIHsNCi0gICAgICAgICAgICAgICAgICAgICAgICAgICAgZSA8LSBtYXRjaC5jYWxsKGdldHRleHRmLCBlKQ0KKyAgICAgICAgICAgICAgICAgICAgICAgICAgICBlIDwtIG1hdGNoLmNhbGwoZ2V0dGV4dGYsIGUsIGVudmlyID0gY2FsbGVudikNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZSA8LSBlWyJmbXQiXSAjIGp1c3QgbG9vayBhdCBmbXQgYXJnDQogICAgICAgICAgICAgICAgICAgICAgICAgfSBlbHNlIGlmKGZuYW1lID09ICJnZXR0ZXh0IiAmJg0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAhaXMubnVsbChuYW1lcyhlKSkpIHsNCkBAIC03OCw3ICs4Miw3IEBADQogICAgICAgICAgICAgICAgICBpZighc3VwcHJlc3MpIHN0cmluZ3MgPDwtIGMoc3RyaW5ncywgYXMuY2hhcmFjdGVyKGUpWy0xTF0pDQogICAgICAgICAgICAgIH0gZWxzZSB7DQogICAgICAgICAgICAgICAgICBpZihhcy5jaGFyYWN0ZXIoZVtbMUxdXSkgPT0gImdldHRleHRmIikgew0KLSAgICAgICAgICAgICAgICAgICAgIGUgPC0gbWF0Y2guY2FsbChnZXR0ZXh0ZiwgZSkNCisgICAgICAgICAgICAgICAgICAgICBlIDwtIG1hdGNoLmNhbGwoZ2V0dGV4dGYsIGUsIGVudmlyID0gY2FsbGVudikNCiAgICAgICAgICAgICAgICAgICAgICBlIDwtIGVbImZtdCJdICMganVzdCBsb29rIGF0IGZtdCBhcmcNCiAgICAgICAgICAgICAgICAgIH0NCiAgICAgICAgICAgICAgICAgIGZvcihpIGluIHNlcV9hbG9uZyhlKSkgZmluZF9zdHJpbmdzMihlW1tpXV0sIHN1cHByZXNzKQ0KQEAgLTEzMSwxMCArMTM1LDEzIEBADQogICAgIG91dCA8LSB2ZWN0b3IoImxpc3QiLCBsZW5ndGggPSBsZW5ndGgoUl9maWxlcykpDQogICAgIG5hbWVzKG91dCkgPC0gUl9maWxlcw0KIA0KKyAgICBjYWxsZW52IDwtIG5ldy5lbnYocGFyZW50ID0gZW1wdHllbnYoKSkNCisgICAgY2FsbGVudiRgLi4uYCA8LSBOVUxMDQorDQogICAgIGZpbmRfc3RyaW5ncyA8LSBmdW5jdGlvbihlKSB7DQogICAgICAgICBpZihpcy5jYWxsKGUpICYmIGlzLm5hbWUoZVtbMUxdXSkNCiAgICAgICAgICAgICYmIGFzLmNoYXJhY3RlcihlW1sxTF1dKSAlaW4lICJuZ2V0dGV4dCIpIHsNCi0JICAgIGUgPC0gbWF0Y2guY2FsbChuZ2V0dGV4dCwgZSkNCisJICAgIGUgPC0gbWF0Y2guY2FsbChuZ2V0dGV4dCwgZSwgZW52aXIgPSBjYWxsZW52KQ0KICAgICAgICAgICAgIGRvbWFpbiA8LSBlW1siZG9tYWluIl1dDQogICAgICAgICAgICAgc3VwcHJlc3MgPC0gIWlzLm51bGwoZG9tYWluKSAmJiAhaXMubmFtZShkb21haW4pICYmIGlzLm5hKGRvbWFpbikNCiAJICAgIGlmICghc3VwcHJlc3MgJiYNCg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2024-09-14 18:32:20"
+}

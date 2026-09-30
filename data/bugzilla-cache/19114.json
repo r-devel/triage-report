@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Low-level",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-08-01T21:07:10Z",
+        "version": "R 4.6.x",
+        "whiteboard": "",
+        "id": 19114,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "summary": "poison free small-node data to catch use of collected objects",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-08-01T21:07:33Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19114": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103350,
+            "tags": [],
+            "count": 0,
+            "bug_id": 19114,
+            "text": "Created attachment 3765\nCandidate patch.\n\nThis patch provided an additional mechanism for identifying usages of unprotected objects, via ASan's support for \"poisoning\" of memory regions.\n\nIn short, once a memory region has been \"poisoned\", ASan can then report an error if that memory region is accessed or used. This is primarily helpful in identifying usages of unprotected (or already-freed) R objects, which might otherwise be challenging to isolate via e.g. `gctorture()`.\n\nWith R configured as `CC=\"clang -fsanitize=address\" CFLAGS=\"-fno-omit-frame-pointer -g -O2\" MAIN_LDFLAGS=-fsanitize=address` (no strict barrier needed), running this under `gctorture(TRUE)`:\n\n```\nSEXP C_uaf(void)\n{\n    SEXP x = allocVector(REALSXP, 3);\n    REAL(x)[0] = 42.0;\n    SEXP y = PROTECT(allocVector(REALSXP, 100)); /* x not protected */\n    double d = REAL(x)[0];  /* use after collection */\n    REAL(y)[0] = d;\n    UNPROTECT(1);\n    return y;\n}\n```\n\nproduces an immediate report with the exact faulting access:\n\n```\n==13131==ERROR: AddressSanitizer: use-after-poison on address 0x625001a5b938 ...\n    #0 0x000101d7d2f4 in C_uaf uaf.c:13\n    #1 0x00010105ec10 in R_doDotCall dotcode.c:751\n    #2 0x00010106feb0 in do_dotcall dotcode.c:1437\n    #3 0x0001010f1ab0 in Rf_eval eval.c:1258\n    ...\n```",
+            "creation_time": "2026-08-01T21:07:10Z",
+            "time": "2026-08-01T21:07:10Z",
+            "attachment_id": 3765,
+            "is_markdown": true,
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19114": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "ZGlmZiAtLWdpdCBhL2RvYy9tYW51YWwvUi1leHRzLnRleGkgYi9kb2MvbWFudWFsL1ItZXh0cy50ZXhpDQppbmRleCAxNWM0YjVhNjRmLi45NDY0N2NhNTM3IDEwMDY0NA0KLS0tIGEvZG9jL21hbnVhbC9SLWV4dHMudGV4aQ0KKysrIGIvZG9jL21hbnVhbC9SLWV4dHMudGV4aQ0KQEAgLTEwMDgzLDYgKzEwMDgzLDE5IEBAIEJ5IGNvbXBhcmlzb24gd2l0aCBAY29tbWFuZHt2YWxncmluZH0sIEBhYmJye0FTYW59IGNhbg0KIGRldGVjdCBtaXN1c2Ugb2Ygc3RhY2sgYW5kIGdsb2JhbCB2YXJpYWJsZXMgYnV0IG5vdCB0aGUgdXNlIG9mDQogdW5pbml0aWFsaXplZCBtZW1vcnkuDQogDQorV2hlbiBAUnt9IGl0c2VsZiBpcyBidWlsdCB3aXRoIEBvcHRpb257LWZzYW5pdGl6ZT1hZGRyZXNzfSwgdGhlIG1lbW9yeQ0KK21hbmFnZXIgYWRkaXRpb25hbGx5IHBvaXNvbnMgdGhlIGRhdGEgcmVnaW9ucyBvZiB2ZWN0b3Igbm9kZXMgaW4gaXRzDQoraW50ZXJuYWwgc21hbGwtbm9kZSBwYWdlcyB3aGVuZXZlciB0aGV5IGFyZSBmcmVlLCBzbyB1c2Ugb2YgYSB2ZWN0b3Incw0KK2RhdGEgYWZ0ZXIgdGhlIHZlY3RvciBoYXMgYmVlbiBnYXJiYWdlIGNvbGxlY3RlZCBpcyByZXBvcnRlZCBieQ0KK0BhYmJye0FTYW59IGV2ZW4gdGhvdWdoIHRoZSB1bmRlcmx5aW5nIHBhZ2VzIGFyZSByZWN5Y2xlZCBieSBAUnt9DQorcmF0aGVyIHRoYW4gcmV0dXJuZWQgdG8gQGNvZGV7bWFsbG9jfSAodGhpcyBwYXJhbGxlbHMgd2hhdA0KK0BvcHRpb257LS13aXRoLXZhbGdyaW5kLWluc3RydW1lbnRhdGlvbj0yfSBwcm92aWRlcyB1bmRlcg0KK0Bjb21tYW5ke3ZhbGdyaW5kfSkuICBTdWNoIHJlcG9ydHMgYXJlIGxhYmVsbGVkDQorQHNhbXB7dXNlLWFmdGVyLXBvaXNvbn0uICBUb2dldGhlciB3aXRoIEBjb2Rle2djdG9ydHVyZX0gdGhpcyBjYW4NCitkZXRlY3QgdGhlIHVzZSBvZiB1bnByb3RlY3RlZCBvYmplY3RzIHdob3NlIG1lbW9yeSBoYXMgYmVlbiByZWNsYWltZWQuDQorTm9kZSBoZWFkZXJzIGFuZCBjb25zIGNlbGxzIGFyZSBub3QgcG9pc29uZWQsIHNvIG1pc3VzZSBvZiB0aG9zZSBpcw0KK3N0aWxsIG5vdCBkZXRlY3RlZC4NCisNCiBSZWNlbnQgdmVyc2lvbnMgcmV0dXJuIHN5bWJvbGljIGFkZHJlc3NlcyBmb3IgdGhlIGxvY2F0aW9uIG9mIHRoZSBlcnJvcg0KIHByb3ZpZGVkIEBjb21tYW5ke2xsdm0tc3ltYm9saXplcn1AZm9vdG5vdGV7cGFydCBvZiB0aGUgQEl7TExWTX0gcHJvamVjdCBhbmQNCiBkaXN0cmlidXRlZCBpbiBAY29kZXtsbHZtfSBAYWNyb255bXtSUE19cyBhbmQgQGZpbGV7LmRlYn1zIG9uIExpbnV4LiAgSXQgaXMgbm90DQpkaWZmIC0tZ2l0IGEvc3JjL21haW4vbWVtb3J5LmMgYi9zcmMvbWFpbi9tZW1vcnkuYw0KaW5kZXggYzcwY2Y4M2FjOC4uNDI4ZDUyM2RjNSAxMDA2NDQNCi0tLSBhL3NyYy9tYWluL21lbW9yeS5jDQorKysgYi9zcmMvbWFpbi9tZW1vcnkuYw0KQEAgLTc2LDYgKzc2LDU1IEBADQogIyBpbmNsdWRlICJ2YWxncmluZC9tZW1jaGVjay5oIg0KICNlbmRpZg0KIA0KKy8qIERlY2xhcmF0aW9ucyBmb3IgdGhlIEFkZHJlc3MgU2FuaXRpemVyLg0KKw0KKyAgIFdoZW4gUiBpdHNlbGYgaXMgY29tcGlsZWQgd2l0aCAtZnNhbml0aXplPWFkZHJlc3MsIHRoZSBkYXRhIHJlZ2lvbnMNCisgICBvZiBmcmVlIG5vZGVzIGluIHRoZSBzbWFsbC1ub2RlIHBhZ2VzIGFyZSBtYW51YWxseSBwb2lzb25lZCwgc28NCisgICB0aGF0IHVzZSBvZiBhIG5vZGUncyBkYXRhIGFmdGVyIHRoZSBub2RlIGhhcyBiZWVuIGNvbGxlY3RlZCBpcw0KKyAgIHJlcG9ydGVkIGJ5IEFTYW4gZXZlbiB0aG91Z2ggdGhlIHVuZGVybHlpbmcgcGFnZXMgYXJlIHJlY3ljbGVkIGJ5DQorICAgUidzIGFsbG9jYXRvciBhbmQgbmV2ZXIgcmV0dXJuZWQgdG8gbWFsbG9jLiAgVGhpcyBwYXJhbGxlbHMgd2hhdA0KKyAgIC0td2l0aC12YWxncmluZC1pbnN0cnVtZW50YXRpb249MiBwcm92aWRlcyB1bmRlciB2YWxncmluZCwgYXQgYQ0KKyAgIG11Y2ggc21hbGxlciBydW4tdGltZSBjb3N0Lg0KKw0KKyAgIExhcmdlIHZlY3RvciBub2RlcyBuZWVkIG5vIG1hbnVhbCBoYW5kbGluZzogdGhleSBhcmUgaW5kaXZpZHVhbGx5DQorICAgbWFsbG9jJ2QgYW5kIGZyZWVkLCBzbyBBU2FuIHRyYWNrcyB0aGVtIG5hdGl2ZWx5LiAgTm9kZSBoZWFkZXJzIGFyZQ0KKyAgIG5ldmVyIHBvaXNvbmVkLCBzaW5jZSB0aGUgY29sbGVjdG9yIHRyYXZlcnNlcyBmcmVlIG5vZGVzIHZpYSB0aGVpcg0KKyAgIGhlYWRlciBmaWVsZHM7IGNvbnNlcXVlbnRseSBtaXN1c2Ugb2YgdGhlIGhlYWRlciBvZiBhIGNvbGxlY3RlZA0KKyAgIG5vZGUgKG9yIG9mIGEgY29sbGVjdGVkIGNvbnMgY2VsbCwgd2hpY2ggaGFzIG5vIHNlcGFyYXRlIGRhdGENCisgICByZWdpb24pIGlzIHN0aWxsIG5vdCBkZXRlY3RlZC4NCisqLw0KKyNpZiBkZWZpbmVkKF9faGFzX2ZlYXR1cmUpDQorIyBpZiBfX2hhc19mZWF0dXJlKGFkZHJlc3Nfc2FuaXRpemVyKQ0KKyMgIGRlZmluZSBIQVZFX0FERFJFU1NfU0FOSVRJWkVSIDENCisjIGVuZGlmDQorI2VuZGlmDQorI2lmICFkZWZpbmVkKEhBVkVfQUREUkVTU19TQU5JVElaRVIpICYmIGRlZmluZWQoX19TQU5JVElaRV9BRERSRVNTX18pDQorIyBkZWZpbmUgSEFWRV9BRERSRVNTX1NBTklUSVpFUiAxDQorI2VuZGlmDQorDQorI2lmZGVmIEhBVkVfQUREUkVTU19TQU5JVElaRVINCisjIGluY2x1ZGUgPHNhbml0aXplci9hc2FuX2ludGVyZmFjZS5oPg0KKyMgZGVmaW5lIEFTQU5fUE9JU09OX0ZSRUVfTk9ERShjLCBuKSBcDQorICAgIGRvIHsgXA0KKwlpZiAoTm9kZUNsYXNzU2l6ZVtjXSA+IDApIFwNCisJICAgIEFTQU5fUE9JU09OX01FTU9SWV9SRUdJT04oU1REVkVDX0RBVEFQVFIobiksIFwNCisJCQkJICAgICAgTm9kZUNsYXNzU2l6ZVtjXSpzaXplb2YoVkVDUkVDKSk7IFwNCisgICAgfSB3aGlsZSAoMCkNCisjIGRlZmluZSBBU0FOX1VOUE9JU09OX0ZSRUVfTk9ERShjLCBuKSBcDQorICAgIGRvIHsgXA0KKwlpZiAoTm9kZUNsYXNzU2l6ZVtjXSA+IDApIFwNCisJICAgIEFTQU5fVU5QT0lTT05fTUVNT1JZX1JFR0lPTihTVERWRUNfREFUQVBUUihuKSwgXA0KKwkJCQkJTm9kZUNsYXNzU2l6ZVtjXSpzaXplb2YoVkVDUkVDKSk7IFwNCisgICAgfSB3aGlsZSAoMCkNCisvKiBtZW1vcnkgbWFudWFsbHkgcG9pc29uZWQgbXVzdCBiZSB1bnBvaXNvbmVkIGJlZm9yZSBpdCBpcyByZXR1cm5lZA0KKyAgIHRvIG1hbGxvYyAqLw0KKyMgZGVmaW5lIEFTQU5fVU5QT0lTT05fUEFHRShwKSBBU0FOX1VOUE9JU09OX01FTU9SWV9SRUdJT04ocCwgUl9QQUdFX1NJWkUpDQorI2Vsc2UNCisjIGRlZmluZSBBU0FOX1BPSVNPTl9GUkVFX05PREUoYywgbikgZG8geyB9IHdoaWxlICgwKQ0KKyMgZGVmaW5lIEFTQU5fVU5QT0lTT05fRlJFRV9OT0RFKGMsIG4pIGRvIHsgfSB3aGlsZSAoMCkNCisjIGRlZmluZSBBU0FOX1VOUE9JU09OX1BBR0UocCkgZG8geyB9IHdoaWxlICgwKQ0KKyNlbmRpZg0KKw0KIC8qIEZvciBzcGVlZCBpbiBjYXNlcyB3aGVuIHRoZSBhcmd1bWVudCBpcyBrbm93biB0byBub3QgYmUgYW4gQUxUUkVQIGxpc3QuICovDQogI2RlZmluZSBWRUNUT1JfRUxUXzAoeCxpKSAgICAgICAgKChTRVhQICopIFNURFZFQ19EQVRBUFRSKHgpKVtpXQ0KICNkZWZpbmUgU0VUX1ZFQ1RPUl9FTFRfMCh4LGksIHYpICgoKFNFWFAgKikgU1REVkVDX0RBVEFQVFIoeCkpW2ldID0gKHYpKQ0KQEAgLTg0Niw2ICs4OTUsNyBAQCBzdGF0aWMgUl9zaXplX3QgUl9Ob2Rlc0luVXNlID0gMDsNCiAgIH0gXA0KICAgUl9HZW5IZWFwW2NdLkZyZWUgPSBORVhUX05PREUoX19uX18pOyBcDQogICBSX05vZGVzSW5Vc2UrKzsgXA0KKyAgQVNBTl9VTlBPSVNPTl9GUkVFX05PREUoYywgX19uX18pOyBcDQogICAocykgPSBfX25fXzsgXA0KIH0gd2hpbGUgKDApDQogDQpAQCAtODU5LDYgKzkwOSw3IEBAIHN0YXRpYyBSX3NpemVfdCBSX05vZGVzSW5Vc2UgPSAwOw0KIAkgICAgZXJyb3IoIm5lZWQgbmV3IHBhZ2UgLSBzaG91bGQgbm90IGhhcHBlbiIpOwlcDQogCVJfR2VuSGVhcFtjXS5GcmVlID0gTkVYVF9OT0RFKF9fbl9fKTsJCVwNCiAJUl9Ob2Rlc0luVXNlKys7CQkJCQlcDQorCUFTQU5fVU5QT0lTT05fRlJFRV9OT0RFKGMsIF9fbl9fKTsJCVwNCiAJKHMpID0gX19uX187CQkJCQlcDQogICAgIH0gd2hpbGUgKDApDQogDQpAQCAtMTAxOSw2ICsxMDcwLDcgQEAgc3RhdGljIHZvaWQgR2V0TmV3UGFnZShpbnQgbm9kZV9jbGFzcykNCiAJaWYgKE5vZGVDbGFzc1NpemVbbm9kZV9jbGFzc10gPiAwKQ0KIAkgICAgVkFMR1JJTkRfTUFLRV9NRU1fTk9BQ0NFU1MoU1REVkVDX0RBVEFQVFIocyksIE5vZGVDbGFzc1NpemVbbm9kZV9jbGFzc10qc2l6ZW9mKFZFQ1JFQykpOw0KICNlbmRpZg0KKwlBU0FOX1BPSVNPTl9GUkVFX05PREUobm9kZV9jbGFzcywgcyk7DQogCXMtPnN4cGluZm8gPSBVbm1hcmtlZE5vZGVUZW1wbGF0ZS5zeHBpbmZvOw0KIAlJTklUX1JFRkNOVChzKTsNCiAJU0VUX05PREVfQ0xBU1Mocywgbm9kZV9jbGFzcyk7DQpAQCAtMTA0Niw2ICsxMDk4LDcgQEAgc3RhdGljIHZvaWQgUmVsZWFzZVBhZ2UoUEFHRV9IRUFERVIgKnBhZ2UsIGludCBub2RlX2NsYXNzKQ0KIAlSX0dlbkhlYXBbbm9kZV9jbGFzc10uQWxsb2NDb3VudC0tOw0KICAgICB9DQogICAgIFJfR2VuSGVhcFtub2RlX2NsYXNzXS5QYWdlQ291bnQtLTsNCisgICAgQVNBTl9VTlBPSVNPTl9QQUdFKHBhZ2UpOw0KICAgICBmcmVlKHBhZ2UpOw0KIH0NCiANCkBAIC0xOTY0LDYgKzIwMTcsMTcgQEAgc3RhdGljIGludCBSdW5HZW5Db2xsZWN0KFJfc2l6ZV90IHNpemVfbmVlZGVkKQ0KICAgICB9DQogI2VuZGlmDQogDQorI2lmZGVmIEhBVkVfQUREUkVTU19TQU5JVElaRVINCisgICAgLyogUG9pc29uIHRoZSBkYXRhIG9mIGV2ZXJ5dGhpbmcgbGVmdCBpbiBOZXcgc3BhY2U6IG9ubHkgZnJlZSBhbmQNCisgICAgICAgbmV3bHkgY29sbGVjdGVkIG5vZGVzIHJlbWFpbiB0aGVyZSBhdCB0aGlzIHBvaW50LiAgTm9kZXMgaGFuZGVkDQorICAgICAgIGJhY2sgb3V0IGFyZSB1bnBvaXNvbmVkIGluIENMQVNTX0dFVF9GUkVFX05PREUuICovDQorICAgIGZvciAoaSA9IDE7IGkgPCBOVU1fU01BTExfTk9ERV9DTEFTU0VTOyBpKyspDQorCWZvciAocyA9IE5FWFRfTk9ERShSX0dlbkhlYXBbaV0uTmV3KTsNCisJICAgICBzICE9IFJfR2VuSGVhcFtpXS5OZXc7DQorCSAgICAgcyA9IE5FWFRfTk9ERShzKSkNCisJICAgIEFTQU5fUE9JU09OX0ZSRUVfTk9ERShpLCBzKTsNCisjZW5kaWYNCisNCiAgICAgLyogcmVzZXQgRnJlZSBwb2ludGVycyAqLw0KICAgICBmb3IgKGkgPSAwOyBpIDwgTlVNX05PREVfQ0xBU1NFUzsgaSsrKQ0KIAlSX0dlbkhlYXBbaV0uRnJlZSA9IE5FWFRfTk9ERShSX0dlbkhlYXBbaV0uTmV3KTsNCg==",
+          "creator": "kevinushey",
+          "id": 3765,
+          "is_private": false,
+          "size": 5419,
+          "last_change_time": "2026-08-01T21:07:33Z",
+          "bug_id": 19114,
+          "file_name": "file_19114.txt",
+          "summary": "Candidate patch.",
+          "creation_time": "2026-08-01T21:07:10Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-08-01 21:07:33"
+}

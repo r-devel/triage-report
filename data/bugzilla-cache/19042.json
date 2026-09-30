@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "summary": "Provide getDLLVersion on all platforms?",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-04-02T18:41:54Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "whiteboard": "",
+        "creation_time": "2026-04-02T17:52:05Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19042,
+        "dupe_of": {},
+        "severity": "normal",
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19042": {
+        "comments": [
+          {
+            "count": 0,
+            "text": "On Windows, R provides `getDLLVersion()` as a useful way of getting the R version directly from the `.dll`. For applications embedding R, it would be handy if R could provide this (or something similar) on all platforms.",
+            "bug_id": 19042,
+            "creation_time": "2026-04-02T17:52:05Z",
+            "is_private": false,
+            "id": 102863,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2026-04-02T17:52:05Z",
+            "attachment_id": {}
+          },
+          {
+            "id": 102864,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19042,
+            "text": "Created attachment 3660\nAdd R_GetVersion() to Rembedded.h\n\nProposed implementation.",
+            "count": 1,
+            "creation_time": "2026-04-02T18:41:54Z",
+            "time": "2026-04-02T18:41:54Z",
+            "attachment_id": 3660,
+            "is_markdown": true,
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19042": [
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL1JlbWJlZGRlZC5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9pbmNsdWRlL1JlbWJlZGRlZC5oCShyZXZpc2lvbiA4OTc4MCkKKysrIHNyYy9pbmNsdWRlL1JlbWJlZGRlZC5oCSh3b3JraW5nIGNvcHkpCkBAIC0yNCwxMSArMjQsMjIgQEAKICNkZWZpbmUgUkVNQkVEREVEX0hfCiAKICNpbmNsdWRlIDxSX2V4dC9Cb29sZWFuLmg+CisjaW5jbHVkZSA8c3RkZGVmLmg+IC8qIGZvciBzaXplX3QgKi8KIAogI2lmZGVmIF9fY3BsdXNwbHVzCiBleHRlcm4gIkMiIHsKICNlbmRpZgogCit0eXBlZGVmIHN0cnVjdCB7CisgICAgaW50IG1ham9yOworICAgIGludCBtaW5vcjsKKyAgICBpbnQgcGF0Y2g7Cit9IFJWZXJzaW9uSW5mbzsKKworLyogR2V0IHRoZSB2ZXJzaW9uIG9mIFIsIHVzYWJsZSBiZWZvcmUgUiBpcyBpbml0aWFsaXplZC4KKyAgIFBhc3Mgc2l6ZW9mKFJWZXJzaW9uSW5mbykgYXMgc2l6ZSBmb3IgZm9yd2FyZCBjb21wYXRpYmlsaXR5LiAqLwordm9pZCBSX0dldFZlcnNpb24oUlZlcnNpb25JbmZvICp2ZXJzaW9uLCBzaXplX3Qgc2l6ZSk7CisKIGV4dGVybiBpbnQgUmZfaW5pdEVtYmVkZGVkUihpbnQgYXJnYywgY2hhciAqYXJndltdKTsKIGV4dGVybiB2b2lkIFJmX2VuZEVtYmVkZGVkUihpbnQgZmF0YWwpOwogCkluZGV4OiBzcmMvbWFpbi92ZXJzaW9uLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vdmVyc2lvbi5jCShyZXZpc2lvbiA4OTc4MCkKKysrIHNyYy9tYWluL3ZlcnNpb24uYwkod29ya2luZyBjb3B5KQpAQCAtMjUsNiArMjUsNyBAQAogI2luY2x1ZGUgPERlZm4uaD4KICNpbmNsdWRlIDxJbnRlcm5hbC5oPgogI2luY2x1ZGUgPFJ2ZXJzaW9uLmg+CisjaW5jbHVkZSA8UmVtYmVkZGVkLmg+CiAKIGF0dHJpYnV0ZV9oaWRkZW4gdm9pZCBQcmludEdyZWV0aW5nKHZvaWQpCiB7CkBAIC0xNjcsNiArMTY4LDIwIEBACiAgICAgc3RyY2F0KHMsICJcbiIpOwogfQogCit2b2lkIFJfR2V0VmVyc2lvbihSVmVyc2lvbkluZm8gKnZlcnNpb24sIHNpemVfdCBzaXplKQoreworICAgIFJWZXJzaW9uSW5mbyB2ZXIgPSB7MH07CisgICAgdmVyLm1ham9yID0gUl9WRVJTSU9OIC8gNjU1MzY7CisgICAgdmVyLm1pbm9yID0gKFJfVkVSU0lPTiAvIDI1NikgJSAyNTY7CisgICAgdmVyLnBhdGNoID0gUl9WRVJTSU9OICUgMjU2OworCisgICAgLyogWmVyby1maWxsIGZvciBmb3J3YXJkIGNvbXBhdGliaWxpdHk6IGlmIHRoZSBjYWxsZXIgd2FzIGNvbXBpbGVkCisgICAgICAgYWdhaW5zdCBhIG5ld2VyIFJWZXJzaW9uSW5mbyB3aXRoIGFkZGl0aW9uYWwgZmllbGRzLCB0aG9zZSBmaWVsZHMKKyAgICAgICBnZXQgemVyb2VkIHJhdGhlciB0aGFuIGxlZnQgdW5pbml0aWFsaXplZC4gKi8KKyAgICBtZW1zZXQodmVyc2lvbiwgMCwgc2l6ZSk7CisgICAgbWVtY3B5KHZlcnNpb24sICZ2ZXIsIHNpemUgPCBzaXplb2YodmVyKSA/IHNpemUgOiBzaXplb2YodmVyKSk7Cit9CisKIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19pbnRlcm5hbHNJRChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiB7CiAgICAgcmV0dXJuIG1rU3RyaW5nKFJfSU5URVJOQUxTX1VVSUQpOwo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-04-02T18:41:54Z",
+          "size": 1712,
+          "is_private": false,
+          "id": 3660,
+          "creation_time": "2026-04-02T18:41:54Z",
+          "summary": "Add R_GetVersion() to Rembedded.h",
+          "file_name": "r-version.patch",
+          "bug_id": 19042
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-04-02 18:41:54"
+}

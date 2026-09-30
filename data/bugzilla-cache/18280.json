@@ -1,0 +1,109 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2022-01-07T08:12:47Z",
+        "whiteboard": "",
+        "dupe_of": {},
+        "severity": "enhancement",
+        "id": 18280,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Translations",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "summary": "Suggestion for base to include templated condition handlers (stopf() etc)",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2023-09-11T22:08:15Z",
+        "cc_detail": [],
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        }
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18280": {
+        "comments": [
+          {
+            "bug_id": 18280,
+            "text": "While the `...` interface to `stop()` (and `warning()`, and `message()`, and `packageStartupMessage()`) can be convenient for constructing messages without worrying about input types, it is _very_ unfriendly to translators -- it leads to context-free sentence fragments showing up in the `.pot` file which can be impossible to translate well, and often require the translator to chase down the rest of the message in the source in the hopes of sussing out what was the original intent.\n\nThat templated messages are preferable for translation is evident within r-devel, where of ~1200 calls to condition functions with `...length() > 1`, 83% use `gettextf()`*.\n\nMany of the remaining cases not using `gettextf()` are like:\n\n```\nmessage(\"Warning: unknown option \",sQuote(a))\n```\n\nWhere the 2nd argument is a variable to paste at the end. (I would argue these should be templated too, but that's another issue).\n\nMoreover, the condition functions at the C level (e.g. `error()`, `warning()`, `Rprintf()`) all take templated messages, which makes translation of src/ messages more straightforward at present.\n\nWith that in mind, I think it makes sense for base to add templated versions of the condition message functions. With a nod to the style of `Rprintf()`, I'm partial to `stopf()`, `warningf()`, `messagef()`, and `packageStartupMessagef()`, which I've implemented in potools and data.table:\n\nhttps://github.com/MichaelChirico/potools/blob/master/R/custom-translators.R\nhttps://github.com/Rdatatable/data.table/blob/master/R/translation.R\n\nNote that for `tools::xgettext()`, these functions are substantially easier to extract messages from, since we only need to look for literal strings in the first argument (i.e., no recursive tree search).\n\nI am of course happy to file a patch implementing these, either as a wrapper or re-written to copy the logic of the analogous functions.\n\n---\n*Script I used for posterity:\n\n```\nlibrary(xmlparsedata)\nlibrary(xml2)\nlibrary(glue)\nlibrary(magrittr)\n\nsetwd('~/svn/R-devel/src/library')\nr_scripts = list.files('.', recursive = TRUE, pattern = \"\\\\.R$\", full.names = TRUE)\nr_scripts = grep(\"/R/\", r_scripts, value = TRUE)\n\nall_condition_usage = vector(\"list\", length(r_scripts))\nuntemplated_condition_usage = vector(\"list\", length(r_scripts))\ntemplated_condition_usage = vector(\"list\", length(r_scripts))\n\nxp_text_in_table <- function(x) paste(\"text() = \", sQuote(x, \"'\"), collapse = \" or \")\n\nbase_conditions = c(\"stop\", \"warning\", \"message\", \"packageStartupMessage\")\ntemplate_funs = c(\"gettext\", \"gettextf\")\n\n# not(OP-DOLLAR) blocks {compiler} usages like cntxt$stop()\nall_condition_xp = glue::glue(\"//expr[\n  expr[SYMBOL_FUNCTION_CALL[{xp_text_in_table(base_conditions)}] and not(OP-DOLLAR)]\n]\")\n# count(expr) condition skips cases like stop(\"hello\") where templating makes no sense\nuntemplated_condition_xp = glue::glue(\"//expr[\n  expr[SYMBOL_FUNCTION_CALL[{xp_text_in_table(base_conditions)}] and not(OP-DOLLAR)]\n  and not(expr[expr[SYMBOL_FUNCTION_CALL[{xp_text_in_table(template_funs)}]]])\n  and count(expr) - count(SYMBOL_SUB) > 2\n]\")\ntemplated_condition_xp = glue::glue(\"//expr[\n  expr[SYMBOL_FUNCTION_CALL[{xp_text_in_table(base_conditions)}] and not(OP-DOLLAR)]\n  and expr[expr[SYMBOL_FUNCTION_CALL[{xp_text_in_table(template_funs)}]]]\n]\")\n\nfor (r_script in r_scripts) {\n  cat(\"\\r\", dirname(r_script), strrep(\" \", max(nchar(r_scripts))), sep = \"\")\n  script_xml = r_script %>% \n    parse() %>% \n    xml_parse_data() %>% \n    read_xml()\n\n  all_condition_usage[[r_script]] = script_xml %>% \n    xml_find_all(all_condition_xp) %>%\n    xml_text()\n  \n  untemplated_condition_usage[[r_script]] = script_xml %>% \n    xml_find_all(untemplated_condition_xp) %>%\n    xml_text()\n  \n  templated_condition_usage[[r_script]] = script_xml %>% \n    xml_find_all(templated_condition_xp) %>%\n    xml_text()\n}\n```",
+            "is_markdown": true,
+            "count": 0,
+            "creation_time": "2022-01-07T08:12:47Z",
+            "creator": "michaelchirico4",
+            "id": 98320,
+            "time": "2022-01-07T08:12:47Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "bug_id": 18280,
+            "text": "Just to add a few points about the question \"why put this in base, and not a user package?\"\n\n 1. Signalling to users the importance of templating for making translatable messages.\n 2. Having it in base also means support for extracting messages in `tools::xgettext()`",
+            "count": 1,
+            "is_markdown": true,
+            "creation_time": "2022-01-09T09:00:17Z",
+            "creator": "michaelchirico4",
+            "id": 98325,
+            "time": "2022-01-09T09:00:17Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "time": "2023-09-11T22:08:15Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 100190,
+            "tags": [],
+            "count": 2,
+            "bug_id": 18280,
+            "text": "I was recently reminded (in working on Bug #17597 again) on probably the biggest reason why it's good for base to offer these helpers:\n\nIt prevents the easy-to-make mistake of double-translating messages like so:\n\n```\nstop(gettextf(\"A message with %d inputs\", n))\n```\n\nThe outer `stop()` call needs `domain=NA` to avoid inefficiently attempting to translate the output of the inner `gettextf()` call! In fact, as seen in the patch at Bug #17597, R's own sources omitted this `domain=NA` dozens of times.\n\nOffering one-stop-shops like `stopf()` would avoid the mental overhead of needing to remember this. (as an aside, {lintr} will eventually offer a linter nudging users away from this mistake: https://github.com/r-lib/lintr/issues/577)",
+            "creation_time": "2023-09-11T22:08:15Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18280": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2023-09-11 22:08:15"
+}

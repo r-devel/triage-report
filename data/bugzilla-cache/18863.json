@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc_detail": [],
+        "last_change_time": "2025-02-26T06:53:43Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "Add source locations to parser warnings",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "qa_contact": "",
+        "cc": [],
+        "deadline": {},
+        "id": 18863,
+        "severity": "minor",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2025-02-26T06:53:43Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18863": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": 3463,
+            "id": 101586,
+            "time": "2025-02-26T06:53:43Z",
+            "is_private": false,
+            "creation_time": "2025-02-26T06:53:43Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18863,
+            "text": "Created attachment 3463\nAdd source location info to the warning messages from the parser\n\nCurrently the parser generates warnings in exactly three cases, all incorrect uses of the `L` suffix for numeric literals\n\n 1. A true integer using a decimal e.g. `1.0L`\n 2. A true double using a decimal and `L` e.g. `1.1L`\n 3. A true double using no decimal and `L` e.g. `1e-3L`\n\nUnlike the helpful parser errors, however, no accompanying hint is given as to where in the source the issue might be found.\n\nThis patch adds some source info to the warning by imitating how it's produced in the error cases. I couldn't think of a reason not to support this, but my knowledge of the parser is still quite shallow.\n\nSome notes:\n\n - The column number lands at the end of the literal. I think that's fine.\n - We have to move `getFilename()`'s definition to before where it's used since it's `static`. That's unfortunate since this is quite far away in the source from where it used to be kept. I'm not sure how sensitive this change is.\n - This doesn't take the nice approach of PR#18328 to build a fully-informative condition object where we can just pull out `w$lineno`, `w$colno` -- from #18708 I know messing around with warnings from C is non-trivial. Still getting it from the `conditionMessage()` is better than nothing.\n - I'm not very confident of the nomenclature for parser vs. lexer, but my understanding is this is a parser warning, not a lexer, since we're able to deduce the tokens perfectly well.\n - For context, this arose in fulfilment of getting {lintr} to surface parser warnings as lint objects: https://github.com/r-lib/lintr/issues/2065",
+            "count": 0,
+            "is_markdown": true
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18863": [
+        {
+          "size": 3491,
+          "last_change_time": "2025-02-26T06:53:43Z",
+          "id": 3463,
+          "is_private": false,
+          "summary": "Add source location info to the warning messages from the parser",
+          "creation_time": "2025-02-26T06:53:43Z",
+          "bug_id": 18863,
+          "file_name": "warning-loc.patch",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL2dyYW0ueQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ncmFtLnkJKHJldmlzaW9uIDg3ODI3KQorKysgc3JjL21haW4vZ3JhbS55CSh3b3JraW5nIGNvcHkpCkBAIC0yNTc0LDYgKzI1NzQsMjIgQEAKICAgICByZXR1cm4gYzsKIH0KIAorc3RhdGljIGNvbnN0IGNoYXIqIGdldEZpbGVuYW1lKHZvaWQpIHsKKyAgICBTRVhQIHNyY2ZpbGUgPSBQU19TUkNGSUxFOworICAgIGlmICghc3JjZmlsZSB8fCBUWVBFT0Yoc3JjZmlsZSkgIT0gRU5WU1hQKQorCXJldHVybiAiPGlucHV0PiI7CisgICAgc3JjZmlsZSA9IFJfZmluZFZhcihpbnN0YWxsKCJmaWxlbmFtZSIpLCBzcmNmaWxlKTsKKyAgICBpZiAoVFlQRU9GKHNyY2ZpbGUpICE9IFNUUlNYUCB8fCAhc3RybGVuKENIQVIoU1RSSU5HX0VMVChzcmNmaWxlLCAwKSkpKQorCXJldHVybiAiPGlucHV0PiI7CisgICAgZWxzZQorCXJldHVybiBDSEFSKFNUUklOR19FTFQoc3JjZmlsZSwgMCkpOworfQorCitzdGF0aWMgdm9pZCByYWlzZVBhcnNlV2FybmluZyhjb25zdCBjaGFyICpmb3JtYXQsIGNvbnN0IGNoYXIgKnZhbHVlKQoreworICAgIHdhcm5pbmcoZm9ybWF0LCB2YWx1ZSwgZ2V0RmlsZW5hbWUoKSwgUGFyc2VTdGF0ZS54eGxpbmVubywgUGFyc2VTdGF0ZS54eGNvbG5vKTsKK30KKwogc3RhdGljIGludCBOdW1lcmljVmFsdWUoaW50IGMpCiB7CiAgICAgaW50IHNlZW5kb3QgPSAoYyA9PSAnLicpOwpAQCAtMjY2OSwxMCArMjY4NSwxMCBAQAogCWlmKGEgIT0gKGRvdWJsZSkgYikgewogCSAgICBpZihHZW5lcmF0ZUNvZGUpIHsKIAkJaWYoc2VlbmRvdCA9PSAxICYmIHNlZW5leHAgPT0gMCkKLQkJICAgIHdhcm5pbmcoXygiaW50ZWdlciBsaXRlcmFsICVzIGNvbnRhaW5zIGRlY2ltYWw7IHVzaW5nIG51bWVyaWMgdmFsdWUiKSwgeXl0ZXh0KTsKKwkJICAgIHJhaXNlUGFyc2VXYXJuaW5nKF8oImludGVnZXIgbGl0ZXJhbCAlcyBjb250YWlucyBkZWNpbWFsOyB1c2luZyBudW1lcmljIHZhbHVlICglczolZDolZCkiKSwgeXl0ZXh0KTsKIAkJZWxzZSB7CiAJCSAgICAvKiBoaWRlIHRoZSBMIGZvciB0aGUgd2FybmluZyBtZXNzYWdlICovCi0JCSAgICB3YXJuaW5nKF8oIm5vbi1pbnRlZ2VyIHZhbHVlICVzIHF1YWxpZmllZCB3aXRoIEw7IHVzaW5nIG51bWVyaWMgdmFsdWUiKSwgeXl0ZXh0KTsKKwkJICAgIHJhaXNlUGFyc2VXYXJuaW5nKF8oIm5vbi1pbnRlZ2VyIHZhbHVlICVzIHF1YWxpZmllZCB3aXRoIEw7IHVzaW5nIG51bWVyaWMgdmFsdWUgKCVzOiVkOiVkKSIpLCB5eXRleHQpOwogCQl9CiAJICAgIH0KIAkgICAgYXNOdW1lcmljID0gMTsKQEAgLTI2ODQsNyArMjcwMCw3IEBACiAJeXlsdmFsID0gR2VuZXJhdGVDb2RlID8gbWtDb21wbGV4KHl5dGV4dCkgOiBSX05pbFZhbHVlOwogICAgIH0gZWxzZSBpZihjID09ICdMJyAmJiBhc051bWVyaWMgPT0gMCkgewogCWlmKEdlbmVyYXRlQ29kZSAmJiBzZWVuZG90ID09IDEgJiYgc2VlbmV4cCA9PSAwKQotCSAgICB3YXJuaW5nKF8oImludGVnZXIgbGl0ZXJhbCAlcyBjb250YWlucyB1bm5lY2Vzc2FyeSBkZWNpbWFsIHBvaW50IiksIHl5dGV4dCk7CisJICAgIHJhaXNlUGFyc2VXYXJuaW5nKF8oImludGVnZXIgbGl0ZXJhbCAlcyBjb250YWlucyB1bm5lY2Vzc2FyeSBkZWNpbWFsIHBvaW50ICglczolZDolZCkiKSwgeXl0ZXh0KTsKIAl5eWx2YWwgPSBHZW5lcmF0ZUNvZGUgPyBta0ludCh5eXRleHQpIDogUl9OaWxWYWx1ZTsKICNpZiAwICAvKiBkbyB0aGlzIHRvIG1ha2UgMTIzIGludGVnZXIgbm90IGRvdWJsZSAqLwogICAgIH0gZWxzZSBpZighKHNlZW5kb3QgfHwgc2VlbmV4cCkpIHsKQEAgLTQ0MTcsMTcgKzQ0MzMsNiBAQAogICAgIHJldHVybiBGQUxTRTsKIH0KIAotc3RhdGljIGNvbnN0IGNoYXIqIGdldEZpbGVuYW1lKHZvaWQpIHsKLSAgICBTRVhQIHNyY2ZpbGUgPSBQU19TUkNGSUxFOwotICAgIGlmICghc3JjZmlsZSB8fCBUWVBFT0Yoc3JjZmlsZSkgIT0gRU5WU1hQKQotCXJldHVybiAiPGlucHV0PiI7Ci0gICAgc3JjZmlsZSA9IFJfZmluZFZhcihpbnN0YWxsKCJmaWxlbmFtZSIpLCBzcmNmaWxlKTsKLSAgICBpZiAoVFlQRU9GKHNyY2ZpbGUpICE9IFNUUlNYUCB8fCAhc3RybGVuKENIQVIoU1RSSU5HX0VMVChzcmNmaWxlLCAwKSkpKQotCXJldHVybiAiPGlucHV0PiI7Ci0gICAgZWxzZQotCXJldHVybiBDSEFSKFNUUklOR19FTFQoc3JjZmlsZSwgMCkpOwotfQotCiAvKiByYWlzZVBhcnNlRXJyb3IgY3JlYXRlcyBhICJwYXJzZUVycm9yOiBjb25kaXRpb24gb2JqZWN0IGFuZAogICAgc2lnbmFscyBhbiBlcnJvci4gIAogICAgICAidmFsdWUiIGlzIG9wdGlvbmFsOyB1c2UgdmFsdWV0eXBlID0gTk9fVkFMVUUgdG8gc2tpcCAKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA4NzgyNykKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC05Niw3ICs5NiwyMyBAQAogfSkKICMjIGdhdmUganVzdCBzaW1wbGVFcnJvciBzOyBubyBsaW5lOmNvbHVtbiBudW1iZXJzIGluIFIgPD0gNC4yLjAKIAorIyMgV2FybmluZ3MgZnJvbSBwYXJzaW5nIGdpdmUgc291cmNlIGxvY2F0aW9uIGluZm8KK3R4dCA9IGMoIjFlLTNMOyAxLjBMOyAxLjFMIiwgIjErMSIsICIyLjJMIiwgIiMgMi4yTCIsICIzLjBMIiwgIiczLjBMJyIsICI0ZS00TCIpCit3YXJucyA8LSBsaXN0KCkKK3dpdGhDYWxsaW5nSGFuZGxlcnMocGFyc2UodGV4dCA9IHR4dCksIHdhcm5pbmcgPSBcKHcpIHsgd2FybnMgPDwtIGMod2FybnMsIGxpc3QodykpOyBpbnZva2VSZXN0YXJ0KCJtdWZmbGVXYXJuaW5nIikgfSkKK3N0b3BpZm5vdChleHBycyA9IHsKKyAgbGVuZ3RoKHdhcm5zKSA9PSA2TAorICBncmVwbCgiXFwoPFthLXpdKz46WzAtOV0rOlswLTldK1xcKSIsIHZhcHBseSh3YXJucywgY29uZGl0aW9uTWVzc2FnZSwgIiIpKQorfSkKIAord3JpdGVMaW5lcyh0eHQsIHRtcDwtdGVtcGZpbGUoKSkKK3dhcm5zIDwtIGxpc3QoKQord2l0aENhbGxpbmdIYW5kbGVycyhwYXJzZSh0bXApLCB3YXJuaW5nID0gXCh3KSB7IHdhcm5zIDw8LSBjKHdhcm5zLCBsaXN0KHcpKTsgaW52b2tlUmVzdGFydCgibXVmZmxlV2FybmluZyIpIH0pCitzdG9waWZub3QoZXhwcnMgPSB7CisgIGxlbmd0aCh3YXJucykgPT0gNkwKKyAgZ3JlcGwoIlxcKC4qOlswLTldKzpbMC05XStcXCkiLCB2YXBwbHkod2FybnMsIGNvbmRpdGlvbk1lc3NhZ2UsICIiKSkKK30pCisKICMjIGZpc2hlci50ZXN0KCkgd2l0aCAidG9vIGZ1bGwiIHRhYmxlOiAgUFIjMTgzMzYKIGQgPC0gbWF0cml4KGMoMSwwLDUsMiwxLDkwCiAgICAgICAgICAgICAgLDIsMSwwLDIsMyw4OQo=",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        }
+      ]
+    }
+  },
+  "source_changed": "2025-02-26 06:53:43"
+}

@@ -1,0 +1,160 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Low-level",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-08-12T08:08:14Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 19135,
+        "severity": "normal",
+        "dupe_of": {},
+        "cc": [
+          "kevinushey"
+        ],
+        "qa_contact": "",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "creator": "traversc",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3775,
+          "name": "traversc",
+          "real_name": "Travers Ching"
+        },
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Bug with CHARSXP lifetime assumption by ALTSTRING elt method",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "id": 1044,
+            "name": "kevinushey",
+            "real_name": "Kevin Ushey"
+          }
+        ],
+        "last_change_time": "2026-09-02T01:02:51Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19135": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103408,
+            "time": "2026-08-12T08:08:14Z",
+            "tags": [],
+            "attachment_id": {},
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19135,
+            "text": "Here is a bug report where R functions mistakenly assumes the lifetime of ALTREP elements from package classes.\n\nAlthough this requires package interaction, I believe the bug is more on the R side, because there is no specification on requirements for CHARSXP lifetime from ALTREP classes. The only relevant discussion I found is in 2021: https://stat.ethz.ch/pipermail/r-devel/2021-June/080832.html but the discussion does not settle the expectations.\n\nEven if the bug is on the package side, I think it is important and would like to bring it to the attention of R-core.\n\nBelow are two reproducible examples with a minimal ALTREP class, but this also applies to other ALTREP string packages (vroom, arrow).\n\n  // minimal ALTREP class\n  // mre.c\n  #include <R.h>\n  #include <Rinternals.h>\n  #include <R_ext/Altrep.h>\n\n  static R_altrep_class_t mre_class;\n\n  static R_xlen_t mre_len(SEXP x) { return 1; }\n\n  static SEXP mre_elt(SEXP x, R_xlen_t i)\n  {\n      double *p = REAL(R_altrep_data1(x));\n      int n = (int) p[0];\n      char *buf = R_alloc((size_t) n, 1);\n      for (int k = 0; k < n; k++) buf[k] = 'a';\n      SEXP s = Rf_mkCharLenCE(buf, n, CE_NATIVE);\n      if (p[1]) R_set_altrep_data2(x, s); // testing switch to anchor CHARSXP\n      return s;\n  }\n\n  SEXP mre_make(SEXP nbytes, SEXP retain)\n  {\n      SEXP d1 = PROTECT(Rf_allocVector(REALSXP, 2));\n      REAL(d1)[0] = Rf_asReal(nbytes);\n      REAL(d1)[1] = Rf_asReal(retain);\n      SEXP x = R_new_altrep(mre_class, d1, R_NilValue);\n      UNPROTECT(1);\n      return x;\n  }\n\n  void R_init_mre(DllInfo *dll)\n  {\n      mre_class = R_make_altstring_class(\"mre\", \"mre\", dll);\n      R_set_altrep_Length_method(mre_class, mre_len);\n      R_set_altstring_Elt_method(mre_class, mre_elt);\n  }\n\nExample with `charmatch`\n\n  # R CMD SHLIB mre.c\n  dyn.load(\"mre.so\")\n  target <- rawToChar(as.raw(c(rep.int(0x61L, 64L), 0xe9L)))\n  Encoding(target) <- \"latin1\"\n\n  x <- .Call(\"mre_make\", 64*1024*1024, 0)\n  charmatch(x, target)\n   *** caught segfault ***\n  address 0x7a5419901040, cause 'memory not mapped'\n\n\nIn `charmatch()` (src/main/unique.c), the input is ASCII, so the first element `ss = translateCharUTF8(STRING_ELT(x, i))` returns a pointer to the CHARSXP directly. However, because it is ALTREP, that CHARSXP is not anchored in a vector. Then the 2nd argument needs UTF8 translation because it is latin1, which causes an allocation and garbage collection of the container of `ss`.\n\nHere is another example using substr:\n\n  # R CMD SHLIB mre.c\n  dyn.load(\"mre.so\")\n\n  x <- .Call(\"mre_make\", 64*1024*1024, 0)   # 0: Elt does not retain the CHARSXP\n  substr(x, 1L, 10L)\n  # *** caught segfault ***\n  # address 0x7c9e13fff042, cause 'memory not mapped'\n\n\nSuggested fixes:\n\nImprove ALTREP documentation to require stable lifetime from ALTREP string classes. Document what is expected of ALTREP classes. It is unclear whether ALTREP classes are required to keep CHARSXPs alive. If that is intended, I believe it should be documented.\n\nAlternatively: update these functions (and others) to not assume CHARSXP lifetime is stable.",
+            "creation_time": "2026-08-12T08:08:14Z",
+            "creator": "traversc"
+          },
+          {
+            "count": 1,
+            "text": "Created attachment 3813\nCandidate patch.",
+            "bug_id": 19135,
+            "creation_time": "2026-09-01T15:31:40Z",
+            "is_private": false,
+            "id": 103518,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2026-09-01T15:31:40Z",
+            "attachment_id": 3813
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-09-01T15:32:43Z",
+            "id": 103519,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-09-01T15:32:43Z",
+            "text": "One clean way to solve this problem: add the created CHARSXP vectors to R_VStack, so that their lifetime is at least as long as the typical strings produced by translateChar and friends. I've attached a patch.",
+            "bug_id": 19135,
+            "is_markdown": true,
+            "count": 2
+          },
+          {
+            "text": "To justify why R should be responsible for managing the lifetime of a produced CHARSXP from an ALTREP class here:\n\nNeither side can see the boundary that matters. The class can't observe when a caller is done with an element, and the caller can't observe how it was produced. So the only contract a class can implement alone is \"keep every element I've ever returned alive as long as the vector\" -- materialization over time, exactly what lazy classes exist to avoid. (Cheaper schemes like retaining the last element in data2 fail against pmatch(), which holds pointers to every element of both arguments at once.)\n\nThe evaluation scope is the other natural boundary, and only R can see it: anchoring Elt results on the R_alloc stack gives element pointers the same lifetime as translateChar() results, and class-side anchoring becomes a performance choice rather than a safety requirement.\n\nFor concreteness, two prominent ALTREP string implementations on CRAN have exactly this shape today. vroom's string_Elt on a not-yet-materialized column returns the CHARSXP freshly created in Val() -- protected only during construction, then unprotected and returned, stored nowhere (vroom_chr.h#L48-L84; unchanged in 1.7.1).\n\narrow's AltrepVectorString::Elt does the same on its unmaterialized path, returning a bare Rf_mkCharLenCE() result (altrep.cpp#L861-L887), and is used by default for string columns. I verified the vroom case end-to-end under an ASan build of unpatched trunk: substr() on a lazy vroom column reports heap-use-after-free, with the freed CHARSXP allocated by vroom_chr::Val via ALTSTRING_ELT and freed by GC inside mkCharLenCE() while do_substr still held a pointer into it. With this patch applied, the identical script against the identical vroom binary runs clean. (arrow I confirmed at the source level only -- same structure, same dispatch path -- as building libarrow under ASan isn't practical.)",
+            "bug_id": 19135,
+            "count": 3,
+            "creation_time": "2026-09-01T16:25:02Z",
+            "id": 103523,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2026-09-01T16:25:02Z",
+            "attachment_id": {}
+          },
+          {
+            "bug_id": 19135,
+            "text": "That's an elegant solution, it took me a while to understand it. It has the right semantics, but my concern is overhead. If you have to allocate a node for every string element, that can get heavy in terms of memory usage.\n\nI have an open PR on vroom that would fix it at the package level: https://github.com/tidyverse/vroom/pull/638. The PR could be improved in terms of memory usage, but you can see it would be easier to do so directly in vroom itself. And on top of that, a package level fix can act as a cache for materialization, which would be another performance improvement.\n\nSo I still think the ideal solution is enforce it at the package level on CRAN, where cost is easier to amortize. There are lots of contractual obligations for packages on CRAN and this would be no different.",
+            "count": 4,
+            "is_markdown": true,
+            "creation_time": "2026-09-02T01:02:51Z",
+            "creator": "traversc",
+            "id": 103531,
+            "time": "2026-09-02T01:02:51Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19135": [
+        {
+          "summary": "Candidate patch.",
+          "creation_time": "2026-09-01T15:31:40Z",
+          "bug_id": 19135,
+          "file_name": "file_19135.txt",
+          "size": 1892,
+          "last_change_time": "2026-09-01T15:31:40Z",
+          "id": 3813,
+          "is_private": false,
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9pbmNsdWRlL0RlZm4uaCBiL3NyYy9pbmNsdWRlL0RlZm4uaA0KaW5kZXggODU3N2VkYzY5Yy4uZmI5MWViOTVjYiAxMDA2NDQNCi0tLSBhL3NyYy9pbmNsdWRlL0RlZm4uaA0KKysrIGIvc3JjL2luY2x1ZGUvRGVmbi5oDQpAQCAtMjM3Nyw2ICsyMzc3LDcgQEAgUmJvb2xlYW4gUl9TZXRNYXhOU2l6ZShSX3NpemVfdCk7DQogUl9zaXplX3QgUl9EZWNvZGUyTG9uZyhjaGFyICpwLCBpbnQgKmllcnIpOw0KIHZvaWQgUl9TZXRQUFNpemUoUl9zaXplX3QpOw0KIHZvaWQgUl9TZXROY29ubihpbnQpOw0KK3ZvaWQgUl9WU3RhY2tBbmNob3IoU0VYUCk7DQogDQogdm9pZCBSX2V4cGFuZF9iaW5kaW5nX3ZhbHVlKFNFWFApOw0KICNpZmRlZiBJTU1FRElBVEVfUFJPTUlTRV9WQUxVRVMNCmRpZmYgLS1naXQgYS9zcmMvbWFpbi9hbHRyZXAuYyBiL3NyYy9tYWluL2FsdHJlcC5jDQppbmRleCA0MDIzODg0MGJmLi45YTBkYmJkYTcyIDEwMDY0NA0KLS0tIGEvc3JjL21haW4vYWx0cmVwLmMNCisrKyBiL3NyYy9tYWluL2FsdHJlcC5jDQpAQCAtNTI4LDYgKzUyOCwxNCBAQCBTRVhQIC8qYXR0cmlidXRlX2hpZGRlbiovIEFMVFNUUklOR19FTFQoU0VYUCB4LCBSX3hsZW5fdCBpKQ0KIA0KICAgICB2YWwgPSBBTFRTVFJJTkdfRElTUEFUQ0goRWx0LCB4LCBpKTsNCiANCisgICAgLyogVGhlIG1ldGhvZCBtYXkgaGF2ZSByZXR1cm5lZCBhIGZyZXNobHkgY3JlYXRlZCBDSEFSU1hQIHRoYXQNCisgICAgICAgbm90aGluZyBlbHNlIHJlZmVyZW5jZXMuICBBbmNob3IgaXQgb24gdGhlIFJfYWxsb2Mgc3RhY2ssIHdoaWxlDQorICAgICAgIEdDIGlzIHN0aWxsIGRpc2FibGVkLCBzbyBpdCBsaXZlcyBhdCBsZWFzdCB1bnRpbCB0aGUgZW5jbG9zaW5nDQorICAgICAgIHZtYXhzZXQoKSAtLSB0aGUgc2FtZSBsaWZldGltZSBjYWxsZXJzIGFscmVhZHkgcmVzcGVjdCBmb3INCisgICAgICAgdHJhbnNsYXRlQ2hhcigpIHJlc3VsdHMuICovDQorICAgIGlmICh2YWwgIT0gTlVMTCAmJiB2YWwgIT0gTkFfU1RSSU5HICYmIHZhbCAhPSBSX0JsYW5rU3RyaW5nKQ0KKwlSX1ZTdGFja0FuY2hvcih2YWwpOw0KKw0KICAgICBSX0dDRW5hYmxlZCA9IGVuYWJsZWQ7DQogICAgIHJldHVybiB2YWw7DQogfQ0KZGlmZiAtLWdpdCBhL3NyYy9tYWluL21lbW9yeS5jIGIvc3JjL21haW4vbWVtb3J5LmMNCmluZGV4IDBhZjMzZDQ0ZDMuLjM0ZGQzMDYzZjggMTAwNjQ0DQotLS0gYS9zcmMvbWFpbi9tZW1vcnkuYw0KKysrIGIvc3JjL21haW4vbWVtb3J5LmMNCkBAIC0yMzE4LDYgKzIzMTgsMTYgQEAgdm9pZCB2bWF4c2V0KGNvbnN0IHZvaWQgKm92bWF4KQ0KICAgICBSX1ZTdGFjayA9IChTRVhQKSBvdm1heDsNCiB9DQogDQorLyogQW5jaG9yIGFuIG90aGVyd2lzZSB1bnJlZmVyZW5jZWQgb2JqZWN0IG9uIHRoZSBSX2FsbG9jIHN0YWNrIHNvIHRoYXQsDQorICAgbGlrZSBSX2FsbG9jIG1lbW9yeSwgaXQgc3RheXMgYWxpdmUgdW50aWwgdGhlIGVuY2xvc2luZyB2bWF4c2V0KCkuDQorICAgQ2FjaGVkIENIQVJTWFBzIGNoYWluIHRoZSBzdHJpbmcgaGFzaCB0aHJvdWdoIHRoZWlyIEFUVFJJQiBmaWVsZCwgc28NCisgICB0aGV5IGNhbm5vdCBiZSBsaW5rZWQgaW4gZGlyZWN0bHkgdGhlIHdheSBSX2FsbG9jJ3MgUkFXU1hQcyBhcmU7IGENCisgICBjb25zIGNlbGwgY2FycmllcyB0aGUgcmVmZXJlbmNlIGluc3RlYWQuICovDQorYXR0cmlidXRlX2hpZGRlbiB2b2lkIFJfVlN0YWNrQW5jaG9yKFNFWFAgcykNCit7DQorICAgIFJfVlN0YWNrID0gQ09OUyhzLCBSX1ZTdGFjayk7DQorfQ0KKw0KIGNoYXIgKlJfYWxsb2Moc2l6ZV90IG5lbGVtLCBpbnQgZWx0c2l6ZSkNCiB7DQogICAgIFJfc2l6ZV90IHNpemUgPSBuZWxlbSAqIGVsdHNpemU7DQo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-02 01:02:51"
+}

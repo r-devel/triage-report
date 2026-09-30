@@ -1,0 +1,143 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "blocks": [],
+        "url": "",
+        "summary": "isGeneric(f=) and isGeneric(f=, fdef=) behave inconsistently for primitive functions",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2025-01-08T09:42:44Z",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "platform": "Other",
+        "flags": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "name": "jaganmn2",
+          "id": 3462,
+          "real_name": "Mikael Jagan"
+        },
+        "resolution": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2024-11-23T21:49:50Z",
+        "version": "R-devel (trunk)",
+        "id": 18828,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [
+          "maechler"
+        ],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "component": "S4methods",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18828": {
+        "comments": [
+          {
+            "time": "2024-11-23T21:49:50Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "jaganmn2",
+            "is_private": false,
+            "id": 101369,
+            "tags": [],
+            "count": 0,
+            "text": "An issue related to but different from Bug 18369.\n\nAnother aspect of `isGeneric` behaviour where clarification is needed concerns default and non-default methods for internally generic primitive functions.  Comments in the source code suggest that only non-default methods should affect the result.\n\n```\n    ## check primitives. These are never found as explicit generic functions.\n    if(isBaseFun(fdef)) {\n        if(is.character(f) && f %in% \"as.double\") f <- \"as.numeric\"\n        ## the definition of isGeneric() for a base function is that methods are defined\n        ## (other than the default primitive)\n        gen <- genericForBasic(f, mustFind = FALSE)\n        return(is.function(gen) && length(names(.getMethodsTable(gen))) > 1L)\n    }\n```\n\nHowever, the documentation does not distinguish between default and non-default methods.\n\n> A call to `isGeneric` tells you whether methods have been defined for this primitive function, anywhere in the current search list, or in the specified position `where`.\n\nThe implementation is itself inconsistent.  Specifically, calls `isGeneric(f=, fdef=)` analyze the method table, while calls `isGeneric(f=)` do not, leading to inconsistent results.  Consider any internally generic primitive function whose generic \"proxy\" is not already cached in `methods:::.genericTable` at start-up (because no methods for that function or its \"group\" are defined by **methods** itself).\n\n```\n> exists(\"sum\", envir = methods:::.genericTable, inherits = FALSE)\n[1] FALSE\n```\n\nThe formal generic function object is defined in `methods:::.BasicFunsList` with a method table containing only a default method.  This object is not yet cached in `methods:::.genericTable`.\n\n```\n> fn <- methods:::.BasicFunsList[[\"sum\"]]\n> is(fn, \"genericFunction\")\n[1] TRUE\n> mt <- environment(fn)[[\".MTable\"]]\n> names(mt)\n[1] \"ANY\"\n> identical(mt[[\"ANY\"]], sum)\n[1] TRUE\n```\n\nAt this point, `sum` is not generic by any definition employed by `isGeneric`.  There is no such object in `.genericTable` (consulted by `.getGenericFromCache`) and the object in `.BasicFunsList` (consulted by `genericForBasic`) has no non-default methods in its method table.\n\n```\n> isGeneric(\"sum\")\n[1] FALSE\n> isGeneric(\"sum\", fdef = sum)\n[1] FALSE\n```\n\nNow call `getGeneric(\"sum\")`, which has the side effect of caching the object from `.BasicFunsList` in `.genericTable`.\n\n```\n> identical(getGeneric(\"sum\"), fn)\n[1] TRUE\n> exists(\"sum\", envir = methods:::.genericTable, inherits = FALSE)\n[1] TRUE\n> identical(methods:::.genericTable[[\"sum\"]], fn)\n[1] TRUE\n```\n\nIt is still the case that only a default method is defined for `sum`.\n\n```\n> names(environment(fn)[[\".MTable\"]])\n[1] \"ANY\"\n```\n\nBut now the first usage of `isGeneric` gives a different answer.\n\n```\n> isGeneric(\"sum\")\n[1] TRUE\n> isGeneric(\"sum\", fdef = sum)\n[1] FALSE\n```\n\nHence we should decide what is really meant (in the help page) by \"whether methods have been defined for this primitive function\" and patch `isGeneric` to employ this definition more rigorously.",
+            "bug_id": 18828,
+            "creation_time": "2024-11-23T21:49:50Z"
+          },
+          {
+            "id": 101381,
+            "is_private": false,
+            "tags": [],
+            "text": "(Initially, ..) I agree this is a bug,\nand I think `isGeneric()` should try harder before saying `FALSE`.\nAs you showed, it _could_  call `getGeneric(*, mustWork=FALSE)` which I think should always return `NULL` if it doesn't find anything.\nIf it does find something, almost surely  `isGeneric()` should return `TRUE` immediately.\nOne could think of trying a more efficient version of `getGeneric()`, e.g.,\npossible `{methods}` own hidden `.getGeneric()`.\n\n**However**, I wrote the above before carefully rereading the subsection for `isGeneric` inside the `help(isGeneric)` section `Summary of Functions:`  which \nends with the paragraph\n\n>  The behavior of `isGeneric` and getGeneric for primitive\n>  functions is slightly different.  These functions don't exist\n>  as formal generic function objects (for efficiency and\n>  historical reasons), regardless of whether methods have been\n>  defined for them.  For a primitive function, `isGeneric`\n>  tests whether non-default methods have been defined, whereas\n>  getGeneric returns what the formal generic function object\n>  would be, even if no methods have been defined.\n\nI'm concluding from this that both functions behave as they do (well, \"almost\", see below), on purpose.\n\n\nWhen you  say\n> Now call `getGeneric(\"sum\")`, which has the side effect of caching the\n> object from `.BasicFunsList` in `.genericTable`.\n\nand use\n\n```\n> identical(getGeneric(\"sum\"), fn)\n[1] TRUE\n> exists(\"sum\", envir = methods:::.genericTable, inherits = FALSE)\n[1] TRUE\n> identical(methods:::.genericTable[[\"sum\"]], fn)\n[1] TRUE\n```\n> \n> It is still the case that only a default method is defined for `sum`.\n\nyou are right,  and given the documentation above, `isGeneric(\"sum\")` becoming `TRUE` is actually wrong.\nAs you mention, the `getGeneric()` *does* cache it in `.genericTable` which may be the bug here:\nIf we want to keep the documented behaviour it should only cache it when  isGeneric() is TRUE (or _\"would be true\"_, if there's an easier way to check that).\n\n\nNote the 2nd to last line, when the result of `getGeneric()` is printed:\n```\n> getGeneric(sum)\nstandardGeneric for \"sum\" defined from package \"base\"\n  belonging to group(s): Summary \n\nfunction (x, ..., na.rm = FALSE) \nstandardGeneric(\"sum\", .Primitive(\"sum\"))\n<bytecode: 0xe807440>\n<environment: 0xe805a30>\nMethods may be defined for arguments: x, na.rm\nUse  showMethods(<pkg>:::sum)  for currently available ones where <pkg> does not seem to be among the loadedNamespaces().\n> \n```\ni.e., the `show()` method __does__ note that it cannot find any S4 methods (in the current R session with the currently loaded namespaces).\n\n.. of course, the further complication (also mentioned by the show() method) is that `sum` is part of the groupGeneric `\"Summary\"`,\nand after, e.g.,  `loadNamespace(\"Matrix\")` the output above would not change, but of course  `sum(<..Matrix>)` would use S4 methods from the Matrix package, and indeed,  `showMethods(Summary)`  will show them.",
+            "bug_id": 18828,
+            "count": 1,
+            "creation_time": "2024-11-28T10:02:09Z",
+            "time": "2024-11-28T10:02:09Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "maechler"
+          },
+          {
+            "creator": "jaganmn2",
+            "creation_time": "2024-11-29T20:12:29Z",
+            "text": "My patch for Bug 18369 may have confused this issue a bit.  In R-patched, the paragraph concerning primitive functions reads:\n\n> The behavior of `isGeneric` and `getGeneric` for primitive functions is slightly different.  These functions don't exist as formal function objects (for efficiency and historical reasons), regardless of whether methods have been defined for them.  A call to 'isGeneric' tells you whether **methods** have been defined for this primitive function, anywhere in the current search list, or in the specified position 'where'.  In contrast, a call to 'getGeneric' will return what the generic for that function would be, even if no methods have been currently defined for it.\n\nIn R-devel, it now reads:\n\n> The behavior of `isGeneric` and `getGeneric` for primitive functions is slightly different.  These functions don't exist as formal generic function objects (for efficiency and historical reasons), regardless of whether methods have been defined for them.  For a primitive function, `isGeneric` tests whether **non-default methods** have been defined, whereas `getGeneric` returns what the formal generic function object would be, even if no methods have been defined.\n\nI added the qualifier \"non-default\" so that the documentation would align with the intention of the source code, which is reflected in the comments there.  But that was *before* I detected *this* bug which reveals that the implementation does not consistently behave \"as intended\", i.e., does not consistently consult the method table and distinguish between default and non-default methods.\n\nHence it seems that there is an opportunity here to decide between two paths:\n\n* Eliminate from the paragraph the qualifier \"non-default\", which did not exist before.  Then have `isGeneric` behave as you suggested: `isGeneric(f)` tests whether `getGeneric(f)` is non-`NULL`, without consulting the method table.\n* Keep the qualifier \"non-default\", respecting the intention of the original source code.  Then have `isGeneric` consult the method table in all cases.\n\nIn my opinion, the first approach is both more intuitive and more useful, because then `isGeneric(f)` can then be used as a test of whether `setGeneric(f)` or `setMethod(f)` would create a new generic function object.  The second approach is confusing to me because the distinction between default and non-default methods seems arbitrary.\n\nAnother complication, relevant the above discussion but perhaps not affecting primitive functions: Should `isGeneric` (gain an option to) consider implicit generic functions?  It is possible (e.g., for `f = \"qr.X\"`) that `getGeneric(f)` is `NULL` but `implicitGeneric(f)` is non-`NULL`.",
+            "bug_id": 18828,
+            "count": 2,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2024-11-29T20:12:29Z",
+            "id": 101384,
+            "is_private": false
+          },
+          {
+            "bug_id": 18828,
+            "text": "Since the patch for bug 18369 has been backported, R-patched now has the word \"non-default\" in `help(\"isGeneric\")`.  I mention it mainly for anyone now confused by my comment 2.\n\nWe should decide on a resolution here before R 4.4.3 is released in the spring.",
+            "count": 3,
+            "is_markdown": true,
+            "creation_time": "2024-12-06T18:37:23Z",
+            "creator": "jaganmn2",
+            "id": 101408,
+            "time": "2024-12-06T18:37:23Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "attachment_id": {},
+            "time": "2025-01-08T09:42:44Z",
+            "creator": "maechler",
+            "is_markdown": true,
+            "tags": [],
+            "id": 101442,
+            "is_private": false,
+            "creation_time": "2025-01-08T09:42:44Z",
+            "text": "(In reply to Mikael Jagan from comment #2)\n .......\n> Hence it seems that there is an opportunity here to decide between two paths:\n> \n> * Eliminate from the paragraph the qualifier \"non-default\", which did not\n> exist before.  Then have `isGeneric` behave as you suggested: `isGeneric(f)`\n> tests whether `getGeneric(f)` is non-`NULL`, without consulting the method\n> table.\n> * Keep the qualifier \"non-default\", respecting the intention of the original\n> source code.  Then have `isGeneric` consult the method table in all cases.\n> \n> In my opinion, the first approach is both more intuitive and more useful,\n> because then `isGeneric(f)` can then be used as a test of whether\n> `setGeneric(f)` or `setMethod(f)` would create a new generic function\n> object.  The second approach is confusing to me because the distinction\n> between default and non-default methods seems arbitrary.\n\nI'd agree with you that the first approach would be desirable.\nThe (only?) good reason against it would be if it breaks more than a negligible part of current S4 code \"out there\".\n\nWould we get help testing an R-devel branch (with that change) against BioC and  CRAN packages which have {`methods`} among their (recursive ?) dependencies?\n\n> Another complication, relevant the above discussion but perhaps not\n> affecting primitive functions: Should `isGeneric` (gain an option to)\n> consider implicit generic functions?  It is possible (e.g., for `f =\n> \"qr.X\"`) that `getGeneric(f)` is `NULL` but `implicitGeneric(f)` is\n> non-`NULL`.\n\nThat's a good suggestion, notably as you mention to use `isGeneric()` in order to check if `setMethod()` would create a new generic function.",
+            "bug_id": 18828,
+            "count": 4
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18828": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-01-08 09:42:44"
+}

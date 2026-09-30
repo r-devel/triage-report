@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 4.5.x",
+        "creation_time": "2025-04-15T15:22:17Z",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 18883,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "is_confirmed": false,
+        "op_sys": "Windows 64-bit",
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "ikrylov",
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Ivan Krylov",
+          "id": 3307,
+          "name": "ikrylov"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "Wish: resize the input width in Rterm.exe",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2025-04-15T15:22:17Z",
+        "cc_detail": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18883": {
+        "comments": [
+          {
+            "attachment_id": 3473,
+            "tags": [],
+            "time": "2025-04-15T15:22:17Z",
+            "id": 101688,
+            "is_private": false,
+            "creator": "ikrylov",
+            "creation_time": "2025-04-15T15:22:17Z",
+            "text": "Created attachment 3473\nSuggested change for getline only\n\nOriginally requested by [Iago Gine-Vazquez on R-devel](https://stat.ethz.ch/pipermail/r-devel/2025-February/083852.html).\n\nCurrently, the `getline` function used by `Rterm.exe` always maintains an 80-character \"window\" for the user to type into. When the text exceeds 80 characters, `getline` draws the dollar signs at the ends of the input line to signify possible places to scroll. It may be more convenient to make the width of `getline`'s input line match the width of the terminal window, which could be narrower or (on modern versions of Windows, when used with certain IDEs) greater than 80 characters.\n\nIt is relatively simple to change `getline` to call `GetConsoleScreenBufferInfo` on startup and interpret `WINDOW_BUFFER_SIZE_EVENT` events while reading terminal input. If this is considered acceptable, I can try to also implement `options(setWidthOnResize=TRUE)` for `Rterm.exe` in a similar manner.",
+            "bug_id": 18883,
+            "count": 0,
+            "is_markdown": true
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18883": [
+        {
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "ikrylov",
+          "data": "SW5kZXg6IHNyYy9nbnV3aW4zMi9nZXRsaW5lL2dldGxpbmUuYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9nbnV3aW4zMi9nZXRsaW5lL2dldGxpbmUuYwkocmV2aXNpb24gODc3OTUpDQorKysgc3JjL2dudXdpbjMyL2dldGxpbmUvZ2V0bGluZS5jCSh3b3JraW5nIGNvcHkpDQpAQCAtMjUsNiArMjUsNyBAQA0KIGludCAJCSgqZ2xfaW5faG9vaykoY2hhciAqKSA9IDA7DQogaW50IAkJKCpnbF9vdXRfaG9vaykoY2hhciAqKSA9IDA7DQogaW50IAkJKCpnbF90YWJfaG9vaykoY2hhciAqLCBpbnQsIGludCAqKSA9IGdsX3RhYjsNCitzdGF0aWMgaW50ICAgICAgZG9fc2V0d2lkdGgoaW50IHcpOw0KIA0KICNpbmNsdWRlIDxSY29uZmlnLmg+DQogI2luY2x1ZGUgPFJfZXh0L1JpY29udi5oPg0KQEAgLTIxNCw2ICsyMTUsMTAgQEANCiAgICAgICAgICBUaGUgYnVnIHN0aWxsIGV4aXN0cyBpbiBXaW5kb3dzIDEwLCBhbmQgdGh1cyB3ZSBub3cgY2FsbA0KICAgICAgICAgIEdldENvbnNvbGVJbnB1dFcgdG8gZ2V0IHVjaGFyLlVuaWNvZGVDaGFyLiAqLw0KICAgICAgIFJlYWRDb25zb2xlSW5wdXRXKFdpbjMySW5wdXRTdHJlYW0sICZyLCAxLCAmYSk7DQorICAgICAgaWYgKHIuRXZlbnRUeXBlID09IFdJTkRPV19CVUZGRVJfU0laRV9FVkVOVCkgew0KKyAgICAgICAgaWYgKGRvX3NldHdpZHRoKHIuRXZlbnQuV2luZG93QnVmZmVyU2l6ZUV2ZW50LmR3U2l6ZS5YKSkNCisgICAgICAgICAgZ2xfcmVkcmF3KCk7DQorICAgICAgfQ0KICAgICAgIGlmICghKHIuRXZlbnRUeXBlID09IEtFWV9FVkVOVCkpIGJyZWFrOw0KICAgICAgIHN0ID0gci5FdmVudC5LZXlFdmVudC5kd0NvbnRyb2xLZXlTdGF0ZTsNCiAgICAgICB2ayA9IHIuRXZlbnQuS2V5RXZlbnQud1ZpcnR1YWxLZXlDb2RlOw0KQEAgLTQ4Nyw2ICs0OTIsMTEgQEANCiAgICAgZ2xfdzJlX21hcCA9IGdsX3JlYWxsb2MoTlVMTCwgMCwgQlVGX1NJWkUsIHNpemVvZihzaXplX3QpKTsgDQogDQogICAgIGdsX2NoYXJfaW5pdCgpOw0KKw0KKyAgICBDT05TT0xFX1NDUkVFTl9CVUZGRVJfSU5GTyBjc2I7DQorICAgIEdldENvbnNvbGVTY3JlZW5CdWZmZXJJbmZvKFdpbjMyT3V0cHV0U3RyZWFtLCAmY3NiKTsNCisgICAgZG9fc2V0d2lkdGgoY3NiLmR3U2l6ZS5YKTsNCisNCiAgICAgZ2xfaW5pdF9kb25lID0gMTsNCiB9DQogDQpAQCAtNTM2LDEzICs1NDYsMjEgQEANCiAgICAgQlVGX1NJWkUgPSBuZXdzaXplOw0KIH0NCiANCitzdGF0aWMgaW50DQorZG9fc2V0d2lkdGgoaW50IHcpDQorew0KKyAgICAvKiBtYXkgYmUgY2FsbGVkIGZyb20gZ2xfZ2V0YyBpZiBhIHJlc2l6ZSBldmVudCBpcyByZWNlaXZlZCAqLw0KKyAgICBpZiAodyA+IDIwKSB7DQorCWdsX3dfdGVybXcgPSB3Ow0KKwlyZXR1cm4gMTsNCisgICAgfQ0KKyAgICByZXR1cm4gMDsNCit9DQorDQogdm9pZA0KIGdsX3NldHdpZHRoKGludCB3KQ0KIHsNCi0gICAgLyogbm90IHVzZWQgaW4gUjsgc2hvdWxkIGFycmFuZ2UgZm9yIHJlZHJhdyAqLw0KLSAgICBpZiAodyA+IDIwKSANCi0JZ2xfd190ZXJtdyA9IHc7DQotICAgIGVsc2UgDQorICAgIGlmICghZG9fc2V0d2lkdGgodykpDQogCWdsX2Vycm9yKCJcbioqKiBFcnJvcjogbWluaW11bSBzY3JlZW4gd2lkdGggaXMgMjFcbiIpOw0KIH0NCiANCg0K",
+          "is_patch": true,
+          "file_name": "file_18883.txt",
+          "bug_id": 18883,
+          "creation_time": "2025-04-15T15:22:17Z",
+          "summary": "Suggested change for getline only",
+          "is_private": false,
+          "id": 3473,
+          "last_change_time": "2025-04-15T15:22:17Z",
+          "size": 1707
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-04-15 15:22:17"
+}

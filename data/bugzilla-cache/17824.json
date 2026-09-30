@@ -1,0 +1,134 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "cc_detail": [
+          {
+            "real_name": "Neal Fultz",
+            "id": 2264,
+            "name": "nfultz"
+          }
+        ],
+        "last_change_time": "2023-09-06T15:28:21Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "tools::update_pkg_po doesn't detect string literals from stopifnot('msg'=test) form",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "component": "Translations",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc": [
+          "nfultz"
+        ],
+        "qa_contact": "",
+        "id": 17824,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2020-06-07T14:42:49Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17824": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2020-06-07T14:42:49Z",
+            "id": 95921,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "creation_time": "2020-06-07T14:42:49Z",
+            "text": "R 4.0.0 adds support for more helpful stopifnot() usage like:\n\n> x = 20\n> stopifnot('the input is too large' = x < 10)\n\nHowever, tools::update_pkg_po() does not detect these messages as translatable string literals.\n\nA minimal package:\n\n> cd /tmp\n> mkdir testPkg && cd testPkg\n> echo 'Package: testPkg' > DESCRIPTION\n> echo 'Version: 0.0.1' >> DESCRIPTION\n> mkdir R\n> echo \"foo = function(x) stopifnot('the input is too large' = x < 10)\" >\n> R/test.R\n> echo 'export(foo)' > NAMESPACE\n\nRunning update_pkg_po:\n\n> Rscript -e \"tools::update_pkg_po('.')\"\n\nbuilds the po directory and .pot file:\n\n> cat po/R-testPkg.pot\n> # msgid \"\"\n> # msgstr \"\"\n> # \"Project-Id-Version: testPkg 0.0.1\\n\"\n> # \"POT-Creation-Date: 2020-06-07 22:33\\n\"\n> # \"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n\"\n> # \"Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n\"\n> # \"Language-Team: LANGUAGE <LL@li.org>\\n\"\n> # \"MIME-Version: 1.0\\n\"\n> # \"Content-Type: text/plain; charset=CHARSET\\n\"\n> # \"Content-Transfer-Encoding: 8bit\\n\"\n\nNothing about \"the input is too large\"",
+            "bug_id": 17824,
+            "is_markdown": false,
+            "count": 0
+          },
+          {
+            "is_markdown": false,
+            "count": 1,
+            "bug_id": 17824,
+            "text": "Created attachment 2630\nstopifnot gains domain argument, and tools::xgettext reads these messages\n\nupdate_pkg_po('.') in the patch captures the message from the above example.\n\n 1. Added domain= argument to stopifnot, which only applies to the new 4.0.0 use case\n 2. Adjusted the logic in tools::xgettext to look for stopifnot() calls (in addition to the existing stop(), warning(), ... calls). stopifnot() is slightly different in that it's the argument names, not the values, that we want to capture.\n\nTested on the sample package above & with make check-devel.",
+            "creation_time": "2020-06-07T16:13:17Z",
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 95922,
+            "time": "2020-06-07T16:13:17Z",
+            "attachment_id": 2630,
+            "tags": []
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 100160,
+            "time": "2023-09-06T15:28:21Z",
+            "creation_time": "2023-09-06T15:28:21Z",
+            "creator": "seb.meyer",
+            "count": 2,
+            "is_markdown": false,
+            "bug_id": 17824,
+            "text": "*** Bug 18373 has been marked as a duplicate of this bug. ***"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "17824": [
+        {
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9zdG9wLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvYmFzZS9SL3N0b3AuUgkocmV2aXNpb24gNzg2NTEpCisrKyBzcmMvbGlicmFyeS9iYXNlL1Ivc3RvcC5SCSh3b3JraW5nIGNvcHkpCkBAIC0zMSw3ICszMSw3IEBACiAgICAgICAgIC5JbnRlcm5hbChzdG9wKGNhbGwuLCAubWFrZU1lc3NhZ2UoLi4uLCBkb21haW4gPSBkb21haW4pKSkKIH0KIAotc3RvcGlmbm90IDwtIGZ1bmN0aW9uKC4uLiwgZXhwcnMsIGV4cHJPYmplY3QsIGxvY2FsID0gVFJVRSkKK3N0b3BpZm5vdCA8LSBmdW5jdGlvbiguLi4sIGV4cHJzLCBleHByT2JqZWN0LCBsb2NhbCA9IFRSVUUsIGRvbWFpbiA9IE5VTEwpCiB7CiAgICAgbiA8LSAuLi5sZW5ndGgoKQogICAgIGlmKChoYXMuZSA8LSAhbWlzc2luZyhleHBycykpIHx8ICFtaXNzaW5nKGV4cHJPYmplY3QpKSB7CkBAIC04NCw2ICs4NCw3IEBACiAJCQkJICAgICAiJXMgYXJlIG5vdCBhbGwgVFJVRSIpLAogCQkJICAgIERwYXJzZShjbC5pKSkKIAkgIH0KKyAgICAgIG1zZyA8LSBnZXR0ZXh0KG1zZywgZG9tYWluPWRvbWFpbikKIAkgICAgc3RvcChzaW1wbGVFcnJvcihtc2csIGNhbGwgPSBpZihwIDwtIHN5cy5wYXJlbnQoMUwpKSBzeXMuY2FsbChwKSkpCiAgICAgICAgIH0KICAgICB9CkluZGV4OiBzcmMvbGlicmFyeS9iYXNlL21hbi9zdG9waWZub3QuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vc3RvcGlmbm90LlJkCShyZXZpc2lvbiA3ODY1MSkKKysrIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3N0b3BpZm5vdC5SZAkod29ya2luZyBjb3B5KQpAQCAtMTQsNyArMTQsNyBAQAogICAoXGNvZGV7XGxpbmt7YWxsfX0pIHRydWUuCiB9CiBcdXNhZ2V7Ci1zdG9waWZub3QoXGRvdHMsIGV4cHJzLCBleHByT2JqZWN0LCBsb2NhbCA9IFRSVUUpCitzdG9waWZub3QoXGRvdHMsIGV4cHJzLCBleHByT2JqZWN0LCBsb2NhbCA9IFRSVUUsIGRvbWFpbiA9IE5VTEwpCiB9CiBcYXJndW1lbnRzewogICBcaXRlbXtcZG90cywgZXhwcnN9e2FueSBudW1iZXIgb2YgXFIgZXhwcmVzc2lvbnMsIHdoaWNoIHNob3VsZCBlYWNoCkBAIC00Miw2ICs0Miw4IEBACiAgICAgXGNvZGV7XGxpbmt7ZW52aXJvbm1lbnR9fSBpbiB3aGljaCB0aGUgZXhwcmVzc2lvbnMgc2hvdWxkIGJlCiAgICAgZXZhbHVhdGVkOyBieSBkZWZhdWx0IHRoZSBvbmUgZnJvbSB3aGVyZSBcY29kZXtzdG9waWZub3QoKX0gaGFzIGJlZW4KICAgICBjYWxsZWQufQorICAgIFxpdGVte2RvbWFpbn17c2VlIFxjb2Rle1xsaW5re2dldHRleHR9fS4gIElmIFxjb2Rle05BfSwgbWVzc2FnZXMgd2lsbAorICAgICAgbm90IGJlIHRyYW5zbGF0ZWQufQogfQogXGRldGFpbHN7CiAgIFRoaXMgZnVuY3Rpb24gaXMgaW50ZW5kZWQgZm9yIHVzZSBpbiByZWdyZXNzaW9uIHRlc3RzIG9yIGFsc28gYXJndW1lbnQKSW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IveGdldHRleHQuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL3hnZXR0ZXh0LlIJKHJldmlzaW9uIDc4NjUxKQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi94Z2V0dGV4dC5SCSh3b3JraW5nIGNvcHkpCkBAIC02MiwyMCArNjIsMzAgQEAKICAgICAgICAgICAgJiYgaXMubmFtZShlW1sxTF1dKQogICAgICAgICAgICAmJiAoYXMuY2hhcmFjdGVyKGVbWzFMXV0pCiAgICAgICAgICAgICAgICAlaW4lIGMoIndhcm5pbmciLCAic3RvcCIsICJtZXNzYWdlIiwgInBhY2thZ2VTdGFydHVwTWVzc2FnZSIsCi0gICAgICAgICAgICAgICAgICAgICAgImdldHRleHQiLCAiZ2V0dGV4dGYiKSkpIHsKKyAgICAgICAgICAgICAgICAgICAgICAiZ2V0dGV4dCIsICJnZXR0ZXh0ZiIsICJzdG9waWZub3QiKSkpIHsKICAgICAgICAgICAgICBkb21haW4gPC0gZVtbImRvbWFpbiJdXQogICAgICAgICAgICAgIHN1cHByZXNzIDwtICFpcy5udWxsKGRvbWFpbikgJiYgIWlzLm5hbWUoZG9tYWluKSAmJiBpcy5uYShkb21haW4pCi0gICAgICAgICAgICAgIyMgcmVtb3ZlIG5hbWVkIGFyZ3MKLSAgICAgICAgICAgICBpZighaXMubnVsbChuYW1lcyhlKSkpCi0gICAgICAgICAgICAgICAgIGUgPC0gZVtuYW1lcyhlKSAlbm90aW4lIGMoImNhbGwuIiwgImltbWVkaWF0ZS4iLCAiZG9tYWluIildCi0gICAgICAgICAgICAgaWYoYXNDYWxsKSB7Ci0gICAgICAgICAgICAgICAgIGlmKCFzdXBwcmVzcykgc3RyaW5ncyA8PC0gYyhzdHJpbmdzLCBhcy5jaGFyYWN0ZXIoZSlbLTFMXSkKKyAgICAgICAgICAgICBpZiAoYXMuY2hhcmFjdGVyKGVbWzFMXV0pID09ICJzdG9waWZub3QiKSB7CisgICAgICAgICAgICAgICBpZiAoaXMubnVsbChuYW1lcyhlKSkpIHJldHVybihpbnZpc2libGUoKSkKKyAgICAgICAgICAgICAgIGUgPC0gZVtuYW1lcyhlKSAlbm90aW4lIGMoImV4cHJzIiwgImV4cHJPYmplY3QiLCAibG9jYWwiLCAiZG9tYWluIildCisgICAgICAgICAgICAgICBpZiAoYXNDYWxsKSB7CisgICAgICAgICAgICAgICAgIGlmICghc3VwcHJlc3MpIHN0cmluZ3MgPDwtIGMoc3RyaW5ncywgbmFtZXMoZSlbLTFMXSkKKyAgICAgICAgICAgICAgIH0gZWxzZSB7CisgICAgICAgICAgICAgICAgIGZvciAoaSBpbiBzZXFfYWxvbmcoZSkpIGZpbmRfc3RyaW5nczIobmFtZXMoZSlbaV0sIHN1cHByZXNzKQorICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgIH0gZWxzZSB7Ci0gICAgICAgICAgICAgICAgIGlmKGFzLmNoYXJhY3RlcihlW1sxTF1dKSA9PSAiZ2V0dGV4dGYiKSB7Ci0gICAgICAgICAgICAgICAgICAgICBlIDwtIG1hdGNoLmNhbGwoZ2V0dGV4dGYsIGUpCi0gICAgICAgICAgICAgICAgICAgICBlIDwtIGVbImZtdCJdICMganVzdCBsb29rIGF0IGZtdCBhcmcKLSAgICAgICAgICAgICAgICAgfQotICAgICAgICAgICAgICAgICBmb3IoaSBpbiBzZXFfYWxvbmcoZSkpIGZpbmRfc3RyaW5nczIoZVtbaV1dLCBzdXBwcmVzcykKKyAgICAgICAgICAgICAgICMjIHJlbW92ZSBuYW1lZCBhcmdzCisgICAgICAgICAgICAgICBpZighaXMubnVsbChuYW1lcyhlKSkpCisgICAgICAgICAgICAgICAgICAgZSA8LSBlW25hbWVzKGUpICVub3RpbiUgYygiY2FsbC4iLCAiaW1tZWRpYXRlLiIsICJkb21haW4iKV0KKyAgICAgICAgICAgICAgIGlmKGFzQ2FsbCkgeworICAgICAgICAgICAgICAgICAgIGlmKCFzdXBwcmVzcykgc3RyaW5ncyA8PC0gYyhzdHJpbmdzLCBhcy5jaGFyYWN0ZXIoZSlbLTFMXSkKKyAgICAgICAgICAgICAgIH0gZWxzZSB7CisgICAgICAgICAgICAgICAgICAgaWYoYXMuY2hhcmFjdGVyKGVbWzFMXV0pID09ICJnZXR0ZXh0ZiIpIHsKKyAgICAgICAgICAgICAgICAgICAgICAgZSA8LSBtYXRjaC5jYWxsKGdldHRleHRmLCBlKQorICAgICAgICAgICAgICAgICAgICAgICBlIDwtIGVbImZtdCJdICMganVzdCBsb29rIGF0IGZtdCBhcmcKKyAgICAgICAgICAgICAgICAgICB9CisgICAgICAgICAgICAgICAgICAgZm9yKGkgaW4gc2VxX2Fsb25nKGUpKSBmaW5kX3N0cmluZ3MyKGVbW2ldXSwgc3VwcHJlc3MpCisgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgfQogICAgICAgICB9IGVsc2UgaWYoaXMucmVjdXJzaXZlKGUpKQogICAgICAgICAgICAgZm9yKGkgaW4gc2VxX2Fsb25nKGUpKSBSZWNhbGwoZVtbaV1dKQo=",
+          "creator": "michaelchirico4",
+          "is_patch": true,
+          "bug_id": 17824,
+          "file_name": "patch",
+          "summary": "stopifnot gains domain argument, and tools::xgettext reads these messages",
+          "creation_time": "2020-06-07T16:13:17Z",
+          "id": 2630,
+          "is_private": false,
+          "size": 3818,
+          "last_change_time": "2020-06-07T16:13:17Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2023-09-06 15:28:21"
+}

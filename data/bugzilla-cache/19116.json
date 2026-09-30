@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-08-02T00:45:58Z",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19116,
+        "cc": [],
+        "qa_contact": "",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "flags": [],
+        "platform": "Other",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "<matrix>[[i, j]]: stochastic error with negative i",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-08-02T00:46:13Z"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19116": {
+        "comments": [
+          {
+            "attachment_id": 3767,
+            "time": "2026-08-02T00:45:58Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 103352,
+            "creation_time": "2026-08-02T00:45:58Z",
+            "count": 0,
+            "text": "Created attachment 3767\nCandidate patch.\n\nTo reproduce:\n\n```\nm <- matrix(1:4, 2)\n\nmm <- m; mm[[-1, 1]] <- 99L\nmm[, 1]\n\n## `[[` reads an uninitialized int in the same argument position:\nres <- replicate(200, {\n  invisible(lapply(1:200, function(i) c(2L, 2L)))   # churn the heap\n  tryCatch(as.character(m[[-1, 1]]), error = function(e) \"<error>\")\n})\ntable(res)\n```\n\nThis gives me:\n\n```\n> mm <- m; mm[[-1, 1]] <- 99L\n> mm[, 1]\n[1]  1 99\n>\n> ## `[[` reads an uninitialized int in the same argument position:\n> res <- replicate(200, {\n+   invisible(lapply(1:200, function(i) c(2L, 2L)))   # churn the heap\n+   tryCatch(as.character(m[[-1, 1]]), error = function(e) \"<error>\")\n+ })\n> table(res)\nres\n<error>       2\n    173      27\n```\n\nbut note that the number of errors here isn't deterministic.\n\nFrom what I can see, the issue here arises because of the use of `pindx` instead of `pdims` in the invocation of `get1index()`. Note that the same loop form is used in `do_subassign2_dflt()` (`subassign.c:1897-1911`), but with `pdims[i]` passed instead, so I suspect this is a long-standing typo.",
+            "bug_id": 19116
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19116": [
+        {
+          "creation_time": "2026-08-02T00:45:58Z",
+          "summary": "Candidate patch.",
+          "file_name": "file_19116.txt",
+          "bug_id": 19116,
+          "last_change_time": "2026-08-02T00:46:13Z",
+          "size": 489,
+          "is_private": false,
+          "id": 3767,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3N1YnNldC5jDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL21haW4vc3Vic2V0LmMJKHJldmlzaW9uIDkwMzM0KQ0KKysrIHNyYy9tYWluL3N1YnNldC5jCSh3b3JraW5nIGNvcHkpDQpAQCAtMTA5MSw3ICsxMDkxLDcgQEANCiAJICAgIHBpbmR4W2ldID0gKGludCkNCiAJCWdldDFpbmRleCh0aGVzdWIsDQogCQkJICAoaSA8IG5kbikgPyBWRUNUT1JfRUxUKGRpbW5hbWVzLCBpKSA6IFJfTmlsVmFsdWUsDQotCQkJICBwaW5keFtpXSwgcG9rLCAtMSwgY2FsbCk7DQorCQkJICBwZGltc1tpXSwgcG9rLCAtMSwgY2FsbCk7DQogCSAgICBzdWJzID0gQ0RSKHN1YnMpOw0KIAkgICAgaWYgKHBpbmR4W2ldIDwgMCB8fCBwaW5keFtpXSA+PSBwZGltc1tpXSkNCiAJCWVycm9yY2FsbE91dE9mQm91bmRzU0VYUCh4LCBpLCB0aGVzdWIsIGNhbGwpOw0K",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-08-02 00:46:13"
+}

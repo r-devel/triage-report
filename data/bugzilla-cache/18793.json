@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "checkPoFile() has a really strong assumption of no blank lines between msgid and msgstr entries",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [],
+        "last_change_time": "2024-09-09T03:52:58Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "status": "UNCONFIRMED",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-09-09T03:36:19Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 18793,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Translations"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18793": {
+        "comments": [
+          {
+            "creation_time": "2024-09-09T03:36:19Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18793,
+            "text": "This was encountered during patch generation from Weblate -- we're not sure how the errant newline appeared, but the failure mode here is really \"scary\":\n\n```\nlibrary(tools)\nlt_po = 'src/library/stats/po/lt.po'\nstopifnot(!nrow(checkPoFile(lt_po))) # no issue in trunk file\n\npo_lines = readLines(lt_po)\nwriteLines(po_lines[1:2])\n# msgid \"\"\n# msgstr \"\"\n\nwriteLines(\n  c(po_lines[1L], '', po_lines[-1L]), # i.e., insert a blank line after 'msgid'\n  tmp<-tempfile()\n)\n\nreport = tools::checkPoFile(tmp)\nnrow(report)\n# [1] 152\nr5 = report[1:5, ]\nclass(r5) = class(report)\nr5\n```\n\nFirst 5 entries:\n\n```\n/tmp/RtmpjsPxdj/file31de61deff9cd:18\nSrunmed.c:63\ntranslating strings with \"bytes\" encoding is not allowed\nbandwidth/span of running medians is larger than n\neinam\\xc5\\xb3j\\xc5\\xb3 median\\xc5\\xb3 pralaidumas / span yra didesnis nei n\n\n/tmp/RtmpjsPxdj/file31de61deff9cd:32\nSrunmed.c:315\ntranslating strings with \"bytes\" encoding is not allowed\nna_action logic error (%d), please report!\nna_action logikos klaida (%d), pra\\xc5\\xa1ome prane\\xc5\\xa1ti!\n\n/tmp/RtmpjsPxdj/file31de61deff9cd:36\nansari.c:118\ntranslating strings with \"bytes\" encoding is not allowed\nprobabilities outside [0,1] in qansari()\ntikimyb\\xc4\\x97s [0,1] i\\xc5\\xa1or\\xc4\\x97je, esan\\xc4\\x8dios qansari()\n\n/tmp/RtmpjsPxdj/file31de61deff9cd:40\napprox.c:114\ntranslating strings with \"bytes\" encoding is not allowed\napprox(): invalid f value\napprox(): netinkama f reik\\xc5\\xa1m\\xc4\\x97\n\n/tmp/RtmpjsPxdj/file31de61deff9cd:48\napprox.c:124\ntranslating strings with \"bytes\" encoding is not allowed\napprox(): attempted to interpolate NA values\napprox(): bandyta interpoliuoti NA reik\\xc5\\xa1mes\n```\n\nThis output makes it look like something's gone catastrophically wrong with the translation, while the fix is really just deleting one character.",
+            "count": 0,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "id": 101182,
+            "time": "2024-09-09T03:36:19Z",
+            "is_private": false
+          },
+          {
+            "creation_time": "2024-09-09T03:52:58Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18793,
+            "text": "Created attachment 3399\nAllow blank lines between msgid and msgstr entries\n\nProposed fix to just skip blank lines between `msgid` and `msgstr`.\n\nI don't see anything in the GNU .po file reference about whether this is allowed or not:\n\nhttps://www.gnu.org/software/gettext/manual/html_node/PO-Files.html\n\nRegardless, a little flexibility here to avoid the very confusing failure seen in the issue is worth it IMO.",
+            "is_markdown": true,
+            "count": 1,
+            "attachment_id": 3399,
+            "tags": [],
+            "id": 101183,
+            "time": "2024-09-09T03:52:58Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18793": [
+        {
+          "last_change_time": "2024-09-09T03:52:58Z",
+          "size": 607,
+          "is_private": false,
+          "id": 3399,
+          "creation_time": "2024-09-09T03:52:58Z",
+          "summary": "Allow blank lines between msgid and msgstr entries",
+          "file_name": "patch-po-skip-empty",
+          "bug_id": 18793,
+          "is_patch": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IveGdldHRleHQuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL3hnZXR0ZXh0LlIJKHJldmlzaW9uIDg3MTA2KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi94Z2V0dGV4dC5SCSh3b3JraW5nIGNvcHkpCkBAIC0yNTEsNyArMjUxLDggQEAKIAkJICAgIHN0YXRlbWVudCA8LSAibXNnc3RyIgogCQllbHNlIGlmIChncmVwbCgiXm1zZ3N0clxcW1tbOmRpZ2l0Ol1dK1xcXVtbOmJsYW5rOl1dIiwgbGluZXNbal0sIHVzZUJ5dGVzID0gVFJVRSkpCiAJCSAgICBzdGF0ZW1lbnQgPC0gc3ViKCJeKG1zZ3N0cilcXFsoW1s6ZGlnaXQ6XV0rKVxcXS4qJCIsICJcXDFcXFxcW1xcMlxcXFxdIiwgbGluZXNbal0pCi0JCWVsc2UKKwkJZWxzZSBpZiAobGluZXNbal0gPT0gIiIpIHsgaiA8LSBqICsgMUw7IG5leHQgfQorICAgICAgICAgICAgICAgIGVsc2UKIAkJICAgIGJyZWFrCiAKIAkJczIgPC0gc3ViKCBwYXN0ZTAoIl4iLCBzdGF0ZW1lbnQsICJbWzpibGFuazpdXStbXCJdKC4qKVtcIl1bWzpibGFuazpdXSokIiksCg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2024-09-09 03:52:58"
+}

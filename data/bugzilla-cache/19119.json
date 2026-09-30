@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-08-03T18:06:04Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19119,
+        "deadline": {},
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "Other",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "`writeChar()` on Windows counts supplementary characters twice",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-08-03T18:06:50Z",
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19119": {
+        "comments": [
+          {
+            "time": "2026-08-03T18:06:04Z",
+            "id": 103359,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "## Summary\n\n`do_writechar()` counts the characters of each element with\n`mbstowcs(NULL, s, 0)`.  Where `wchar_t` is 16-bit (Windows), `mbstowcs()`\nreturns the number of UTF-16 code units, so each supplementary (\"non-BMP\")\ncharacter such as `\"\\U0001F600\"` counts as 2.  `nchars` therefore means\nsomething different on Windows than on other platforms -- and something\ndifferent from what `readChar()` and `nchar()` mean by a \"char\" on Windows\nitself.  `?writeChar` describes `nchars` as a number of characters, with no\nplatform qualification.\n\nThis surfaced as a Windows check failure of the regression test added with\nthe PR#19112 fix in r90334: the test writes 100 supplementary characters with\n`nchars = 399L` and expects a 699-byte file; Windows writes 599 bytes.\n\n## Reproducible example\n\nRun on Windows, in a UTF-8 locale:\n\n```\nsu <- strrep(\"\\U0001F600\", 100L)   # 100 characters, 400 bytes in UTF-8\nnchar(su, \"chars\")\n## [1] 100                <- R counts code points itself, also on Windows\n\ntf <- tempfile(); f <- file(tf, \"wb\")\nsuppressWarnings(writeChar(su, f, nchars = 399L, eos = NULL))\nclose(f)\nfile.size(tf)\n## Unix, macOS: 699       (400 bytes + 299 padding: 399 - 100 characters)\n## Windows:     599       (400 bytes + 199 padding: 399 - 200 UTF-16 units)\n```\n\nThis is part (c) of the PR#19112 regression test in `tests/reg-encodings.R`,\nwhose unconditional `stopifnot(all.equal(file.size(tf), 699))` currently\nfails on Windows.\n\n## Analysis\n\nBoth the buffer-sizing loop and the writing loop of `do_writechar()` count\ncharacters the same way (`src/main/connections.c:5419-5420` and `:5506`):\n\n```\n\t    size_t nb = strlen(ss),\n\t\tnc = mbcslocale ? mbstowcs(NULL, ss, 0) : nb;\n```\n\nWith a 16-bit `wchar_t`, converting a supplementary character yields a UTF-16\nsurrogate pair, so `mbstowcs(NULL, s, 0)` counts it twice.  The padding\narithmetic `nb += tt - nc` then under-pads by one byte per supplementary\ncharacter.\n\n`readChar()` never goes through `wchar_t`: in a UTF-8 locale,\n`readFixedString()` and `rawFixedString()` walk the input with `utf8clen()`,\none character at a time (`connections.c:5189-5212`, `:5245-5259`), and\n`nchar(x, \"chars\")` likewise counts code points.  So on Windows,\n`writeChar(x, con, nchars = n)` and `readChar(con, nchars = n)` disagree\nabout what a \"char\" is whenever `x` contains supplementary characters.\n\nThe truncation branch (`nchars` smaller than the character count,\n`connections.c:5423-5433` and the matching loop in the writer) compares\n`tt < nc` against the same inflated count before consuming characters with\n`Mbrtowc()`; for non-BMP input this path was exercised by no test on any\nplatform.\n\n## Candidate patch\n\nAdd `mbCharCount()` and `mbBytesForChars()` helpers used by both the\nbuffer-sizing loop and the writing loop: in a UTF-8 locale, count complete\nUTF-8 characters directly via `utf8clen()` -- the same idiom `readChar()`\nuses -- and in other MBCS locales keep the existing `mbstowcs()`/`Mbrtowc()`\ncode (those encodings have no supplementary-plane characters, so the counts\nagree).\n\n```\n/* Number of characters in 's': where wchar_t is 16-bit (Windows),\n   mbstowcs() returns the number of UTF-16 code units, counting each\n   supplementary (\"non-BMP\") character twice, so in a UTF-8 locale count\n   complete UTF-8 characters directly, as readChar() and nchar() do.\n   Returns (size_t)-1 for an invalid multibyte string. */\nstatic size_t mbCharCount(const char *s)\n{\n    size_t nc = mbstowcs(NULL, s, 0);\n\n    if(utf8locale && (int) nc >= 0) {\n\tnc = 0;\n\tfor(const char *p = s; *p; p += utf8clen(*p))\n\t    nc++;\n    }\n    return nc;\n}\n\n/* Byte length of the first 'nchars' characters of 's'.  For an invalid\n   multibyte string (valid = FALSE), Mbrtowc() signals an error when it\n   reaches the first invalid sequence. */\nstatic size_t mbBytesForChars(const char *s, R_xlen_t nchars, Rboolean valid)\n{\n    const char *p = s;\n\n    if(valid && utf8locale) {\n\tfor(R_xlen_t j = 0; j < nchars && *p; j++)\n\t    p += utf8clen(*p);\n    } else {\n\tmbstate_t mb_st;\n\tmbs_init(&mb_st);\n\tfor(R_xlen_t j = 0; j < nchars; j++) {\n\t    size_t used = Mbrtowc(NULL, p, R_MB_CUR_MAX, &mb_st);\n\t    if(!used) break;\n\t    p += used;\n\t}\n    }\n    return (size_t)(p - s);\n}\n```\n\nProperties:\n\n- On platforms with 32-bit `wchar_t` (Unix, macOS), behavior is unchanged:\n  for valid strings, the `utf8clen()` walk returns exactly what\n  `mbstowcs()`/`Mbrtowc()` returned.\n- Invalid multibyte strings take the previous `Mbrtowc()` path unchanged\n  (`mbCharCount()` still calls `mbstowcs()` first, so invalidity is still\n  detected), preserving the existing \"invalid multibyte string at ...\"\n  error behavior.\n- On Windows, `nchars` now counts supplementary characters once,\n  consistently with `readChar()` and `nchar()`, and the unconditional\n  `file.size(tf) == 699` expectation in `tests/reg-encodings.R` holds on\n  Windows too.\n\nThe patch also adds a truncation test (`nchars` smaller than the number of\ncharacters) with supplementary characters.  Its assertions deliberately use\n`readBin()`/raw comparisons rather than `readChar()`: whether UCRT's\n`mbrtowc()` (used in `readFixedString()`'s per-character validity check)\naccepts 4-byte UTF-8 sequences with a 16-bit `wchar_t` is a separate open\nquestion, and `readChar()` of non-BMP text on Windows deserves its own\ntest and investigation.\n\n## Compatibility\n\nThis changes what Windows writes for the (rare) case\n`nchars != number of characters` with non-BMP input: previously-written\npadded files effectively used UTF-16-unit counts.  Given that the\npadding/truncation path for non-BMP characters was inconsistent between\n`writeChar()` and `readChar()` and untested, treating the old Windows\nbehavior as a bug seems right, but that is R-core's call.  The alternative\nis to keep the Windows behavior, special-case the r90334 regression test\n(`if(onWindows) 599`, proposed as\n<https://github.com/r-devel/r-svn/pull/280>), and document that on Windows\n`nchars` counts UTF-16 code units.\n\n## Verification after patching\n\nOn all platforms, including Windows:\n\n```\nsu <- strrep(\"\\U0001F600\", 100L)\n\n## (c) of the PR#19112 regression test: padding\ntf <- tempfile(); f <- file(tf, \"wb\")\nsuppressWarnings(writeChar(su, f, nchars = 399L, eos = NULL))\nclose(f)\nstopifnot(file.size(tf) == 699)\n\n## truncation, previously untested for non-BMP input on any platform\nr2 <- writeChar(su, raw(), nchars = 50L, eos = NULL)\ntf2 <- tempfile(); f <- file(tf2, \"wb\")\nwriteChar(su, f, nchars = 50L, eos = NULL)\nclose(f)\nstopifnot(exprs = {\n    identical(r2, charToRaw(strrep(\"\\U0001F600\", 50L)))\n    file.size(tf2) == 200\n    identical(readBin(tf2, \"raw\", 300L), charToRaw(strrep(\"\\U0001F600\", 50L)))\n})\n```\n\nBoth checks are included in the patch as additions to\n`tests/reg-encodings.R`, and pass in the r-svn mirror's CI on Linux, macOS,\nand both Windows runners (x86_64 and aarch64).",
+            "bug_id": 19119,
+            "is_markdown": true,
+            "count": 0,
+            "creator": "kevinushey",
+            "creation_time": "2026-08-03T18:06:04Z"
+          },
+          {
+            "creation_time": "2026-08-03T18:06:50Z",
+            "bug_id": 19119,
+            "text": "Created attachment 3769\nCandidate patch.",
+            "count": 1,
+            "tags": [],
+            "id": 103360,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "attachment_id": 3769,
+            "time": "2026-08-03T18:06:50Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19119": [
+        {
+          "summary": "Candidate patch.",
+          "creation_time": "2026-08-03T18:06:50Z",
+          "bug_id": 19119,
+          "file_name": "file_19119.txt",
+          "size": 4469,
+          "last_change_time": "2026-08-03T18:06:50Z",
+          "id": 3769,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMNCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NCi0tLSBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCShyZXZpc2lvbiA5MDMzNCkNCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpDQpAQCAtNTM0NSw4ICs1MzQ1LDQ3IEBADQogICAgIH0NCiAgICAgVU5QUk9URUNUKDEpOw0KICAgICByZXR1cm4gYW5zOw0KK30NCisNCisvKiBOdW1iZXIgb2YgY2hhcmFjdGVycyBpbiAncyc6IHdoZXJlIHdjaGFyX3QgaXMgMTYtYml0IChXaW5kb3dzKSwNCisgICBtYnN0b3djcygpIHJldHVybnMgdGhlIG51bWJlciBvZiBVVEYtMTYgY29kZSB1bml0cywgY291bnRpbmcgZWFjaA0KKyAgIHN1cHBsZW1lbnRhcnkgKCJub24tQk1QIikgY2hhcmFjdGVyIHR3aWNlLCBzbyBpbiBhIFVURi04IGxvY2FsZSBjb3VudA0KKyAgIGNvbXBsZXRlIFVURi04IGNoYXJhY3RlcnMgZGlyZWN0bHksIGFzIHJlYWRDaGFyKCkgYW5kIG5jaGFyKCkgZG8uDQorICAgUmV0dXJucyAoc2l6ZV90KS0xIGZvciBhbiBpbnZhbGlkIG11bHRpYnl0ZSBzdHJpbmcuICovDQorc3RhdGljIHNpemVfdCBtYkNoYXJDb3VudChjb25zdCBjaGFyICpzKQ0KK3sNCisgICAgc2l6ZV90IG5jID0gbWJzdG93Y3MoTlVMTCwgcywgMCk7DQorDQorICAgIGlmKHV0Zjhsb2NhbGUgJiYgKGludCkgbmMgPj0gMCkgew0KKwluYyA9IDA7DQorCWZvcihjb25zdCBjaGFyICpwID0gczsgKnA7IHAgKz0gdXRmOGNsZW4oKnApKQ0KKwkgICAgbmMrKzsNCisgICAgfQ0KKyAgICByZXR1cm4gbmM7DQogfQ0KKw0KKy8qIEJ5dGUgbGVuZ3RoIG9mIHRoZSBmaXJzdCAnbmNoYXJzJyBjaGFyYWN0ZXJzIG9mICdzJy4gIEZvciBhbiBpbnZhbGlkDQorICAgbXVsdGlieXRlIHN0cmluZyAodmFsaWQgPSBGQUxTRSksIE1icnRvd2MoKSBzaWduYWxzIGFuIGVycm9yIHdoZW4gaXQNCisgICByZWFjaGVzIHRoZSBmaXJzdCBpbnZhbGlkIHNlcXVlbmNlLiAqLw0KK3N0YXRpYyBzaXplX3QgbWJCeXRlc0ZvckNoYXJzKGNvbnN0IGNoYXIgKnMsIFJfeGxlbl90IG5jaGFycywgUmJvb2xlYW4gdmFsaWQpDQorew0KKyAgICBjb25zdCBjaGFyICpwID0gczsNCiANCisgICAgaWYodmFsaWQgJiYgdXRmOGxvY2FsZSkgew0KKwlmb3IoUl94bGVuX3QgaiA9IDA7IGogPCBuY2hhcnMgJiYgKnA7IGorKykNCisJICAgIHAgKz0gdXRmOGNsZW4oKnApOw0KKyAgICB9IGVsc2Ugew0KKwltYnN0YXRlX3QgbWJfc3Q7DQorCW1ic19pbml0KCZtYl9zdCk7DQorCWZvcihSX3hsZW5fdCBqID0gMDsgaiA8IG5jaGFyczsgaisrKSB7DQorCSAgICBzaXplX3QgdXNlZCA9IE1icnRvd2MoTlVMTCwgcCwgUl9NQl9DVVJfTUFYLCAmbWJfc3QpOw0KKwkgICAgaWYoIXVzZWQpIGJyZWFrOw0KKwkgICAgcCArPSB1c2VkOw0KKwl9DQorICAgIH0NCisgICAgcmV0dXJuIChzaXplX3QpKHAgLSBzKTsNCit9DQorDQogLyogd3JpdGVDaGFyKG9iamVjdCwgY29uLCBuY2hhcnMsIHNlcCwgdXNlQnl0ZXMpICovDQogYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3dyaXRlY2hhcihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpDQogew0KQEAgLTUzNTgsNyArNTM5Nyw2IEBADQogICAgIGNvbnN0IGNoYXIgKnMsICpzc2VwID0gIiI7DQogICAgIFJib29sZWFuIHdhc29wZW4gPSBUUlVFLCB1c2VzZXAsIGlzUmF3ID0gRkFMU0U7DQogICAgIFJjb25uZWN0aW9uIGNvbiA9IE5VTEw7DQotICAgIG1ic3RhdGVfdCBtYl9zdDsNCiAgICAgUkNOVFhUIGNudHh0Ow0KIA0KICAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsNCkBAIC01NDE3LDIxICs1NDU1LDEzIEBADQogCWVsc2Ugew0KIAkgICAgY29uc3QgY2hhciAqc3MgPSB1c2VCeXRlcyA/IENIQVIoc2lpKSA6IHRyYW5zbGF0ZUNoYXIoc2lpKTsNCiAJICAgIHNpemVfdCBuYiA9IHN0cmxlbihzcyksDQotCQluYyA9IG1iY3Nsb2NhbGUgPyBtYnN0b3djcyhOVUxMLCBzcywgMCkgOiBuYjsNCisJCW5jID0gbWJjc2xvY2FsZSA/IG1iQ2hhckNvdW50KHNzKSA6IG5iOw0KIAkgICAgaWYoKHNpemVfdCkgdHQgPiBuYykNCiAJCW5iICs9ICgoc2l6ZV90KSB0dCAtIG5jKTsgLyogemVyby1wYWRkaW5nLCBjb3VudGVkIGluIGJ5dGVzICovDQogCSAgICBlbHNlIGlmKChzaXplX3QpIHR0IDwgbmMpIHsNCi0JCWlmKG1iY3Nsb2NhbGUpIHsNCi0JCSAgICBtYnN0YXRlX3QgbWJfc3QxOw0KLQkJICAgIG1ic19pbml0KCZtYl9zdDEpOw0KLQkJICAgIGNvbnN0IGNoYXIgKnAgPSBzczsNCi0JCSAgICBuYiA9IDA7DQotCQkgICAgZm9yKGludCBqID0gMDsgaiA8IHR0OyBqKyspIHsNCi0JCQlzaXplX3QgdXNlZCA9IE1icnRvd2MoTlVMTCwgcCwgUl9NQl9DVVJfTUFYLCAmbWJfc3QxKTsNCi0JCQlwICArPSB1c2VkOw0KLQkJCW5iICs9IHVzZWQ7DQotCQkgICAgfQ0KLQkJfSBlbHNlDQorCQlpZihtYmNzbG9jYWxlKQ0KKwkJICAgIG5iID0gbWJCeXRlc0ZvckNoYXJzKHNzLCB0dCwgbmMgIT0gKHNpemVfdCktMSk7DQorCQllbHNlDQogCQkgICAgbmIgPSAoc2l6ZV90KSB0dDsNCiAJICAgIH0NCiAJICAgIG5ieXRlc1tpXSA9IG5iOw0KQEAgLTU1MDMsMjQgKzU1MzMsMTcgQEANCiAJICAgIGVsc2UNCiAJCXMgPSB0cmFuc2xhdGVDaGFyKHNpKTsNCiAJICAgIGxlbmIgPSBsZW5jID0gc3RybGVuKHMpOw0KLQkgICAgaWYobWJjc2xvY2FsZSkgbGVuYyA9IG1ic3Rvd2NzKE5VTEwsIHMsIDApOw0KKwkgICAgaWYobWJjc2xvY2FsZSkgbGVuYyA9IG1iQ2hhckNvdW50KHMpOw0KIAkgICAgLyogQXMgZnJvbSAxLjguMSwgemVyby1wYWQgaWYgdG9vIG1hbnkgY2hhcnMgYXJlIHJlcXVlc3RlZC4gKi8NCiAJICAgIGlmKGxlbiA+IGxlbmMpIHsNCiAJCXdhcm5pbmcoXygid3JpdGVDaGFyOiBtb3JlIGNoYXJhY3RlcnMgcmVxdWVzdGVkIHRoYW4gYXJlIGluIHRoZSBzdHJpbmcgLSB3aWxsIHplcm8tcGFkIikpOw0KIAkJbGVuYiArPSAobGVuIC0gbGVuYyk7DQogCSAgICB9DQogCSAgICBpZihsZW4gPCBsZW5jKSB7DQotCQlpZihtYmNzbG9jYWxlKSB7DQorCQlpZihtYmNzbG9jYWxlKQ0KIAkJICAgIC8qIGZpbmQgb3V0IGhvdyBtYW55IGJ5dGVzIHdlIG5lZWQgdG8gd3JpdGUgKi8NCi0JCSAgICBzaXplX3QgaSwgdXNlZDsNCi0JCSAgICBjb25zdCBjaGFyICpwID0gczsNCi0JCSAgICBtYnNfaW5pdCgmbWJfc3QpOw0KLQkJICAgIGZvcihpID0gMCwgbGVuYiA9IDA7IGkgPCBsZW47IGkrKykgew0KLQkJCXVzZWQgPSBNYnJ0b3djKE5VTEwsIHAsIFJfTUJfQ1VSX01BWCwgJm1iX3N0KTsNCi0JCQlwICs9IHVzZWQ7DQotCQkJbGVuYiArPSB1c2VkOw0KLQkJICAgIH0NCi0JCX0gZWxzZQ0KKwkJICAgIGxlbmIgPSBtYkJ5dGVzRm9yQ2hhcnMocywgbGVuLCBsZW5jICE9IChzaXplX3QpLTEpOw0KKwkJZWxzZQ0KIAkJICAgIGxlbmIgPSBsZW47DQogCSAgICB9DQogCSAgICBpZiAobGVuYiArIHNsZW4pDQpJbmRleDogdGVzdHMvcmVnLWVuY29kaW5ncy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gdGVzdHMvcmVnLWVuY29kaW5ncy5SCShyZXZpc2lvbiA5MDMzNCkNCisrKyB0ZXN0cy9yZWctZW5jb2RpbmdzLlIJKHdvcmtpbmcgY29weSkNCkBAIC00NjUsMyArNDY1LDE1IEBADQogIyMgb3IgICBGYXRhbCBnbGliYyBlcnJvcjogbWFsbG9jLmM6Li4oX2ludF9tYWxsb2MpOiBhc3NlcnRpb24gZmFpbGVkOiAodW5zaWduZWQgbG9uZykgKHNpemUpID49ICh1bnNpZ25lZCBsb25nKShuYikNCiAjIyBub3csIGFmdGVyIGZpeGluZzoNCiBzdG9waWZub3QoYWxsLmVxdWFsKGZpbGUuc2l6ZSh0ZiksIDY5OSkpDQorIyMgZmlsZS5zaXplKHRmKSB3YXMgNTk5IG9uIFdpbmRvd3MgaW4gUiA8PSA0LjYueCwgY291bnRpbmcgZWFjaCBvZiB0aGVzZQ0KKyMjIHN1cHBsZW1lbnRhcnkgKCJub24tQk1QIikgY2hhcmFjdGVycyBhcyB0d28gVVRGLTE2IGNvZGUgdW5pdHMNCisjIyAoZCkgdHJ1bmNhdGlvbiwgd2hpY2ggbXVzdCBhbHNvIGNvdW50IGNoYXJhY3RlcnMsIGFzIHJlYWRDaGFyKCkgZG9lcw0KK3IyIDwtIHdyaXRlQ2hhcihzdSwgcmF3KCksIG5jaGFycyA9IDUwTCwgZW9zID0gTlVMTCkNCit0ZjIgPC0gdGVtcGZpbGUoKTsgZiA8LSBmaWxlKHRmMiwgIndiIikNCit3cml0ZUNoYXIoc3UsIGYsIG5jaGFycyA9IDUwTCwgZW9zID0gTlVMTCkNCitjbG9zZShmKQ0KK3N0b3BpZm5vdChleHBycyA9IHsNCisgICAgaWRlbnRpY2FsKHIyLCBjaGFyVG9SYXcoc3RycmVwKCJcVTAwMDFGNjAwIiwgNTBMKSkpDQorICAgIGZpbGUuc2l6ZSh0ZjIpID09IDIwMA0KKyAgICBpZGVudGljYWwocmVhZEJpbih0ZjIsICJyYXciLCAzMDBMKSwgY2hhclRvUmF3KHN0cnJlcCgiXFUwMDAxRjYwMCIsIDUwTCkpKQ0KK30pDQo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-08-03 18:06:50"
+}

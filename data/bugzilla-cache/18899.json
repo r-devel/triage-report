@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Misc",
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2025-05-28T22:23:18Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 18899,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "split() should get an option (e.g. na.rm=FALSE) to keep missing levels",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2025-05-28T22:23:18Z",
+        "cc_detail": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18899": {
+        "comments": [
+          {
+            "text": "Now, we have no option but to have missing levels dropped from split():\n\n```\nsplit(1:2, c(NA, \"NA\"))\n# $`NA`\n# [1] 2\n```\n\nSticking with `NA` being \"unknown\", it's hard to know what to do with these observations, strictly speaking.\n\nStill, offering `na.rm=FALSE` and treating \"missing\" as its own level gives the user easier flexibility for dealing with these observations.\n\nAs it stands, it's quite awkward in general to deal with the case of possible missingness -- consider splitting a data.frame by multiple factors, any of which might be missing:\n\n```\nsplit(expand.grid(a = c(0:1, NA), b = c(0:1, NA)), ~a+b)\n# $`0.0`\n#   a b\n# 1 0 0\n\n# $`1.0`\n#   a b\n# 2 1 0\n\n# $`0.1`\n#   a b\n# 4 0 1\n\n# $`1.1`\n#   a b\n# 5 1 1\n```\n\nHere we've lost over half of the observations; restoring them manually is non-trivial in the general case where `f` could be a string, possibly including the string `\"NA\"`.",
+            "bug_id": 18899,
+            "count": 0,
+            "creation_time": "2025-05-28T22:23:18Z",
+            "id": 101757,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2025-05-28T22:23:18Z",
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18899": []
+    }
+  },
+  "source_changed": "2025-05-28 22:23:18"
+}

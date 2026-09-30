@@ -1,0 +1,121 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "Other",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "patch: implement fast path for |, & in byte code evaluator",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "real_name": "Tom Abernathy",
+            "id": 3753,
+            "name": "tom.abernathy"
+          }
+        ],
+        "last_change_time": "2026-04-30T14:59:02Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-03-27T00:00:40Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "tom.abernathy"
+        ],
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19031,
+        "deadline": {}
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19031": {
+        "comments": [
+          {
+            "attachment_id": 3645,
+            "time": "2026-03-27T00:00:40Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 102809,
+            "creation_time": "2026-03-27T00:00:40Z",
+            "count": 0,
+            "text": "Created attachment 3645\nImplement FastLogic2.\n\nFastLogic2 was just falling back to Builtin2; this patch implements the actual dispatch to support fast evaluation here.",
+            "bug_id": 19031
+          },
+          {
+            "creation_time": "2026-04-30T14:59:02Z",
+            "creator": "tom.abernathy",
+            "bug_id": 19031,
+            "text": "Wouldn't it be simpler (faster) to test the NA's first in this OROP function?\n\n```\nstatic R_INLINE int OROP(int x, int y) {\n    if ((x == NA_LOGICAL) || (y == NA_LOGICAL)) return NA_LOGICAL;\n    if (x == 0 && y == 0) return 0;\n    return 1;\n}\n```",
+            "count": 1,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "id": 103007,
+            "time": "2026-04-30T14:59:02Z",
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19031": [
+        {
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDg5Njg1KQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC00OTcyLDExICs0OTcyLDUxIEBACiAJUmVsb3AyKG9wdmFsLCBvcHN5bSk7CQkJCQkJXAogICAgIH0gd2hpbGUgKDApCiAKLS8qIG5vdCBhY3R1YWxseSBvcHRpbWl6ZWQgeWV0OyBpZ25vcmUgb3AsIG9wdmFsIGZvciBub3cgKi8KLSNkZWZpbmUgRmFzdExvZ2ljMihvcCwgb3B2YWwsIG9wc3ltKSBkbyB7CQlcCi0JQnVpbHRpbjIoZG9fbG9naWMsIG9wc3ltLCByaG8pOwkJXAorc3RhdGljIFJfSU5MSU5FIGludCBBTkRPUChpbnQgeCwgaW50IHkpIHsKKyAgICBpZiAoeCA9PSAwIHx8IHkgPT0gMCkgcmV0dXJuIDA7CisgICAgaWYgKHggPT0gTkFfTE9HSUNBTCB8fCB5ID09IE5BX0xPR0lDQUwpIHJldHVybiBOQV9MT0dJQ0FMOworICAgIHJldHVybiAxOworfQorCitzdGF0aWMgUl9JTkxJTkUgaW50IE9ST1AoaW50IHgsIGludCB5KSB7CisgICAgaWYgKCh4ICE9IE5BX0xPR0lDQUwgJiYgeCkgfHwgKHkgIT0gTkFfTE9HSUNBTCAmJiB5KSkgcmV0dXJuIDE7CisgICAgaWYgKHggPT0gMCAmJiB5ID09IDApIHJldHVybiAwOworICAgIHJldHVybiBOQV9MT0dJQ0FMOworfQorCisjZGVmaW5lIERPX0ZBU1RfTE9HSUMyKG9wLCB4LCB5KSBkbyB7CQlcCisJU0tJUF9PUCgpOwkJCQlcCisJU0VUU1RBQ0tfTE9HSUNBTCgtMiwgb3AoeCwgeSkpOwkJXAorCVJfQkNOb2RlU3RhY2tUb3AtLTsJCQlcCisJUl9WaXNpYmxlID0gVFJVRTsJCQlcCisJTkVYVCgpOwkJCQkJXAogICAgIH0gd2hpbGUgKDApCiAKKyNkZWZpbmUgRmFzdExvZ2ljMihvcCwgb3B2YWwsIG9wc3ltKSBkbyB7CQkJCVwKKwlSX2Jjc3RhY2tfdCB2dngsIHZ2eTsJCQkJCQlcCisJUl9iY3N0YWNrX3QgKnZ4ID0gYmNTdGFja1NjYWxhcihSX0JDTm9kZVN0YWNrVG9wIC0gMiwgJnZ2eCk7CVwKKwlSX2Jjc3RhY2tfdCAqdnkgPSBiY1N0YWNrU2NhbGFyKFJfQkNOb2RlU3RhY2tUb3AgLSAxLCAmdnZ5KTsJXAorCWlmICh2eC0+dGFnID09IExHTFNYUCkgewkJCQkJXAorCSAgICBpZiAodnktPnRhZyA9PSBMR0xTWFApCQkJCQlcCisJCURPX0ZBU1RfTE9HSUMyKG9wdmFsLCB2eC0+dS5pdmFsLCB2eS0+dS5pdmFsKTsJCVwKKwkgICAgZWxzZSBpZiAodnktPnRhZyA9PSBJTlRTWFApCQkJCQlcCisJCURPX0ZBU1RfTE9HSUMyKG9wdmFsLAkJCQkJXAorCQkJICAgICAgIHZ4LT51Lml2YWwsCQkJCVwKKwkJCSAgICAgICBJTlRFR0VSX1RPX0xPR0lDQUwodnktPnUuaXZhbCkpOwkJXAorCX0JCQkJCQkJCVwKKwllbHNlIGlmICh2eC0+dGFnID09IElOVFNYUCkgewkJCQkJXAorCSAgICBpZiAodnktPnRhZyA9PSBMR0xTWFApCQkJCQlcCisJCURPX0ZBU1RfTE9HSUMyKG9wdmFsLAkJCQkJXAorCQkJICAgICAgIElOVEVHRVJfVE9fTE9HSUNBTCh2eC0+dS5pdmFsKSwJCVwKKwkJCSAgICAgICB2eS0+dS5pdmFsKTsJCQkJXAorCSAgICBlbHNlIGlmICh2eS0+dGFnID09IElOVFNYUCkJCQkJCVwKKwkJRE9fRkFTVF9MT0dJQzIob3B2YWwsCQkJCQlcCisJCQkgICAgICAgSU5URUdFUl9UT19MT0dJQ0FMKHZ4LT51Lml2YWwpLAkJXAorCQkJICAgICAgIElOVEVHRVJfVE9fTE9HSUNBTCh2eS0+dS5pdmFsKSk7CQlcCisJfQkJCQkJCQkJXAorCUJ1aWx0aW4yKGRvX2xvZ2ljLCBvcHN5bSwgcmhvKTsJCQkJCVwKKyAgICB9IHdoaWxlICgwKQorCiBzdGF0aWMgUl9JTkxJTkUgU0VYUCBnZXRQcmltaXRpdmUoU0VYUCBzeW1ib2wsIFNFWFBUWVBFIHR5cGUpCiB7CiAgICAgU0VYUCB2YWx1ZSA9IFNZTVZBTFVFKHN5bWJvbCk7Cg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "Implement FastLogic2.",
+          "creation_time": "2026-03-27T00:00:40Z",
+          "bug_id": 19031,
+          "file_name": "fast-logic-ops.patch",
+          "size": 1909,
+          "last_change_time": "2026-03-27T00:00:40Z",
+          "id": 3645,
+          "is_private": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-04-30 14:59:02"
+}

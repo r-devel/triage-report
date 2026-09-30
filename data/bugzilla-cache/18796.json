@@ -1,0 +1,143 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "status": "UNCONFIRMED",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "cc_detail": [
+          {
+            "name": "Kurt.Hornik",
+            "id": 308,
+            "real_name": "Kurt Hornik"
+          }
+        ],
+        "last_change_time": "2025-02-20T17:12:55Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "tapply() fails to combine attributes correctly (difftime)",
+        "url": "",
+        "blocks": [],
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Misc",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [
+          "Kurt.Hornik"
+        ],
+        "deadline": {},
+        "id": 18796,
+        "dupe_of": {},
+        "severity": "normal",
+        "creation_time": "2024-09-13T17:20:43Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18796": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 101196,
+            "time": "2024-09-13T17:20:43Z",
+            "is_private": false,
+            "creation_time": "2024-09-13T17:20:43Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18796,
+            "text": "```\nt <- .POSIXct(c(0, 1, 0, 3*60*60))\ng <-          c(1, 1, 2,       2))\n\ntapply(t, g, diff)\n# 1 2 \n# 1 3 \n\ntapply(t, g, \\(x) x[2] - x[1]) # same\n\n# c.difftime exists and does the right thing!\nc(diff(t[g==1]), diff(t[g==2]))\n# Time differences in secs\n# [1]     1 10800\n```\n\nI don't see anything about attributes mentioned in `?tapply`.\n\ndata.table does _slightly_ better:\n\n```\ndata.table(t, g)[, diff(t), by=g]\n#        g         V1\n#    <num> <difftime>\n# 1:     1     1 secs\n# 2:     2     3 secs\n\ndata.table(t, g)[, t[2]-t[1], by=g]\n#        g         V1\n#    <num> <difftime>\n# 1:     1     1 secs\n# 2:     2 10800 secs\n```\n\ndplyr handles this pretty well:\n\n```\nsummarize(data.frame(t, g), diff(t), .by=\"g\")\n#   g    diff(t)\n# 1 1     1 secs\n# 2 2 10800 secs\n\nsummarize(data.frame(t, g), t[2]-t[1], .by=\"g\")\n#   g t[2] - t[1]\n# 1 1      1 secs\n# 2 2  10800 secs\n```",
+            "count": 0,
+            "is_markdown": true
+          },
+          {
+            "is_private": false,
+            "id": 101197,
+            "tags": [],
+            "count": 1,
+            "text": "Just saw r84928 which helps here by exposing `units=` to `diff()`, great!\n\n```\ntapply(t, g, diff, units='secs')\n#     1     2 \n#     1 10800\n\ndata.table(t, g)[, diff(t, units='secs'), by=g]\n#        g         V1\n#    <num> <difftime>\n# 1:     1     1 secs\n# 2:     2 10800 secs\n```\n\nI still think `tapply()` is doing the wrong thing here by missing the `c()` method dispatch; e.g. the natural-looking `t[2]-t[1]` has no way to specify `units=` and winds up garbled/incorrect.",
+            "bug_id": 18796,
+            "creation_time": "2024-09-13T17:28:17Z",
+            "time": "2024-09-13T17:28:17Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          },
+          {
+            "is_private": false,
+            "time": "2024-09-13T17:33:43Z",
+            "id": 101198,
+            "attachment_id": {},
+            "tags": [],
+            "count": 2,
+            "is_markdown": true,
+            "text": "Poking a little more: `simplify=FALSE` (obviously) doesn't have this issue; it's the `unlist()` step where the attributes get mangled. So at root this is about:\n\n```\nunlist(list(\n  as.difftime(1, units='secs'),\n  as.difftime(1, units='hours')))\n# [1] 1 1\n```\n\n`?unlist` also doesn't mention anything about attributes, and I don't see any related issue on the tracker, so leaving this open as is.",
+            "bug_id": 18796,
+            "creator": "michaelchirico4",
+            "creation_time": "2024-09-13T17:33:43Z"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 101200,
+            "creation_time": "2024-09-14T09:19:59Z",
+            "count": 3,
+            "text": "I think you want 'simplify = FALSE':\n\nR> t <- .POSIXct(c(0, 1, 0, 3*60*60))\ng <-          c(1, 1, 2,       2)\ntapply(t, g, diff, simplify = FALSE)\n$`1`\nTime difference of 1 secs\n\n$`2`\nTime difference of 3 hours\n\nBy default, tapply simplifies to array in the all-length-one case, which necessarily drops classes.",
+            "bug_id": 18796,
+            "attachment_id": {},
+            "time": "2024-09-14T09:19:59Z",
+            "creator": "Kurt.Hornik",
+            "is_markdown": true
+          },
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2025-02-20T17:12:55Z",
+            "attachment_id": {},
+            "count": 4,
+            "bug_id": 18796,
+            "text": "> which necessarily drops classes.\n\nThe proposed patch avoids that by using `c()` instead of `unlist()`:\n\nhttps://github.com/r-devel/r-svn/pull/183/files\n\nThe question is whether that's a substantially better default, or whether the caller should do that on their own with `simplify=FALSE`.\n\n(I haven't added the patch here yet since I haven't given it enough testing)",
+            "creation_time": "2025-02-20T17:12:55Z",
+            "is_private": false,
+            "id": 101569,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18796": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-02-20 17:12:55"
+}

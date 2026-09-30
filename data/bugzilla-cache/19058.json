@@ -1,0 +1,202 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-04-24T15:59:30Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [
+          "maechler"
+        ],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19058,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "summary": "abbreviate() can give unexpected output with non-ASCII input",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2026-04-29T17:22:00Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "status": "CONFIRMED"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19058": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 102970,
+            "tags": [],
+            "count": 0,
+            "bug_id": 19058,
+            "text": "Created attachment 3681\nUse iswlower() rather than islower() when determining if a wide character is lowercase in the current locale.\n\nThis is perhaps expected given the warning, but given that this is an issue that could be resolved, here's an example:\n\n```\n> abbreviate(\"přístřešek\")\npřístřešek\n    \"přřš\"\nWarning message:\nIn abbreviate(\"přístřešek\") : abbreviate used with non-ASCII chars\n\n> R.version\n               _\nplatform       aarch64-unknown-linux-gnu\narch           aarch64\nos             linux-gnu\nsystem         aarch64, linux-gnu\nstatus         Under development (unstable)\nmajor          4\nminor          7.0\nyear           2026\nmonth          04\nday            23\nsvn rev        89955\nlanguage       R\nversion.string R Under development (unstable) (2026-04-23 r89955)\nnickname       Unsuffered Consequences\n```\n\nCompare with a similar build of R on macOS, and note the difference in behavior -- likely owing to different behavior in `islower()` between the two different libc implementations.\n\n```\n> abbreviate(\"přístřešek\")\nWarning in abbreviate(\"přístřešek\") :\n  abbreviate used with non-ASCII chars\npřístřešek\n    \"přst\"\n>\n> R.version\n               _\nplatform       aarch64-apple-darwin25.4.0\narch           aarch64\nos             darwin25.4.0\nsystem         aarch64, darwin25.4.0\nstatus         Under development (unstable)\nmajor          4\nminor          7.0\nyear           2026\nmonth          04\nday            23\nsvn rev        89955\nlanguage       R\nversion.string R Under development (unstable) (2026-04-23 r89955)\nnickname       Unsuffered Consequences\n```\n\nThis comes down to the use of `islower()` rather than `iswlower()` in `wstripchars`. A simple patch is attached.",
+            "creation_time": "2026-04-24T15:59:30Z",
+            "time": "2026-04-24T15:59:30Z",
+            "attachment_id": 3681,
+            "is_markdown": true,
+            "creator": "kevinushey"
+          },
+          {
+            "time": "2026-04-24T16:02:24Z",
+            "attachment_id": 3682,
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "id": 102971,
+            "is_private": false,
+            "tags": [],
+            "text": "Created attachment 3682\nUse iswlower() rather than islower() when determining if a wide character is lowercase in the current locale. (proper SVN patch)",
+            "bug_id": 19058,
+            "count": 1,
+            "creation_time": "2026-04-24T16:02:24Z"
+          },
+          {
+            "tags": [],
+            "id": 102988,
+            "is_private": false,
+            "creation_time": "2026-04-27T17:23:27Z",
+            "bug_id": 19058,
+            "text": "(In reply to Kevin Ushey from comment #1)\n> Created attachment 3682\n> Use iswlower() rather than islower() when determining if a wide character is\n> lowercase in the current locale. (proper SVN patch)\n\nThank you, Kevin.\n\nNote that  `help(abbreviate)`  does warn about  using it with non-ASCII characters.  I had hoped that that warning may no longer be necessary, but it **is**:\n\nThe result in this case *depends* on the locale (see below)!\nOn my platform (Fedora Linux 42,43, or 44),\nsetting the locale, i.e., the here-relevant `LC_CTYPE`, does work,\nand the following code --- my proposed regression test, using your example ---\nis revealing:\n```\nch1 <- intToUtf8(c(112L, 345L, 237L, 115:116, 345L, 101L, 353L, 101L, 107L))\nSys.getlocale() # just for info ..\nfor(loc in c(\"C\", \"C.UTF-8\")) {\n    lc <- Sys.setlocale(\"LC_CTYPE\", loc)\n    if(!is.null(lc) && nzchar(lc)) { # when Sys.setlocale() worked supposedly\n        suppressWarnings(a1 <- abbreviate(ch1)) # FIXME - should it warn even when \"correct\"?\n        ## In abbreviate(\"přístřešek\") : abbreviate used with non-ASCII chars\n        print(a1) # correctly \"přst\" *in* case\n        print(hasUTF8 <- grepl(\"utf-?8$\", print(Sys.getlocale(\"LC_CTYPE\")), ignore.case=TRUE))\n        stopifnot(identical(ch1, names(a1)),\n                  identical(c(112L, 345L, if(hasUTF8) 115:116 else c(345L, 353L)),\n                            print(utf8ToInt(a1))))\n    }\n}\n\n```\nwith the following output (which does *not* render properly in bugzilla/markdown ...):\n```\n> Sys.getlocale() # just for info ..\n[1] \"LC_CTYPE=C.UTF-8;LC_NUMERIC=C;LC_TIME=en_US.UTF-8;LC_COLLATE=en_US.UTF-8;LC_MONETARY=en_US.UTF-8;LC_MESSAGES=de_CH.UTF-8;LC_PAPER=de_CH.UTF-8;LC_NAME=C;LC_ADDRESS=C;LC_TELEPHONE=C;LC_MEASUREMENT=de_CH.UTF-8;LC_IDENTIFICATION=C\"\n```\nand the interesting one:\n```\np<U+0159><U+00ED>st<U+0159>e<U+0161>ek \n   \"p<U+0159><U+0159><U+0161>\" \n[1] \"C\"\n[1] FALSE\n[1] 112 345 345 353\npřístřešek \n    \"přst\" \n[1] \"C.UTF-8\"\n[1] TRUE\n[1] 112 345 115 116\n```\n\nCan you try the above R code on your two platforms -- after applying the patch(!!) --\nplease ?\n\nThe exact rendering of the output is of course not the point, but rather that the assertions\nare fulfilled for both locale settings...",
+            "count": 2,
+            "attachment_id": {},
+            "time": "2026-04-27T17:23:27Z",
+            "creator": "maechler",
+            "is_markdown": false
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-04-27T18:35:32Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 102989,
+            "creation_time": "2026-04-27T18:35:32Z",
+            "count": 3,
+            "text": "Thanks Martin! To confirm, here's what I see on my Linux machine (Ubuntu 24.04) with the patch applied against r89967.\n\n```\n> R.version\n               _\nplatform       aarch64-unknown-linux-gnu\narch           aarch64\nos             linux-gnu\nsystem         aarch64, linux-gnu\nstatus         Under development (unstable)\nmajor          4\nminor          7.0\nyear           2026\nmonth          04\nday            27\nsvn rev        89967\nlanguage       R\nversion.string R Under development (unstable) (2026-04-27 r89967)\nnickname       Unsuffered Consequences\n\n> ch1 <- intToUtf8(c(112L, 345L, 237L, 115:116, 345L, 101L, 353L, 101L, 107L))\nSys.getlocale() # just for info ..\nfor(loc in c(\"C\", \"C.UTF-8\")) {\n    lc <- Sys.setlocale(\"LC_CTYPE\", loc)\n    if(!is.null(lc) && nzchar(lc)) { # when Sys.setlocale() worked supposedly\n        suppressWarnings(a1 <- abbreviate(ch1)) # FIXME - should it warn even when \"correct\"?\n        ## In abbreviate(\"přístřešek\") : abbreviate used with non-ASCII chars\n        print(a1) # correctly \"přst\" *in* case\n        print(hasUTF8 <- grepl(\"utf-?8$\", print(Sys.getlocale(\"LC_CTYPE\")), ignore.case=TRUE))\n        stopifnot(identical(ch1, names(a1)),\n                  identical(c(112L, 345L, if(hasUTF8) 115:116 else c(345L, 353L)),\n                            print(utf8ToInt(a1))))\n    }\n}\n[1] \"LC_CTYPE=en_US.UTF-8;LC_NUMERIC=C;LC_TIME=en_US.UTF-8;LC_COLLATE=en_US.UTF-8;LC_MONETARY=en_US.UTF-8;LC_MESSAGES=en_US.UTF-8;LC_PAPER=en_US.UTF-8;LC_NAME=C;LC_ADDRESS=C;LC_TELEPHONE=C;LC_MEASUREMENT=en_US.UTF-8;LC_IDENTIFICATION=C\"\np<U+0159><U+00ED>st<U+0159>e<U+0161>ek\n   \"p<U+0159><U+0159><U+0161>\"\n[1] \"C\"\n[1] FALSE\n[1] 112 345 345 353\npřístřešek\n    \"přst\"\n[1] \"C.UTF-8\"\n[1] TRUE\n[1] 112 345 115 116\n```\n\nIn addition, I now see the expected output for the original case, e.g.\n\n```\n> abbreviate(\"přístřešek\")\nWarning in abbreviate(\"přístřešek\") :\n  abbreviate used with non-ASCII chars\npřístřešek\n    \"přst\"\n```\n\n(I note the encoding of the characters are mangled in the preview in Bugzilla; hopefully they survive the actual post...)\n\n\nThe test for me fails with this patch applied on macOS, even though it succeeded on Linux.\n\n```\n> R.version\n               _\nplatform       aarch64-apple-darwin25.4.0\narch           aarch64\nos             darwin25.4.0\nsystem         aarch64, darwin25.4.0\nstatus         Under development (unstable)\nmajor          4\nminor          7.0\nyear           2026\nmonth          04\nday            27\nsvn rev        89967\nlanguage       R\nversion.string R Under development (unstable) (2026-04-27 r89967)\nnickname       Unsuffered Consequences\n> ch1 <- intToUtf8(c(112L, 345L, 237L, 115:116, 345L, 101L, 353L, 101L, 107L))\n> Sys.getlocale() # just for info ..\n[1] \"en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\"\n> for(loc in c(\"C\", \"C.UTF-8\")) {\n+     lc <- Sys.setlocale(\"LC_CTYPE\", loc)\n+     if(!is.null(lc) && nzchar(lc)) { # when Sys.setlocale() worked supposedly\n+         suppressWarnings(a1 <- abbreviate(ch1)) # FIXME - should it warn even when \"correct\"?\n+         ## In abbreviate(\"přístřešek\") : abbreviate used with non-ASCII chars\n+         print(a1) # correctly \"přst\" *in* case\n+         print(hasUTF8 <- grepl(\"utf-?8$\", print(Sys.getlocale(\"LC_CTYPE\")), ignore.case=TRUE))\n+         stopifnot(identical(ch1, names(a1)),\n+                   identical(c(112L, 345L, if(hasUTF8) 115:116 else c(345L, 353L)),\n+                             print(utf8ToInt(a1))))\n+     }\n+ }\np<U+0159><U+00ED>st<U+0159>e<U+0161>ek\n\"p<U+0159>st\"\n[1] \"C\"\n[1] FALSE\n[1] 112 345 115 116\nError: identical(c(112L, 345L, if (hasUTF8) 115:116 else c(345L, 353L)),  .... is not TRUE\nExecution halted\n```\n\nSo there seems to be some inconsistent behavior here when working in a C locale -- however, the test in the UTF-8 locale agrees on both platforms. I'll see if I can learn more.",
+            "bug_id": 19058
+          },
+          {
+            "id": 102990,
+            "time": "2026-04-27T21:14:12Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "bug_id": 19058,
+            "text": "I think I understand what's happening on macOS. src/main/character.c uses the rlocale.h header, which introduces R's own locale functions when USE_RI18N_FNS is defined. IIUC, this happens in configure.ac:2341-2356, and defaults to on for macOS and Solaris, and off for other platforms.\n\nNotably, this implies that (in \"default\" builds of R) functions like `iswlower()` are going to be locale-aware on Linux, but not on macOS, where they will behave as though a unicode locale is active regardless of what the current locale actually is.",
+            "is_markdown": true,
+            "count": 4,
+            "creation_time": "2026-04-27T21:14:12Z",
+            "creator": "kevinushey"
+          },
+          {
+            "is_private": false,
+            "time": "2026-04-29T10:29:43Z",
+            "id": 102997,
+            "tags": [],
+            "attachment_id": {},
+            "count": 5,
+            "is_markdown": true,
+            "text": "(In reply to Kevin Ushey from comment #4)\n\nThank you... the story is even more complicated, somehow.\nWe can use  `--with-internal-towlower`  to configure R on Linux,\nand then it *also* uses R's own locale function.\n\nBut contrary to macOS (according to you) it still does not behave \"UTF-8 respecting\" when in locale `LC_CTIME=C` \n\n(which I think is correct Linux behaviour but \"too helpful\" and really wrong behaviour on macOS).\n\nFor that reason, I have *not* added any regression test yet when I've committed your patch (+ a NEWS entry) a few minutes ago.\nOur regression tests (almost all, notably the  `tests/reg-tests-1*.R` ones)\nexplicitly set the locale to \"C\" when running R on the test files, and according to your finding, macOS behaves differently here..\n\nI forget if we can ensure locale  \"C.UTF-8\" to be available everywhere _and_ settable from R via  `Sys.setlocale()`; if the answer is 'yes' to both, a\nregression test using my code (based on your example!) would be fine.\n\nI could close now (bug fixed), .. but am interested in an outcome here.",
+            "bug_id": 19058,
+            "creator": "maechler",
+            "creation_time": "2026-04-29T10:29:43Z"
+          },
+          {
+            "tags": [],
+            "id": 102998,
+            "is_private": false,
+            "creation_time": "2026-04-29T17:22:00Z",
+            "text": "> I forget if we can ensure locale \"C.UTF-8\" to be available everywhere and settable from R via Sys.setlocale(); if the answer is 'yes' to both, a\nregression test using my code (based on your example!) would be fine.\n\nUnfortunately, I don't think so. As I understand it, when using glibc on Linux, we can normally only assume the C locale is available, and the desired UTF-8 locales need to be explicitly generated. Typical desktop Linux environments will  provide a UTF-8 locale by default, but others (e.g. minimal server installations) may not come with a UTF-8 locale baked in.\n\nIn practice, I think almost all R installations are going to be in environments with a UTF-8 locale available, but it's not a guarantee.\n\n-----\n\nI suppose a related question to all of this is what R _should_ do in these scenarios; e.g. what is the right behavior when working with UTF-8 strings in a C locale?\n\nMy bias would be towards being locale-independent in this scenario; e.g. once we have a UTF-8 string, we should be able to classify it the same way regardless of the current locale, but this is quite a larger change and I imagine is contentious. In this world, we could build R to use R's own R18n wrappers on all platforms by default, but is a much larger change.\n\nSorry, when I initially filed this, I did not think it would prompt such deep questions!",
+            "bug_id": 19058,
+            "count": 6,
+            "attachment_id": {},
+            "time": "2026-04-29T17:22:00Z",
+            "creator": "kevinushey",
+            "is_markdown": true
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19058": [
+        {
+          "size": 528,
+          "last_change_time": "2026-04-24T16:02:24Z",
+          "id": 3681,
+          "is_private": false,
+          "summary": "Use iswlower() rather than islower() when determining if a wide character is lowercase in the current locale.",
+          "creation_time": "2026-04-24T15:59:30Z",
+          "bug_id": 19058,
+          "file_name": "wstripchars-islower.patch",
+          "is_patch": true,
+          "data": "LS0tIGEvc3JjL21haW4vY2hhcmFjdGVyLmMKKysrIGIvc3JjL21haW4vY2hhcmFjdGVyLmMKQEAgLTg5OSwxMyArODk5LDEzIEBACiAJfQoKIAlmb3IgKGkgPSBXVVA7IGkgPiAwOyBpLS0pIHsKLQkgICAgaWYgKGlzbG93ZXIoKGludCl3Y1tpXSkgJiYgTEFTVENIQVJXKGkpKQorCSAgICBpZiAoaXN3bG93ZXIoKHdpbnRfdCl3Y1tpXSkgJiYgTEFTVENIQVJXKGkpKQogCQlteXdjc2NweSh3YyArIGksIHdjICsgaSArIDEpOwogCSAgICBpZiAod2NzbGVuKHdjKSAtIG5zcGFjZSA8PSBtaW5sZW4pCiAJCWdvdG8gZG9uZXdzYzsKIAl9CgogCWZvciAoaSA9IFdVUDsgaSA+IDA7IGktLSkgewotCSAgICBpZiAoaXNsb3dlcigoaW50KXdjW2ldKSAmJiAhRklSU1RDSEFSVyhpKSkKKwkgICAgaWYgKGlzd2xvd2VyKCh3aW50X3Qpd2NbaV0pICYmICFGSVJTVENIQVJXKGkpKQogCQlteXdjc2NweSh3YyArIGksIHdjICsgaSArIDEpOwogCSAgICBpZiAod2NzbGVuKHdjKSAtIG5zcGFjZSA8PSBtaW5sZW4pCiAJCWdvdG8gZG9uZXdzYzsK",
+          "creator": "kevinushey",
+          "is_obsolete": true,
+          "content_type": "text/plain",
+          "flags": []
+        },
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2NoYXJhY3Rlci5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2NoYXJhY3Rlci5jCShyZXZpc2lvbiA4OTk2MSkKKysrIHNyYy9tYWluL2NoYXJhY3Rlci5jCSh3b3JraW5nIGNvcHkpCkBAIC04OTksMTQgKzg5OSwxNCBAQAogCX0KCiAJZm9yIChpID0gV1VQOyBpID4gMDsgaS0tKSB7Ci0JICAgIGlmIChpc2xvd2VyKChpbnQpd2NbaV0pICYmIExBU1RDSEFSVyhpKSkKKwkgICAgaWYgKGlzd2xvd2VyKCh3aW50X3Qpd2NbaV0pICYmIExBU1RDSEFSVyhpKSkKIAkJbXl3Y3NjcHkod2MgKyBpLCB3YyArIGkgKyAxKTsKIAkgICAgaWYgKHdjc2xlbih3YykgLSBuc3BhY2UgPD0gbWlubGVuKQogCQlnb3RvIGRvbmV3c2M7CiAJfQoKIAlmb3IgKGkgPSBXVVA7IGkgPiAwOyBpLS0pIHsKLQkgICAgaWYgKGlzbG93ZXIoKGludCl3Y1tpXSkgJiYgIUZJUlNUQ0hBUlcoaSkpCisJICAgIGlmIChpc3dsb3dlcigod2ludF90KXdjW2ldKSAmJiAhRklSU1RDSEFSVyhpKSkKIAkJbXl3Y3NjcHkod2MgKyBpLCB3YyArIGkgKyAxKTsKIAkgICAgaWYgKHdjc2xlbih3YykgLSBuc3BhY2UgPD0gbWlubGVuKQogCQlnb3RvIGRvbmV3c2M7Cg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-04-24T16:02:24Z",
+          "size": 652,
+          "is_private": false,
+          "id": 3682,
+          "creation_time": "2026-04-24T16:02:24Z",
+          "summary": "Use iswlower() rather than islower() when determining if a wide character is lowercase in the current locale. (proper SVN patch)",
+          "file_name": "wstripchars-islower.patch",
+          "bug_id": 19058
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-04-29 17:22:00"
+}

@@ -1,0 +1,143 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "alias": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "name": "jaganmn2",
+          "id": 3462,
+          "real_name": "Mikael Jagan"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "summary": "unclear status of group generic function 'matrixOps'",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2025-08-22T18:46:07Z",
+        "cc_detail": [
+          {
+            "id": 308,
+            "name": "Kurt.Hornik",
+            "real_name": "Kurt Hornik"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "component": "Documentation",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "whiteboard": "",
+        "creation_time": "2025-08-21T04:32:02Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "Kurt.Hornik"
+        ],
+        "qa_contact": "",
+        "id": 18937,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {}
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18937": {
+        "comments": [
+          {
+            "bug_id": 18937,
+            "text": "`help(\"crossprod\")` says:\n\n> These are generic functions since R 4.4.0: methods can be written individually or via the `matOps` group generic function; it dispatches to S3 and S4 methods.\n\nIgnoring the typo `s/matOps/matrixOps/`, the sentence seems to claim that `crossprod` and `tcrossprod` dispatch both S3 methods and S4 methods for `matrixOps`.  That's currently not true.\n\n```\n> .S3method(\"matrixOps\", \"zzz3\", function (x, y) \"ok\")\n> setClass(\"zzz4\", contains = \"numeric\")\n> setMethod(\"matrixOps\", c(x = \"zzz4\", y = \"missing\"), function (x, y) \"ok\")\n> x3 <- `class<-`(0, \"zzz3\")\n> x4 <- new(\"zzz4\")\n> crossprod(x3)\n[1] \"ok\"\n> crossprod(x4)\n     [,1]\n[1,]    0\n> tcrossprod(x3)\n[1] \"ok\"\n> tcrossprod(x4)\n<0 x 0 matrix>\n```\n\nSo `crossprod` and `tcrossprod` dispatch S3 methods for `matrixOps` but not S4 methods for `matrixOps`.  That is consistent with:\n\n```\n> getGroupMembers(\"matrixOps\")\n[1] \"%*%\"\n```\n\nIf it has been intended since R 4.4 that they would dispatch S4 methods for `matrixOps`, too, then maybe such a change should happen for R 4.6 ... ?\n\nOne last discrepancy: `help(\"S3groupGeneric\")` says:\n\n> This group currently contains the matrix multiply `%*%` binary operator only, where at least `crossprod()` and `tcrossprod()` are meant to follow.\n\nIt seems that `crossprod` and `tcrossprod` have *already* followed, if both dispatch S3 methods for `matrixOps`, hence perhaps this sentence should be amended now.\n\nIn contrast, `help(\"S4groupGeneric\")` seems correct for now, but it would have to be amended, too, should `crossprod` and `tcrossprod` start dispatching S4 methods for `matrixOps`.",
+            "is_markdown": true,
+            "count": 0,
+            "creation_time": "2025-08-21T04:32:02Z",
+            "creator": "jaganmn2",
+            "id": 102054,
+            "time": "2025-08-21T04:32:02Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "is_markdown": true,
+            "creator": "Kurt.Hornik",
+            "time": "2025-08-21T06:29:33Z",
+            "attachment_id": {},
+            "count": 1,
+            "text": "For the record, I have been arguing that it would be preferable not to have matrix products in a new group, but instead use left to right internal dispatch as we do for rbind and cbind (and maybe provide a general interface for doing this).\nOtherwise, if e.g package A provides a sparse matrix class cA and package B provides a sparse matrix class cB it is impossible to conveniently arrange for the appropriate dispatch when doing a matrix product of cA x and cB y.\n(If both A and B provide matrixOps methods, neither will be dispatched to.)\nI still think this is what we should change to, perhaps with the matrixOps dispatch as fallback.",
+            "bug_id": 18937,
+            "creation_time": "2025-08-21T06:29:33Z",
+            "is_private": false,
+            "id": 102055,
+            "tags": []
+          },
+          {
+            "is_private": false,
+            "id": 102068,
+            "time": "2025-08-22T03:07:22Z",
+            "attachment_id": {},
+            "tags": [],
+            "count": 2,
+            "is_markdown": true,
+            "bug_id": 18937,
+            "text": "(In reply to Kurt Hornik from comment #1)\n> Otherwise, if e.g package A provides a sparse matrix class cA and package B\n> provides a sparse matrix class cB it is impossible to conveniently arrange\n> for the appropriate dispatch when doing a matrix product of cA x and cB y.\n> (If both A and B provide matrixOps methods, neither will be dispatched to.)\n\n`%*%`, `crossprod`, and `tcrossprod` all use `chooseOpsMethod` to resolve S3 dispatch ambiguities.  And that is documented behaviour insofar as `help(\"S3groupGenerics\")` says:\n\n> Members of the \\[`matrixOps`\\] group have the same dispatch semantics (using _both_ arguments) as the `Ops` group.\n\nS4 dispatch ambiguities (if S4 dispatch worked) would be resolved by additional methods for those signatures.\n\nThese existing mechanisms seem convenient enough to me ... ?",
+            "creation_time": "2025-08-22T03:07:22Z",
+            "creator": "jaganmn2"
+          },
+          {
+            "creation_time": "2025-08-22T07:28:15Z",
+            "creator": "Kurt.Hornik",
+            "is_markdown": true,
+            "count": 3,
+            "bug_id": 18937,
+            "text": "I don't see how.\n\nSuppose you have two S3 using packages A and B with sparse matrix\nclasses cA and cB.  Both want to say: \n\n  For a matrix product of x and y, if x has my class, then use my method.\n  Otherwise, if x is dense and y has my class, then use my method.  \n\n(which is what I think we want)\n\nSo we need matrixOps.cA and matrixOps.cB, and this will refuse to\ndispatch to anything if one argument has class cA and the other has\nclass cB.\n\nWith left-to-right dispatch we could get what I think we want.",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 102069,
+            "time": "2025-08-22T07:28:15Z"
+          },
+          {
+            "text": "Currently, for the left-to-right S3 dispatch that you propose, one needs two methods for `chooseOpsMethod`:\n\n```\n.S3method(\"matrixOps\", \"cA\", function (x, y) \"A\")\n.S3method(\"matrixOps\", \"cB\", function (x, y) \"B\")\n\n.S3method(\"chooseOpsMethod\", \"cA\",\n          function (x, y, mx, my, cl, reverse) TRUE)\n.S3method(\"chooseOpsMethod\", \"cB\",\n          function (x, y, mx, my, cl, reverse) TRUE)\n\nF <- function (cx, cy) `class<-`(0, cx) %*% `class<-`(0, cy)\nG <- expand.grid(cx = list(\"cA\", \"cB\", NULL),\n                 cy = list(\"cA\", \"cB\", NULL),\n                 stringsAsFactors = FALSE)\nG$ans <- .mapply(F, G, NULL)\nG\n```\n```\n    cx   cy ans\n1   cA   cA   A\n2   cB   cA   B\n3 NULL   cA   A\n4   cA   cB   A\n5   cB   cB   B\n6 NULL   cB   B\n7   cA NULL   A\n8   cB NULL   B\n9 NULL NULL   0\n```\n\nIf the group generic function `matrixOps` were eliminated and the internal dispatch mechanism for `%*%`, `crossprod`, and `tcrossprod` changed according to your proposal, then S3 class authors would be saved from writing two methods for `chooseOpsMethod` but newly tasked with writing methods for each of `%*%`, `crossprod`, and `tcrossprod`.\n\nFrom the point of view of **Matrix** maintenance, where we currently have 70-75 S4 methods for each of `%*%`, `crossprod`, and `tcrossprod`, my gut feeling is that an S4 group generic `matrixOps` would simplify things quite a bit.  Well, that is S4, not S3.\n\nIt's worth pointing out that I accomplish the same left-to-right S3 dispatch by changing the default method for `chooseOpsMethod`, which returns `FALSE`, to one that returns `TRUE`:\n\n```\n.S3method(\"chooseOpsMethod\", \"default\",\n          function (x, y, mx, my, cl, reverse) TRUE)\n```\n\nMaybe I should have started discussion on the mailing list ...  On the other hand, it *is* a bug that documentation and behaviour do not agree here.",
+            "bug_id": 18937,
+            "count": 4,
+            "is_markdown": true,
+            "creator": "jaganmn2",
+            "creation_time": "2025-08-22T18:46:07Z",
+            "time": "2025-08-22T18:46:07Z",
+            "id": 102070,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18937": []
+    }
+  },
+  "source_changed": "2025-08-22 18:46:07"
+}

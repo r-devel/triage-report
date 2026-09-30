@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "status": "NEW",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "summary": "Update handling of overflow in integer operations",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [],
+        "last_change_time": "2026-06-30T17:39:29Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-06-30T17:39:29Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19096
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19096": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19096,
+            "text": "Created attachment 3747\n__builtin overflow checks in arithmetic.c\n\nFollowing up from r-devel: https://stat.ethz.ch/pipermail/r-devel/2026-June/084615.html\n\nThe initial motivation here is that `R_integer_times`, as currently implemented, relies on Undefined Behavior (UB):\n\n```\n// stylized from arithmetic.c\nint z = x * y;\nif ((double)x * (double)y == z && z != NA_INTEGER)\n  return z;\n```\n\nI.e., _after_ running the multiplication in `int`, we check if wraparound happened _in `double`_ (into which `int` embeds faithfully). The comment in the code acknowledges this is UB.\n\nMy initial proposal was to use `int64_t` instead, but Brian points out it is not universally available and indeed it's basically not used elsewhere in the R sources. The widely available `int_fast64_t` seems much more appropriate here than `int_least64_t`.\n\nLuke also mentions `__builtin_mul_overflow` [1][2], which are recent enough (e.g. 2015) to necessitate some `configure` checks to activate, but which _are_ supported by `gcc` and `clang`.\n\nOn r-devel, I mentioned a quick benchmark in support of moving away from `double` -- now I've made that more formal by running the benchmark on GitHub Actions in the R mirror [3] by adding in `reg-tests-2.R` a snippet:\n\n```\nx <- y <- rep(10000L, 5e7)\nprint(system.time(for(i in 1:100) x * y))\n```\n\nAnd extracting the timings from 4 different proposals [4][5][6][7]. \n\nHere is the benchmark timings table (unit: seconds) compiled from the logs:\n\n| Flavor | baseline | int64_t | int_fast64_t | \\_\\_builtin\\_mul\\_overflow |\n| :--- | :--- | :--- | :--- | :--- |\n| **Linux (clang, debian:stable, arm)** | 14.084 | 12.915 | 12.815* | 13.521 |\n| **Linux (clang, debian:stable, intel)** | 15.528 | 10.573 | 10.694 | 10.379* |\n| **Linux (clang, debian:testing, arm)** | 14.400 | 12.896 | 12.757* | 13.799 |\n| **Linux (clang, debian:testing, intel)** | 15.487 | 10.776 | 10.612* | 10.639 |\n| **Linux (gcc, debian:stable, arm)** | 14.940 | 12.588 | 12.518* | 14.285 |\n| **Linux (gcc, debian:stable, intel)** | 13.983 | 10.046 | 9.318* | 9.441 |\n| **Linux (gcc, debian:testing, arm)** | 14.731 | 12.707* | 12.870 | 14.386 |\n| **Linux (gcc, debian:testing, intel)** | 14.753 | 11.719 | 10.903 | 8.704* |\n| **MacOS (macOS-26)** | 8.977 | 10.001 | 8.855* | 11.006 |\n| **MacOS (macOS-26-intel)** | 22.831 | 21.492 | 21.802 | 20.030* |\n| **Windows (aarch64)** | 12.250 | 11.050 | 10.980* | 11.940 |\n| **Windows (x86_64)** | 14.990 | 6.350* | 12.250 | 11.310 |\n\nNote that these timings all have a fair amount of overhead from R -- I'm trying to make it a bit more realistic to show how the end user will perceive the change. This is of course far from comprehensive. Another way to view this is comparing the assembly output of the two approaches (`double` vs. `int_fast64_t`). Consider this minimized script:\n\n```\n// compare.c\n#include <stdint.h>\n#include <stdbool.h>\n#include <stddef.h>\n\n#define R_INT_MAX  2147483647\n#define R_INT_MIN -2147483647\n#define NA_INTEGER -2147483648\n\n#define GOODIPROD_DOUBLE(x, y, z) ((double) (x) * (double) (y) == (z))\n\nint times_double(int x, int y, bool *pnaflag) {\n    if (x == NA_INTEGER || y == NA_INTEGER) return NA_INTEGER;\n    int z = x * y;\n    if (GOODIPROD_DOUBLE(x, y, z) && z != NA_INTEGER)\n\treturn z;\n    else {\n\tif (pnaflag != NULL) *pnaflag = true;\n\treturn NA_INTEGER;\n    }\n}\n\nint times_fast64(int x, int y, bool *pnaflag) {\n    if (x == NA_INTEGER || y == NA_INTEGER) return NA_INTEGER;\n    int_fast64_t prod = (int_fast64_t)x * (int_fast64_t)y;\n    if (prod >= R_INT_MIN && prod <= R_INT_MAX && prod != NA_INTEGER) {\n        return (int)prod;\n    } else {\n        if (pnaflag != NULL) *pnaflag = true;\n        return NA_INTEGER;\n    }\n}\n```\n\nIn the generated assembly (`gcc -O2 -S -masm=intel compare.c -o compare.s`, and similarly for `clang`), I see:\n\n```\ntimes_double:\n.LFB0:\n        .cfi_startproc\n        mov     r8, rdx\n        cmp     edi, -2147483648\n        je      .L2\n        cmp     esi, -2147483648\n        sete    cl\n        je      .L2\n        pxor    xmm0, xmm0\n        pxor    xmm1, xmm1\n        mov     eax, edi\n        cvtsi2sd        xmm1, esi\n        cvtsi2sd        xmm0, edi\n        mulsd   xmm0, xmm1\n        imul    eax, esi\n        pxor    xmm1, xmm1\n        cvtsi2sd        xmm1, eax\n        ucomisd xmm0, xmm1\n        setnp   dl\n        cmovne  edx, ecx\n        test    dl, dl\n        je      .L5\n        cmp     eax, -2147483648\n        je      .L5\n        ret\n        .p2align 4,,10\n        .p2align 3\n```\n\nCompared to:\n\n```\ntimes_fast64:\n.LFB1:\n        .cfi_startproc\n        mov     rcx, rdx\n        cmp     edi, -2147483648\n        je      .L14\n        cmp     esi, -2147483648\n        je      .L14\n        movsx   rdi, edi\n        movsx   rsi, esi\n        mov     edx, 4294967294\n        imul    rdi, rsi\n        lea     rax, 2147483647[rdi]\n        cmp     rdx, rax\n        jb      .L15\n        mov     eax, edi\n        ret\n        .p2align 4,,10\n        .p2align 3\n```\n\n`cvtsi2sd`, `mulsd`, and `ucomisd` are all relatively expensive compared to `movsx`, `imul`, and `cmp`.\n\nSo to me, this is really about whether we should use `int_fast64_t` or `__builtin_mul_overflow`. The appeal of the latter is that it is _designed_ explicitly for what we're trying to do. The code is also quite clean.\n\nLastly, while this started from improving integer _multiplication_ in this file, we might as well address the checks for overflow in _subtraction and addition_ while we're at it. The principle is the same -- we can refactor to either (1) explicitly embed in a 64-bit type, probably `int64_t` or (2) use `__builtin_{add,sub}_overflow`. It's not formalized yet, but a quick benchmark shows a similar conclusion -- we can do way better than the current implementation with either approach.\n\nI think all of the approaches are pretty straightforward; I'm attaching a PoC patch of the `__builtin_{add,sub,mul}_overflow`.\n\n[1] https://gcc.gnu.org/onlinedocs/gcc-13.3.0/gcc/Integer-Overflow-Builtins.html\n[2] https://clang.llvm.org/docs/LanguageExtensions.html#checked-arithmetic-builtins\n[3] https://github.com/r-devel/r-svn/pull/272\n[4] https://github.com/r-devel/r-svn/actions/runs/28381932448 (baseline)\n[5] https://github.com/r-devel/r-svn/actions/runs/28414598687 (`int64_t`)\n[6] https://github.com/r-devel/r-svn/actions/runs/28421249004 (`int_fast64_t`)\n[7] https://github.com/r-devel/r-svn/actions/runs/28425139273 (`__builtin_mul_overflow`)",
+            "creation_time": "2026-06-30T17:39:29Z",
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 103266,
+            "time": "2026-06-30T17:39:29Z",
+            "tags": [],
+            "attachment_id": 3747
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19096": [
+        {
+          "bug_id": 19096,
+          "file_name": "math-builtin.patch",
+          "summary": "__builtin overflow checks in arithmetic.c",
+          "creation_time": "2026-06-30T17:39:29Z",
+          "id": 3747,
+          "is_private": false,
+          "size": 1821,
+          "last_change_time": "2026-06-30T17:39:29Z",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL2FyaXRobWV0aWMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hcml0aG1ldGljLmMJKHJldmlzaW9uIDkwMTk5KQorKysgc3JjL21haW4vYXJpdGhtZXRpYy5jCSh3b3JraW5nIGNvcHkpCkBAIC0zMjUsMTMgKzMyNSwxNCBAQAogICAgIGlmICh4ID09IE5BX0lOVEVHRVIgfHwgeSA9PSBOQV9JTlRFR0VSKQogCXJldHVybiBOQV9JTlRFR0VSOwogCi0gICAgaWYgKCgoeSA+IDApICYmICh4ID4gKFJfSU5UX01BWCAtIHkpKSkgfHwKLQkoKHkgPCAwKSAmJiAoeCA8IChSX0lOVF9NSU4gLSB5KSkpKSB7Ci0JaWYgKHBuYWZsYWcgIT0gTlVMTCkKLQkgICAgKnBuYWZsYWcgPSB0cnVlOwotCXJldHVybiBOQV9JTlRFR0VSOwotICAgIH0KLSAgICByZXR1cm4geCArIHk7CisgICAgaW50IHo7CisgICAgaWYgKCFfX2J1aWx0aW5fYWRkX292ZXJmbG93KHgsIHksICZ6KSAmJiB6ICE9IE5BX0lOVEVHRVIpCisgICAgICByZXR1cm4gejsKKworICAgIGlmIChwbmFmbGFnICE9IE5VTEwpCisgICAgICAqcG5hZmxhZyA9IHRydWU7CisKKyAgICByZXR1cm4gTkFfSU5URUdFUjsKIH0KIAogc3RhdGljIFJfSU5MSU5FIGludCBSX2ludGVnZXJfbWludXMoaW50IHgsIGludCB5LCBib29sICpwbmFmbGFnKQpAQCAtMzM5LDMwICszNDAsMjggQEAKICAgICBpZiAoeCA9PSBOQV9JTlRFR0VSIHx8IHkgPT0gTkFfSU5URUdFUikKIAlyZXR1cm4gTkFfSU5URUdFUjsKIAotICAgIGlmICgoKHkgPCAwKSAmJiAoeCA+IChSX0lOVF9NQVggKyB5KSkpIHx8Ci0JKCh5ID4gMCkgJiYgKHggPCAoUl9JTlRfTUlOICsgeSkpKSkgewotCWlmIChwbmFmbGFnICE9IE5VTEwpCi0JICAgICpwbmFmbGFnID0gdHJ1ZTsKLQlyZXR1cm4gTkFfSU5URUdFUjsKLSAgICB9Ci0gICAgcmV0dXJuIHggLSB5OworICAgIGludCB6OworICAgIGlmICghX19idWlsdGluX3N1Yl9vdmVyZmxvdyh4LCB5LCAmeikgJiYgeiAhPSBOQV9JTlRFR0VSKQorICAgICAgcmV0dXJuIHo7CisKKyAgICBpZiAocG5hZmxhZyAhPSBOVUxMKQorICAgICAgKnBuYWZsYWcgPSB0cnVlOworCisgICAgcmV0dXJuIE5BX0lOVEVHRVI7CiB9CiAKLSNkZWZpbmUgR09PRElQUk9EKHgsIHksIHopICgoZG91YmxlKSAoeCkgKiAoZG91YmxlKSAoeSkgPT0gKHopKQogc3RhdGljIFJfSU5MSU5FIGludCBSX2ludGVnZXJfdGltZXMoaW50IHgsIGludCB5LCBib29sICpwbmFmbGFnKQogewogICAgIGlmICh4ID09IE5BX0lOVEVHRVIgfHwgeSA9PSBOQV9JTlRFR0VSKQotCXJldHVybiBOQV9JTlRFR0VSOwotICAgIGVsc2UgewotCWludCB6ID0geCAqIHk7ICAvLyBVQlNBTiB3aWxsIHdhcm4gaWYgdGhpcyBvdmVyZmxvd3MgKGhhcHBlbnMgaW4gYmRhKQotCWlmIChHT09ESVBST0QoeCwgeSwgeikgJiYgeiAhPSBOQV9JTlRFR0VSKQotCSAgICByZXR1cm4gejsKLQllbHNlIHsKLQkgICAgaWYgKHBuYWZsYWcgIT0gTlVMTCkKLQkJKnBuYWZsYWcgPSB0cnVlOwotCSAgICByZXR1cm4gTkFfSU5URUdFUjsKLQl9Ci0gICAgfQorCSAgcmV0dXJuIE5BX0lOVEVHRVI7CisKKyAgICBpbnQgejsKKyAgICBpZiAoIV9fYnVpbHRpbl9tdWxfb3ZlcmZsb3coeCwgeSwgJnopICYmIHogIT0gTkFfSU5URUdFUikKKwkgIHJldHVybiB6OworCisgICAgaWYgKHBuYWZsYWcgIT0gTlVMTCkKKwkgICpwbmFmbGFnID0gdHJ1ZTsKKyAgICByZXR1cm4gTkFfSU5URUdFUjsKIH0KIAogc3RhdGljIFJfSU5MSU5FIGRvdWJsZSBSX2ludGVnZXJfZGl2aWRlKGludCB4LCBpbnQgeSkK",
+          "creator": "michaelchirico4",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-06-30 17:39:29"
+}

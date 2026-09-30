@@ -1,0 +1,182 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-06-05T07:49:36Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "jaganmn2",
+          "maechler"
+        ],
+        "severity": "minor",
+        "dupe_of": {},
+        "id": 19083,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "S4methods",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "summary": "setGeneric(\"f\", \\(x) { standardGeneric(\"x\") }) makes generic with class 'nonstandardGenericFunction'",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-06-22T18:04:14Z",
+        "cc_detail": [
+          {
+            "id": 3462,
+            "name": "jaganmn2",
+            "real_name": "Mikael Jagan"
+          },
+          {
+            "real_name": "Martin Maechler",
+            "id": 18,
+            "name": "maechler"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "CONFIRMED"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19083": {
+        "comments": [
+          {
+            "creation_time": "2026-06-05T07:49:36Z",
+            "text": "Created attachment 3726\ndef=function(...) { standardGeneric(...) } gets braces removed\n\nThere's been conventional wisdom aroud for a while to \"just omit the braces when writing standard generic\":\n\n```\n# DO THIS\nsetGeneric(\"f1\", function(...) standardGeneric(\"f1\"))\n\n# DON'T DO THIS\nsetGeneric(\"f2\", function(...) { standardGeneric(\"f2\") })\n```\n\nE.g. this wound up in the Tidyverse style guide [1] for a long time (since refactored).\n\n`?setGeneric` is mum on the issue, but the scuttlebutt (see the comment thread in [1]) was \"there's a performance implication\". Upon investigation [2], this is not _really_ true -- compiled (e.g. package) code has no performance difference, but there _is_ a small overhead to using `{` in interactive code, which I intuit is rare.\n\nPerformance aside, I think this is hard to reason about:\n\n```\nsetGeneric(\"f1\", function(obj) standardGeneric(\"f1\"))\nsetGeneric(\"f2\", function(obj) { standardGeneric(\"f2\") })\nis(getGeneric(\"f1\"))\n# [1] \"standardGeneric\"  \"genericFunction\"  \"function\"         \"OptionalFunction\" \"PossibleMethod\"   \"optionalMethod\"  \nis(getGeneric(\"f2\"))\n# [1] \"nonstandardGenericFunction\" \"genericFunction\"            \"nonstandardGeneric\"         \"function\"                   \"OptionalFunction\"           \"PossibleMethod\"            \n# [7] \"optionalMethod\"\n```\n\n'nonstandardGenericFunction', AIUI, is meant for more complicated functions that do non-trivial things (e.g. argument validation [3]), but some branch of which includes `standardGeneric()`; simple `{` wrapping need _not_ fall under this heading.\n\nOne further motivation for changing this is to simplify downstream authors' lives -- `{` can be used for standardization and readability, if appropriate [4].\n\n---\n\nThe proposed patch strips away this issue by teaching `setGeneric()` to look for simple `{`-wrapped `standardGeneric()` and to strip the `{` away. This removes any performance overhead and makes the resulting generic inherit from `standardGeneric`.\n\nI'm not perfectly happy with the proposed approach, which encountered two clunky issues:\n\n - `body()` retains srcref attributes for braced functions, but not unbraced ones:\n\n    ```\n    options(keep.source=TRUE) # force for batch sessions\n    is.null(attributes(body(function(x) x)))\n    # [1] TRUE\n    is.null(attributes(body(function(x) {x} )))\n    # [1] FALSE\n    ```\n\n - `identical(ignore.srcref=TRUE)` does not apply to the `body()` of a closure, only the closure itself:\n\n    ```\n    options(keep.source=TRUE)\n    f1 = function(x) { x }\n    f2 = function(x) {\n      x\n    }\n    identical(f1, f2)\n    # [1] TRUE\n    identical(body(f1), body(f2))\n    # [1] FALSE\n    ```\n\nHence, `attributes(fbody) <- NULL`.\n\n\n [1] https://github.com/hadley/adv-r/issues/1804\n [2] https://github.com/r-lib/lintr/issues/1968#issuecomment-4626931684\n [3] https://github.com/cran/copula/blob/d0ddd79049170bad2dfd243f86bb483e91c3108f/R/margCopula.R#L11-L15\n [4] https://github.com/posit-dev/air/issues/398",
+            "bug_id": 19083,
+            "count": 0,
+            "tags": [],
+            "id": 103157,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": 3726,
+            "time": "2026-06-05T07:49:36Z"
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-06-15T19:32:39Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "id": 103197,
+            "is_private": false,
+            "creation_time": "2026-06-15T19:32:39Z",
+            "text": "Just looked at this again and noticed that I switched the examples around, it should read as:\n\n - `body()` retains srcref attributes for braced functions, but not unbraced ones:\n\n\n```\n      options(keep.source=TRUE) # force for batch sessions\n      is.null(attributes(body(function(x) x)))\n      # [1] TRUE\n      is.null(attributes(body(function(x) {x} )))\n      # [1] FALSE\n```\n\n - `identical(ignore.srcref=TRUE)` does not apply to the `body()` of a closure, only the closure itself:\n\n```\n      options(keep.source=TRUE)\n      f1 = function(x) { x }\n      f2 = function(x) {\n        x\n      }\n      identical(f1, f2)\n      # [1] TRUE\n      identical(body(f1), body(f2))\n      # [1] FALSE\n```",
+            "bug_id": 19083,
+            "count": 1
+          },
+          {
+            "count": 2,
+            "is_markdown": true,
+            "text": "Note that \"omit braces around a 1-line function body\"\nis recommended by humans who prefer \"beauty\" and \"cleanness\" over  robotic rules and \"coding standards\".   \nYes it seems these humans are dying out in today's world, really sad in my view.\n\nAfter all that: Yes, of course, this is still a bug which should be addressed!\n(hence `CONFIRMED`).",
+            "bug_id": 19083,
+            "creator": "maechler",
+            "creation_time": "2026-06-16T09:14:34Z",
+            "is_private": false,
+            "time": "2026-06-16T09:14:34Z",
+            "id": 103207,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "is_private": false,
+            "time": "2026-06-19T21:45:35Z",
+            "id": 103220,
+            "tags": [],
+            "attachment_id": {},
+            "count": 3,
+            "is_markdown": true,
+            "text": "After\n\n```\nF <- function (.) { standardGeneric(\"G\") }\nsetGeneric(\"G\", F)\n```\n\nI think that `body(F)` and `body(G)` should be identical, as currently.  Stripping braces, so that `body(G)` becomes `body(F)[[2L]]`, would violate the expectation of users accustomed to parsing of calls to `function`, including ones like `function (.) { UseMethod(\"G\") }`, which keeps braces.\n\nA smaller change would be to arrange for `setGeneric` to do `new(\"standardGeneric\", F, ...)` instead of `new(\"nonstandardGenericFunction\", F, ...)`.  Something like:\n\n```\nIndex: src/library/methods/R/RMethodUtils.R\n===================================================================\n--- src/library/methods/R/RMethodUtils.R\t(revision 90180)\n+++ src/library/methods/R/RMethodUtils.R\t(working copy)\n@@ -1215,7 +1215,10 @@\n \n .NonstandardGenericTest <- function(body, fname, stdBody)\n {\n-    if(identical(body, stdBody))\n+    if(identical(body, stdBody) ||\n+       (is.call(body) && length(body) == 2L &&\n+        identical(body[[1L]], quote(`{`)) &&\n+        identical(body[[2L]], stdBody)))\n         FALSE\n     else if(.recursiveCallTest(body, fname))\n         TRUE\n```\n\nThen, compared to current behaviour, `body(G)` is unchanged (still a call to `{`) but `class(G)` is `\"standardGeneric\"` instead of `\"nonstandardGenericFunction\"`.\n\nHowever, from reading and testing, I notice that nowhere in R is the standard-nonstandard distinction actually used.  In particular, it seems possible to *remove* from **methods** these (documented as internal) class definitions\n\n```\nstandardGeneric\nstandardGenericWithTrace\nnonstandardGeneric\nnonstandardGenericWithTrace\nnonstandardGenericFunction\nnonstandardGroupGenericFunction\n```\n\n*keeping* in **methods** just these ones\n\n```\ngenericFunction\ngenericFunctionWithTrace\ngroupGenericFunction\ngroupGenericFunctionWithTrace\n```\n\nwithout changing documented behaviour.  Unfortunately, a small number of packages (15-20 across CRAN and BioC, according to a static analysis) have relied inappropriately on **methods** internals by, e.g., testing `is(., \"standardGeneric\")` where `is(., \"genericFunction\")` would have sufficed.\n\nHence I may propose a staged removal within R-core, leaving time between now and the release of R 4.7 to provide package maintainers with patches for their code.  Fixing this \"bug\" with such a simplification, rather than a further complication of `setGeneric` logic, would be nice.  Well, it's just a proposal for now and I'll want to explore more ...",
+            "bug_id": 19083,
+            "creator": "jaganmn2",
+            "creation_time": "2026-06-19T21:45:35Z"
+          },
+          {
+            "attachment_id": 3735,
+            "time": "2026-06-22T18:04:14Z",
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 103224,
+            "creation_time": "2026-06-22T18:04:14Z",
+            "count": 4,
+            "text": "Created attachment 3735\nprune subclasses of \"genericFunction\"\n\nTo help R contributors thinking about patches for CRAN/BioC packages, this patch implements the proposal for simplification mentioned in comment 3.",
+            "bug_id": 19083
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19083": [
+        {
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9NZXRob2RzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL01ldGhvZHMuUgkocmV2aXNpb24gOTAxMDQpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMTQsNyArMTE0LDEwIEBACiAgICAgICAgIGlmKGlzLnByaW1pdGl2ZShkZWYpIHx8ICFpcy5mdW5jdGlvbihkZWYpKQogICAgICAgICAgICAgc3RvcChnZXR0ZXh0ZigiaWYgdGhlICdkZWYnIGFyZ3VtZW50IGlzIHN1cHBsaWVkLCBpdCBtdXN0IGJlIGEgZnVuY3Rpb24gdGhhdCBjYWxscyBzdGFuZGFyZEdlbmVyaWMoXCIlc1wiKSBvciBpcyB0aGUgZGVmYXVsdCIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgIG5hbWUpLCBkb21haW4gPSBOQSkKLSAgICAgICAgbm9uc3RhbmRhcmRDYXNlIDwtIC5Ob25zdGFuZGFyZEdlbmVyaWNUZXN0KGJvZHkoZGVmKSwgbmFtZSwgc3RkR2VuZXJpY0JvZHkpCisgICAgICAgIGZib2R5IDwtIGJvZHkoZGVmKQorICAgICAgICBhdHRyaWJ1dGVzKGZib2R5KSA8LSBOVUxMCisgICAgICAgIGJyYWNlZEdlbmVyaWNCb2R5IDwtIGNhbGwoInsiLCBzdGRHZW5lcmljQm9keSkKKyAgICAgICAgbm9uc3RhbmRhcmRDYXNlIDwtIC5Ob25zdGFuZGFyZEdlbmVyaWNUZXN0KGZib2R5LCBuYW1lLCBzdGRHZW5lcmljQm9keSwgYnJhY2VkR2VuZXJpY0JvZHkpCiAgICAgICAgIGlmKGlzLm5hKG5vbnN0YW5kYXJkQ2FzZSkpIHsKICAgICAgICAgICAgIGlmKGlzLm51bGwodXNlQXNEZWZhdWx0KSkgeyMgdGFrZSB0aGlzIGFzIHRoZSBkZWZhdWx0CiAgICAgICAgICAgICAgICAgdXNlQXNEZWZhdWx0IDwtIGRlZgpAQCAtMTIxLDYgKzEyNCw4IEBACiAgICAgICAgICAgICB9CiAgICAgICAgICAgICBib2R5KGRlZiwgZW52aXIgPSBhcy5lbnZpcm9ubWVudCh3aGVyZSkpIDwtIHN0ZEdlbmVyaWNCb2R5CiAgICAgICAgICAgICBub25zdGFuZGFyZENhc2UgPC0gRkFMU0UKKyAgICAgICAgfSBlbHNlIGlmICghbm9uc3RhbmRhcmRDYXNlICYmIGlkZW50aWNhbChmYm9keSwgYnJhY2VkR2VuZXJpY0JvZHkpKSB7CisgICAgICAgICAgICBib2R5KGRlZiwgZW52aXIgPSBhcy5lbnZpcm9ubWVudCh3aGVyZSkpIDwtIHN0ZEdlbmVyaWNCb2R5CiAgICAgICAgIH0KICAgICAgICAgZmRlZiA8LSBkZWYKICAgICAgICAgaWYoaXMubnVsbChnZW5lcmljRnVuY3Rpb24pICYmIG5vbnN0YW5kYXJkQ2FzZSkKSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9STWV0aG9kVXRpbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIJKHJldmlzaW9uIDkwMTA0KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JNZXRob2RVdGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMjEzLDEwICsxMjEzLDEyIEBACiAgICAgICAgIEZBTFNFCiB9CiAKLS5Ob25zdGFuZGFyZEdlbmVyaWNUZXN0IDwtIGZ1bmN0aW9uKGJvZHksIGZuYW1lLCBzdGRCb2R5KQorLk5vbnN0YW5kYXJkR2VuZXJpY1Rlc3QgPC0gZnVuY3Rpb24oYm9keSwgZm5hbWUsIHN0ZEJvZHksIGJyYWNlZEJvZHkpCiB7CiAgICAgaWYoaWRlbnRpY2FsKGJvZHksIHN0ZEJvZHkpKQogICAgICAgICBGQUxTRQorICAgIGVsc2UgaWYoaWRlbnRpY2FsKGJvZHksIGJyYWNlZEJvZHkpKQorICAgICAgICBGQUxTRQogICAgIGVsc2UgaWYoLnJlY3Vyc2l2ZUNhbGxUZXN0KGJvZHksIGZuYW1lKSkKICAgICAgICAgVFJVRQogICAgIGVsc2UKSW5kZXg6IHRlc3RzL3JlZy1TNC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy1TNC5SCShyZXZpc2lvbiA5MDEwNCkKKysrIHRlc3RzL3JlZy1TNC5SCSh3b3JraW5nIGNvcHkpCkBAIC04NzgsNiArODc4LDE2IEBACiBzZXRDbGFzcygiYmFyIiwgY29udGFpbnMgPSAiZm9vIikKIGJvZHkoZ2V0Q2xhc3MoImJhciIpQGNvbnRhaW5zW1sxXV1AY29lcmNlKVtbMl1dCiAKKyMjIHNldEdlbmVyaWMgZGVmIGNhbiBiZSBpbiAneycgZm9yIGNvbnZlbmllbmNlCitzZXRHZW5lcmljKCJCcmFjZWRHZW5lcmljRGVmIiwgZnVuY3Rpb24ob2JqKSB7CisgICAgc3RhbmRhcmRHZW5lcmljKCJCcmFjZWRHZW5lcmljRGVmIikKK30pCitnIDwtIGdldEdlbmVyaWMoIkJyYWNlZEdlbmVyaWNEZWYiKQorIyMgYXNzZXJ0IGNvcnJlY3QgY2xhc3MgYW5kIGB7YCBpcyBzdHJpcHBlZCBmcm9tIHJlc3VsdAorc3RvcGlmbm90KGV4cHJzID0geworICAgIGlzKGcsICJzdGFuZGFyZEdlbmVyaWMiKQorICAgIGlkZW50aWNhbChib2R5KGcpLCBzdWJzdGl0dXRlKHN0YW5kYXJkR2VuZXJpYygiQnJhY2VkR2VuZXJpY0RlZiIpKSkKK30pCiAKIAogIyMgLS0tLS0gZnJvbSBoZXJlIG9uLCBrZWVwIGF0IEVPRiAtLS0tLQpJbmRleDogdGVzdHMvcmVnLVM0LlJvdXQuc2F2ZQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctUzQuUm91dC5zYXZlCShyZXZpc2lvbiA5MDEwNCkKKysrIHRlc3RzL3JlZy1TNC5Sb3V0LnNhdmUJKHdvcmtpbmcgY29weSkKQEAgLTEsNiArMSw2IEBACiAKLVIgVW5kZXIgZGV2ZWxvcG1lbnQgKHVuc3RhYmxlKSAoMjAyNC0wOC0yNyByODcwNjMpIC0tICJVbnN1ZmZlcmVkIENvbnNlcXVlbmNlcyIKLUNvcHlyaWdodCAoQykgMjAyNCBUaGUgUiBGb3VuZGF0aW9uIGZvciBTdGF0aXN0aWNhbCBDb21wdXRpbmcKK1IgVW5kZXIgZGV2ZWxvcG1lbnQgKHVuc3RhYmxlKSAoMjAyNi0wNi0wNCByOTAxMDQpIC0tICJVbnN1ZmZlcmVkIENvbnNlcXVlbmNlcyIKK0NvcHlyaWdodCAoQykgMjAyNiBUaGUgUiBGb3VuZGF0aW9uIGZvciBTdGF0aXN0aWNhbCBDb21wdXRpbmcKIFBsYXRmb3JtOiB4ODZfNjQtcGMtbGludXgtZ251CiAKIFIgaXMgZnJlZSBzb2Z0d2FyZSBhbmQgY29tZXMgd2l0aCBBQlNPTFVURUxZIE5PIFdBUlJBTlRZLgpAQCAtNyw2ICs3LDggQEAKIFlvdSBhcmUgd2VsY29tZSB0byByZWRpc3RyaWJ1dGUgaXQgdW5kZXIgY2VydGFpbiBjb25kaXRpb25zLgogVHlwZSAnbGljZW5zZSgpJyBvciAnbGljZW5jZSgpJyBmb3IgZGlzdHJpYnV0aW9uIGRldGFpbHMuCiAKKyAgTmF0dXJhbCBsYW5ndWFnZSBzdXBwb3J0IGJ1dCBydW5uaW5nIGluIGFuIEVuZ2xpc2ggbG9jYWxlCisKIFIgaXMgYSBjb2xsYWJvcmF0aXZlIHByb2plY3Qgd2l0aCBtYW55IGNvbnRyaWJ1dG9ycy4KIFR5cGUgJ2NvbnRyaWJ1dG9ycygpJyBmb3IgbW9yZSBpbmZvcm1hdGlvbiBhbmQKICdjaXRhdGlvbigpJyBvbiBob3cgdG8gY2l0ZSBSIG9yIFIgcGFja2FnZXMgaW4gcHVibGljYXRpb25zLgpAQCAtMTE3NiwxMiArMTE3OCwyMyBAQAogPiBib2R5KGdldENsYXNzKCJiYXIiKUBjb250YWluc1tbMV1dQGNvZXJjZSlbWzJdXQogY2xhc3MoZnJvbSkgPC0gImZvbyIKID4gCis+ICMjIHNldEdlbmVyaWMgZGVmIGNhbiBiZSBpbiAneycgZm9yIGNvbnZlbmllbmNlCis+IHNldEdlbmVyaWMoIkJyYWNlZEdlbmVyaWNEZWYiLCBmdW5jdGlvbihvYmopIHsKKysgICAgIHN0YW5kYXJkR2VuZXJpYygiQnJhY2VkR2VuZXJpY0RlZiIpCisrIH0pCitbMV0gIkJyYWNlZEdlbmVyaWNEZWYiCis+IGcgPC0gZ2V0R2VuZXJpYygiQnJhY2VkR2VuZXJpY0RlZiIpCis+ICMjIGFzc2VydCBjb3JyZWN0IGNsYXNzIGFuZCBge2AgaXMgc3RyaXBwZWQgZnJvbSByZXN1bHQKKz4gc3RvcGlmbm90KGV4cHJzID0geworKyAgICAgaXMoZywgInN0YW5kYXJkR2VuZXJpYyIpCisrICAgICBpZGVudGljYWwoYm9keShnKSwgc3Vic3RpdHV0ZShzdGFuZGFyZEdlbmVyaWMoIkJyYWNlZEdlbmVyaWNEZWYiKSkpCisrIH0pCiA+IAogPiAKID4gIyMgLS0tLS0gZnJvbSBoZXJlIG9uLCBrZWVwIGF0IEVPRiAtLS0tLQogPiAKID4gY2F0KCdUaW1lIGVsYXBzZWQ6ICcsIHByb2MudGltZSgpLCdcbicpCi1UaW1lIGVsYXBzZWQ6ICAwLjg2OSAwLjE2OSAxLjY0MiAwLjAwMSAwLjAwMyAKK1RpbWUgZWxhcHNlZDogIDAuODUzIDAuMDk2IDAuOTUgMC4wMTIgMC4wMDMgCiA+IAogPiAjIyMgTkI6IE9ubHkgYWRkIG5ldyB0ZXN0cyBoZXJlIF9JRl8gICBjaGVja2luZyBvdXRwdXQsCiA+ICMjIyAtLSAgb3RoZXJ3aXNlIHVzZSAuL2NsYXNzZXMtbWV0aG9kcy5SCg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2026-06-05T07:49:36Z",
+          "summary": "def=function(...) { standardGeneric(...) } gets braces removed",
+          "file_name": "braced-generic.patch",
+          "bug_id": 19083,
+          "last_change_time": "2026-06-05T07:49:36Z",
+          "size": 4315,
+          "is_private": false,
+          "id": 3726
+        },
+        {
+          "last_change_time": "2026-06-22T18:04:14Z",
+          "size": 13141,
+          "is_private": false,
+          "id": 3735,
+          "creation_time": "2026-06-22T18:04:14Z",
+          "summary": "prune subclasses of \"genericFunction\"",
+          "file_name": "genericFunction.diff",
+          "bug_id": 19083,
+          "is_patch": true,
+          "creator": "jaganmn2",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9NZXRob2RzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL01ldGhvZHMuUgkocmV2aXNpb24gOTAxODUpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMjAsMTEgKzEyMCw4IEBACiAgICAgICAgICAgICAgICAgdXNlQXNEZWZhdWx0IDwtIGRlZgogICAgICAgICAgICAgfQogICAgICAgICAgICAgYm9keShkZWYsIGVudmlyID0gYXMuZW52aXJvbm1lbnQod2hlcmUpKSA8LSBzdGRHZW5lcmljQm9keQotICAgICAgICAgICAgbm9uc3RhbmRhcmRDYXNlIDwtIEZBTFNFCiAgICAgICAgIH0KICAgICAgICAgZmRlZiA8LSBkZWYKLSAgICAgICAgaWYoaXMubnVsbChnZW5lcmljRnVuY3Rpb24pICYmIG5vbnN0YW5kYXJkQ2FzZSkKLSAgICAgICAgICAgIGdlbmVyaWNGdW5jdGlvbiA8LSBuZXcoIm5vbnN0YW5kYXJkR2VuZXJpY0Z1bmN0aW9uIikgIyBmb3JjZSB0aGlzIGNsYXNzIGZvciBmZGVmCiAgICAgfQogICAgIHRoaXNQYWNrYWdlIDwtIGdldFBhY2thZ2VOYW1lKHdoZXJlKQogICAgIGlmKGlzLm51bGwocGFja2FnZSkgfHwgIW56Y2hhcihwYWNrYWdlKSkKSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9NZXRob2RzTGlzdENsYXNzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL01ldGhvZHNMaXN0Q2xhc3MuUgkocmV2aXNpb24gOTAxODUpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kc0xpc3RDbGFzcy5SCSh3b3JraW5nIGNvcHkpCkBAIC02MSwxOSArNjEsOSBAQAogICAgICAgICAgICAgICAgICAgICAgICAgICAgIGdyb3VwID0gImxpc3QiLCB2YWx1ZUNsYXNzID0gImNoYXJhY3RlciIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc2lnbmF0dXJlID0gImNoYXJhY3RlciIsIGRlZmF1bHQgPSAib3B0aW9uYWxNZXRob2QiLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNrZWxldG9uID0gImNhbGwiKSwgd2hlcmUgPSBlbnZpcik7IGNsTGlzdCA8LSBjKGNsTGlzdCwgImdlbmVyaWNGdW5jdGlvbiIpCi0gICAgIyMgc3RhbmRhcmQgZ2VuZXJpYyBmdW5jdGlvbiAtLSBhbGxvd3MgaW1tZWRpYXRlIGRpc3BhdGNoCi0gICAgc2V0Q2xhc3MoInN0YW5kYXJkR2VuZXJpYyIsICBjb250YWlucyA9ICJnZW5lcmljRnVuY3Rpb24iKQotICAgIHNldENsYXNzKCJub25zdGFuZGFyZEdlbmVyaWMiLCAjIHZpcnR1YWwgY2xhc3MgdG8gbWFyayBzcGVjaWFsIGdlbmVyaWMvZ3JvdXAgZ2VuZXJpYwotICAgICAgICAgICAgIHdoZXJlID0gZW52aXIpOyBjbExpc3QgPC0gYyhjbExpc3QsICJub25zdGFuZGFyZEdlbmVyaWMiKQotICAgIHNldENsYXNzKCJub25zdGFuZGFyZEdlbmVyaWNGdW5jdGlvbiIsCi0gICAgICAgICAgICAgcmVwcmVzZW50YXRpb24oImdlbmVyaWNGdW5jdGlvbiIsICJub25zdGFuZGFyZEdlbmVyaWMiKSwKLSAgICAgICAgICAgICB3aGVyZSA9IGVudmlyKTsgY2xMaXN0IDwtIGMoY2xMaXN0LCAibm9uc3RhbmRhcmRHZW5lcmljRnVuY3Rpb24iKQogICAgIHNldENsYXNzKCJncm91cEdlbmVyaWNGdW5jdGlvbiIsCiAgICAgICAgICAgICAgcmVwcmVzZW50YXRpb24oImdlbmVyaWNGdW5jdGlvbiIsIGdyb3VwTWVtYmVycyA9ICJsaXN0IiksCiAgICAgICAgICAgICAgd2hlcmUgPSBlbnZpcik7IGNsTGlzdCA8LSBjKGNsTGlzdCwgImdyb3VwR2VuZXJpY0Z1bmN0aW9uIikKLSAgICBzZXRDbGFzcygibm9uc3RhbmRhcmRHcm91cEdlbmVyaWNGdW5jdGlvbiIsCi0gICAgICAgICAgICAgcmVwcmVzZW50YXRpb24oImdyb3VwR2VuZXJpY0Z1bmN0aW9uIiwgIm5vbnN0YW5kYXJkR2VuZXJpYyIpLAotICAgICAgICAgICAgIHdoZXJlID0gZW52aXIpOyBjbExpc3QgPC0gYyhjbExpc3QsICJub25zdGFuZGFyZEdyb3VwR2VuZXJpY0Z1bmN0aW9uIikKICAgICBzZXRDbGFzcygiTGluZWFyTWV0aG9kc0xpc3QiLCByZXByZXNlbnRhdGlvbihtZXRob2RzID0gImxpc3QiLCBhcmd1bWVudHMgPSAibGlzdCIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY2xhc3NlcyA9ICJsaXN0IiwgZ2VuZXJpYyA9ICJnZW5lcmljRnVuY3Rpb24iKSwKICAgICAgICAgICAgICB3aGVyZSA9IGVudmlyKTsgY2xMaXN0IDwtIGMoY2xMaXN0LCAiTGluZWFyTWV0aG9kc0xpc3QiKQpJbmRleDogc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JNZXRob2RVdGlscy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9STWV0aG9kVXRpbHMuUgkocmV2aXNpb24gOTAxODUpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIJKHdvcmtpbmcgY29weSkKQEAgLTY4LDcgKzY4LDcgQEAKICAgICAgICAgZmRlZiA8LSAuVmFsaWRhdGVWYWx1ZUNsYXNzKGZkZWYsIGYsIHZhbHVlQ2xhc3MpCiAgICAgZ3JvdXAgPC0gLmFzR3JvdXBBcmd1bWVudChncm91cCkKICAgICBpZihpcy5udWxsKGdlbmVyaWNGdW5jdGlvbikpCi0gICAgICAgIHZhbHVlIDwtIG5ldygic3RhbmRhcmRHZW5lcmljIikKKyAgICAgICAgdmFsdWUgPC0gbmV3KCJnZW5lcmljRnVuY3Rpb24iKQogICAgIGVsc2UgaWYoaXMoZ2VuZXJpY0Z1bmN0aW9uLCAiZ2VuZXJpY0Z1bmN0aW9uIikpCiAgICAgICAgIHZhbHVlIDwtIGdlbmVyaWNGdW5jdGlvbgogICAgIGVsc2UKQEAgLTE1Miw3ICsxNTIsNyBAQAogIyMjLS0tLS0tLS0KICAgICB2YWx1ZSA8LSAuYXNTNChmZGVmKQogICAgIGlmKGlzLm51bGwoZ2VuZXJpY0Z1bmN0aW9uKSkKLSAgICAgICAgY2xhc3ModmFsdWUpIDwtIC5jbGFzc05hbWVGcm9tTWV0aG9kcygic3RhbmRhcmRHZW5lcmljIikKKyAgICAgICAgY2xhc3ModmFsdWUpIDwtIC5jbGFzc05hbWVGcm9tTWV0aG9kcygiZ2VuZXJpY0Z1bmN0aW9uIikKICAgICBlbHNlCiAgICAgICAgIGNsYXNzKHZhbHVlKSA8LSBjbGFzcyhnZW5lcmljRnVuY3Rpb24pCiAgICAgc2xvdCh2YWx1ZSwgImdlbmVyaWMiLCBGQUxTRSkgPC0gZgpJbmRleDogc3JjL2xpYnJhcnkvbWV0aG9kcy9SL3RyYWNlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL3RyYWNlLlIJKHJldmlzaW9uIDkwMTg1KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9SL3RyYWNlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ2NSw3ICs0NjUsNyBAQAogICAgICAgICAgICAgIHdoZXJlID0gZW52aXIpOyBjbExpc3QgPC0gInRyYWNlYWJsZSIKICAgICAjIyBjcmVhdGUgdGhlIHRyYWNlYWJsZSBjbGFzc2VzCiAgICAgZm9yKGNsIGluIGMoImZ1bmN0aW9uIiwgIk1ldGhvZERlZmluaXRpb24iLCAiTWV0aG9kV2l0aE5leHQiLCAiZ2VuZXJpY0Z1bmN0aW9uIiwKLSAgICAgICAgICAgICAgICAic3RhbmRhcmRHZW5lcmljIiwgIm5vbnN0YW5kYXJkR2VuZXJpYyIsICJncm91cEdlbmVyaWNGdW5jdGlvbiIsCisgICAgICAgICAgICAgICAgImdyb3VwR2VuZXJpY0Z1bmN0aW9uIiwKICAgICAgICAgICAgICAgICAiZGVyaXZlZERlZmF1bHRNZXRob2QiKSkgewogICAgICAgICAubWFrZVRyYWNlQ2xhc3MoLnRyYWNlQ2xhc3NOYW1lKGNsKSwgY2wsIEZBTFNFKQogICAgICAgICBjbExpc3QgPC0gYyhjbExpc3QsIC50cmFjZUNsYXNzTmFtZShjbCkpCkluZGV4OiBzcmMvbGlicmFyeS9tZXRob2RzL21hbi9FbXB0eU1ldGhvZHNMaXN0LWNsYXNzLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvbWFuL0VtcHR5TWV0aG9kc0xpc3QtY2xhc3MuUmQJKHJldmlzaW9uIDkwMTg1KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9tYW4vRW1wdHlNZXRob2RzTGlzdC1jbGFzcy5SZAkod29ya2luZyBjb3B5KQpAQCAtOCwxMSArOCw2IEBACiBcYWxpYXN7RW1wdHlNZXRob2RzTGlzdC1jbGFzc30KIFxhbGlhc3tvcHRpb25hbE1ldGhvZC1jbGFzc30KIFxhbGlhc3tQb3NzaWJsZU1ldGhvZC1jbGFzc30KLVxhbGlhc3tzdGFuZGFyZEdlbmVyaWMtY2xhc3N9Ci1cYWxpYXN7c3RhbmRhcmRHZW5lcmljV2l0aFRyYWNlLWNsYXNzfQotXGFsaWFze25vbnN0YW5kYXJkR2VuZXJpYy1jbGFzc30KLVxhbGlhc3tub25zdGFuZGFyZEdlbmVyaWNGdW5jdGlvbi1jbGFzc30KLVxhbGlhc3tub25zdGFuZGFyZEdyb3VwR2VuZXJpY0Z1bmN0aW9uLWNsYXNzfQogXGFsaWFze09wdGlvbmFsRnVuY3Rpb24tY2xhc3N9CiBcYWxpYXN7ZGVyaXZlZERlZmF1bHRNZXRob2QtY2xhc3N9CiBcYWxpYXN7aW50ZXJuYWxEaXNwYXRjaE1ldGhvZC1jbGFzc30KQEAgLTI2LDExICsyMSw2IEBACiAiRW1wdHlNZXRob2RzTGlzdCIgIyBkZXByZWNhdGVkLCBzaW5jZSBcUiAzLjIuMDsgcmF0aGVyICJkZWZ1bmN0IiBmcm9tIDQuNS4wCiAKICMjIyBPdGhlciwgdmlydHVhbCBjbGFzc2VzIHVzZWQgaW4gbWV0aG9kIGRpc3BhdGNoCi0ic3RhbmRhcmRHZW5lcmljIgotInN0YW5kYXJkR2VuZXJpY1dpdGhUcmFjZSIKLSJub25zdGFuZGFyZEdlbmVyaWMiCi0ibm9uc3RhbmRhcmRHZW5lcmljRnVuY3Rpb24iCi0ibm9uc3RhbmRhcmRHcm91cEdlbmVyaWNGdW5jdGlvbiIKICJPcHRpb25hbEZ1bmN0aW9uIgogIm9wdGlvbmFsTWV0aG9kIgogIlBvc3NpYmxlTWV0aG9kIgpJbmRleDogc3JjL2xpYnJhcnkvbWV0aG9kcy9tYW4vTWV0aG9kc19EZXRhaWxzLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvbWFuL01ldGhvZHNfRGV0YWlscy5SZAkocmV2aXNpb24gOTAxODUpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL21hbi9NZXRob2RzX0RldGFpbHMuUmQJKHdvcmtpbmcgY29weSkKQEAgLTI1MSw3ICsyNTEsMTMgQEAKIFxzZWN0aW9ue0dlbmVyaWMgRnVuY3Rpb25zfXsKIEluIHByaW5jaXBsZSwgYSBnZW5lcmljIGZ1bmN0aW9uIGNvdWxkIGJlIGFueSBmdW5jdGlvbiB0aGF0IGV2YWx1YXRlcwogYSBjYWxsIHRvIFxjb2Rle3N0YW5kYXJkR2VuZXJpYygpfSwgdGhlIGludGVybmFsIGZ1bmN0aW9uIHRoYXQgc2VsZWN0cwotYSBtZXRob2QgYW5kIGV2YWx1YXRlcyBhIGNhbGwgdG8gIHRoZSBzZWxlY3RlZCBtZXRob2QuICBJbiBwcmFjdGljZSwKK2EgbWV0aG9kIGFuZCBldmFsdWF0ZXMgYSBjYWxsIHRvICB0aGUgc2VsZWN0ZWQgbWV0aG9kLiAgQSBnZW5lcmljCitmdW5jdGlvbiB3aG9zZSBib2R5IGlzIGEgY2FsbCB0byBcY29kZXtzdGFuZGFyZEdlbmVyaWN9IGlzIGNhbGxlZAorXGRRdW90ZXtzdGFuZGFyZH0uICBTdGFuZGFyZCBnZW5lcmljIGZ1bmN0aW9ucyBwZXJmb3JtIG1ldGhvZCBkaXNwYXRjaAorYW5kIGRvIG5vdGhpbmcgZWxzZS4gIE5vbnN0YW5kYXJkIGdlbmVyaWMgZnVuY3Rpb25zIGludm9sdmUgYWRkaXRpb25hbAorc3RlcHMsIHN1Y2ggYXMgaGFuZGxpbmcgb2YgYXJndW1lbnRzIG9yIHRoZSBtZXRob2QgcmV0dXJuIHZhbHVlLgorCitJbiBwcmFjdGljZSwKIGdlbmVyaWMgZnVuY3Rpb25zIGFyZSBzcGVjaWFsIG9iamVjdHMgdGhhdCBpbiBhZGRpdGlvbiB0byBiZWluZyBmcm9tIGEKIHN1YmNsYXNzIG9mIGNsYXNzIFxjb2RleyJmdW5jdGlvbiJ9IGFsc28gZXh0ZW5kIHRoZSBjbGFzcwogXGNvZGV7XGxpbmtTNGNsYXNze2dlbmVyaWNGdW5jdGlvbn19LiAgU3VjaCBvYmplY3RzIGhhdmUgc2xvdHMgdG8gZGVmaW5lCkBAIC0yNzksMTMgKzI4NSw2IEBACiBFYWNoIHRhYmxlIG11c3QgYmUgY29uc2lzdGVudCBpbiB0aGUgc2lnbmF0dXJlIGFzc3VtZWQgZm9yIHRoZSBnZW5lcmljCiBmdW5jdGlvbi4KIAotXFIgZGlzdGluZ3Vpc2hlcyBcZW1waHtzdGFuZGFyZH0gYW5kIFxlbXBoe25vbnN0YW5kYXJkfSBnZW5lcmljCi1mdW5jdGlvbnMsIHdpdGggdGhlIGZvcm1lciBoYXZpbmcgYSBmdW5jdGlvbiBib2R5IHRoYXQgZG9lcyBub3RoaW5nCi1idXQgZGlzcGF0Y2ggYSBtZXRob2QuCi1Gb3IgdGhlIG1vc3QgcGFydCwgdGhlIGRpc3RpbmN0aW9uIGlzIGp1c3Qgb25lIG9mIHNpbXBsaWNpdHk6ICBrbm93aW5nCi10aGF0IGEgZ2VuZXJpYyBmdW5jdGlvbiBvbmx5IGRpc3BhdGNoZXMgYSBtZXRob2QgY2FsbCBhbGxvd3Mgc29tZQotZWZmaWNpZW5jaWVzIGFuZCBhbHNvIHJlbW92ZXMgc29tZSB1bmNlcnRhaW50aWVzLgotCiBJbiBtb3N0IGNhc2VzLCB0aGUgZ2VuZXJpYyBmdW5jdGlvbiBpcyB0aGUgdmlzaWJsZSBmdW5jdGlvbgogY29ycmVzcG9uZGluZyB0byB0aGF0IG5hbWUsIGluIHRoZSBjb3JyZXNwb25kaW5nIHBhY2thZ2UuCiBUaGVyZSBhcmUgdHdvIGV4Y2VwdGlvbnMsIFxlbXBoe2ltcGxpY2l0fSBnZW5lcmljCkluZGV4OiBzcmMvbGlicmFyeS9tZXRob2RzL21hbi9UcmFjZUNsYXNzZXMuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9tYW4vVHJhY2VDbGFzc2VzLlJkCShyZXZpc2lvbiA5MDE4NSkKKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvbWFuL1RyYWNlQ2xhc3Nlcy5SZAkod29ya2luZyBjb3B5KQpAQCAtMTIsNyArMTIsNiBAQAogXGFsaWFze2dlbmVyaWNGdW5jdGlvbldpdGhUcmFjZS1jbGFzc30KIFxhbGlhc3tncm91cEdlbmVyaWNGdW5jdGlvbldpdGhUcmFjZS1jbGFzc30KIFxhbGlhc3tkZXJpdmVkRGVmYXVsdE1ldGhvZFdpdGhUcmFjZS1jbGFzc30KLVxhbGlhc3tub25zdGFuZGFyZEdlbmVyaWNXaXRoVHJhY2UtY2xhc3N9CiAlJSBtZXRob2RzIGdlbmVyYXRlZCBieSAuSW5pdFRyYWNlCiBcYWxpYXN7c2hvdyxNZXRob2REZWZpbml0aW9uV2l0aFRyYWNlLW1ldGhvZH0KIFxhbGlhc3tzaG93LE1ldGhvZFdpdGhOZXh0V2l0aFRyYWNlLW1ldGhvZH0KSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvbWFuL2NsYXNzZXNUb0FNLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvbWFuL2NsYXNzZXNUb0FNLlJkCShyZXZpc2lvbiA5MDE4NSkKKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvbWFuL2NsYXNzZXNUb0FNLlJkCSh3b3JraW5nIGNvcHkpCkBAIC03NSw3ICs3NSw3IEBACiB9CiBcZXhhbXBsZXN7CiAKLSMjIHRoZSBzdXBlci0gYW5kIHN1YmNsYXNzZXMgb2YgInN0YW5kYXJkR2VuZXJpYyIKKyMjIHRoZSBzdXBlci0gYW5kIHN1YmNsYXNzZXMgb2YgImdlbmVyaWNGdW5jdGlvbiIKICMjIGFuZCAiZGVyaXZlZERlZmF1bHRNZXRob2QiCiBhbSA8LSBjbGFzc2VzVG9BTShsaXN0KGNsYXNzKHNob3cpLCBjbGFzcyhnZXRNZXRob2Qoc2hvdykpKSwgVFJVRSkKIGFtCkluZGV4OiBzcmMvbGlicmFyeS9tZXRob2RzL3Rlc3RzL3Rlc3RDb25kaXRpb25hbElzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy90ZXN0cy90ZXN0Q29uZGl0aW9uYWxJcy5SCShyZXZpc2lvbiA5MDE4NSkKKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvdGVzdHMvdGVzdENvbmRpdGlvbmFsSXMuUgkod29ya2luZyBjb3B5KQpAQCAtMTIsNyArMTIsNyBAQAogCiBzZXRHZW5lcmljKCJmZiIsIGZ1bmN0aW9uKHgpImRlZmF1bHQgZmYiKQogIyMgdGVzdCB0aGF0IHRoZSBzZXRHZW5lcmljKCkgY2FsbCBjcmVhdGVkIHRoZSBnZW5lcmljICYgZGVmYXVsdAotc3RvcGlmbm90KGlzKGZmLCAic3RhbmRhcmRHZW5lcmljIiksCitzdG9waWZub3QoaXMoZmYsICJnZW5lcmljRnVuY3Rpb24iKSwKICAgICAgICAgICBpZGVudGljYWwoYm9keShnZXRNZXRob2QoImZmIiwiQU5ZIikpLCAiZGVmYXVsdCBmZiIpKQogCiBmZk1heWJlIDwtIGZ1bmN0aW9uKHgpICJmZiBtYXliZSBtZXRob2QiCkluZGV4OiBzcmMvbGlicmFyeS9tZXRob2RzL3Rlc3RzL3Rlc3RJcy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvdGVzdHMvdGVzdElzLlIJKHJldmlzaW9uIDkwMTg1KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy90ZXN0cy90ZXN0SXMuUgkod29ya2luZyBjb3B5KQpAQCAtMjAsNyArMjAsNyBAQAogCiBzZXRHZW5lcmljKCJzaXplIiwgZnVuY3Rpb24oeClzdGFuZGFyZEdlbmVyaWMoInNpemUiKSkKICMjIGNoZWNrIHRoYXQgZ2VuZXJpYyBmb3Igc2l6ZSgpIHdhcyBjcmVhdGVkIHcvbyBhIGRlZmF1bHQgbWV0aG9kCi1zdG9waWZub3QoaXMoc2l6ZSwgInN0YW5kYXJkR2VuZXJpYyIpLAorc3RvcGlmbm90KGlzKHNpemUsICJnZW5lcmljRnVuY3Rpb24iKSwKICAgICAgICAgICBpcy5udWxsKHNlbGVjdE1ldGhvZCgic2l6ZSIsICJBTlkiLG9wdGlvbmFsPVRSVUUpKSkKIAogc2V0TWV0aG9kKCJzaXplIiwgInZlY3RvciIsIGZ1bmN0aW9uKHgpbGVuZ3RoKHgpKQpJbmRleDogdGVzdHMvcmVnLVM0LlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLVM0LlIJKHJldmlzaW9uIDkwMTg1KQorKysgdGVzdHMvcmVnLVM0LlIJKHdvcmtpbmcgY29weSkKQEAgLTEyLDcgKzEyLDcgQEAKIHJlcXVpcmUoc3RhdHM0KQogZGV0YWNoKCJwYWNrYWdlOm1ldGhvZHMiKQogcmVxdWlyZSgibWV0aG9kcyIpCi1jYyA8LSBtZXRob2RzOjpnZXRDbGFzc0RlZigic3RhbmRhcmRHZW5lcmljIikKK2NjIDwtIG1ldGhvZHM6OmdldENsYXNzRGVmKCJnZW5lcmljRnVuY3Rpb24iKSAjIG9yaWcuICJzdGFuZGFyZEdlbmVyaWMiCiBjYyAjIyAoYXV0bykgcHJpbnQgZmFpbGVkIGhlcmUsIGluIFIgPD0gMy4yLjIKIHN0b3BpZm5vdCguaXNNZXRob2RzRGlzcGF0Y2hPbigpKSAjIyB3YXMgRkFMU0UgaW4gUiA8PSAzLjIuMgogCkBAIC01NTcsNyArNTU3LDcgQEAKICMjIGltcGxpY2l0IGdlbmVyaWNzIC4uCiBzZXRNZXRob2QoInNhbXBsZSIsICJDMiIsCiAgICAgICAgICAgZnVuY3Rpb24oeCwgc2l6ZSwgcmVwbGFjZT1GQUxTRSwgcHJvYj1OVUxMKSB7InNhbXBsZS5DMiJ9KQotc3RvcGlmbm90KGlzKHNhbXBsZSwic3RhbmRhcmRHZW5lcmljIiksCitzdG9waWZub3QoaXMoc2FtcGxlLCJnZW5lcmljRnVuY3Rpb24iKSwKIAkgICMjIHRoZSBzaWduYXR1cmUgbXVzdCBjb21lIGZyb20gdGhlIGltcGxpY2l0IGdlbmVyaWM6CiAJICBpZGVudGljYWwoc2FtcGxlQHNpZ25hdHVyZSwgYygieCIsICJzaXplIikpLAogCSAgaWRlbnRpY2FsKHBhY2thZ2VTbG90KHNhbXBsZSksICJiYXNlIiksCkBAIC01NjksNyArNTY5LDcgQEAKICMjIChGb3IgdGVzdCwgcXFwbG90IG11c3QgYmUgYSAic2ltcGxlIiBmdW5jdGlvbjopCiBzdG9waWZub3QoaXMuZnVuY3Rpb24ocXFwbG90KSAmJiBpZGVudGljYWwoY2xhc3MocXFwbG90KSwgImZ1bmN0aW9uIikpCiBzZXRHZW5lcmljKCJxcXBsb3QiLCBmdW5jdGlvbih4LCB5LCAuLi4pIHN0YW5kYXJkR2VuZXJpYygicXFwbG90IikpCi1zdG9waWZub3QoaXMocXFwbG90LCAic3RhbmRhcmRHZW5lcmljIiksCitzdG9waWZub3QoaXMocXFwbG90LCAiZ2VuZXJpY0Z1bmN0aW9uIiksCiAJICBpZGVudGljYWwocXFwbG90QHNpZ25hdHVyZSwgYygieCIsInkiKSkpCiAjIyBmYWlsZWQgZm9yIGEgZGF5IH4gMjAwNS0wNS0yNiwgZm9yIFItZGV2ZWwgb25seQogCkluZGV4OiB0ZXN0cy9yZWctUzQuUm91dC5zYXZlCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy1TNC5Sb3V0LnNhdmUJKHJldmlzaW9uIDkwMTg1KQorKysgdGVzdHMvcmVnLVM0LlJvdXQuc2F2ZQkod29ya2luZyBjb3B5KQpAQCAtMSw3ICsxLDcgQEAKIAotUiBVbmRlciBkZXZlbG9wbWVudCAodW5zdGFibGUpICgyMDI0LTA4LTI3IHI4NzA2MykgLS0gIlVuc3VmZmVyZWQgQ29uc2VxdWVuY2VzIgotQ29weXJpZ2h0IChDKSAyMDI0IFRoZSBSIEZvdW5kYXRpb24gZm9yIFN0YXRpc3RpY2FsIENvbXB1dGluZwotUGxhdGZvcm06IHg4Nl82NC1wYy1saW51eC1nbnUKK1IgVW5kZXIgZGV2ZWxvcG1lbnQgKHVuc3RhYmxlKSAoMjAyNi0wNi0yMSByOTAxODUpIC0tICJVbnN1ZmZlcmVkIENvbnNlcXVlbmNlcyIKK0NvcHlyaWdodCAoQykgMjAyNiBUaGUgUiBGb3VuZGF0aW9uIGZvciBTdGF0aXN0aWNhbCBDb21wdXRpbmcKK1BsYXRmb3JtOiBhYXJjaDY0LWFwcGxlLWRhcndpbjI1LjUuMAogCiBSIGlzIGZyZWUgc29mdHdhcmUgYW5kIGNvbWVzIHdpdGggQUJTT0xVVEVMWSBOTyBXQVJSQU5UWS4KIFlvdSBhcmUgd2VsY29tZSB0byByZWRpc3RyaWJ1dGUgaXQgdW5kZXIgY2VydGFpbiBjb25kaXRpb25zLgpAQCAtMzEsOSArMzEsOSBAQAogPiBkZXRhY2goInBhY2thZ2U6bWV0aG9kcyIpCiA+IHJlcXVpcmUoIm1ldGhvZHMiKQogTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBtZXRob2RzCi0+IGNjIDwtIG1ldGhvZHM6OmdldENsYXNzRGVmKCJzdGFuZGFyZEdlbmVyaWMiKQorPiBjYyA8LSBtZXRob2RzOjpnZXRDbGFzc0RlZigiZ2VuZXJpY0Z1bmN0aW9uIikgIyBvcmlnLiAic3RhbmRhcmRHZW5lcmljIgogPiBjYyAjIyAoYXV0bykgcHJpbnQgZmFpbGVkIGhlcmUsIGluIFIgPD0gMy4yLjIKLUNsYXNzICJzdGFuZGFyZEdlbmVyaWMiIFtwYWNrYWdlICJtZXRob2RzIl0KK0NsYXNzICJnZW5lcmljRnVuY3Rpb24iIFtwYWNrYWdlICJtZXRob2RzIl0KIAogU2xvdHM6CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKQEAgLTQ0LDEzICs0NCwxNSBAQAogQ2xhc3M6ICAgICAgY2hhcmFjdGVyICAgICAgY2hhcmFjdGVyIG9wdGlvbmFsTWV0aG9kICAgICAgICAgICBjYWxsCiAKIEV4dGVuZHM6IAotQ2xhc3MgImdlbmVyaWNGdW5jdGlvbiIsIGRpcmVjdGx5Ci1DbGFzcyAiZnVuY3Rpb24iLCBieSBjbGFzcyAiZ2VuZXJpY0Z1bmN0aW9uIiwgZGlzdGFuY2UgMgotQ2xhc3MgIk9wdGlvbmFsRnVuY3Rpb24iLCBieSBjbGFzcyAiZnVuY3Rpb24iLCBkaXN0YW5jZSAzCi1DbGFzcyAiUG9zc2libGVNZXRob2QiLCBieSBjbGFzcyAiZ2VuZXJpY0Z1bmN0aW9uIiwgZGlzdGFuY2UgMwotQ2xhc3MgIm9wdGlvbmFsTWV0aG9kIiwgYnkgY2xhc3MgImdlbmVyaWNGdW5jdGlvbiIsIGRpc3RhbmNlIDQKK0NsYXNzICJmdW5jdGlvbiIsIGZyb20gZGF0YSBwYXJ0CitDbGFzcyAiT3B0aW9uYWxGdW5jdGlvbiIsIGJ5IGNsYXNzICJmdW5jdGlvbiIsIGRpc3RhbmNlIDIKK0NsYXNzICJQb3NzaWJsZU1ldGhvZCIsIGJ5IGNsYXNzICJmdW5jdGlvbiIsIGRpc3RhbmNlIDIKK0NsYXNzICJvcHRpb25hbE1ldGhvZCIsIGJ5IGNsYXNzICJmdW5jdGlvbiIsIGRpc3RhbmNlIDMKIAotS25vd24gU3ViY2xhc3NlczogInN0YW5kYXJkR2VuZXJpY1dpdGhUcmFjZSIKK0tub3duIFN1YmNsYXNzZXM6IAorQ2xhc3MgImdyb3VwR2VuZXJpY0Z1bmN0aW9uIiwgZGlyZWN0bHkKK0NsYXNzICJnZW5lcmljRnVuY3Rpb25XaXRoVHJhY2UiLCBkaXJlY3RseQorQ2xhc3MgImdyb3VwR2VuZXJpY0Z1bmN0aW9uV2l0aFRyYWNlIiwgYnkgY2xhc3MgImdyb3VwR2VuZXJpY0Z1bmN0aW9uIiwgZGlzdGFuY2UgMgogPiBzdG9waWZub3QoLmlzTWV0aG9kc0Rpc3BhdGNoT24oKSkgIyMgd2FzIEZBTFNFIGluIFIgPD0gMy4yLjIKID4gCiA+IApAQCAtNzg1LDcgKzc4Nyw3IEBACiA+IHNldE1ldGhvZCgic2FtcGxlIiwgIkMyIiwKICsgICAgICAgICAgIGZ1bmN0aW9uKHgsIHNpemUsIHJlcGxhY2U9RkFMU0UsIHByb2I9TlVMTCkgeyJzYW1wbGUuQzIifSkKIENyZWF0aW5nIGEgZ2VuZXJpYyBmdW5jdGlvbiBmb3IgJ3NhbXBsZScgZnJvbSBwYWNrYWdlICdiYXNlJyBpbiB0aGUgZ2xvYmFsIGVudmlyb25tZW50Ci0+IHN0b3BpZm5vdChpcyhzYW1wbGUsInN0YW5kYXJkR2VuZXJpYyIpLAorPiBzdG9waWZub3QoaXMoc2FtcGxlLCJnZW5lcmljRnVuY3Rpb24iKSwKICsgCSAgIyMgdGhlIHNpZ25hdHVyZSBtdXN0IGNvbWUgZnJvbSB0aGUgaW1wbGljaXQgZ2VuZXJpYzoKICsgCSAgaWRlbnRpY2FsKHNhbXBsZUBzaWduYXR1cmUsIGMoIngiLCAic2l6ZSIpKSwKICsgCSAgaWRlbnRpY2FsKHBhY2thZ2VTbG90KHNhbXBsZSksICJiYXNlIiksCkBAIC03OTksNyArODAxLDcgQEAKID4gc2V0R2VuZXJpYygicXFwbG90IiwgZnVuY3Rpb24oeCwgeSwgLi4uKSBzdGFuZGFyZEdlbmVyaWMoInFxcGxvdCIpKQogQ3JlYXRpbmcgYSBuZXcgZ2VuZXJpYyBmdW5jdGlvbiBmb3IgJ3FxcGxvdCcgaW4gdGhlIGdsb2JhbCBlbnZpcm9ubWVudAogWzFdICJxcXBsb3QiCi0+IHN0b3BpZm5vdChpcyhxcXBsb3QsICJzdGFuZGFyZEdlbmVyaWMiKSwKKz4gc3RvcGlmbm90KGlzKHFxcGxvdCwgImdlbmVyaWNGdW5jdGlvbiIpLAogKyAJICBpZGVudGljYWwocXFwbG90QHNpZ25hdHVyZSwgYygieCIsInkiKSkpCiA+ICMjIGZhaWxlZCBmb3IgYSBkYXkgfiAyMDA1LTA1LTI2LCBmb3IgUi1kZXZlbCBvbmx5CiA+IApAQCAtMTE4MSw3ICsxMTgzLDcgQEAKID4gIyMgLS0tLS0gZnJvbSBoZXJlIG9uLCBrZWVwIGF0IEVPRiAtLS0tLQogPiAKID4gY2F0KCdUaW1lIGVsYXBzZWQ6ICcsIHByb2MudGltZSgpLCdcbicpCi1UaW1lIGVsYXBzZWQ6ICAwLjg2OSAwLjE2OSAxLjY0MiAwLjAwMSAwLjAwMyAKK1RpbWUgZWxhcHNlZDogIDAuNDI2IDAuMDI2IDAuNDYgMC4wMDUgMC4wMDUgCiA+IAogPiAjIyMgTkI6IE9ubHkgYWRkIG5ldyB0ZXN0cyBoZXJlIF9JRl8gICBjaGVja2luZyBvdXRwdXQsCiA+ICMjIyAtLSAgb3RoZXJ3aXNlIHVzZSAuL2NsYXNzZXMtbWV0aG9kcy5SCg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-06-22 18:04:14"
+}

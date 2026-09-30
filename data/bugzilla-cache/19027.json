@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Provide before / after hooks for install.packages(), for R front-ends",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-03-23T23:03:51Z",
+        "cc_detail": [],
+        "platform": "Other",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-03-23T23:03:51Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 19027,
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Wishlist"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19027": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 102802,
+            "tags": [],
+            "count": 0,
+            "text": "This is mainly a request for RStudio, but would be useful more broadly for other applications embedding R...\n\nIt can be useful for applications embedding R to know when `install.packages()` is being invoked. For example:\n\n- On Windows, the front-end could notify the user if they're attempting to install a package that is already loaded / in use, and that installation will likely fail.\n\n- The front-end can also prompt the user to take some action that could help installation to succeed.\n\n- After installation is complete, a notification could be used to tell the front-end to take some action (e.g. rebuild the Packages pane).\n\nHaving explicit hooks here would also allow R to differentiate between errors that occur in the hooks provided by the front-end application, and errors that occur in the install.packages code itself (and could make that clear in error reports). It would also make it unnecessary for RStudio to mask these functions to attach its own behaviors.\n\nMy proposal here is to have two hooks, specified via R options `before.install.packages` and `after.install.packages`, which get invoked on enter / exit.\n\nA similar set of hooks would be useful for `remove.packages()`.\n\n`update.packages()` appears to delegate to `install.packages()`, so would also be handled by the above scheme.",
+            "bug_id": 19027,
+            "creation_time": "2026-03-23T23:03:51Z",
+            "time": "2026-03-23T23:03:51Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19027": []
+    }
+  },
+  "source_changed": "2026-03-23 23:03:51"
+}

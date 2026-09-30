@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2023-08-26T10:44:15Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "minor",
+        "dupe_of": {},
+        "id": 18584,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "Add-ons",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "summary": "_R_CHECK_DEPENDS_ONLY_ assumes that .Library doesn't contain third-party packages",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2023-08-26T10:44:15Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "creator": "ikrylov",
+        "is_creator_accessible": true,
+        "alias": [],
+        "is_confirmed": false,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "id": 3307,
+          "name": "ikrylov",
+          "real_name": "Ivan Krylov"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18584": {
+        "comments": [
+          {
+            "creator": "ikrylov",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2023-08-26T10:44:15Z",
+            "creation_time": "2023-08-26T10:44:15Z",
+            "bug_id": 18584,
+            "text": "When checking whether a package works without its `Suggests` available, `R CMD check` prepares a temporary library containing only the stated hard dependencies. It has to keep `.Library` available, which is where the base packages live, and includes this comment (`src/library/tools/R/check.R`, function `setRlibs`):\n\n```\n## We need to make some assumptions about layout: this version\n## assumes .Library contains standard and recommended packages\n## and nothing else.\n```\n\nUnfortunately, `.Library` can end up being writeable and therefore collect third-party packages: https://stat.ethz.ch/pipermail/r-devel/2023-July/082740.html\n\nI don't know whether it's been fixed on macOS, but keeping a build of R-devel in a home directory is something that many R package developers do. Having CRAN packages installed under `.Library` makes it impossible to check packages with `_R_CHECK_DEPENDS_ONLY_=TRUE`.\n\n`setRlibs` contains additional logic to test whether a package works without Recommended packages. Since those do live in `.Library`, `setRlibs` sets up empty shells of them in the temporary library that take precedence over `.Library` but fail to load. Can this logic be reused for the regular dependencies under `Suggests:` too? I have duplicated the logic in a very crude manner, and it seems to work, but more testing and better integration with `setRlibs` is needed:\n\n```\nif (!suggests) for(pkg in names(pi$Suggests) %w/o% deps) {\n    dir.create(pd <- file.path(tmplib, pkg))\n    f <- system.file('DESCRIPTION', package = pkg)\n    if(file.exists(f)) file.copy(f, pd)\n    close(file(file.path(pd, \"dummy_for_check\"), \"w\"))\n}\n```\n\nThe fact that this works probably relies on an implementation detail of the package loader. A different solution would be to set up a private, non-API environment variable for the duration of the check `_R_PACKAGE_PROHIBIT_LOADING_=dep1,dep2,...` and consult it when loading packages.\n\nOr is it better to always set up a separate library, even for R-devel?",
+            "count": 0,
+            "tags": [],
+            "id": 100060,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18584": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2023-08-26 10:44:15"
+}

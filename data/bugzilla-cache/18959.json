@@ -1,0 +1,205 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "undoc(dir=) differs from undoc(package=)",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-09-08T15:39:37Z",
+        "cc_detail": [
+          {
+            "id": 1602,
+            "name": "brodie.gaslam",
+            "real_name": ""
+          },
+          {
+            "id": 308,
+            "name": "Kurt.Hornik",
+            "real_name": "Kurt Hornik"
+          }
+        ],
+        "platform": "Other",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "Linux",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2025-10-18T17:37:36Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "id": 18959,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [
+          "brodie.gaslam",
+          "Kurt.Hornik"
+        ],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Misc"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18959": {
+        "comments": [
+          {
+            "text": "Using {diffobj} as an example: https://github.com/brodieG/diffobj/issues/165\n\n```\nlibrary(tools)\n# NB: diffobj@19c1742bc9798db9cd4ac35ccff3f503b50fceaa\nstr(undoc(dir = \"diffobj\"))\n# List of 4\n#  $ code objects: chr(0) \n#  $ data sets   : chr(0) \n#  $ S4 classes  : chr [1:2] \"StyleFunsAnsi\" \"GuideLines\"\n#  $ S4 methods  : chr(0) \n#  - attr(*, \"class\")= chr \"undoc\"\n\nstr(undoc(package = \"diffobj\"))\n# List of 4\n#  $ code objects: chr(0) \n#  $ data sets   : chr(0) \n#  $ S4 classes  : chr(0) \n#  $ S4 methods  : chr(0) \n#  - attr(*, \"class\")= chr \"undoc\"\n```\n\nI'm still investigating why the difference, but it's certainly undocumented.",
+            "bug_id": 18959,
+            "count": 0,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "creation_time": "2025-10-18T17:37:36Z",
+            "time": "2025-10-18T17:37:36Z",
+            "id": 102367,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "is_private": false,
+            "id": 102368,
+            "time": "2025-10-18T22:03:44Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 18959,
+            "text": "So basically it looks like `dir=` expects unexported classes to be documented:\n\n```\nlibrary(diffobj)\n\"StyleFunsAnsi\" %in% methods::getClasses(\"package:diffobj\")\n# [1] FALSE\n\"StyleFunsAnsi\" %in% methods::getClasses(asNamespace(\"diffobj\"))\n# [1] TRUE\n```\n\nI am but an S4 novice but it looks like the `dir=` version is incorrect, I'm just not sure if it's possible to make the two agree.",
+            "creation_time": "2025-10-18T22:03:44Z",
+            "creator": "michaelchirico4"
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "id": 102369,
+            "time": "2025-10-18T22:19:51Z",
+            "is_private": false,
+            "creation_time": "2025-10-18T22:19:51Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18959,
+            "text": "There's a little more to be said here, since `undoc()` only found two issues but there are many more unexported classes in {diffobj}\n\n```\nlibrary(diffobj)\nexported_classes <- getClasses(\"package:diffobj\")\nall_classes <- getClasses(asNamespace(\"diffobj\"))\n\nprivate_classes <- setdiff(all_classes, exported_classes)\nlength(private_classes)\n# [1] 20\n```\n\nSo what sets `StyleFunsAnsi` and `GuideLines` apart from, e.g. `Dark` or `Gutter`?",
+            "count": 2,
+            "is_markdown": true
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 102372,
+            "time": "2025-10-20T14:24:07Z",
+            "is_private": false,
+            "creation_time": "2025-10-20T14:24:07Z",
+            "creator": "brodie.gaslam",
+            "bug_id": 18959,
+            "text": "Not sure if this helps or not but one difference between the classes you mention and the ones that errors are reported for in dir mode is that the latter are both defined and assigned to (unexported) symbols in the namespace, e.g.:\n\n```\nStyleFunsAnsi <- setClass(\n  \"StyleFunsAnsi\", contains=\"StyleFuns\",\n  ...\n```\n\nWhereas e.g. \"Dark\" is just defined but not assigned:\n\n```\nsetClass(\"Dark\", contains=\"VIRTUAL\")\n```",
+            "is_markdown": true,
+            "count": 3
+          },
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-07-14T17:16:33Z",
+            "attachment_id": {},
+            "count": 4,
+            "bug_id": 18959,
+            "text": "Offering an LLM investigation which basically pinpoints the issue, but omitting the proposed solution about which I'm more agnostic. It did find this comment in the code which is evocative:\n\n```\n<NOTE>\nThere is no point in worrying about exportClasses directives\nin a NAMESPACE file when working on a package source dir, as\nwe only source the assignments, and hence do not get any\nS4 classes or methods.\n<\/NOTE>\n```\n\nhttps://github.com/r-devel/r-svn/blob/b5a50cb201993f64bd62d6c1d0b610e6f3dbef6e/src/library/tools/R/QC.R#L229-L278\n\nWhich means the QC.R code assumes that {diffobj} approach of assigning the output of `setClass()` doesn't occur.\n\n---\n\nThe inconsistency between `undoc(dir=)` (checking source directory) and `undoc(package=)` (checking installed package) for S4 classes and methods was caused by two main issues in how `undoc(dir=)` processed the source files:\n\n1.  **Incomplete Evaluation of S4 Definitions:**\n    To find objects in `dir` mode, R sources the package files into a temporary environment. However, it was using `.source_assignments` which only evaluated top-level assignments (matching `<-` or `=`).\n    *   S4 classes defined *with* assignment (e.g., `MyClass <- setClass(\"MyClass\", ...)`) were evaluated and registered.\n    *   S4 classes defined *without* assignment (e.g., `setClass(\"MyClass\", ...)`) were ignored.\n    *   S4 methods (typically defined using `setMethod(...)` without assignment) and S4 generics defined without assignment were also ignored.\n\n2.  **Missing NAMESPACE Filtering for S4 Objects:**\n    While `undoc(dir=)` filtered regular code objects using `NAMESPACE` exports, it did not apply any filtering to S4 classes and methods.\n    *   Any S4 class that happened to be evaluated (because of assignment) was checked, even if it was not exported. This led to false positives (reporting unexported S4 classes as undocumented).\n    *   Conversely, exported S4 classes/methods defined without assignment were missed entirely because they were never evaluated.\n\nIn contrast, `undoc(package=)` loads the installed package and checks the attached package environment, which naturally only contains exported S4 classes and methods.",
+            "creation_time": "2026-07-14T17:16:33Z",
+            "is_private": false,
+            "id": 103310,
+            "tags": []
+          },
+          {
+            "tags": [],
+            "id": 103465,
+            "is_private": false,
+            "creation_time": "2026-08-21T17:24:06Z",
+            "text": "Created attachment 3797\nExclude unexported classes, methods when flagging undocumented classes, methods\n\nSharing a tested patch in resolution of the issue here. The change is pretty straightforward -- after pulling the classes/methods from the namespace, consult the NAMESPACE (`nsInfo`), if available, and ignore private classes/methods.\n\n(whether `R CMD check` should complain if there are _documented_ unexported methods is not considered here)",
+            "bug_id": 18959,
+            "count": 5,
+            "attachment_id": 3797,
+            "time": "2026-08-21T17:24:06Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 103574,
+            "time": "2026-09-03T14:47:54Z",
+            "is_private": false,
+            "creation_time": "2026-09-03T14:47:54Z",
+            "creator": "brodie.gaslam",
+            "bug_id": 18959,
+            "text": "FWIW I looked at the patch and it _seems_ like a good implementation with good testing.  I only say seems because I transitioned computers and my R-devel compilation set-up is not up and running yet so I've only visually reviewed.",
+            "is_markdown": true,
+            "count": 6
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-09-08T15:39:37Z",
+            "id": 103607,
+            "creator": "Kurt.Hornik",
+            "creation_time": "2026-09-08T15:39:37Z",
+            "count": 7,
+            "is_markdown": true,
+            "text": "Patch committed to the trunk now with c90509.\nOk to close this PR now?  Of course, this originally reported something different,  due to the fact that when using the \"code\" from an uninstalled package all we currently use is .source_assignments_in_code_dir(), which misses code objects obtained via setClass() et al.  This could perhaps be improved, but likely not worth the effort, as there are so few packages we cannot install everywhere ..",
+            "bug_id": 18959
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18959": [
+        {
+          "is_patch": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IvUUMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL1FDLlIJKHJldmlzaW9uIDkwNDQwKQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi9RQy5SCSh3b3JraW5nIGNvcHkpCkBAIC05MSw2ICs5MSw3IEBACiB1bmRvYyA8LQogZnVuY3Rpb24ocGFja2FnZSwgZGlyLCBsaWIubG9jID0gTlVMTCkKIHsKKyAgICBuc0luZm8gPC0gTlVMTAogICAgICMjIEFyZ3VtZW50IGhhbmRsaW5nLgogICAgICMjIDxOT1RFPgogICAgICMjIEVhcmxpZXIgdmVyc2lvbnMgdXNlZCB0byBnaXZlIGFuIGVycm9yIGlmIHRoZXJlIHdlcmUgbm8gUmQKQEAgLTIyOSwxMiArMjMwLDEyIEBACiAgICAgaWYoLmlzTWV0aG9kc0Rpc3BhdGNoT24oKSkgewogICAgICAgICAjIyBVbmRvY3VtZW50ZWQgUzQgY2xhc3Nlcz8KICAgICAgICAgUzRfY2xhc3NlcyA8LSBtZXRob2RzOjpnZXRDbGFzc2VzKGNvZGVfZW52KQotICAgICAgICAjIyA8Tk9URT4KLSAgICAgICAgIyMgVGhlcmUgaXMgbm8gcG9pbnQgaW4gd29ycnlpbmcgYWJvdXQgZXhwb3J0Q2xhc3NlcyBkaXJlY3RpdmVzCi0gICAgICAgICMjIGluIGEgTkFNRVNQQUNFIGZpbGUgd2hlbiB3b3JraW5nIG9uIGEgcGFja2FnZSBzb3VyY2UgZGlyLCBhcwotICAgICAgICAjIyB3ZSBvbmx5IHNvdXJjZSB0aGUgYXNzaWdubWVudHMsIGFuZCBoZW5jZSBkbyBub3QgZ2V0IGFueQotICAgICAgICAjIyBTNCBjbGFzc2VzIG9yIG1ldGhvZHMuCi0gICAgICAgICMjIDwvTk9URT4KKyAgICAgICAgaWYoIWlzLm51bGwobnNJbmZvKSkgeworICAgICAgICAgICAgT0sgPC0gbnNJbmZvJGV4cG9ydENsYXNzZXMKKyAgICAgICAgICAgIGZvcihwIGluIG5zSW5mbyRleHBvcnRDbGFzc1BhdHRlcm5zKQorICAgICAgICAgICAgICAgIE9LIDwtIGMoT0ssIGdyZXB2KHAsIFM0X2NsYXNzZXMpKQorICAgICAgICAgICAgUzRfY2xhc3NlcyA8LSB1bmlxdWUoT0spCisgICAgICAgIH0KICAgICAgICAgIyMgVGhlIGJhZCBvbmVzOgogICAgICAgICBTNF9jbGFzc2VzIDwtCiAgICAgICAgICAgICBTNF9jbGFzc2VzW3ZhcHBseShTNF9jbGFzc2VzLCB1dGlsczo6OnRvcGljTmFtZSwgIiAiLApAQCAtMjQyLDE2ICsyNDMsOCBAQAogICAgICAgICAgICAgICAgICAgICAgICAlbm90aW4lIGFsbF9kb2NfdG9waWNzXQogICAgICAgICB1bmRvY190aGluZ3MgPC0KICAgICAgICAgICAgIGModW5kb2NfdGhpbmdzLCBsaXN0KCJTNCBjbGFzc2VzIiA9IHVuaXF1ZShTNF9jbGFzc2VzKSkpCi0gICAgfQogCi0gICAgaWYoLmlzTWV0aG9kc0Rpc3BhdGNoT24oKSkgewogICAgICAgICAjIyBVbmRvY3VtZW50ZWQgUzQgbWV0aG9kcz8KLSAgICAgICAgIyMgPE5PVEU+Ci0gICAgICAgICMjIFRoZXJlIGlzIG5vIHBvaW50IGluIHdvcnJ5aW5nIGFib3V0IGV4cG9ydE1ldGhvZHMgZGlyZWN0aXZlcwotICAgICAgICAjIyBpbiBhIE5BTUVTUEFDRSBmaWxlIHdoZW4gd29ya2luZyBvbiBhIHBhY2thZ2Ugc291cmNlIGRpciwgYXMKLSAgICAgICAgIyMgd2Ugb25seSBzb3VyY2UgdGhlIGFzc2lnbm1lbnRzLCBhbmQgaGVuY2UgZG8gbm90IGdldCBhbnkKLSAgICAgICAgIyMgUzQgY2xhc3NlcyBvciBtZXRob2RzLgotICAgICAgICAjIyA8L05PVEU+CiAgICAgICAgIC5tYWtlX1M0X21ldGhvZF9zaWdsaXN0IDwtIGZ1bmN0aW9uKGcpIHsKICAgICAgICAgICAgIG1saXN0IDwtIC5nZXRfUzRfbWV0aG9kc19saXN0KGcsIGNvZGVfZW52KQogICAgICAgICAgICAgc2lncyA8LSAubWFrZV9zaWdsaXN0KG1saXN0KSAjICBzLyMvLC9nCkBAIC0yNjAsOCArMjUzLDEwIEBACiAgICAgICAgICAgICBlbHNlCiAgICAgICAgICAgICAgICAgY2hhcmFjdGVyKCkKICAgICAgICAgfQotICAgICAgICBTNF9tZXRob2RzIDwtIGxhcHBseSguZ2V0X1M0X2dlbmVyaWNzKGNvZGVfZW52KSwKLSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLm1ha2VfUzRfbWV0aG9kX3NpZ2xpc3QpCisgICAgICAgIGdlbmVyaWNzIDwtIC5nZXRfUzRfZ2VuZXJpY3MoY29kZV9lbnYpCisgICAgICAgIGlmKCFpcy5udWxsKG5zSW5mbykpCisgICAgICAgICAgICBnZW5lcmljcyA8LSBnZW5lcmljc1tuYW1lcyhnZW5lcmljcykgJWluJSBuc0luZm8kZXhwb3J0TWV0aG9kc10KKyAgICAgICAgUzRfbWV0aG9kcyA8LSBsYXBwbHkoZ2VuZXJpY3MsIC5tYWtlX1M0X21ldGhvZF9zaWdsaXN0KQogICAgICAgICBTNF9tZXRob2RzIDwtIGFzLmNoYXJhY3Rlcih1bmxpc3QoUzRfbWV0aG9kcywgdXNlLm5hbWVzID0gRkFMU0UpKQogCiAgICAgICAgICMjIFRoZSBiYWQgb25lczoKSW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL3Rlc3RzL3VuZG9jLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvdG9vbHMvdGVzdHMvdW5kb2MuUgkocmV2aXNpb24gOTA0NDApCisrKyBzcmMvbGlicmFyeS90b29scy90ZXN0cy91bmRvYy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yLDMgKzIsOTYgQEAKIAogKHVkNCA8LSB1bmRvYygic3RhdHM0IikpCiBzdG9waWZub3Qoc2FwcGx5KHVkNCwgbGVuZ3RoKSA9PSAwKQorCisKKyMjIFBSIzE4OTU5OiB1bmRvYygpIG9uIHBhY2thZ2UgZGlyIHdpdGggUzQgY2xhc3NlcyBhbmQgbWV0aG9kcworcGtnZGlyIDwtIHRlbXBmaWxlKCJ0ZXN0cGtnIikKK2Rpci5jcmVhdGUoZmlsZS5wYXRoKHBrZ2RpciwgIlIiKSwgcmVjdXJzaXZlID0gVFJVRSkKK2Rpci5jcmVhdGUoZmlsZS5wYXRoKHBrZ2RpciwgIm1hbiIpKQorCit3cml0ZS5kY2YoZmlsZSA9IGZpbGUucGF0aChwa2dkaXIsICJERVNDUklQVElPTiIpLAorICBsaXN0KFBhY2thZ2UgPSBiYXNlbmFtZShwa2dkaXIpLAorICAgICAgIFRpdGxlID0gIlRlc3QgUGFja2FnZSB3aXRoIFByaXZhdGUgQ2xhc3NlcyBhbmQgTWV0aG9kcyIsCisgICAgICAgVmVyc2lvbiA9ICIxLjAiLAorICAgICAgIERlc2NyaXB0aW9uID0gIlRlc3Qgd2l0aCB1bmV4cG9ydGVkIG1ldGhvZHMsIGNsYXNzZXMgZm9yIHVuZG9jIFBSMTg5NTkiLAorICAgICAgIExpY2Vuc2UgPSAiR1BMLTIiKSkKKworY2F0KGZpbGUgPSBmaWxlLnBhdGgocGtnZGlyLCAiTkFNRVNQQUNFIiksIHIiKAorZXhwb3J0Q2xhc3NlcyhFeHBDbGFzcykKK2V4cG9ydENsYXNzUGF0dGVybigiXlBhdENsYXNzIikKK2V4cG9ydE1ldGhvZHMoc2hvdykKKykiKQorCitjYXQoZmlsZSA9IGZpbGUucGF0aChwa2dkaXIsICJSIiwgImNvZGUuUiIpLCByIigKK0V4cENsYXNzIDwtIHNldENsYXNzKCJFeHBDbGFzcyIsIHNsb3RzID0gYyh4ID0gIm51bWVyaWMiKSkKK1BhdENsYXNzQSA8LSBzZXRDbGFzcygiUGF0Q2xhc3NBIiwgc2xvdHMgPSBjKHkxID0gIm51bWVyaWMiKSkKK1BhdENsYXNzQiA8LSBzZXRDbGFzcygiUGF0Q2xhc3NCIiwgc2xvdHMgPSBjKHkyID0gIm51bWVyaWMiKSkKK1VuZXhwQ2xhc3MgPC0gc2V0Q2xhc3MoIlVuZXhwQ2xhc3MiLCBzbG90cyA9IGMoeiA9ICJudW1lcmljIikpCisubTEgPC0gc2V0TWV0aG9kKCJzaG93IiwgIkV4cENsYXNzIiwgZnVuY3Rpb24ob2JqZWN0KSBwcmludChvYmplY3RAeCkpCisubTIgPC0gc2V0TWV0aG9kKCJwbG90IiwgIkV4cENsYXNzIiwgZnVuY3Rpb24oeCwgeSwgLi4uKSBwbG90KHhAeCwgLi4uKSkKKykiKQorCit1IDwtIHVuZG9jKGRpciA9IHBrZ2RpcikKK3N0b3BpZm5vdChleHBycyA9IHsKKyAgICBpZGVudGljYWwodVtbIlM0IGNsYXNzZXMiXV0sIGMoIkV4cENsYXNzIiwgIlBhdENsYXNzQSIsICJQYXRDbGFzc0IiKSkKKyAgICBpZGVudGljYWwodVtbIlM0IG1ldGhvZHMiXV0sICJnZW5lcmljICdzaG93JyBhbmQgc2lnbGlzdCAnRXhwQ2xhc3MnIikKK30pCisKKyMjIERvY3VtZW50IHRoZSBleHBvcnRlZCBTNCBjbGFzcyBhbmQgbWV0aG9kCitjYXQoZmlsZSA9IGZpbGUucGF0aChwa2dkaXIsICJtYW4iLCAiRXhwQ2xhc3MuUmQiKSwgciIoCitcbmFtZXtFeHBDbGFzcy1jbGFzc30KK1xkb2NUeXBle2NsYXNzfQorXGFsaWFze0V4cENsYXNzLWNsYXNzfQorXGFsaWFze3Nob3csRXhwQ2xhc3MtbWV0aG9kfQorXHRpdGxle0V4cENsYXNzfQorXGRlc2NyaXB0aW9ue0V4cENsYXNzfQorKSIpCisKK2NhdChmaWxlID0gZmlsZS5wYXRoKHBrZ2RpciwgIm1hbiIsICJQYXRDbGFzc0EuUmQiKSwgciIoCitcbmFtZXtQYXRDbGFzc0EtY2xhc3N9CitcZG9jVHlwZXtjbGFzc30KK1xhbGlhc3tQYXRDbGFzc0EtY2xhc3N9CitcdGl0bGV7UGF0Q2xhc3NBfQorXGRlc2NyaXB0aW9ue1BhdENsYXNzQX0KKykiKQorY2F0KGZpbGUgPSBmaWxlLnBhdGgocGtnZGlyLCAibWFuIiwgIlBhdENsYXNzQi5SZCIpLCByIigKK1xuYW1le1BhdENsYXNzQi1jbGFzc30KK1xkb2NUeXBle2NsYXNzfQorXGFsaWFze1BhdENsYXNzQi1jbGFzc30KK1x0aXRsZXtQYXRDbGFzc0J9CitcZGVzY3JpcHRpb257UGF0Q2xhc3NCfQorKSIpCisKK3VfZG9jIDwtIHVuZG9jKGRpciA9IHBrZ2RpcikKK3N0b3BpZm5vdChleHBycyA9IHsKKyAgICBsZW5ndGgodV9kb2NbWyJTNCBjbGFzc2VzIl1dKSA9PSAwTAorICAgIGxlbmd0aCh1X2RvY1tbIlM0IG1ldGhvZHMiXV0pID09IDBMCit9KQorCit1bmxpbmsocGtnZGlyLCByZWN1cnNpdmUgPSBUUlVFKQorCisKKyMjIFBhY2thZ2UgZGlyZWN0b3J5IHdpdGhvdXQgTkFNRVNQQUNFIChuc0luZm8gaXMgTlVMTCkKK3BrZ2Rpcl9ub19ucyA8LSB0ZW1wZmlsZSgidGVzdHBrZ19ub19ucyIpCitkaXIuY3JlYXRlKGZpbGUucGF0aChwa2dkaXJfbm9fbnMsICJSIiksIHJlY3Vyc2l2ZSA9IFRSVUUpCitkaXIuY3JlYXRlKGZpbGUucGF0aChwa2dkaXJfbm9fbnMsICJtYW4iKSkKKword3JpdGUuZGNmKGZpbGUgPSBmaWxlLnBhdGgocGtnZGlyX25vX25zLCAiREVTQ1JJUFRJT04iKSwKKyAgbGlzdChQYWNrYWdlID0gYmFzZW5hbWUocGtnZGlyX25vX25zKSwKKyAgICAgICBUaXRsZSA9ICJUZXN0IFBhY2thZ2Ugd2l0aG91dCBOQU1FU1BBQ0UiLAorICAgICAgIFZlcnNpb24gPSAiMS4wIiwKKyAgICAgICBEZXNjcmlwdGlvbiA9ICJUZXN0IHBhY2thZ2Ugd2l0aG91dCBOQU1FU1BBQ0UgZm9yIHVuZG9jIFBSMTg5NTkuIiwKKyAgICAgICBMaWNlbnNlID0gIkdQTC0yIikpCisKK2NhdChmaWxlID0gZmlsZS5wYXRoKHBrZ2Rpcl9ub19ucywgIlIiLCAiY29kZS5SIiksIHIiKAorQ2wxIDwtIHNldENsYXNzKCJDbDEiLCBzbG90cyA9IGMoeCA9ICJudW1lcmljIikpCisubSA8LSBzZXRNZXRob2QoInNob3ciLCAiQ2wxIiwgZnVuY3Rpb24ob2JqZWN0KSBwcmludChvYmplY3RAeCkpCispIikKKwordV9ub19ucyA8LSB1bmRvYyhkaXIgPSBwa2dkaXJfbm9fbnMpCitzdG9waWZub3QoZXhwcnMgPSB7CisgICAgaWRlbnRpY2FsKHVfbm9fbnNbWyJTNCBjbGFzc2VzIl1dLCAiQ2wxIikKKyAgICBpZGVudGljYWwodV9ub19uc1tbIlM0IG1ldGhvZHMiXV0sICJnZW5lcmljICdzaG93JyBhbmQgc2lnbGlzdCAnQ2wxJyIpCit9KQorCit1bmxpbmsocGtnZGlyX25vX25zLCByZWN1cnNpdmUgPSBUUlVFKQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-08-21T17:24:06Z",
+          "size": 5600,
+          "is_private": false,
+          "id": 3797,
+          "creation_time": "2026-08-21T17:24:06Z",
+          "summary": "Exclude unexported classes, methods when flagging undocumented classes, methods",
+          "file_name": "undoc-exported.patch",
+          "bug_id": 18959
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-08 15:39:37"
+}

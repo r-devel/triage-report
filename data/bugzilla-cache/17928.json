@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "p.krivitsky",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "resolution": "",
+        "creator_detail": {
+          "name": "p.krivitsky",
+          "id": 847,
+          "real_name": "Pavel N. Krivitsky"
+        },
+        "status": "TRIAGED",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "NextMethod does not appear to dispatch to group generic methods from specific methods.",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [
+          {
+            "real_name": "Gabriel Becker",
+            "id": 1299,
+            "name": "gabembecker"
+          }
+        ],
+        "last_change_time": "2026-04-21T20:13:18Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Language",
+        "version": "R-devel (trunk)",
+        "creation_time": "2020-09-25T12:45:09Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [
+          "gabembecker"
+        ],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 17928,
+        "deadline": {}
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17928": {
+        "comments": [
+          {
+            "id": 96540,
+            "time": "2020-09-25T12:45:09Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "bug_id": 17928,
+            "text": "# Overview\n\nIt appears that for an object with inherited classes (such as `class=c(\"A\",\"B\")`), when a method for the subclass (such as `&.A`) calls `NextMethod`, it fails to dispatch to a group method even if a suitable one (such as `Ops.B`) exists for the superclass.\n\n# Steps to Reproduce and Expected and Actual Results\n\nRun the following code on R 4.0.2, the current (as of 25 September 2020) R-trunk, and perhaps others.\n\n```\n## Define an & method for class \"A\" which inherits from \"B\".\n`&.A` <- function(e1,e2){\n  message(\"&.A with \", e1, \" and \", e2)\n  NextMethod()\n}\n\n## Define an Ops group method for \"B\" and register it. (Normally,\n## the registration would happen in NAMESPACE.)\nOps.B <- function(e1, e2){\n  message(\"Ops.B with \", e1, \" and \", e2)\n}\nregisterS3method(\"Ops\", \"B\", Ops.B)\n\n## An object of class c(\"A\", \"B\").\nx <- structure(1, class=c(\"A\",\"B\"))\n## An object of class \"B\".\ny <- structure(1, class=\"B\")\n\n## An object of class \"B\" only dispatches to Ops.B as expected.\ny&y\n# Ops.B with 1 and 1\n# NULL\n\n\n## I expect this to dispatch to &.A, then, via NextMethod(), to\n## Ops.B, since & is in the Ops group. This does not appear to\n## happen.\nx&x\n# &.A with 1 and 1\n# [1] TRUE\n\n## But, if an explicit &.B method is implemented, NextMethod()\n## dispatches to it.\n`&.B` <- function(e1, e2){\n  message(\"&.B with \", e1, \" and \", e2)\n}\nx&x\n# &.A with 1 and 1\n# &.B with 1 and 1\n# NULL\n```",
+            "is_markdown": true,
+            "count": 0,
+            "creation_time": "2020-09-25T12:45:09Z",
+            "creator": "p.krivitsky"
+          },
+          {
+            "creation_time": "2026-04-08T02:41:11Z",
+            "creator": "gabembecker",
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 17928,
+            "text": "Hi Pavel, I can confirm this still occurs as of 4.5.1. I'm not sure whether what you were trying to do was ever intended to be supported, though. The documentation is somewhat oblique, as it says:\n\n> A method defined for an individual member of the group takes precedence over a method defined for the group as a whole.\n\nin `?Ops` but doesn't appear to discuss the inheritance/`NextMethod` case of individual methods. As such I am leaving the status as UNCONFIRMED until R-core weighs in on the desired/intended behavior here.\n\nAs a practical matter, it *does* appear you cannot currently mix group methods and individual operator methods within a group generic. The issue appears to be related to the fact that the `.Group` \"S3 variable\" is set when a group method is hit first, but is not set (or set to `\"\"`) when an individual method is hit first. \n\nWe can see this by slightly modifying your example:\n\n\n```\n## Define an & method for class \"A\" which inherits from \"B\".\n`&.A` <- function(e1,e2){\n #   browser()\n  message(\"&.A method generic: '\", .Generic, \"' group: '\", .Group, \"'\" )\n\n  NextMethod()\n}\n\nregisterS3method(\"&\", \"A\", `&.A`)\n\n## Define an Ops group method for \"B\" and register it. (Normally,\n## the registration would happen in NAMESPACE.)\nOps.B <- function(e1, e2){\n      message(\"Ops.B method generic: '\", .Generic, \"' group: '\", .Group, \"'\" )\n    NextMethod()\n#    message(\"Ops.B with \", e1, \" and \", e2)\n}\nregisterS3method(\"Ops\", \"B\", Ops.B)\n\n## An object of class c(\"A\", \"B\").\nx <- structure(1, class=c(\"A\",\"B\"))\n## An object of class \"B\".\ny <- structure(1, class=\"B\")\n\nz <- structure(0, class=c(\"A\",\"B\"))\n\nu <- structure(1, class = c(\"B\", \"A\"))\n```\n\nWe then get:\n\nAs expected `Ops.B` works fine in isolation\n```\n> y&y\nOps.B method generic: '&' group: 'Ops'\n[1] TRUE\n```\n\nWhen we hit A first, `.Group` is set to `\"\"`, which causes `NextMethod` to miss `Ops.B` entirely.\n\n\n```\n> x&x\n&.A method generic: '&' group: ''\n[1] TRUE\n```\n\n\n\nAnd most worrying, when we hit Ops.B first, `.Group` is set to `\"Ops\"`, it finds the individual A method, and then `&.A`'s call to `NextMethod` finds itself, infinitely:\n\n```\n> u&u\nOps.B method generic: '&' group: 'Ops'\n&.A method generic: '&' group: 'Ops'\n&.A method generic: '&' group: 'Ops'\n&.A method generic: '&' group: 'Ops'\n&.A method generic: '&' group: 'Ops'\n<snip>\n&.A method generic: '&' group: 'Ops'\n&.A method generic: '&' group: 'Ops'\nError: C stack usage  9527312 is too close to the limit\n```\n\nThe third case seems to pretty unequivocally be a bug, but if it is intended that individual methods NOT be mixable with group methods in a group generic, the bug would either be different or be prevented by defensive programming that caught when such mixing is occurring.\n\nIf, on the other hand, method type mixing *is* intended to be supported then each of the cases appears to be buggy in different ways.\n\nThe reasons I am inferring that mixing is not intended to be allowed are the following:\n\n1. The generics are group generics. I think this means the operations are intended to be implemented as a group. Implementing only one of the operations and not the others seems... questionable in most cases.\n2. The only individual methods for `&` I could find defined in the R sources are for the `octmode` and `hexmode` classes and neither method calls `NextMethod`\n3. When `utils` implements roman numerals via the `roman` class, it defines an op method, even though most operators do not implement special behavior (see `utils/R/roman.R`)\n\nSo I suspect the (only) supported way to implement specialized `&` behavior for class `\"A\"` is by doing\n\n```\nOps.A <- function(e1, e2) {\n  if(.Generic == \"&\") {\n    message(\"Fancy mode activated!\")\n    structure(NextMethod(), class = \"fancy\")\n  } else { ## everyone else gets basic mode\n    NextMethod()\n  }\n}\n```\n\nwith the same `Ops.B` definition above, we get the desired behavior:\n\n```\n> x <- structure(1, class=c(\"A\",\"B\"))\n> y <- structure(1, class=\"B\")\n> y&y\nOps.B method generic: '&' group: 'Ops'\n[1] TRUE\n> x&x\nFancy mode activated!\nOps.B method generic: '&' group: 'Ops'\n[1] TRUE\nattr(,\"class\")\n[1] \"fancy\"\n> y|y\nOps.B method generic: '|' group: 'Ops'\n[1] TRUE\n> x|x\nOps.B method generic: '|' group: 'Ops'\n[1] TRUE\n```\n\nPut another way, if the custom behavior you want for some ops doesn't extend to collective custom behavior for all ops in the group, you can make a custom individual method **but you can't rely on `NextMethod` to catch group methods in this case**. If you want to rely on `NextMethod` finding group methods, you have to implement the entire group.\n\nIf that is correct, the documentation should probably updated to make that clearer, and if possible detection of at least the stack limit overflow case would be nice. I can investigate further and/or develop a draft documentation patch if desired.",
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 102886,
+            "time": "2026-04-08T02:41:11Z"
+          },
+          {
+            "creation_time": "2026-04-08T04:22:42Z",
+            "creator": "p.krivitsky",
+            "count": 2,
+            "is_markdown": true,
+            "bug_id": 17928,
+            "text": "Thank you for looking into this!\n\nI can see why it fails mechanistically, but I disagree that a subclass implementation should have to implement a group method whenever the base class does.\n\nThe specific situation, I believe, was that I had implemented an `Ops` method for the `rle` class, so that, e.g., `identical(inverse.rle(rle(x) + rle(y)), x + y)`. This makes sense, because the algorithm is the same for all binary operators: align the two `rle`s and perform the operation on each run.\n\nI then created a subclass that concerned only `logical`-valued `rle`s and was invalid for my application if the values were in any other mode, so only the logical operators made sense to implement.\n\nI ended up implementing the `Ops` method for the subclass as well, though now that I look, I should probably implement a type-check to make sure an invalid object is never returned.\n\nUltimately, I still think that least-surprising behaviour would be, unless there is a very good reason to do otherwise, for NextMethod() to dispatch as if it were the original call but with the first element of `class` attribute removed.",
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 102887,
+            "time": "2026-04-08T04:22:42Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "17928": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-04-21 20:13:18"
+}

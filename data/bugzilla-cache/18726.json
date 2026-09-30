@@ -1,0 +1,162 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "whiteboard": "",
+        "creation_time": "2024-05-08T18:09:35Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "bugreport",
+          "michael.lydeamore",
+          "siddheshakole"
+        ],
+        "qa_contact": "",
+        "id": 18726,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "summary": "Add class to error emitted via R_CheckTimeLimits",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "id": 3046,
+            "name": "bugreport",
+            "real_name": "Jonathan Carroll"
+          },
+          {
+            "name": "michael.lydeamore",
+            "id": 3734,
+            "real_name": "Michael Lydeamore"
+          },
+          {
+            "real_name": "Siddhesh Akole",
+            "name": "siddheshakole",
+            "id": 3697
+          }
+        ],
+        "last_change_time": "2025-11-21T02:12:57Z",
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18726": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "creation_time": "2024-05-08T18:09:35Z",
+            "text": "`setTimeLimit(transient = TRUE)` is a useful tool for limiting the amount of time R can spend running some chunk of code. However, the errors emitted on timeout are just \"regular\" errors, e.g.\n\n```\n> result <- tryCatch({\n+    setTimeLimit(elapsed = 1L, transient = TRUE)\n+    Sys.sleep(2)\n+ }, error = identity)\n> result\n<simpleError in Sys.sleep(2): reached elapsed time limit>\n```\n\nIt would be useful if these errors had a custom class set, so that one could specifically detect and handle these errors -- similar to how R now uses the `stackOverflowError` class for stack overflow errors.",
+            "bug_id": 18726,
+            "count": 0,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2024-05-08T18:09:35Z",
+            "id": 100849,
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 102417,
+            "creation_time": "2025-11-20T17:17:13Z",
+            "count": 1,
+            "text": "Created attachment 3563\nSpecial function in error.c for checking the Time Limit\n\nThe patch is related adding a special Time Limit Error function for R_checkTimeLimit(), as mentioned in the https://github.com/r-devel/r-dev-day/issues/114#issue-3393407665  issue",
+            "bug_id": 18726,
+            "attachment_id": 3563,
+            "time": "2025-11-20T17:17:13Z",
+            "creator": "siddheshakole",
+            "is_markdown": true
+          },
+          {
+            "creator": "michael.lydeamore",
+            "is_markdown": true,
+            "attachment_id": 3564,
+            "time": "2025-11-21T02:11:01Z",
+            "creation_time": "2025-11-21T02:11:01Z",
+            "count": 2,
+            "text": "Created attachment 3564\nClassed Errors for timeouts diffs\n\nFrom the R Dev Day in November.\n\nThoughts are to use a hierarchical error system:\n\nTimeoutError is the superclass that can be used more generally across the broad.\n\nThe four errors currently thrown by R are considered TimeLimit*TimeoutErrors in the patch. These are then broken down into CPU/non-CPU and session/non-session.\n\nSome re-implementation of getCurrentCall() was needed to be able to return the call back to the user.",
+            "bug_id": 18726,
+            "tags": [],
+            "is_private": false,
+            "id": 102418
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18726": [
+        {
+          "size": 3267,
+          "last_change_time": "2025-11-20T17:17:13Z",
+          "id": 3563,
+          "is_private": false,
+          "summary": "Special function in error.c for checking the Time Limit",
+          "creation_time": "2025-11-20T17:17:13Z",
+          "bug_id": 18726,
+          "file_name": "TimeLimitErrorfunctn.patch",
+          "is_patch": true,
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9pbmNsdWRlL1JpbnRlcm5hbHMuaCBiL3NyYy9pbmNsdWRlL1JpbnRlcm5hbHMuaAppbmRleCBmNTQ0MmE5NGRhLi5iMGJjYjk1ZWU3IDEwMDY0NAotLS0gYS9zcmMvaW5jbHVkZS9SaW50ZXJuYWxzLmgKKysrIGIvc3JjL2luY2x1ZGUvUmludGVybmFscy5oCkBAIC03MTQsNiArNzE0LDggQEAgUmJvb2xlYW4gUl9IYXNGYW5jeUJpbmRpbmdzKFNFWFAgcmhvKTsgLy8gZW52aXIuYwogTk9SRVQgdm9pZCBSZl9lcnJvcmNhbGwoU0VYUCwgY29uc3QgY2hhciAqLCAuLi4pIFJfUFJJTlRGX0ZPUk1BVCgyLCAzKTsKIHZvaWQgUmZfd2FybmluZ2NhbGwoU0VYUCwgY29uc3QgY2hhciAqLCAuLi4pIFJfUFJJTlRGX0ZPUk1BVCgyLCAzKTsKIHZvaWQgUmZfd2FybmluZ2NhbGxfaW1tZWRpYXRlKFNFWFAsIGNvbnN0IGNoYXIgKiwgLi4uKSBSX1BSSU5URl9GT1JNQVQoMiwgMyk7CitTRVhQIFJfbWFrZUVsYXBzZWRfVGltZUxpbWl0RXJyb3IoU0VYUCBjYWxsLCBkb3VibGUgZWxhcHNlZCk7CitTRVhQIFJfbWFrZUNwdV9UaW1lTGltaXRFcnJvcihTRVhQIGNhbGwsIGRvdWJsZSBjcHUpOwogCiAvKiBTYXZlL0xvYWQgSW50ZXJmYWNlICovCiAjZGVmaW5lIFJfWERSX0RPVUJMRV9TSVpFIDgKZGlmZiAtLWdpdCBhL3NyYy9tYWluL2Vycm9ycy5jIGIvc3JjL21haW4vZXJyb3JzLmMKaW5kZXggYWMzNjA3NmYzMi4uMjg3YzUwNTBkNSAxMDA2NDQKLS0tIGEvc3JjL21haW4vZXJyb3JzLmMKKysrIGIvc3JjL21haW4vZXJyb3JzLmMKQEAgLTMzLDYgKzMzLDcgQEAKICNpbmNsdWRlIDxSX2V4dC9QcmludC5oPgogI2luY2x1ZGUgPHN0ZGFyZy5oPgogCisKIC8qIGV2YWwoKSBzZXRzIFJfVmlzaWJsZSA9IFRSVUUuIFRoYXMgbWF5IG5vdCBiZSB3YW50ZWQgd2hlbiBldmFsKCkgaXMKICAgIHVzZWQgaW4gQyBjb2RlLiBUaGlzIGlzIGEgdmVyc2lvbiB0aGF0IHNhdmVzL3Jlc3RvcmVzIFJfVmlzaWJsZS4KICAgIFRoaXMgc2hvdWxkIHByb2JhYmx5IGJlIG1vdmVkIHRvIGV2YWwuYywgYmUgbWFrZSBwdWJsaWMsIGFuZCB1c2VkCkBAIC0zMDA2LDMgKzMwMDcsMzEgQEAgdm9pZCBSX0luaXRDb25kaXRpb25zKHZvaWQpCiAgICAgTUFSS19OT1RfTVVUQUJMRShSX25vZGVTdGFja092ZXJmbG93RXJyb3IpOwogICAgIFJfUHJlc2VydmVPYmplY3QoUl9ub2RlU3RhY2tPdmVyZmxvd0Vycm9yKTsKIH0KKworc3RhdGljIGNvbnN0IGNoYXIgKkNfVGltZUxpbWl0X21zZ19mbXQgPQorCSJPcGVyYXRpb24gRXhjZWVkZWQgdGhlIHRpbWUgbGltaXQgKGJ5OiAlbGYgc2Vjb25kcykiOworYXR0cmlidXRlX2hpZGRlbiBTRVhQIFJfbWFrZVRpbWVMaW1pdEVycm9yKFNFWFAgY2FsbCwgZG91YmxlIHZhbHVlLCBjb25zdCBjaGFyICpjbGFzc25hbWUsIGNvbnN0IGNoYXIgKmZpZWxkbmFtZSkKK3sKKwlTRVhQIGNvbmQgPSBQUk9URUNUKCBSX21ha2VFcnJvckNvbmRpdGlvbihjYWxsLCAKKwkgICAgY2xhc3NuYW1lLAorCSAgICAiVGltZUxpbWl0RXJyb3IiLAorCQkxLCAKKwkJQ19UaW1lTGltaXRfbXNnX2ZtdCwKKwkJdmFsdWUKKwkpKTsKKwlSX3NldENvbmRpdGlvbkZpZWxkKGNvbmQsMixmaWVsZG5hbWUsU2NhbGFyUmVhbCh2YWx1ZSkpOworCisJVU5QUk9URUNUKDEpOworCXJldHVybiBjb25kOworfQorCithdHRyaWJ1dGVfaGlkZGVuIFNFWFAgUl9tYWtlRWxhcHNlZF9UaW1lTGltaXRFcnJvcihTRVhQIGNhbGwsIGRvdWJsZSBlbGFwc2VkKQoreworICAgIHJldHVybiBSX21ha2VUaW1lTGltaXRFcnJvcihjYWxsLGVsYXBzZWQsImVsYXBzZWRfVGltZUxpbWl0RXJyb3IiLCJlbGFwc2VkIik7CisKK30KK2F0dHJpYnV0ZV9oaWRkZW4gU0VYUCBSX21ha2VDcHVfVGltZUxpbWl0RXJyb3IoU0VYUCBjYWxsLCBkb3VibGUgY3B1X3RpbWUpCit7CisJcmV0dXJuIFJfbWFrZVRpbWVMaW1pdEVycm9yKGNhbGwsY3B1X3RpbWUsImNwdV9UaW1lTGltaXRFcnJvciIsImNwdSIpOworfQorCmRpZmYgLS1naXQgYS9zcmMvbWFpbi9zeXN1dGlscy5jIGIvc3JjL21haW4vc3lzdXRpbHMuYwppbmRleCAxZDEwZGFlMWJlLi45N2Y5NDVhYjViIDEwMDY0NAotLS0gYS9zcmMvbWFpbi9zeXN1dGlscy5jCisrKyBiL3NyYy9tYWluL3N5c3V0aWxzLmMKQEAgLTM0LDYgKzM0LDcgQEAKICNpbmNsdWRlIDxSaW50ZXJmYWNlLmg+CiAjaW5jbHVkZSA8ZXJybm8uaD4KICNpbmNsdWRlIDxybG9jYWxlLmg+CisjaW5jbHVkZSA8UmludGVybmFscy5oPgogCiAvKgogICBTZWUgLi4vdW5peC9zeXN0ZW0udHh0IGZvciBhIGRlc2NyaXB0aW9uIG9mIHNvbWUgb2YgdGhlc2UgZnVuY3Rpb25zLgpAQCAtMjkxOSwyMiArMjkyMCwyMiBAQCBhdHRyaWJ1dGVfaGlkZGVuIHZvaWQgUl9DaGVja1RpbWVMaW1pdHModm9pZCkKICNlbmRpZgogCWlmIChlbGFwc2VkTGltaXQgPiAwLjAgJiYgZGF0YVsyXSA+IGVsYXBzZWRMaW1pdCkgewogCSAgICBjcHVMaW1pdCA9IGVsYXBzZWRMaW1pdCA9IC0xOwotCSAgICBpZiAoZWxhcHNlZExpbWl0MiA+IDAuMCAmJiBkYXRhWzJdID4gZWxhcHNlZExpbWl0MikgewotCQllbGFwc2VkTGltaXQyID0gLTEuMDsKLQkJZXJyb3IoXygicmVhY2hlZCBzZXNzaW9uIGVsYXBzZWQgdGltZSBsaW1pdCIpKTsKLQkgICAgfSBlbHNlCi0JCWVycm9yKF8oInJlYWNoZWQgZWxhcHNlZCB0aW1lIGxpbWl0IikpOworCSAgICBTRVhQIGNvbmQgPSBQUk9URUNUKAorCQkJUl9tYWtlRWxhcHNlZF9UaW1lTGltaXRFcnJvcihSX05pbFZhbHVlLGRhdGFbMl0pCisJCSk7CisJCWVycm9yY2FsbChSX05pbFZhbHVlLCBjb25kKTsKKwkJVU5QUk9URUNUKDEpOwogCX0KIAlpZiAoY3B1TGltaXQgPiAwLjAgJiYgY3B1ID4gY3B1TGltaXQpIHsKIAkgICAgY3B1TGltaXQgPSBlbGFwc2VkTGltaXQgPSAtMTsKLQkgICAgaWYgKGNwdUxpbWl0MiA+IDAuMCAmJiBjcHUgPiBjcHVMaW1pdDIpIHsKLQkJY3B1TGltaXQyID0gLTEuMDsKLQkJZXJyb3IoXygicmVhY2hlZCBzZXNzaW9uIENQVSB0aW1lIGxpbWl0IikpOwotCSAgICB9IGVsc2UKLQkJZXJyb3IoXygicmVhY2hlZCBDUFUgdGltZSBsaW1pdCIpKTsKLQl9CisJICAgIFNFWFAgY29uZCA9IFBST1RFQ1QoCisJCQlSX21ha2VDcHVfVGltZUxpbWl0RXJyb3IoUl9OaWxWYWx1ZSwgY3B1KQorCQkpOworCQllcnJvcmNhbGwoUl9OaWxWYWx1ZSxjb25kKTsKKwkJVU5QUk9URUNUKDEpOwogICAgIH0KIH0KK30KIAogLyogbW92ZWQgZnJvbSBjaGFyYWN0ZXIuYyBpbiAyLjEwLjA6IGNvbmZpZ3VyZSByZXF1aXJlcyB0aGlzICovCiAK",
+          "creator": "siddheshakole",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        },
+        {
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "michael.lydeamore",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL0RlZm4uaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9EZWZuLmgJKHJldmlzaW9uIDg5MDQzKQorKysgc3JjL2luY2x1ZGUvRGVmbi5oCSh3b3JraW5nIGNvcHkpCkBAIC0yMjI4LDYgKzIyMjgsNyBAQAogU0VYUCBSX21ha2VPdXRPZkJvdW5kc0Vycm9yKFNFWFAgeCwgaW50IHN1YnNjcmlwdCwgU0VYUCBzaW5kZXgsCiAJCQkgICAgU0VYUCBjYWxsLCBjb25zdCBjaGFyICpwcmVmaXgpOwogU0VYUCBSX21ha2VDU3RhY2tPdmVyZmxvd0Vycm9yKFNFWFAgY2FsbCwgaW50cHRyX3QgdXNhZ2UpOworU0VYUCBSX21ha2VUaW1lb3V0RXJyb3IoU0VYUCBjYWxsLCBjb25zdCBjaGFyICptc2csIGNvbnN0IGNoYXIgKnN1YnR5cGUsIGRvdWJsZSBlbGFwc2VkLCBkb3VibGUgY3B1KTsKIFNFWFAgUl9nZXRQcm90ZWN0U3RhY2tPdmVyZmxvd0Vycm9yKHZvaWQpOwogU0VYUCBSX2dldEV4cHJlc3Npb25TdGFja092ZXJmbG93RXJyb3Iodm9pZCk7CiBTRVhQIFJfZ2V0Tm9kZVN0YWNrT3ZlcmZsb3dFcnJvcih2b2lkKTsKSW5kZXg6IHNyYy9tYWluL2Vycm9ycy5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2Vycm9ycy5jCShyZXZpc2lvbiA4OTA0MykKKysrIHNyYy9tYWluL2Vycm9ycy5jCSh3b3JraW5nIGNvcHkpCkBAIC0yODc5LDEwICsyODc5LDI2IEBACiAgICAgcmV0dXJuIGNvbmQ7CiB9CiAKK2F0dHJpYnV0ZV9oaWRkZW4gU0VYUCBSX21ha2VUaW1lb3V0RXJyb3IoU0VYUCBjYWxsLCBjb25zdCBjaGFyICptc2csIGNvbnN0IGNoYXIgKnN1YnR5cGUsIGRvdWJsZSBlbGFwc2VkLCBkb3VibGUgY3B1KSB7CisgICAgaWYgKGNhbGwgPT0gUl9OaWxWYWx1ZSkgeworCVJDTlRYVCAqYyA9IFJfR2xvYmFsQ29udGV4dDsKKwlpZiAoYykKKwkgICAgY2FsbCA9IChjID09IFJfR2xvYmFsQ29udGV4dCAmJiBSX0JDSW50QWN0aXZlKSA/IFJfZ2V0QkNJbnRlcnByZXRlckV4cHJlc3Npb24oKSA6IGMtPmNhbGw7CisgICAgfQorICAgIFNFWFAgY29uZCA9IFJfbWFrZUVycm9yQ29uZGl0aW9uKGNhbGwsICJ0aW1lb3V0RXJyb3IiLAorCQkJCSAgICAgc3VidHlwZSwgMiwgbXNnKTsKKyAgICBQUk9URUNUKGNvbmQpOworICAgIFJfc2V0Q29uZGl0aW9uRmllbGQoY29uZCwgMiwgImVsYXBzZWQiLCBTY2FsYXJSZWFsKGVsYXBzZWQpKTsKKyAgICBSX3NldENvbmRpdGlvbkZpZWxkKGNvbmQsIDMsICJjcHUiLCBTY2FsYXJSZWFsKGNwdSkpOworICAgIFVOUFJPVEVDVCgxKTsgLyogY29uZCAqLworICAgIHJldHVybiBjb25kOworfQorCiAvKiBEbyBub3QgdHJhbnNsYXRlIHRoaXMsIHRvIHNhdmUgc3RhY2sgc3BhY2UgKi8KIHN0YXRpYyBjb25zdCBjaGFyICpDX1NPX21zZ19mbXQgPQogICAgICJDIHN0YWNrIHVzYWdlICAlbGQgaXMgdG9vIGNsb3NlIHRvIHRoZSBsaW1pdCI7CiAKKwogYXR0cmlidXRlX2hpZGRlbiBTRVhQIFJfbWFrZUNTdGFja092ZXJmbG93RXJyb3IoU0VYUCBjYWxsLCBpbnRwdHJfdCB1c2FnZSkKIHsKICAgICBTRVhQIGNvbmQgPSBSX21ha2VFcnJvckNvbmRpdGlvbihjYWxsLCAic3RhY2tPdmVyZmxvd0Vycm9yIiwKSW5kZXg6IHNyYy9tYWluL3N5c3V0aWxzLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vc3lzdXRpbHMuYwkocmV2aXNpb24gODkwNDMpCisrKyBzcmMvbWFpbi9zeXN1dGlscy5jCSh3b3JraW5nIGNvcHkpCkBAIC0yOTE3LDIyICsyOTE3LDMyIEBACiAjZWxzZQogCWNwdSA9IGRhdGFbMF0gKyBkYXRhWzFdICsgZGF0YVszXSArIGRhdGFbNF07CiAjZW5kaWYKKwlTRVhQIGNvbmQgPSBSX05pbFZhbHVlOwogCWlmIChlbGFwc2VkTGltaXQgPiAwLjAgJiYgZGF0YVsyXSA+IGVsYXBzZWRMaW1pdCkgewogCSAgICBjcHVMaW1pdCA9IGVsYXBzZWRMaW1pdCA9IC0xOwogCSAgICBpZiAoZWxhcHNlZExpbWl0MiA+IDAuMCAmJiBkYXRhWzJdID4gZWxhcHNlZExpbWl0MikgewogCQllbGFwc2VkTGltaXQyID0gLTEuMDsKLQkJZXJyb3IoXygicmVhY2hlZCBzZXNzaW9uIGVsYXBzZWQgdGltZSBsaW1pdCIpKTsKKwkJY29uZCA9IFJfbWFrZVRpbWVvdXRFcnJvcihSX05pbFZhbHVlLCBfKCJyZWFjaGVkIHNlc3Npb24gZWxhcHNlZCB0aW1lIGxpbWl0IiksCisJCQkJCSAgIlRpbWVMaW1pdFNlc3Npb25UaW1lb3V0RXJyb3IiLCBkYXRhWzJdLCBjcHUpOwogCSAgICB9IGVsc2UKLQkJZXJyb3IoXygicmVhY2hlZCBlbGFwc2VkIHRpbWUgbGltaXQiKSk7CisJCWNvbmQgPSBSX21ha2VUaW1lb3V0RXJyb3IoUl9OaWxWYWx1ZSwgXygicmVhY2hlZCBlbGFwc2VkIHRpbWUgbGltaXQiKSwKKwkJCQkJICAiVGltZUxpbWl0VGltZW91dEVycm9yIiwgZGF0YVsyXSwgY3B1KTsKIAl9CiAJaWYgKGNwdUxpbWl0ID4gMC4wICYmIGNwdSA+IGNwdUxpbWl0KSB7CiAJICAgIGNwdUxpbWl0ID0gZWxhcHNlZExpbWl0ID0gLTE7CiAJICAgIGlmIChjcHVMaW1pdDIgPiAwLjAgJiYgY3B1ID4gY3B1TGltaXQyKSB7CiAJCWNwdUxpbWl0MiA9IC0xLjA7Ci0JCWVycm9yKF8oInJlYWNoZWQgc2Vzc2lvbiBDUFUgdGltZSBsaW1pdCIpKTsKKwkJY29uZCA9IFJfbWFrZVRpbWVvdXRFcnJvcihSX05pbFZhbHVlLCBfKCJyZWFjaGVkIHNlc3Npb24gQ1BVIHRpbWUgbGltaXQiKSwKKwkJCQkJICAiVGltZUxpbWl0U2Vzc2lvbkNQVVRpbWVvdXRFcnJvciIsIGRhdGFbMl0sIGNwdSk7CiAJICAgIH0gZWxzZQotCQllcnJvcihfKCJyZWFjaGVkIENQVSB0aW1lIGxpbWl0IikpOworCQljb25kID0gUl9tYWtlVGltZW91dEVycm9yKFJfTmlsVmFsdWUsIF8oInJlYWNoZWQgQ1BVIHRpbWUgbGltaXQiKSwKKwkJCQkJICAiVGltZUxpbWl0Q1BVVGltZW91dEVycm9yIiwgZGF0YVsyXSwgY3B1KTsKIAl9CisJaWYgKGNvbmQgIT0gUl9OaWxWYWx1ZSkgeworCSAgICBQUk9URUNUKGNvbmQpOworCSAgICBSX3NpZ25hbEVycm9yQ29uZGl0aW9uKGNvbmQsIFJfTmlsVmFsdWUpOworCSAgICBVTlBST1RFQ1QoMSk7CisJfQogICAgIH0KIH0KIAo=",
+          "is_patch": true,
+          "file_name": "timelimits18726.diff",
+          "bug_id": 18726,
+          "creation_time": "2025-11-21T02:11:01Z",
+          "summary": "Classed Errors for timeouts diffs",
+          "is_private": false,
+          "id": 3564,
+          "last_change_time": "2025-11-21T02:11:01Z",
+          "size": 3152
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-11-21 02:12:57"
+}

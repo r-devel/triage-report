@@ -1,0 +1,173 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "creator": "lindblad",
+        "is_creator_accessible": true,
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "Linux",
+        "flags": [],
+        "platform": "Other",
+        "creator_detail": {
+          "real_name": "Eric Lindblad",
+          "id": 3359,
+          "name": "lindblad"
+        },
+        "resolution": "",
+        "status": "TRIAGED",
+        "summary": "cleanup tcltk",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-09-21T18:40:56Z",
+        "cc_detail": [
+          {
+            "id": 3268,
+            "name": "lluis.revilla",
+            "real_name": "Llu�s"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "assigned_to": "R-core",
+        "component": "Documentation",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2025-06-18T21:37:19Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "lluis.revilla"
+        ],
+        "qa_contact": "",
+        "severity": "enhancement",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 18911
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18911": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2025-06-18T21:37:19Z",
+            "id": 101821,
+            "tags": [],
+            "attachment_id": 3499,
+            "count": 0,
+            "is_markdown": true,
+            "text": "Created attachment 3499\ncleanup\n\n`https://core.tcl-lang.org/bwidget/home`\n\nimplements typo fixes merged above\n\n`https://core.tcl-lang.org/widget/home`\n\nimplements typo fixes pending above\n\nremoves no longer valid email address\n\nadds reference to \"licence.terms\" in widget.tcl\n\nPR#18910\n\n> Policy might set 8.5 as the base supported Tk version.",
+            "bug_id": 18911,
+            "creator": "lindblad",
+            "creation_time": "2025-06-18T21:37:19Z"
+          },
+          {
+            "attachment_id": {},
+            "time": "2025-06-19T16:14:54Z",
+            "creator": "lindblad",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 101823,
+            "creation_time": "2025-06-19T16:14:54Z",
+            "count": 1,
+            "text": "In addition to fixes the in the patch here's another fix.\n\n```\n$ sed -i \"s/unkown/unknown/g\" src/library/tcltk/exec/hierarchy.tcl\n$ \n```",
+            "bug_id": 18911
+          },
+          {
+            "text": "With the Widget Library ticket now resolved these changes could be implemented.\n\nIn addition to the patch content do not overlook the herein GNU `sed` line for the additional fix. \n\n> `https://core.tcl-lang.org/bwidget/home`\n\nBwidget Source Code\nCheck-in [0be16a0895]\n\nSpelling fixes implemented in the above.\n\n`https://github.com/tcltk/bwidget/tree/bwidget`\nbranch updated in mirror\n\nFWIW, one Bwidget branch is said to be ttk enabled.\n\n> `https://core.tcl-lang.org/widget/home`\n\nA Widget Library\nCheck-in [2c42160bbf]\n\nSpelling fixes implemented in the above including that from the herein GNU `sed` line.\n\n`https://github.com/tcltk/widget`\nno branch updated in mirror\n\n> adds reference to \"licence.terms\" in widget.tcl\n\nThe foregoing reference to \"licence.terms\" was not a subject brought up in the Widget Library ticket.",
+            "bug_id": 18911,
+            "is_markdown": true,
+            "count": 2,
+            "creator": "lindblad",
+            "creation_time": "2025-07-08T22:29:11Z",
+            "time": "2025-07-08T22:29:11Z",
+            "id": 101868,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "is_private": false,
+            "id": 101930,
+            "tags": [],
+            "count": 3,
+            "bug_id": 18911,
+            "text": "Hopfully this is not deemed off-topic; feasibly R's use of Tcl/Tk might be revisited somedsy.\n\n\nSome issues with Audio and Video quality, but Posting this as the content indicates it is an impressive project.\n\nBologna, Italy\nJuly 10, 20205\n\n`https://learn.wu.ac.at/eurotcl2025/lecturecasts/753988238?m=delivery`\nThe future of BWidget in context of Tk and ttk (Thomas Wunderlich)\n\n`https://openacs.km.at/evaluate/org/129998253/conferencenews/`",
+            "creation_time": "2025-08-03T19:53:49Z",
+            "time": "2025-08-03T19:53:49Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "lindblad"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 103672,
+            "creation_time": "2026-09-19T14:48:16Z",
+            "count": 4,
+            "text": "Thanks for the update. \n\nThis patch fixes typos and an email on the comments, but no real change on the Bwidget source code.",
+            "bug_id": 18911,
+            "attachment_id": {},
+            "time": "2026-09-19T14:48:16Z",
+            "creator": "lluis.revilla",
+            "is_markdown": true
+          },
+          {
+            "creator": "lindblad",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-09-21T18:40:56Z",
+            "creation_time": "2026-09-21T18:40:56Z",
+            "text": "the changes were mostly to comment lines\n\nthe excption being the typo corrected messages which originate in utils.tcl\n\nplease don't overlook the additional fix from comment 1 which was overlooked in the patch\n\n```\n$ sed -n '209p' bwidget/utils.tcl\n            return -code error \"XLFDfont: command incorrect: $cmd\"\n$ sed -n '224p' bwidget/utils.tcl\n            default  { return -code error \"XLFDfont: option incorrect: $option\" }\n$ \n```",
+            "bug_id": 18911,
+            "count": 5,
+            "tags": [],
+            "id": 103683,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18911": [
+        {
+          "last_change_time": "2025-06-18T21:37:19Z",
+          "size": 6443,
+          "is_private": false,
+          "id": 3499,
+          "creation_time": "2025-06-18T21:37:19Z",
+          "summary": "cleanup",
+          "file_name": "tcltk.patch",
+          "bug_id": 18911,
+          "is_patch": true,
+          "creator": "lindblad",
+          "data": "ZGlmZiAtTmF1ciBhL3NyYy9saWJyYXJ5L3RjbHRrL2V4ZWMvaGllcmFyY2h5LnRjbCBiL3NyYy9saWJyYXJ5L3RjbHRrL2V4ZWMvaGllcmFyY2h5LnRjbAotLS0gYS9zcmMvbGlicmFyeS90Y2x0ay9leGVjL2hpZXJhcmNoeS50Y2wJMjAyNS0wNi0xOCAxMTo1MTowOC41MjMwODg2NTIgLTA1MDAKKysrIGIvc3JjL2xpYnJhcnkvdGNsdGsvZXhlYy9oaWVyYXJjaHkudGNsCTIwMjUtMDYtMTggMTU6NTU6MTEuMDM5MjkwNTI4IC0wNTAwCkBAIC0xLDYgKzEsNiBAQAogIyMKICMjIExheW91dCByb3V0aW5lcyB0YWtlbiBmcm9tIG9vb29sZCBjb2RlLCBhdXRob3IgdW5rb3duLgotIyMgQ29weXJpZ2h0IDE5OTUtMTk5OCBKZWZmcmV5IEhvYmJzLCBqZWZmLmhvYmJzQGFjbS5vcmcKKyMjIENvcHlyaWdodCAxOTk1LTE5OTggSmVmZnJleSBIb2JicwogIyMKICMjIExhc3QgVXBkYXRlOiAyOCBKdW5lIDE5OTcKICMjCkBAIC0xMDUsOCArMTA1LDggQEAKICMjCXN0cmluZyB3aGljaCB3aWxsIHJlc2V0IHRoZSByb290IG5vZGUgdG8gaXRzIHBhcmVudC4KICMjCiAjIyBNRVRIT0RTCi0jIwlUaGVzZSBhcmUgdGhlIG1ldGhvZHMgdGhhdCB0aGUgaGllcmFjaGljYWwgbGlzdGJveCBvYmplY3QgcmVjb2duaXplcy4KLSMjCShpZSAtIGhpZXJhY2h5IC5oIDsgLmggPG1ldGhvZD4gPGFyZ3M+KQorIyMJVGhlc2UgYXJlIHRoZSBtZXRob2RzIHRoYXQgdGhlIGhpZXJhcmNoaWNhbCBsaXN0Ym94IG9iamVjdCByZWNvZ25pemVzLgorIyMJKGkuZS4gLSBoaWVyYXJjaHkgLmggOyAuaCA8bWV0aG9kPiA8YXJncz4pCiAjIwlBbnkgdW5pcXVlIHN1YnN0cmluZyBpcyBhY2NlcHRhYmxlCiAjIwogIyMgY29uZmlndXJlID9vcHRpb24/ID92YWx1ZSBvcHRpb24gdmFsdWUgLi4uPwpAQCAtMTM2LDcgKzEzNiw3IEBACiAjIwogIyMJbnVtYmVyIC0gU3BlY2lmaWVzIHRoZSBlbGVtZW50IGFzIGEgbnVtZXJpY2FsIGluZGV4LgogIyMJcm9vdCAgIC0gc3BlY2lmaWVzIHRoZSByb290IGl0ZW0uCi0jIwlzdHJpbmcgLSBTcGVjaWZpcyBhbiBpdGVtIHRoYXQgaGFzIHRoYXQgdGV4dCBpbiBpdCdzIG5vZGUuCisjIwlzdHJpbmcgLSBTcGVjaWZpZXMgYW4gaXRlbSB0aGF0IGhhcyB0aGF0IHRleHQgaW4gaXQncyBub2RlLgogIyMJQHgseSAgIC0gSW5kaWNhdGVzIHRoZSBlbGVtZW50IHRoYXQgY292ZXJzIHRoZSBwb2ludCBpbgogIyMJCXRoZSBsaXN0Ym94IHdpbmRvdyBzcGVjaWZpZWQgYnkgeCBhbmQgeSAoaW4gcGl4ZWwKICMjCQljb29yZGluYXRlcykuICBJZiBubyBlbGVtZW50IGNvdmVycyB0aGF0IHBvaW50LApAQCAtNzQ2LDcgKzc0Niw3IEBACiAjIyBvZiBjaGlsZHJlbiBmcm9tIHRoZWlyIHBhcmVudHMgaW4gdGVybXMgb2Ygc3RhY2sgdmFsdWVzLiAgCiAjIwogIyMgImNucCIgaXMgZWl0aGVyIGVtcHR5IG9yIGEgbm9kZSBuYW1lIHdoaWNoIGluZGljYXRlcyB3aGVyZSB0aGUgb25seQotIyMgY2hhbmdlcyBoYXZlIG9jY3VyZWQgaW4gdGhlIGhpZXJhcmNoeSBzaW5jZSB0aGUgbGFzdCBjYWxsIHRvIFJlY29tcHV0ZS4KKyMjIGNoYW5nZXMgaGF2ZSBvY2N1cnJlZCBpbiB0aGUgaGllcmFyY2h5IHNpbmNlIHRoZSBsYXN0IGNhbGwgdG8gUmVjb21wdXRlLgogIyMgVGhpcyBpcyB1c2VkIGJlY2F1c2Ugd2hlbiBhIG5vZGUgaXMgdG9nZ2xlZCBvbi9vZmYgZGVlcCBpbiB0aGUKICMjIGhpZXJhcmNoeSB0aGVuIG5vdCBhbGwgdGhlIHBvc2l0aW9ucyBvZiBpdGVtcyBuZWVkIHRvIGJlIHJlY29tcHV0ZWQuCiAjIyBUaGUgb25seSBvbmVzIHRoYXQgZG8gYXJlIGV2ZXJ5dGhpbmcgYmVsb3cgdGhlIGNoYW5nZWQgbm9kZSAob2YKQEAgLTc2Nyw3ICs3NjcsNyBAQAogICAgIH0KICAgICAKICAgICAjIFJ1biB0aHJvdWdoIHRoZSBjaGlsZHJlbiwgcmVjdXJzaXZlbHkgY2FsY3VsYXRpbmcgdGhlaXIgdXNhZ2Ugb2YKLSAgICAjIHN0YWNrIHJlYWwtZXN0YXRlLCBhbmQgYWxsb2NhdGluZyBhbiBpbnRpYWwgcGxhY2VtZW50IGZvciBlYWNoIGNoaWxkCisgICAgIyBzdGFjayByZWFsLWVzdGF0ZSwgYW5kIGFsbG9jYXRpbmcgYW4gaW5pdGlhbCBwbGFjZW1lbnQgZm9yIGVhY2ggY2hpbGQKICAgICAjCiAgICAgIyBWYWx1ZXMgZG8gbm90IG5lZWQgdG8gYmUgcmVjb21wdXRlZCBmb3Igc2libGluZ3Mgb2YgdGhlIGNoYW5nZWQKICAgICAjIG5vZGUgYW5kIHRoZWlyIGRlc2NlbmRhbnRzLiAgRm9yIHRoZSBjbm9kZSBpdHNlbGYsIGluIHRoZQpAQCAtOTU1LDcgKzk1NSw3IEBACiAjIyBUaGVzZSBhcmUgbW9zdGx5IG1pcnJvcmVkIGZyb20gdGhlIExpc3Rib3ggY2xhc3MgYmluZGluZ3MuCiAjIwogIyMgU29tZSBvZiB0aGVzZSBhcmUgaGFja2VkIHVwIHRvIGJlIG1vcmUgZWZmaWNpZW50IGJ5IG1ha2luZyBjYWxscwotIyMgdGhhdCByZXF1aXJlIGZvcmtub3dsZWRnZSBvZiB0aGUgbWVnYXdpZGdldCBzdHJ1Y3R1cmUuCisjIyB0aGF0IHJlcXVpcmUgZm9yZWtub3dsZWRnZSBvZiB0aGUgbWVnYXdpZGdldCBzdHJ1Y3R1cmUuCiAjIwogCiAjIEJlZ2luU2VsZWN0IC0tCmRpZmYgLU5hdXIgYS9zcmMvbGlicmFyeS90Y2x0ay9leGVjL3Byb2dyZXNzYmFyLnRjbCBiL3NyYy9saWJyYXJ5L3RjbHRrL2V4ZWMvcHJvZ3Jlc3NiYXIudGNsCi0tLSBhL3NyYy9saWJyYXJ5L3RjbHRrL2V4ZWMvcHJvZ3Jlc3NiYXIudGNsCTIwMjUtMDYtMTggMTE6NTE6MDguNzU4MDg4NjY3IC0wNTAwCisrKyBiL3NyYy9saWJyYXJ5L3RjbHRrL2V4ZWMvcHJvZ3Jlc3NiYXIudGNsCTIwMjUtMDYtMTggMTU6NDk6MjcuMjM1MjY1OTg2IC0wNTAwCkBAIC0yMTYsNyArMjE2LDcgQEAKICAgICAgICAgICAgIHNldCBhcmdzIFtscmFuZ2UgJGFyZ3MgMSBlbmRdCiAgICAgICAgIH0KICAgICAgICAgZGVmYXVsdCB7Ci0gICAgICAgICAgICByZXR1cm4gLWNvZGUgZXJyb3IgIlhMRkRmb250OiBjb21tYW5kZSBpbmNvcnJlY3Q6ICRjbWQiCisgICAgICAgICAgICByZXR1cm4gLWNvZGUgZXJyb3IgIlhMRkRmb250OiBjb21tYW5kIGluY29ycmVjdDogJGNtZCIKICAgICAgICAgfQogICAgIH0KICAgICBzZXQgbGZvbnQgW3NwbGl0ICRmb250ICItIl0KQEAgLTIzMSw3ICsyMzEsNyBAQAogICAgICAgICAgICAgLXdlaWdodCAgeyBzZXQgaW5kZXggMyB9CiAgICAgICAgICAgICAtc2xhbnQgICB7IHNldCBpbmRleCA0IH0KICAgICAgICAgICAgIC1zaXplICAgIHsgc2V0IGluZGV4IDcgfQotICAgICAgICAgICAgZGVmYXVsdCAgeyByZXR1cm4gLWNvZGUgZXJyb3IgIlhMRkRmb250OiBvcHRpb24gaW5jb3JyZWN0ZTogJG9wdGlvbiIgfQorICAgICAgICAgICAgZGVmYXVsdCAgeyByZXR1cm4gLWNvZGUgZXJyb3IgIlhMRkRmb250OiBvcHRpb24gaW5jb3JyZWN0OiAkb3B0aW9uIiB9CiAgICAgICAgIH0KICAgICAgICAgc2V0IGxmb250IFtscmVwbGFjZSAkbGZvbnQgJGluZGV4ICRpbmRleCAkdmFsdWVdCiAgICAgfQpAQCAtNzUzLDcgKzc1Myw3IEBACiAjICBjbGFzcyAgICAgIGNsYXNzIG5hbWUgb2YgdGhlIEJXaWRnZXQKICMgIHRrd2lkZ2V0ICAgdGsgd2lkZ2V0IHRvIGluY2x1ZGUKICMgIHN1YnBhdGggICAgc3VicGF0aCB0byBjb25maWd1cmUKLSMgIGFyZ3MgICAgICAgYWRkaXRpb25uYWwgYXJncyBmb3IgaW5jbHVkZWQgb3B0aW9ucworIyAgYXJncyAgICAgICBhZGRpdGlvbmFsIGFyZ3MgZm9yIGluY2x1ZGVkIG9wdGlvbnMKICMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQogcHJvYyBXaWRnZXQ6OnRraW5jbHVkZSB7IGNsYXNzIHRrd2lkZ2V0IHN1YnBhdGggYXJncyB9IHsKICAgICBmb3JlYWNoIHtjbWQgbG9wdH0gJGFyZ3MgewpAQCAtNzk5LDcgKzc5OSw3IEBACiAgICAgdXB2YXIgMCAke2NsYXNzfTo6b3B0aW9uRXhwb3J0cyBleHBvcnRzCiAKICAgICBzZXQgZm9vIFskdGt3aWRnZXQgIi5lcmljRm9vIyMjIl0KLSAgICAjIGNyZWF0ZSByZXNvdXJjZXMgaW5mb3JtYXRpb25zIGZyb20gdGsgd2lkZ2V0IHJlc291cmNlcworICAgICMgY3JlYXRlIHJlc291cmNlcyBpbmZvcm1hdGlvbiBmcm9tIHRrIHdpZGdldCByZXNvdXJjZXMKICAgICBmb3JlYWNoIG9wdGRlc2MgW19nZXRfdGt3aWRnZXRfb3B0aW9ucyAkdGt3aWRnZXRdIHsKICAgICAgICAgc2V0IG9wdGlvbiBbbGluZGV4ICRvcHRkZXNjIDBdCiAgICAgICAgIGlmIHsgKCFbaW5mbyBleGlzdHMgaW5jbHVkZV0gfHwgW2luZm8gZXhpc3RzIGluY2x1ZGUoJG9wdGlvbildKSAmJgpAQCAtODYwLDcgKzg2MCw3IEBACiAjICBjbGFzcyAgICBjbGFzcyBuYW1lIG9mIHRoZSBCV2lkZ2V0CiAjICBzdWJjbGFzcyBCV2lkZ2V0IGNsYXNzIHRvIGluY2x1ZGUKICMgIHN1YnBhdGggIHN1YnBhdGggdG8gY29uZmlndXJlCi0jICBhcmdzICAgICBhZGRpdGlvbm5hbCBhcmdzIGZvciBpbmNsdWRlZCBvcHRpb25zCisjICBhcmdzICAgICBhZGRpdGlvbmFsIGFyZ3MgZm9yIGluY2x1ZGVkIG9wdGlvbnMKICMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQogcHJvYyBXaWRnZXQ6OmJ3aW5jbHVkZSB7IGNsYXNzIHN1YmNsYXNzIHN1YnBhdGggYXJncyB9IHsKICAgICBmb3JlYWNoIHtjbWQgbG9wdH0gJGFyZ3MgewpAQCAtOTA3LDcgKzkwNyw3IEBACiAgICAgdXB2YXIgMCAke3N1YmNsYXNzfTo6b3B0IHN1YmNsYXNzb3B0CiAgICAgdXB2YXIgMCAke3N1YmNsYXNzfTo6b3B0aW9uRXhwb3J0cyBzdWJleHBvcnRzCiAKLSAgICAjIGNyZWF0ZSByZXNvdXJjZXMgaW5mb3JtYXRpb25zIGZyb20gQldpZGdldCByZXNvdXJjZXMKKyAgICAjIGNyZWF0ZSByZXNvdXJjZXMgaW5mb3JtYXRpb24gZnJvbSBCV2lkZ2V0IHJlc291cmNlcwogICAgIGZvcmVhY2gge29wdGlvbiBvcHRkZXNjfSBbYXJyYXkgZ2V0IHN1YmNsYXNzb3B0XSB7CiAJc2V0IHN1Yk9wdGlvbiAkb3B0aW9uCiAgICAgICAgIGlmIHsgKCFbaW5mbyBleGlzdHMgaW5jbHVkZV0gfHwgW2luZm8gZXhpc3RzIGluY2x1ZGUoJG9wdGlvbildKSAmJgpAQCAtMTAzMiw3ICsxMDMyLDcgQEAKICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgIH0KIAotICAgICAgICAjIHJldHJlaXZlIGRlZmF1bHQgdmFsdWUgZm9yIFRrUmVzb3VyY2UKKyAgICAgICAgIyByZXRyaWV2ZSBkZWZhdWx0IHZhbHVlIGZvciBUa1Jlc291cmNlCiAgICAgICAgIGlmIHsgW3N0cmluZyBlcXVhbCAkdHlwZSAiVGtSZXNvdXJjZSJdIH0gewogICAgICAgICAgICAgc2V0IHRrd2lkZ2V0IFtsaW5kZXggJGFyZyAwXQogCSAgICBzZXQgZm9vIFskdGt3aWRnZXQgIi5lcmljRm9vIyMiXQpkaWZmIC1OYXVyIGEvc3JjL2xpYnJhcnkvdGNsdGsvZXhlYy93aWRnZXQudGNsIGIvc3JjL2xpYnJhcnkvdGNsdGsvZXhlYy93aWRnZXQudGNsCi0tLSBhL3NyYy9saWJyYXJ5L3RjbHRrL2V4ZWMvd2lkZ2V0LnRjbAkyMDI1LTA2LTE4IDExOjUxOjA4LjUyNTA4ODY1MiAtMDUwMAorKysgYi9zcmMvbGlicmFyeS90Y2x0ay9leGVjL3dpZGdldC50Y2wJMjAyNS0wNi0xOCAxNTo1OTo1NS41ODkzMTA4MzkgLTA1MDAKQEAgLTEsNiArMSw5IEBACiAjIyBCYXJlYm9uZXMgcmVxdWlyZW1lbnRzIGZvciBjcmVhdGluZyBhbmQgcXVlcnlpbmcgbWVnYXdpZGdldHMKICMjCi0jIyBDb3B5cmlnaHQgMTk5Ny04IEplZmZyZXkgSG9iYnMsIGplZmYuaG9iYnNAYWNtLm9yZworIyMgQ29weXJpZ2h0IDE5OTctOCBKZWZmcmV5IEhvYmJzCisjIworIyMgU2VlIHRoZSBmaWxlICJsaWNlbnNlLnRlcm1zIiBmb3IgaW5mb3JtYXRpb24gb24gdXNhZ2UgYW5kCisjIyByZWRpc3RyaWJ1dGlvbiBvZiB0aGlzIGZpbGUsIGFuZCBmb3IgYSBESVNDTEFJTUVSIE9GIEFMTCBXQVJSQU5USUVTLgogIyMKICMjIEluaXRpYXRlZDogNSBKdW5lIDE5OTcKICMjIExhc3QgVXBkYXRlOiAxOTk4CkBAIC04NjEsNyArODY0LDcgQEAKICMjIGFycmF5IHdpdGggYWxsIHRoZSBkZWZhdWx0IG9wdGlvbiB2YWx1ZXMsIHRoZSAiYmFzZSIga2V5IGFuZCB0aGUga2V5CiAjIyBuYW1lcyBmb3IgYW55IG90aGVyIGNvbXBvbmVudHMuICBUaGUgdXNlciBzaG91bGQgdGhlbiBncmlkL3BhY2sgYWxsCiAjIyBzdWJ3aWRnZXRzIGludG8gJHcuICBBdCB0aGlzIHBvaW50LCB0aGUgaW5pdGlhbCBjb25maWd1cmUgaGFzIG5vdAotIyMgb2NjdXJlZCwgc28gdGhlIHdpZGdldCBvcHRpb25zIGFyZSBhbGwgdGhlIGRlZmF1bHQuICBJZiB0aGlzIHByb2MKKyMjIG9jY3VycmVkLCBzbyB0aGUgd2lkZ2V0IG9wdGlvbnMgYXJlIGFsbCB0aGUgZGVmYXVsdC4gIElmIHRoaXMgcHJvYwogIyMgZXJyb3JzLCBzbyBkb2VzIHRoZSBtYWluIGNyZWF0aW9uIHJvdXRpbmUsIHJldHVybmluZyB5b3VyIGVycm9yLgogIyMKICMjICROQU1FU1BBQ0U6OmNvbmZpZ3VyZSB7dyBhcmdzfQk9PiByZXR1cm4gaWdub3JlZCAoc2hvdWxkIGJlIGVtcHR5KQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-21 18:40:56"
+}

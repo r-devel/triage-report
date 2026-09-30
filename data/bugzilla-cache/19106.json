@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-07-29T20:22:22Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 19106,
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Documentation",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Fix recommendation in discovering CMake on macOS",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-07-29T20:22:22Z",
+        "cc_detail": [],
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        }
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19106": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103334,
+            "time": "2026-07-29T20:22:22Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19106,
+            "text": "https://cran.r-project.org/doc/manuals/r-devel/R-exts.html#Using-cmake has:\n\n>A complication is that on macOS cmake (where installed) is commonly not on the path but at /Applications/CMake.app/Contents/bin/cmake. One way to work around this is for the package’s configure script to include\n>\n>if test -z \"$CMAKE\"; then CMAKE=\"`which cmake`\"; fi\n>if test -z \"$CMAKE\"; then CMAKE=/Applications/CMake.app/Contents/bin/cmake; fi\n>if test -f \"$CMAKE\"; then echo \"no 'cmake' command found\"; exit 1; fi\n>\n>and for the second approach to substitute CMAKE into src/Makevars. This also applies to the ancillary command ctest, if used.\n\nbut that final check should be negated; it should fail if CMAKE is unset or doesn't point to a file. Potential patch:\n\n```\nIndex: doc/manual/R-exts.texi\n===================================================================\n--- doc/manual/R-exts.texi    (revision 90317)\n+++ doc/manual/R-exts.texi    (working copy)\n@@ -3355,7 +3355,7 @@\n @example\n if test -z \"$CMAKE\"; then CMAKE=\"`which cmake`\"; fi\n if test -z \"$CMAKE\"; then CMAKE=/Applications/CMake.app/Contents/bin/cmake; fi\n-if test -f \"$CMAKE\"; then echo \"no 'cmake' command found\"; exit 1; fi\n+if test ! -f \"$CMAKE\"; then echo \"no 'cmake' command found\"; exit 1; fi\n @end example\n @noindent\n and for the second approach to substitute @env{CMAKE} into\n```",
+            "creation_time": "2026-07-29T20:22:22Z",
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19106": []
+    }
+  },
+  "source_changed": "2026-07-29 20:22:22"
+}

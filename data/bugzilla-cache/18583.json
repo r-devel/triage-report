@@ -1,0 +1,192 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Language",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 18583,
+        "severity": "minor",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "maechler"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2023-08-25T15:14:28Z",
+        "version": "R-devel (trunk)",
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "id": 3462,
+          "name": "jaganmn2",
+          "real_name": "Mikael Jagan"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "id": 18,
+            "name": "maechler"
+          }
+        ],
+        "last_change_time": "2024-02-08T06:53:07Z",
+        "blocks": [],
+        "url": "",
+        "summary": "cbind.ts does not respect 'deparse.level'",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18583": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": 3216,
+            "is_private": false,
+            "id": 100056,
+            "time": "2023-08-25T15:14:28Z",
+            "creation_time": "2023-08-25T15:14:28Z",
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 18583,
+            "text": "Created attachment 3216\npatch for cbind.ts(deparse.level=)\n\nNote that a fix for this bug is more or less conditional on a fix for Bug 18579, as `cbind.ts` is currently only ever dispatched with `deparse.level = 1`.  But even then, we see:\n\n```\n> body(stats:::cbind.ts)\n{\n    if (deparse.level != 1) \n        .NotYetUsed(\"deparse.level != 1\")\n    .cbind.ts(list(...), .makeNamesTs(...), dframe = FALSE, union = TRUE)\n}\n```\n\n`cbind.ts` does not really behave as the internal default method does when `deparse.level = 1`.  Untagged arguments are named by `.makeNamesTs` as if `deparse.level = 2`.  That is, they are deparsed unconditionally:\n\n```\n> body(stats:::.makeNamesTs)\n{\n    l <- as.list(substitute(list(...)))[-1L]\n    nm <- names(l)\n    fixup <- if (is.null(nm)) \n        seq_along(l)\n    else nm == \"\"\n    dep <- sapply(l[fixup], function(x) deparse(x)[1L])\n    if (is.null(nm)) \n        return(dep)\n    if (any(fixup)) \n        nm[fixup] <- dep\n    nm\n}\n```\n\nA corollary is that the return value of `cbind.ts` always has non-`NULL` column names.  Another difference is that matrices with 2 or more columns have their column names formatted in the result as `paste(<name>, colnames(.), sep=\".\")` or `paste(<name>, seq_len(ncol(.)), sep=\".\")`.\n\nObviously, for backwards compatibility, this behaviour should be more or less preserved when `missing(deparse.level)` is `TRUE`.  Hence I propose the following changes:\n\n1. In the `missing(deparse.level)=FALSE` case, the column names of the `cbind.ts` result should be determined exactly as they are determined the internal default method.\n2. In the `missing(deparse.level)= TRUE` case, _all_ matrices (i.e., not only those with two or more columns) should have their column names formatted with `paste(..., sep=\".\")`.\n\nThe attached patch implements these changes more or less by:\n\n* Refactoring the helper `.makeNamesTs` to behave according to a `deparse.level` argument.\n* Refactoring the helper `.cbind.ts` to behave according to a `doDot` argument, i.e., \"as before\" (modulo Change 2) when `doDot=TRUE` and as the internal default method for `cbind` when `doDot=FALSE`.\n* Adjusting methods `cbind.ts` and `Ops.ts` and exported functions `ts.union` and `ts.intersect`, which each call `.makeNamesTs` and/or `.cbind.ts`.\n* Adjusting method `summary.stl` which is affected by Change 2.\n\nI suppose that a more conservative patch would omit Change 2, and I can provide one if that path is preferred.  One need only omit the changes to `summary.stl` and adjust some logic in `.cbind.ts` ..."
+          },
+          {
+            "count": 1,
+            "is_markdown": true,
+            "text": "I should add that this \"bug\" is perhaps really a feature request, given that:\n\n* `cbind.ts` is aliased in `help(\"ts\")` but nowhere documented\n* `cbind.data.frame` does not use `deparse.level` and is documented accordingly in help(\"cbind\") (\"just a wrapper for `data.frame(..., check.names = FALSE)`\")\n* `help(\"cbind\")` hints that `deparse.level` need not be used by methods other than the internal default method (\"integer controlling the construction of labels in the case of non-matrix-like arguments (for the default method)\")\n\nOn the other hand:\n\n* users would be right to expect classes `mts` and `ts` to be handled as traditional matrices and vectors by the method for `cbind` (modulo alignment of `tsp[1:2]`)\n* `methods:::cbind` handles most cases of `base::cbind(..., <S4>, ...)` and _does_ respect `deparse.level`",
+            "bug_id": 18583,
+            "creator": "jaganmn2",
+            "creation_time": "2023-08-25T17:40:00Z",
+            "is_private": false,
+            "time": "2023-08-25T17:40:00Z",
+            "id": 100057,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "time": "2023-10-20T19:21:41Z",
+            "id": 100301,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "I agree that this is a reasonable WISHLIST / feature request.\n\nOTOH, my gut feeling was that the patch is relatively extensive, adding quite a bit more code (to be maintained, etc) than I'd had assumed intuitively...\nHence confirmed (but of minor importance ..).\n\n{OTOH, Bug 18579 really *was* unfortunate and the solution we ended with there,\n using new `R_missing()` was really nice}.",
+            "bug_id": 18583,
+            "count": 2,
+            "is_markdown": true,
+            "creator": "maechler",
+            "creation_time": "2023-10-20T19:21:41Z"
+          },
+          {
+            "count": 3,
+            "is_markdown": true,
+            "text": "Created attachment 3307\nditto with smaller diff\n\nReturning with less tired eyes, I was able to shrink the diff (63->47 lines added, 31->23 lines removed).  I would say that the apparent complexity of the remaining changes reflects the _actual_ complexity of the way that the internal `cbind` constructs `dimnames` as a function of `deparse.level`.\n\nThis patch replaces one instance of `if(is.null(A)) B else A` (in the code written by me) with `A %||% B`.",
+            "bug_id": 18583,
+            "creator": "jaganmn2",
+            "creation_time": "2024-02-07T23:09:57Z",
+            "is_private": false,
+            "time": "2024-02-07T23:09:57Z",
+            "id": 100583,
+            "attachment_id": 3307,
+            "tags": []
+          },
+          {
+            "tags": [],
+            "attachment_id": 3308,
+            "is_private": false,
+            "id": 100584,
+            "time": "2024-02-08T06:53:07Z",
+            "creation_time": "2024-02-08T06:53:07Z",
+            "creator": "jaganmn2",
+            "count": 4,
+            "is_markdown": true,
+            "bug_id": 18583,
+            "text": "Created attachment 3308\ntest demonstrating what changes with patch"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18583": [
+        {
+          "last_change_time": "2023-08-25T15:14:28Z",
+          "size": 5809,
+          "is_private": false,
+          "id": 3216,
+          "creation_time": "2023-08-25T15:14:28Z",
+          "summary": "patch for cbind.ts(deparse.level=)",
+          "file_name": "patch.diff",
+          "bug_id": 18583,
+          "is_patch": true,
+          "creator": "jaganmn2",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1Ivc3RsLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvUi9zdGwuUgkocmV2aXNpb24gODUwMTApCisrKyBzcmMvbGlicmFyeS9zdGF0cy9SL3N0bC5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMTEsNyArMTExLDcgQEAKICAgICBwcmludChzdW1tYXJ5KG9iamVjdCR0aW1lLnNlcmllcywgZGlnaXRzID0gZGlnaXRzLCAuLi4pKQogICAgIGNhdCgiIElRUjpcbiIpCiAgICAgaXFyIDwtIGFwcGx5KGNiaW5kKFNUTCA9IG9iamVjdCR0aW1lLnNlcmllcywKLSAgICAgICAgICAgICAgICAgICAgICAgZGF0YSA9IG9iamVjdCR0aW1lLnNlcmllcyAlKiUgcmVwKDEsMykpLAorICAgICAgICAgICAgICAgICAgICAgICBkYXRhID0gYXMudmVjdG9yKG9iamVjdCR0aW1lLnNlcmllcyAlKiUgcmVwKDEsMykpKSwKIAkJIDJMLCBJUVIpCiAgICAgcHJpbnQocmJpbmQoZm9ybWF0KGlxciwgZGlnaXRzID0gbWF4KDJMLCBkaWdpdHMgLSAzTCkpLAogCQkiICAgJSI9IGZvcm1hdChyb3VuZCgxMDAgKiBpcXIgLyBpcXJbImRhdGEiXSwgMSkpKSwKSW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvdHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy9SL3RzLlIJKHJldmlzaW9uIDg1MDEwKQorKysgc3JjL2xpYnJhcnkvc3RhdHMvUi90cy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMjksNyArMTI5LDcgQEAKICAgICBlbHNlIHRzKHgpCiB9CiAKLS5jYmluZC50cyA8LSBmdW5jdGlvbihzZXJzLCBubXNlcnMsIGRmcmFtZSA9IEZBTFNFLCB1bmlvbiA9IFRSVUUsCisuY2JpbmQudHMgPC0gZnVuY3Rpb24oc2VycywgZGZyYW1lID0gRkFMU0UsIHVuaW9uID0gVFJVRSwgZG9Eb3QgPSBUUlVFLAogICAgICAgICAgICAgICAgICAgICAgIHRzLmVwcyA9IGdldE9wdGlvbigidHMuZXBzIikpCiB7CiAgICAgbnVsbHMgPC0gdmFwcGx5KHNlcnMsIGlzLm51bGwsIE5BKQpAQCAtMTc0LDYgKzE3NCw3IEBACiAgICAgICAgIHRzcHMgPC0gc2FwcGx5KHNlcnMsIHRzcCkKICAgICB9CiAgICAgbnNlcnMgPC0gdmFwcGx5KHNlcnMsIE5DT0wsIDEpCisgICAgbm1zZXJzIDwtIG5hbWVzKHNlcnMpCiAgICAgaWYoZGZyYW1lKSB7CiAJeCA8LSBzZXROYW1lcyh2ZWN0b3IoImxpc3QiLCBuc2VyKSwgbm1zZXJzKQogICAgIH0gZWxzZSB7CkBAIC0xODAsMTMgKzE4MSwyOSBAQAogICAgICAgICBucyA8LSBzdW0obnNlcnMpCiAgICAgICAgIHggPC0gbWF0cml4KCwgbiwgbnMpCiAgICAgICAgIGNzIDwtIGMoMCwgY3Vtc3VtKG5zZXJzKSkKLSAgICAgICAgbm0gPC0gY2hhcmFjdGVyKG5zKQotICAgICAgICBmb3IoaSBpbiAxTDpuc2VyKQotICAgICAgICAgICAgaWYobnNlcnNbaV0gPiAxKSB7Ci0gICAgICAgICAgICAgICAgY24gPC0gY29sbmFtZXMoc2Vyc1tbaV1dKSAlfHwlIDFMOm5zZXJzW2ldCi0gICAgICAgICAgICAgICAgbm1bKDErY3NbaV0pOmNzW2krMV1dIDwtIHBhc3RlKG5tc2Vyc1tpXSwgY24sIHNlcD0iLiIpCi0gICAgICAgICAgICB9IGVsc2Ugbm1bY3NbaSsxXV0gPC0gbm1zZXJzW2ldCi0gICAgICAgIGRpbW5hbWVzKHgpIDwtIGxpc3QoTlVMTCwgbm0pCisgICAgICAgIGRvRE4gPC0gZG9Eb3QKKyAgICAgICAgaWYoIWRvRE4pCisgICAgICAgICAgICBmb3IoaSBpbiAxTDpuc2VyKQorICAgICAgICAgICAgICAgIGlmKGlmKGlzLm1hdHJpeChzZXJzW1tpXV0pKQorICAgICAgICAgICAgICAgICAgICAgICAhaXMubnVsbChjb2xuYW1lcyhzZXJzW1tpXV0pKQorICAgICAgICAgICAgICAgICAgIGVsc2UgbnpjaGFyKG5tc2Vyc1tpXSkpIHsKKyAgICAgICAgICAgICAgICAgICAgZG9ETiA8LSBUUlVFCisgICAgICAgICAgICAgICAgICAgIGJyZWFrCisgICAgICAgICAgICAgICAgfQorICAgICAgICBpZihkb0ROKSB7CisgICAgICAgICAgICBubSA8LSBjaGFyYWN0ZXIobnMpCisgICAgICAgICAgICBmb3IoaSBpbiAxTDpuc2VyKSB7CisgICAgICAgICAgICAgICAgaWYoaXMubWF0cml4KHNlcnNbW2ldXSkpIHsKKyAgICAgICAgICAgICAgICAgICAgY24gPC0gY29sbmFtZXMoc2Vyc1tbaV1dKQorICAgICAgICAgICAgICAgICAgICBpZihkb0RvdCAmJiBpcy5udWxsKGNuKSkKKyAgICAgICAgICAgICAgICAgICAgICAgIGNuIDwtIDFMOm5zZXJzW2ldCisgICAgICAgICAgICAgICAgICAgIGlmKCFpcy5udWxsKGNuKSkKKyAgICAgICAgICAgICAgICAgICAgICAgIG5tWygxK2NzW2ldKTpjc1tpKzFMXV0gPC0KKyAgICAgICAgICAgICAgICAgICAgICAgIGlmKGRvRG90KSBwYXN0ZTAobm1zZXJzW2ldLCAiLiIsIGNuKSBlbHNlIGNuCisgICAgICAgICAgICAgICAgfSBlbHNlIG5tW2NzW2krMUxdXSA8LSBubXNlcnNbaV0KKyAgICAgICAgICAgIH0KKyAgICAgICAgICAgIGRpbW5hbWVzKHgpIDwtIGxpc3QoTlVMTCwgbm0pCisgICAgICAgIH0KICAgICB9CiAgICAgZm9yKGkgaW4gMUw6bnNlcikgewogICAgICAgICBpZih1bmlvbikgewpAQCAtMjA4LDIxICsyMjUsMjQgQEAKICAgICBlbHNlIHRzKHgsIHN0YXJ0PXN0LCBmcmVxdWVuY3k9ZnJlcSkKIH0KIAotLm1ha2VOYW1lc1RzIDwtIGZ1bmN0aW9uKC4uLikKKy5tYWtlTmFtZXNUcyA8LSBmdW5jdGlvbiguLi4sIGRlcGFyc2UubGV2ZWwpCiB7CiAgICAgbCA8LSBhcy5saXN0KHN1YnN0aXR1dGUobGlzdCguLi4pKSlbLTFMXQogICAgIG5tIDwtIG5hbWVzKGwpCi0gICAgZml4dXAgPC0gaWYoaXMubnVsbChubSkpIHNlcV9hbG9uZyhsKSBlbHNlIG5tID09ICIiCi0gICAgIyMgPE5PVEU+Ci0gICAgZGVwIDwtIHNhcHBseShsW2ZpeHVwXSwgZnVuY3Rpb24oeCkgZGVwYXJzZSh4KVsxTF0pCi0gICAgIyMgV2UgY291bGQgYWRkIHN1cHBvcnQgZm9yICdkZXBhcnNlLmxldmVsJyBoZXJlIGJ5IGNyZWF0aW5nIGRlcAotICAgICMjIGFzIGluIGxpc3QubmFtZXMoKSBpbnNpZGUgdGFibGUoKS4gIEJ1dCB0aGVyZSBpcyBhIGNhdGNoOiB3ZQotICAgICMjIG5lZWQgZGVwYXJzZS5sZXZlbCA9IDIgdG8gZ2V0IHRoZSAndXN1YWwnIGRlcGFyc2luZyB3aGVuIHRoZQotICAgICMjIG1ldGhvZCBpcyBpbnZva2VkIGJ5IHRoZSBnZW5lcmljIC4uLgotICAgICMjIDwvTk9URT4KLSAgICBpZihpcy5udWxsKG5tKSkgcmV0dXJuKGRlcCkKLSAgICBpZihhbnkoZml4dXApKSBubVtmaXh1cF0gPC0gZGVwCi0gICAgbm0KKyAgICBkZXBhcnNlLmxldmVsIDwtIGFzLmludGVnZXIoZGVwYXJzZS5sZXZlbClbMUxdCisgICAgZml4dXAgPC0KKyAgICBpZihpZGVudGljYWwoZGVwYXJzZS5sZXZlbCwgMkwpKQorICAgICAgICBmdW5jdGlvbih4KSBkZXBhcnNlKHgpWzFMXQorICAgIGVsc2UgaWYoaWRlbnRpY2FsKGRlcGFyc2UubGV2ZWwsIDFMKSkKKyAgICAgICAgZnVuY3Rpb24oeCkgaWYoaXMuc3ltYm9sKHgpKSBhcy5jaGFyYWN0ZXIoeCkgZWxzZSAiIgorICAgIGVsc2UgcmV0dXJuKGlmKGlzLm51bGwobm0pKSBjaGFyYWN0ZXIobGVuZ3RoKGwpKSBlbHNlIG5tKQorICAgIGlmKGlzLm51bGwobm0pKQorICAgICAgICB2YXBwbHkobCwgZml4dXAsICIiKQorICAgIGVsc2UgeworICAgICAgICBpIDwtIHdoaWNoKG5tID09ICIiKQorICAgICAgICBubVtpXSA8LSB2YXBwbHkobFtpXSwgZml4dXAsICIiKQorICAgICAgICBubQorICAgIH0KIH0KIAogT3BzLnRzIDwtIGZ1bmN0aW9uKGUxLCBlMikKQEAgLTIzNywxMCArMjU3LDEwIEBACiAgICAgICAgIG5jMSA8LSBOQ09MKGUxKQogICAgICAgICBuYzIgPC0gTkNPTChlMikKICAgICAgICAgIyMgYWxpZ24gZTEgYW5kIGUyCi0gICAgICAgIGUxMiA8LSAuY2JpbmQudHMobGlzdChlMSwgZTIpLAotICAgICAgICAgICAgICAgICAgICAgICAgIGMoZGVwYXJzZShzdWJzdGl0dXRlKGUxKSlbMUxdLAotICAgICAgICAgICAgICAgICAgICAgICAgICAgZGVwYXJzZShzdWJzdGl0dXRlKGUyKSlbMUxdKSwKLSAgICAgICAgICAgICAgICAgICAgICAgICB1bmlvbiA9IEZBTFNFKQorICAgICAgICBhcmdzIDwtIGxpc3QoZTEsIGUyKQorICAgICAgICBuYW1lcyhhcmdzKSA8LSBjKGRlcGFyc2Uoc3Vic3RpdHV0ZShlMSkpWzFMXSwKKyAgICAgICAgICAgICAgICAgICAgICAgICBkZXBhcnNlKHN1YnN0aXR1dGUoZTIpKVsxTF0pCisgICAgICAgIGUxMiA8LSAuY2JpbmQudHMoYXJncywgZGZyYW1lID0gRkFMU0UsIHVuaW9uID0gRkFMU0UsIGRvRG90ID0gRkFMU0UpCiAgICAgICAgIGUxIDwtIGlmKGlzLm1hdHJpeChlMSkpIGUxMlssICAgICAgICAxTDpuYzEgLCBkcm9wID0gRkFMU0VdIGVsc2UgZTEyWywgMV0KICAgICAgICAgZTIgPC0gaWYoaXMubWF0cml4KGUyKSkgZTEyWywgbmMxICsgKDFMOm5jMiksIGRyb3AgPSBGQUxTRV0gZWxzZSBlMTJbLCBuYzEgKyAxXQogICAgICAgICBOZXh0TWV0aG9kKC5HZW5lcmljKQpAQCAtMjQ4LDE1ICsyNjgsMjcgQEAKIH0KIAogY2JpbmQudHMgPC0gZnVuY3Rpb24oLi4uLCBkZXBhcnNlLmxldmVsID0gMSkgewotICAgIGlmKGRlcGFyc2UubGV2ZWwgIT0gMSkgLk5vdFlldFVzZWQoImRlcGFyc2UubGV2ZWwgIT0gMSIpCi0gICAgLmNiaW5kLnRzKGxpc3QoLi4uKSwgLm1ha2VOYW1lc1RzKC4uLiksIGRmcmFtZSA9IEZBTFNFLCB1bmlvbiA9IFRSVUUpCisgICAgIyMgTkI6IGRlcGFyc2UubGV2ZWw9MiBieSBkZWZhdWx0IGZvciBiYWNrd2FyZHMgY29tcGF0aWJpbGl0eQorICAgICMjICAgICB3aXRoIGVhcmxpZXIgdmVyc2lvbnMgd2hpY2ggZGVwYXJzZWQgdW50YWdnZWQgYXJndW1lbnRzCisgICAgIyMgICAgIHVuY29uZGl0aW9uYWxseQorICAgIGlmKGRvRG90IDwtIG1pc3NpbmcoZGVwYXJzZS5sZXZlbCkpCisgICAgICAgIGRlcGFyc2UubGV2ZWwgPC0gMkwKKyAgICBhcmdzIDwtIGxpc3QoLi4uKQorICAgIG5hbWVzKGFyZ3MpIDwtIC5tYWtlTmFtZXNUcyguLi4sIGRlcGFyc2UubGV2ZWwgPSBkZXBhcnNlLmxldmVsKQorICAgIC5jYmluZC50cyhhcmdzLCBkZnJhbWUgPSBGQUxTRSwgdW5pb24gPSBUUlVFLCBkb0RvdCA9IGRvRG90KQogfQogCi10cy51bmlvbiA8LSBmdW5jdGlvbiguLi4sIGRmcmFtZSA9IEZBTFNFKQotICAgIC5jYmluZC50cyhsaXN0KC4uLiksIC5tYWtlTmFtZXNUcyguLi4pLCBkZnJhbWUgPSBkZnJhbWUsIHVuaW9uID0gVFJVRSkKK3RzLnVuaW9uIDwtIGZ1bmN0aW9uKC4uLiwgZGZyYW1lID0gRkFMU0UpIHsKKyAgICBhcmdzIDwtIGxpc3QoLi4uKQorICAgIG5hbWVzKGFyZ3MpIDwtIC5tYWtlTmFtZXNUcyguLi4sIGRlcGFyc2UubGV2ZWwgPSAyTCkKKyAgICAuY2JpbmQudHMoYXJncywgZGZyYW1lID0gZGZyYW1lLCB1bmlvbiA9ICBUUlVFLCBkb0RvdCA9IFRSVUUpCit9CiAKLXRzLmludGVyc2VjdCA8LSBmdW5jdGlvbiguLi4sIGRmcmFtZSA9IEZBTFNFKQotICAgIC5jYmluZC50cyhsaXN0KC4uLiksIC5tYWtlTmFtZXNUcyguLi4pLCBkZnJhbWUgPSBkZnJhbWUsIHVuaW9uID0gRkFMU0UpCit0cy5pbnRlcnNlY3QgPC0gZnVuY3Rpb24oLi4uLCBkZnJhbWUgPSBGQUxTRSkgeworICAgIGFyZ3MgPC0gbGlzdCguLi4pCisgICAgbmFtZXMoYXJncykgPC0gLm1ha2VOYW1lc1RzKC4uLiwgZGVwYXJzZS5sZXZlbCA9IDJMKQorICAgIC5jYmluZC50cyhhcmdzLCBkZnJhbWUgPSBkZnJhbWUsIHVuaW9uID0gRkFMU0UsIGRvRG90ID0gVFJVRSkKK30KIAogZGlmZi50cyA8LSBmdW5jdGlvbiAoeCwgbGFnID0gMSwgZGlmZmVyZW5jZXMgPSAxLCAuLi4pCiB7Cg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        },
+        {
+          "summary": "ditto with smaller diff",
+          "creation_time": "2024-02-07T23:09:57Z",
+          "bug_id": 18583,
+          "file_name": "patch.diff",
+          "size": 4205,
+          "last_change_time": "2024-02-07T23:09:57Z",
+          "id": 3307,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1Ivc3RsLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvUi9zdGwuUgkocmV2aXNpb24gODU4NzMpCisrKyBzcmMvbGlicmFyeS9zdGF0cy9SL3N0bC5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMTEsNyArMTExLDcgQEAKICAgICBwcmludChzdW1tYXJ5KG9iamVjdCR0aW1lLnNlcmllcywgZGlnaXRzID0gZGlnaXRzLCAuLi4pKQogICAgIGNhdCgiIElRUjpcbiIpCiAgICAgaXFyIDwtIGFwcGx5KGNiaW5kKFNUTCA9IG9iamVjdCR0aW1lLnNlcmllcywKLSAgICAgICAgICAgICAgICAgICAgICAgZGF0YSA9IG9iamVjdCR0aW1lLnNlcmllcyAlKiUgcmVwKDEsMykpLAorICAgICAgICAgICAgICAgICAgICAgICBkYXRhID0gYXMudmVjdG9yKG9iamVjdCR0aW1lLnNlcmllcyAlKiUgcmVwKDEsMykpKSwKIAkJIDJMLCBJUVIpCiAgICAgcHJpbnQocmJpbmQoZm9ybWF0KGlxciwgZGlnaXRzID0gbWF4KDJMLCBkaWdpdHMgLSAzTCkpLAogCQkiICAgJSI9IGZvcm1hdChyb3VuZCgxMDAgKiBpcXIgLyBpcXJbImRhdGEiXSwgMSkpKSwKSW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvdHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy9SL3RzLlIJKHJldmlzaW9uIDg1ODczKQorKysgc3JjL2xpYnJhcnkvc3RhdHMvUi90cy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMjksNyArMTI5LDcgQEAKICAgICBlbHNlIHRzKHgpCiB9CiAKLS5jYmluZC50cyA8LSBmdW5jdGlvbihzZXJzLCBubXNlcnMsIGRmcmFtZSA9IEZBTFNFLCB1bmlvbiA9IFRSVUUsCisuY2JpbmQudHMgPC0gZnVuY3Rpb24oc2Vycywgbm1zZXJzLCBkZnJhbWUgPSBGQUxTRSwgdW5pb24gPSBUUlVFLCBkb0RvdCA9IFRSVUUsCiAgICAgICAgICAgICAgICAgICAgICAgdHMuZXBzID0gZ2V0T3B0aW9uKCJ0cy5lcHMiKSkKIHsKICAgICBudWxscyA8LSB2YXBwbHkoc2VycywgaXMubnVsbCwgTkEpCkBAIC0xODAsMTMgKzE4MCwyOSBAQAogICAgICAgICBucyA8LSBzdW0obnNlcnMpCiAgICAgICAgIHggPC0gbWF0cml4KCwgbiwgbnMpCiAgICAgICAgIGNzIDwtIGMoMCwgY3Vtc3VtKG5zZXJzKSkKLSAgICAgICAgbm0gPC0gY2hhcmFjdGVyKG5zKQotICAgICAgICBmb3IoaSBpbiAxTDpuc2VyKQotICAgICAgICAgICAgaWYobnNlcnNbaV0gPiAxKSB7Ci0gICAgICAgICAgICAgICAgY24gPC0gY29sbmFtZXMoc2Vyc1tbaV1dKSAlfHwlIDFMOm5zZXJzW2ldCi0gICAgICAgICAgICAgICAgbm1bKDErY3NbaV0pOmNzW2krMV1dIDwtIHBhc3RlKG5tc2Vyc1tpXSwgY24sIHNlcD0iLiIpCi0gICAgICAgICAgICB9IGVsc2Ugbm1bY3NbaSsxXV0gPC0gbm1zZXJzW2ldCi0gICAgICAgIGRpbW5hbWVzKHgpIDwtIGxpc3QoTlVMTCwgbm0pCisgICAgICAgIGRvRE4gPC0gZG9Eb3QKKyAgICAgICAgaWYoIWRvRE4pCisgICAgICAgICAgICBmb3IoaSBpbiAxTDpuc2VyKQorICAgICAgICAgICAgICAgIGlmKGlmKGlzLm1hdHJpeChzZXJzW1tpXV0pKQorICAgICAgICAgICAgICAgICAgICAgICAhaXMubnVsbChjb2xuYW1lcyhzZXJzW1tpXV0pKQorICAgICAgICAgICAgICAgICAgIGVsc2UgbnpjaGFyKG5tc2Vyc1tpXSkpIHsKKyAgICAgICAgICAgICAgICAgICAgZG9ETiA8LSBUUlVFCisgICAgICAgICAgICAgICAgICAgIGJyZWFrCisgICAgICAgICAgICAgICAgfQorICAgICAgICBpZihkb0ROKSB7CisgICAgICAgICAgICBubSA8LSBjaGFyYWN0ZXIobnMpCisgICAgICAgICAgICBmb3IoaSBpbiAxTDpuc2VyKSB7CisgICAgICAgICAgICAgICAgaWYoaXMubWF0cml4KHNlcnNbW2ldXSkpIHsKKyAgICAgICAgICAgICAgICAgICAgY24gPC0gY29sbmFtZXMoc2Vyc1tbaV1dKQorICAgICAgICAgICAgICAgICAgICBpZihkb0RvdCAmJiBpcy5udWxsKGNuKSkKKyAgICAgICAgICAgICAgICAgICAgICAgIGNuIDwtIDFMOm5zZXJzW2ldCisgICAgICAgICAgICAgICAgICAgIGlmKCFpcy5udWxsKGNuKSkKKyAgICAgICAgICAgICAgICAgICAgICAgIG5tWygxK2NzW2ldKTpjc1tpKzFMXV0gPC0KKyAgICAgICAgICAgICAgICAgICAgICAgIGlmKGRvRG90KSBwYXN0ZTAobm1zZXJzW2ldLCAiLiIsIGNuKSBlbHNlIGNuCisgICAgICAgICAgICAgICAgfSBlbHNlIG5tW2NzW2krMUxdXSA8LSBubXNlcnNbaV0KKyAgICAgICAgICAgIH0KKyAgICAgICAgICAgIGRpbW5hbWVzKHgpIDwtIGxpc3QoTlVMTCwgbm0pCisgICAgICAgIH0KICAgICB9CiAgICAgZm9yKGkgaW4gMUw6bnNlcikgewogICAgICAgICBpZih1bmlvbikgewpAQCAtMjA4LDIxICsyMjQsMjQgQEAKICAgICBlbHNlIHRzKHgsIHN0YXJ0PXN0LCBmcmVxdWVuY3k9ZnJlcSkKIH0KIAotLm1ha2VOYW1lc1RzIDwtIGZ1bmN0aW9uKC4uLikKKy5tYWtlTmFtZXNUcyA8LSBmdW5jdGlvbiguLi4sIGRlcGFyc2UubGV2ZWwgPSAyTCkKIHsKICAgICBsIDwtIGFzLmxpc3Qoc3Vic3RpdHV0ZShsaXN0KC4uLikpKVstMUxdCiAgICAgbm0gPC0gbmFtZXMobCkKLSAgICBmaXh1cCA8LSBpZihpcy5udWxsKG5tKSkgc2VxX2Fsb25nKGwpIGVsc2Ugbm0gPT0gIiIKLSAgICAjIyA8Tk9URT4KLSAgICBkZXAgPC0gc2FwcGx5KGxbZml4dXBdLCBmdW5jdGlvbih4KSBkZXBhcnNlKHgpWzFMXSkKLSAgICAjIyBXZSBjb3VsZCBhZGQgc3VwcG9ydCBmb3IgJ2RlcGFyc2UubGV2ZWwnIGhlcmUgYnkgY3JlYXRpbmcgZGVwCi0gICAgIyMgYXMgaW4gbGlzdC5uYW1lcygpIGluc2lkZSB0YWJsZSgpLiAgQnV0IHRoZXJlIGlzIGEgY2F0Y2g6IHdlCi0gICAgIyMgbmVlZCBkZXBhcnNlLmxldmVsID0gMiB0byBnZXQgdGhlICd1c3VhbCcgZGVwYXJzaW5nIHdoZW4gdGhlCi0gICAgIyMgbWV0aG9kIGlzIGludm9rZWQgYnkgdGhlIGdlbmVyaWMgLi4uCi0gICAgIyMgPC9OT1RFPgotICAgIGlmKGlzLm51bGwobm0pKSByZXR1cm4oZGVwKQotICAgIGlmKGFueShmaXh1cCkpIG5tW2ZpeHVwXSA8LSBkZXAKLSAgICBubQorICAgIGRlcGFyc2UubGV2ZWwgPC0gYXMuaW50ZWdlcihkZXBhcnNlLmxldmVsKVsxTF0KKyAgICBmaXh1cCA8LQorICAgIGlmKGlkZW50aWNhbChkZXBhcnNlLmxldmVsLCAyTCkpCisgICAgICAgIGZ1bmN0aW9uKHgpIGRlcGFyc2UoeClbMUxdCisgICAgZWxzZSBpZihpZGVudGljYWwoZGVwYXJzZS5sZXZlbCwgMUwpKQorICAgICAgICBmdW5jdGlvbih4KSBpZihpcy5zeW1ib2woeCkpIGFzLmNoYXJhY3Rlcih4KSBlbHNlICIiCisgICAgZWxzZSByZXR1cm4obm0gJXx8JSBjaGFyYWN0ZXIobGVuZ3RoKGwpKSkKKyAgICBpZihpcy5udWxsKG5tKSkKKyAgICAgICAgdmFwcGx5KGwsIGZpeHVwLCAiIikKKyAgICBlbHNlIHsKKyAgICAgICAgaSA8LSB3aGljaChubSA9PSAiIikKKyAgICAgICAgbm1baV0gPC0gdmFwcGx5KGxbaV0sIGZpeHVwLCAiIikKKyAgICAgICAgbm0KKyAgICB9CiB9CiAKIE9wcy50cyA8LSBmdW5jdGlvbihlMSwgZTIpCkBAIC0yNDgsOCArMjY3LDEzIEBACiB9CiAKIGNiaW5kLnRzIDwtIGZ1bmN0aW9uKC4uLiwgZGVwYXJzZS5sZXZlbCA9IDEpIHsKLSAgICBpZihkZXBhcnNlLmxldmVsICE9IDEpIC5Ob3RZZXRVc2VkKCJkZXBhcnNlLmxldmVsICE9IDEiKQotICAgIC5jYmluZC50cyhsaXN0KC4uLiksIC5tYWtlTmFtZXNUcyguLi4pLCBkZnJhbWUgPSBGQUxTRSwgdW5pb24gPSBUUlVFKQorICAgICMjIE5COiBkZXBhcnNlLmxldmVsPTIgYnkgZGVmYXVsdCBmb3IgYmFja3dhcmRzIGNvbXBhdGliaWxpdHkKKyAgICAjIyAgICAgd2l0aCBlYXJsaWVyIHZlcnNpb25zIHdoaWNoIGRlcGFyc2VkIHVudGFnZ2VkIGFyZ3VtZW50cworICAgICMjICAgICB1bmNvbmRpdGlvbmFsbHkKKyAgICBpZihkb0RvdCA8LSBtaXNzaW5nKGRlcGFyc2UubGV2ZWwpKQorICAgICAgICBkZXBhcnNlLmxldmVsIDwtIDJMCisgICAgLmNiaW5kLnRzKGxpc3QoLi4uKSwgLm1ha2VOYW1lc1RzKC4uLiwgZGVwYXJzZS5sZXZlbCA9IGRlcGFyc2UubGV2ZWwpLAorICAgICAgICAgICAgICBkZnJhbWUgPSBGQUxTRSwgdW5pb24gPSBUUlVFLCBkb0RvdCA9IGRvRG90KQogfQogCiB0cy51bmlvbiA8LSBmdW5jdGlvbiguLi4sIGRmcmFtZSA9IEZBTFNFKQo=",
+          "creator": "jaganmn2",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        },
+        {
+          "file_name": "cbind.ts.R",
+          "bug_id": 18583,
+          "creation_time": "2024-02-08T06:53:07Z",
+          "summary": "test demonstrating what changes with patch",
+          "is_private": false,
+          "id": 3308,
+          "last_change_time": "2024-02-08T06:53:07Z",
+          "size": 1216,
+          "content_type": "text/x-matlab",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "jaganmn2",
+          "data": "IyMgQnVnIDE4NTgzLCBNaWthZWwgSmFnYW4KCiMjIGRpbW5hbWVzKHN0YXRzOjo6Y2JpbmQudHMoLi4uKSkgbWF0Y2hpbmcgZGltbmFtZXMoYmFzZTo6Y2JpbmQoLi4uKSkKIyMgd2hlbiAnZGVwYXJzZS5sZXZlbCcgaXMgbm9uLW1pc3NpbmcuCiMjIEJlaGF2aW91ciBpbiBtaXNzaW5nIGNhc2UgcHJlc2VydmVkIGZvciBiYWNrd2FyZHMgY29tcGF0aWJpbGl0eSwKIyMgX2V4Y2VwdF8gZm9yIDEtY29sdW1uIG1hdHJpY2VzIHdoaWNoIHdlcmUgaGFuZGxlZCBhcyB2ZWN0b3JzIGJ1dAojIyBhcmUgbm93IGhhbmRsZWQgYXMgb3RoZXIgbWF0cmljZXMuCgpzdGF0czo6OmNiaW5kLnRzCgp2MSA8LSB0cygxOjIpCm0xIDwtIHRzKG1hdHJpeCgzOjQsIDJMKSwgbmFtZXMgPSAiYSIpCm0yIDwtIHRzKG1hdHJpeCg1OjgsIDJMKSwgbmFtZXMgPSBjKCJiIiwgImMiKSkKCkEuIDwtIG1hdHJpeChjKDE6MiwgMTo4KSwgMkwpCmIuIDwtIGNiaW5kKEkodjEpLCB2MSwgbTEsIG0yKQpiMCA8LSBjYmluZChJKHYxKSwgdjEsIG0xLCBtMiwgZGVwYXJzZS5sZXZlbCA9IDBMKQpiMSA8LSBjYmluZChJKHYxKSwgdjEsIG0xLCBtMiwgZGVwYXJzZS5sZXZlbCA9IDFMKQpiMiA8LSBjYmluZChJKHYxKSwgdjEsIG0xLCBtMiwgZGVwYXJzZS5sZXZlbCA9IDJMKQoKaWYgKGFueShuYW1lcyhmb3JtYWxzKHN0YXRzOjo6LmNiaW5kLnRzKSkgPT0gImRvRG90IikpIHsgIyA9PiBwYXRjaGVkCgpzdG9waWZub3QoZXhwcnMgPSB7CglpZGVudGljYWwoYi4sIHRzKEEuLCBuYW1lcyA9IGMoIkkodjEpIiwgInYxIiwgIm0xLmEiLCAibTIuYiIsICJtMi5jIikpKQoJaWRlbnRpY2FsKGIwLCB0cyhBLiwgbmFtZXMgPSBjKCAgICAgIiIsICAgIiIsICAgICJhIiwgICAgImIiLCAgICAiYyIpKSkKCWlkZW50aWNhbChiMSwgdHMoQS4sIG5hbWVzID0gYyggICAgICIiLCAidjEiLCAgICAiYSIsICAgICJiIiwgICAgImMiKSkpCglpZGVudGljYWwoYjIsIHRzKEEuLCBuYW1lcyA9IGMoIkkodjEpIiwgInYxIiwgICAgImEiLCAgICAiYiIsICAgICJjIikpKQp9KQoKfSBlbHNlIHsgIyA9PiB1bnBhdGNoZWQKCnN0b3BpZm5vdChleHBycyA9IHsKCWlkZW50aWNhbChiLiwgdHMoQS4sIG5hbWVzID0gYygiSSh2MSkiLCAidjEiLCAgICJtMSIsICJtMi5iIiwgIm0yLmMiKSkpCglpZGVudGljYWwoYjAsIGIuKQoJaWRlbnRpY2FsKGIxLCBiLikKCWlkZW50aWNhbChiMiwgYi4pCn0pCgp9Cg==",
+          "is_patch": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2024-02-08 06:53:07"
+}

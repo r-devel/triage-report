@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Installation",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 18967,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2025-11-14T05:25:06Z",
+        "whiteboard": "",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2025-11-14T05:25:06Z",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "summary": "Mismatched standard package & R version requirements should be an error"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18967": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2025-11-14T05:25:06Z",
+            "id": 102411,
+            "creator": "michaelchirico4",
+            "creation_time": "2025-11-14T05:25:06Z",
+            "is_markdown": true,
+            "count": 0,
+            "text": "I just tried installing a package (coneproj) with this in DESCRIPTION\n\n```\nDepends: R(>= 4.4.0)\nImports: Rcpp (>= 0.10.4), methods (>= 4.5.0)\n```\n\nWhen run from R 4.4.0, installation fail like so:\n\n```\ninstall.packages(\"coneproj\")\n# Warning: dependency ‘methods’ is not available\n# <does full compilation of src/ code>\n# more output\n# ** byte-compile and prepare package for lazy loading\n# Error in loadNamespace(j <- i[[1L]], c(lib.loc, .libPaths()), versionCheck = vI[[j]]) : \n#   namespace ‘methods’ 4.4.0 is already loaded, but >= 4.5.0 is required\n# Calls: <Anonymous> ... namespaceImportFrom -> asNamespace -> loadNamespace\n# Execution halted\n# ERROR: lazy loading failed for package ‘coneproj’\n# * removing ‘/media/michael/69913553-793b-4435-ac82-0e7df8e34b9f/tmpCRAN/coneproj’\n```\n\nThis seems like a waste of time. I can't think of a reason to put a version requirement on a standard package in `Depends`, `Imports`, or `LinkingTo`. Even doing so once when they all agree risks them drifting apart over time. Conceivably there could be a use for doing so on weaker dependencies like `Suggests`.\n\nI think it's preferable to require standardization to version requirements on `R` alone, but certainly any requirements among hard dependencies on standard packages must agree.\n\nI find 246 packages on CRAN with such mismatching version requirements on standard packages, including Arothron which has 5 distinct version requirements:\n\nhttps://cran.r-project.org/web/packages/Arothron/index.html\n\n```\ndb = data.frame(available.packages())\n\ndefault_packages <- tools:::.get_standard_package_names()$base\n\nfor (dep in c(\"Depends\", \"Imports\", \"LinkingTo\"))\n  db[[dep]] = lapply(db[[dep]], \\(x) if (!is.na(x)) tools:::.split_dependencies(x))\ndb$hard_deps <- lapply(\n  seq_len(nrow(db)),\n  \\(i) c(db$Depends[[i]], db$Imports[[i]], db$LinkingTo[[i]])\n)\ndb$default_deps <- lapply(\n  db$hard_deps,\n  \\(x) x[names(x) %in% c(\"R\", default_packages)]\n)\ndb$default_deps_versions <- lapply(\n  db$default_deps,\n  \\(x) Filter(length, lapply(x, \\(xi) xi$version))\n)\ndb$n_distinct_default_deps_versions <- vapply(\n  db$default_deps_versions,\n  \\(x) length(unique(unlist(x, recursive=FALSE))),\n  integer(1L)\n)\ntable(db$n_distinct_default_deps_versions)\n#     0     1     2     3     5 \n#  7125 15631   228    17     1 \n```",
+            "bug_id": 18967
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18967": []
+    }
+  },
+  "source_changed": "2025-11-14 05:25:06"
+}

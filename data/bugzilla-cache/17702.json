@@ -1,0 +1,129 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "last_change_time": "2026-06-10T15:18:11Z",
+        "cc_detail": [
+          {
+            "name": "BodeEmil",
+            "id": 3228,
+            "real_name": "Emil Bode"
+          },
+          {
+            "real_name": "Gabriel Becker",
+            "name": "gabembecker",
+            "id": 1299
+          },
+          {
+            "real_name": "Heather Turner",
+            "id": 2824,
+            "name": "ht"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "Assignment to data.frame column (`$<-` or `[[<-`) should convert POSIXlt to POSIXct",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Emil Bode",
+          "id": 3228,
+          "name": "BodeEmil"
+        },
+        "status": "TRIAGED",
+        "is_creator_accessible": true,
+        "creator": "BodeEmil",
+        "alias": [],
+        "flags": [],
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "cc": [
+          "BodeEmil",
+          "gabembecker",
+          "ht"
+        ],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "trivial",
+        "deadline": {},
+        "id": 17702,
+        "version": "R 3.6.xx",
+        "creation_time": "2020-01-31T15:45:19Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Language",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "17702": {
+        "comments": [
+          {
+            "creator": "BodeEmil",
+            "creation_time": "2020-01-31T15:45:19Z",
+            "text": "When creating a new data.frame, any columns supplied as POSIXlt are automatically converted to POSIXct (unless they are provided \"AsIS\" with `I`)\n\nHowever, I'd expect the same behaviour when adding or resetting entire new columns, with `$<-` or `[[<-`.\n\nConsider the following example:\ntest <- data.frame(ts1=as.POSIXlt(runif(10, 1.4e9, 1.7e9), origin='1970-1-1'))\ntest$ts2 <- as.POSIXlt(runif(10, 1.4e9, 1.7e9), origin='1970-1-1')\nlapply(test, class)\n\nFirst we make a data.frame where we provide a POSIXlt-column, then set an additional second column giving exactly equivalent input. \nHowever, the resulting columns are of different classes, and this can lead to problems further downstream (for example, I encountered this when trying dplyr::sample_n, which complained my timestamp should be stored as POSIXct)\n\nThe example with as.POSIXlt may seem contrived, but e.g. strptime also returns a POSIXlt, and here it's more unexpected that classes don't behave consistently.\n\nFWIW, I haven't included `[<-.data.frame` here. That fails in another way (it seems like it only takes the second-part of the POSIXlit), but at least it throws a (somewhat unclear) warning.\n\nEnvironment info:\nUsing R 3.6.1 and 3.6.2 under Rstudio 1.2.5033 and 1.2.1335 under Windows 10 (all 64-bit)\nChecked with R --vanilla via commandline for R 3.6.2 and R 3.5.3",
+            "bug_id": 17702,
+            "is_markdown": false,
+            "count": 0,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2020-01-31T15:45:19Z",
+            "id": 95264,
+            "is_private": false
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-04-13T20:43:50Z",
+            "creator": "gabembecker",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 102923,
+            "creation_time": "2026-04-13T20:43:50Z",
+            "count": 1,
+            "text": "I can confirm that this behavior remains in a recent R-devel.\n\nThis appears to be happening because `data.frame` converts its arguments to data.frames before combining them, which is where the conversion from `POSIXlt` to `POSIXct` is occuring.\n\n```\n> df <- as.data.frame(as.POSIXlt(runif(10, 1.4e9, 1.7e9), origin='1970-1-1'))\n> lapply(df, class)\n$`as.POSIXlt(runif(10, 1.4e+09, 1.7e+09), origin = \"1970-1-1\")`\n[1] \"POSIXct\" \"POSIXt\" \n```\n\nAccording to the documentation for `$<-.data.frame`:\n\n> There is no ‘data.frame’ method for ‘$’, so ‘x$name’ uses the default method which treats ‘x’ as a list (with partial matching of column names if the match is unique, see ‘Extract’).  The replacement method (for ‘$’) checks ‘value’ for the correct number of rows, and replicates it if necessary. \n\nThis matches the actual code for `$<-.data.frame` which strips the class off of `x`, checks the number of rows in `value`, reps `value` out as needed, assigns into `x` while it's still a list, then reapply's `x`'s class. \n\nThus this is working as documented, at least. \n\nThat said I'm sympathetic to wanting the behaviors to match. We don't have dual dispatch for S3 methods, so the only ways I can think of to implement this change (if desired) would be \n\n1. have `$<-.data.frame` convert `value` to a data.frame before shoving it into `x`, or \n2. hard-code a special case for value being `POSIXlt` to convert it to `POSIXct`.\n\nApproach 1 seems *way* too fundamental a shift for this level of behavior change, and the amount of testing we'd need to do to make sure this didn't break anything else seems.. daunting to say the least.\n\nApproach 2 is doable, if a bit hacky, if desired. Happy to prepare a patch, though I suspect if a member of R-core wants to put that change in it'd be easier for them to just do it themselves.",
+            "bug_id": 17702
+          },
+          {
+            "creation_time": "2026-06-10T15:18:11Z",
+            "creator": "ht",
+            "is_markdown": true,
+            "count": 2,
+            "bug_id": 17702,
+            "text": "For total consistency, I think `$<-.data.frame` would need to use `as.data.frame(x)` to convert back to a data frame rather than reapplying x's class to the intermediate list object.\n\nHowever, you're right that this would be a major shift in behaviour. One particular case that would be affected is matrices/arrays. Currently a matrix is converted to separate columns by `data.frame`/`as.data.frame` but added as a single column by `$<-`/`[[<-`:\n\n```\ndf <- data.frame(arr1 = matrix(1:10, 5, 2))\ndf$arr2 <- matrix(1:10, 5, 2)\nlapply(df, class)\n#> $arr1.1\n#> [1] \"integer\"\n#> \n#> $arr1.2\n#> [1] \"integer\"\n#> \n#> $arr2\n#> [1] \"matrix\" \"array\"\n```\n\nThis is well documented in `?data.frame` and I think there's a lot of code that relies on this behaviour in the wild. So I think Approach 1 is probably out.\n\nI'm not sure about special-casing POSIXlt to coerce to POSIXct in `$<-`/`[[<-`. At the moment `$<-`/`[[<-` don't do any coercion when replacing a whole column. In some ways it would be better if `data.frame`/`as.data.frame` did not coerce POSIXlt in the first place, then users would be encouraged to explictly convert to POSIXct as required, leading to more understandable code. Such a change would  also have broad impact though and is not a decision we could take lightly.",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 103182,
+            "time": "2026-06-10T15:18:11Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "17702": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-06-10 15:18:11"
+}

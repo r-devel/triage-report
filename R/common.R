@@ -19,6 +19,26 @@ TEAM_LOGINS <- c(
   "ikrylov"
 )
 
+CORE_LOGINS <- c(
+  "deepayan.sarkar",
+  "ht",
+  "jaganmn2",
+  "jmc",
+  "Kurt.Hornik",
+  "lawremi",
+  "ligges",
+  "luke",
+  "maechler",
+  "martyn.plummer",
+  "paul",
+  "pd.mes",
+  "ripley",
+  "seb.meyer",
+  "simon.urbanek",
+  "thomas.lumley",
+  "seb.meyer"
+)
+
 TRIAGE_CATEGORIES <- c(
   "Major patches",
   "Minor patches",
@@ -28,6 +48,91 @@ TRIAGE_CATEGORIES <- c(
 )
 
 BUGZILLA_URL <- "https://bugs.r-project.org/show_bug.cgi?id="
+
+BUGZILLA_API <- "https://bugs.r-project.org/rest/"
+
+read_contribs <- function(contribs_dir) {
+  paths <- list.files(contribs_dir, pattern = "\\.csv$", full.names = TRUE)
+  
+  map_dfr(paths, read_csv, col_types = cols(.default = col_character())) |>
+    mutate(
+      bug_id = as.integer(bug_id),
+      resolution = trimws(resolution),
+      resolution = if_else(resolution == "---", "", resolution)
+    ) |>
+    arrange(bug_id, desc(changeddate)) |>
+    distinct(bug_id, .keep_all = TRUE)
+}
+
+bugzilla_cache_path <- function(bug_id, cache_dir) {
+  file.path(cache_dir, paste0(bug_id, ".json"))
+}
+
+read_bugzilla_cache <- function(bug_id, changed, cache_dir) {
+  path <- bugzilla_cache_path(bug_id, cache_dir)
+  
+  if (!file.exists(path)) return(NULL)
+  
+  cached <- read_json(path, simplifyVector = FALSE)
+  
+  if (!identical(cached$source_changed, changed)) return(NULL)
+  
+  cached
+}
+
+write_bugzilla_cache <- function(x, bug_id, changed, cache_dir) {
+  dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+  
+  x$source_changed <- changed
+  
+  write_json(
+    x,
+    bugzilla_cache_path(bug_id, cache_dir),
+    auto_unbox = TRUE,
+    pretty = TRUE
+  )
+  
+  invisible(x)
+}
+
+bugzilla_get <- function(path) {
+  request(paste0(BUGZILLA_API, path)) |>
+    req_headers(Accept = "application/json") |>
+    req_retry(max_tries = 3) |>
+    req_perform() |>
+    resp_body_json(simplifyVector = FALSE)
+}
+
+fetch_bugzilla_bug <- function(bug_id) {
+  message("Fetching Bug ", bug_id, " from Bugzilla API")
+  
+  list(
+    bug = bugzilla_get(paste0("bug/", bug_id)),
+    comments = bugzilla_get(paste0("bug/", bug_id, "/comment")),
+    attachments = bugzilla_get(paste0("bug/", bug_id, "/attachment"))
+  )
+}
+
+get_bugzilla_bug <- function(bug_id, changed,
+                             cache_dir = "data/bugzilla-cache") {
+  cached <- read_bugzilla_cache(bug_id, changed, cache_dir)
+  
+  if (!is.null(cached)) {
+    message("Using cached Bugzilla data for Bug ", bug_id)
+    return(cached)
+  }
+  
+  result <- fetch_bugzilla_bug(bug_id)
+  
+  write_bugzilla_cache(
+    result,
+    bug_id,
+    changed,
+    cache_dir
+  )
+  
+  result
+}
 
 node_text <- function(node, xpath) {
   value <- xml2::xml_text(xml_find_first(node, xpath), trim = TRUE)
@@ -143,6 +248,256 @@ parse_bug <- function(path) {
     comments = comments,
     attachments = attachments
   )
+}
+
+bug_xml_is_current <- function(bug, changed) {
+  identical(bug$changed, changed)
+}
+
+format_bugzilla_date <- function(x) {
+  if (!nzchar(x)) return("")
+  
+  x <- as.POSIXct(
+    x,
+    format = "%Y-%m-%dT%H:%M:%SZ",
+    tz = "UTC"
+  )
+  
+  format(x, "%Y-%m-%d %H:%M:%S +0000", tz = "UTC")
+}
+
+parse_api_comments <- function(x, bug_id) {
+  comments <- x$comments$bugs[[as.character(bug_id)]]$comments
+  
+  if (length(comments) == 0) {
+    return(tibble(
+      comment_id = character(),
+      comment_count = integer(),
+      who = character(),
+      date = character(),
+      text = character()
+    ))
+  }
+  
+  map_dfr(comments, function(comment) {
+    tibble(
+      comment_id = as.character(comment$id),
+      comment_count = as.integer(comment$count),
+      who = comment$creator,
+      date = format_bugzilla_date(comment$creation_time),
+      text = comment$text
+    )
+  })
+}
+
+parse_api_attachments <- function(x, bug_id, max_chars = 20000) {
+  attachments <- x$attachments$bugs[[as.character(bug_id)]]
+  
+  if (length(attachments) == 0) {
+    return(tibble(
+      attachment_id = character(),
+      date = character(),
+      description = character(),
+      filename = character(),
+      type = character(),
+      attacher = character(),
+      content = character()
+    ))
+  }
+  
+  map_dfr(attachments, function(attachment) {
+    content <- tryCatch(
+      rawToChar(base64_dec(attachment$data)),
+      error = function(e) ""
+    )
+    
+    if (nchar(content) > max_chars) {
+      content <- paste0(
+        substr(content, 1, max_chars),
+        "\n[attachment truncated]"
+      )
+    }
+    
+    tibble(
+      attachment_id = as.character(attachment$id),
+      date = format_bugzilla_date(attachment$creation_time),
+      description = attachment$summary,
+      filename = attachment$file_name,
+      type = attachment$content_type,
+      attacher = attachment$creator,
+      content = content
+    )
+  })
+}
+
+parse_api_bug <- function(x, bug_id) {
+  bug <- x$bug$bugs[[1]]
+  
+  list(
+    bug_id = bug$id,
+    summary = bug$summary,
+    component = bug$component,
+    status = bug$status,
+    resolution = bug$resolution,
+    reporter = bug$creator,
+    changed = format_bugzilla_date(bug$last_change_time),
+    comments = parse_api_comments(x, bug_id),
+    attachments = parse_api_attachments(x, bug_id)
+  )
+}
+
+load_current_bug <- function(row, bugs_dir,
+                             cache_dir = "data/bugzilla-cache") {
+  bug_id <- row$bug_id
+  changed <- row$changeddate
+  path <- file.path(bugs_dir, paste0(bug_id, ".xml"))
+  
+  bug <- NULL
+  
+  if (file.exists(path)) {
+    bug <- tryCatch(
+      parse_bug(path),
+      error = function(e) NULL
+    )
+  }
+  
+  if (is.null(bug) || !identical(bug$changed, changed)) {
+    api <- get_bugzilla_bug(
+      bug_id,
+      changed,
+      cache_dir = cache_dir
+    )
+    bug <- parse_api_bug(api, bug_id)
+  }
+  
+  # Current metadata comes from contribs, not XML/API.
+  bug$summary <- row$short_desc
+  bug$component <- row$component
+  bug$status <- row$bug_status
+  bug$resolution <- row$resolution
+  bug$changed <- row$changeddate
+  
+  bug
+}
+
+clean_bugzilla_cache <- function(cache_dir, keep_ids) {
+  if (!dir.exists(cache_dir)) return(invisible())
+  
+  paths <- list.files(
+    cache_dir,
+    pattern = "\\.json$",
+    full.names = TRUE
+  )
+  
+  if (length(paths) == 0) return(invisible())
+  
+  cached_ids <- tools::file_path_sans_ext(basename(paths))
+  remove <- !cached_ids %in% as.character(keep_ids)
+  
+  if (any(remove)) {
+    message("Removing ", sum(remove), " unused Bugzilla cache entries.")
+    unlink(paths[remove])
+  }
+  
+  invisible()
+}
+
+build_current_bugs <- function(index, bugs_dir,
+                               cache_dir = "data/bugzilla-cache") {
+  bugs <- list()
+  n_triaged <- 0L
+  n_team_reporter <- 0L
+  n_missing_xml <- 0L
+  fallback <- logical(nrow(index))
+  
+  for (i in seq_len(nrow(index))) {
+    row <- index[i, ]
+    bug_id <- row$bug_id
+    path <- file.path(bugs_dir, paste0(bug_id, ".xml"))
+    is_triaged <- row$bug_status == "TRIAGED"
+    
+    if (!file.exists(path)) {
+      n_missing_xml <- n_missing_xml + 1L
+      fallback[i] <- TRUE
+      
+      bug <- load_current_bug(row, bugs_dir, cache_dir)
+      
+      if (is_triaged) {
+        n_triaged <- n_triaged + 1L
+        bugs[[length(bugs) + 1L]] <- bug
+      } else if (bug$reporter %in% TEAM_LOGINS) {
+        n_team_reporter <- n_team_reporter + 1L
+        bugs[[length(bugs) + 1L]] <- bug
+      }
+      
+      next
+    }
+    
+    bug <- tryCatch(
+      parse_bug(path),
+      error = function(e) {
+        warning(
+          "Could not parse ", basename(path), ": ",
+          conditionMessage(e)
+        )
+        NULL
+      }
+    )
+    
+    if (is_triaged) {
+      n_triaged <- n_triaged + 1L
+      
+      if (is.null(bug) || !identical(bug$changed, row$changeddate)) {
+        fallback[i] <- TRUE
+        bug <- load_current_bug(row, bugs_dir, cache_dir)
+      } else {
+        bug$status <- row$bug_status
+        bug$resolution <- row$resolution
+      }
+      
+      bugs[[length(bugs) + 1L]] <- bug
+      next
+    }
+    
+    # For the additional-patches list, the reporter must be a
+    # Triage Team member. Reporter is immutable, so stale XML is
+    # sufficient for making this decision.
+    if (is.null(bug)) {
+      fallback[i] <- TRUE
+      bug <- load_current_bug(row, bugs_dir, cache_dir)
+      
+      if (!bug$reporter %in% TEAM_LOGINS) {
+        next
+      }
+    } else if (!bug$reporter %in% TEAM_LOGINS) {
+      next
+    }
+    
+    n_team_reporter <- n_team_reporter + 1L
+    
+    if (!identical(bug$changed, row$changeddate)) {
+      fallback[i] <- TRUE
+      bug <- load_current_bug(row, bugs_dir, cache_dir)
+    } else {
+      bug$status <- row$bug_status
+      bug$resolution <- row$resolution
+    }
+    
+    bugs[[length(bugs) + 1L]] <- bug
+  }
+  
+  message("TRIAGED bugs: ", n_triaged)
+  message(
+    "Additional candidate bugs with Triage Team reporter: ",
+    n_team_reporter
+  )
+  message("Missing XML: ", n_missing_xml)
+  
+  fallback_ids <- index$bug_id[fallback]
+  message("XML fallbacks (API or cache): ", sum(fallback))
+  clean_bugzilla_cache(cache_dir, fallback_ids)
+  
+  bugs
 }
 
 parse_all_bugs <- function(bugs_dir) {
@@ -390,6 +745,21 @@ classify_triaged <- function(bugs, cache_path, prompt_path) {
   bind_rows(output)
 }
 
+reviewed_by_core <- function(bug, patches) {
+  if (nrow(patches) == 0) return(FALSE)
+  
+  latest <- patches |>
+    arrange(desc(date)) |>
+    slice(1)
+  
+  reviewers <- setdiff(CORE_LOGINS, latest$attacher)
+  
+  any(
+    bug$comments$who %in% reviewers &
+      bug$comments$date > latest$date
+  )
+}
+
 additional_team_patches <- function(bugs) {
   map_dfr(bugs, function(bug) {
     if (!bug$reporter %in% TEAM_LOGINS) return(tibble())
@@ -398,6 +768,7 @@ additional_team_patches <- function(bugs) {
     
     patches <- team_patch_info(bug)
     if (nrow(patches) == 0) return(tibble())
+    if (reviewed_by_core(bug, patches)) return(tibble())
     
     tibble(
       bug_id = bug$bug_id,
@@ -405,7 +776,7 @@ additional_team_patches <- function(bugs) {
       component = bug$component,
       reporter = bug$reporter,
       status = bug$status,
-      patch_date = min(patches$date),
+      patch_date = max(patches$date),
       patch_count = nrow(patches),
       bugzilla_url = paste0(BUGZILLA_URL, bug$bug_id)
     )

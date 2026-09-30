@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2025-04-08T04:10:05Z",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 18881,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "flags": [],
+        "platform": "Other",
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "name": "jaganmn2",
+          "id": 3462,
+          "real_name": "Mikael Jagan"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "S4 bit is not always unset when removing class attribute",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2025-04-08T04:10:05Z",
+        "cc_detail": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18881": {
+        "comments": [
+          {
+            "creation_time": "2025-04-08T04:10:05Z",
+            "count": 0,
+            "bug_id": 18881,
+            "text": "The R Internals manual says:\n\n> It is currently unclear what should happen if the class attribute is removed from an S4 object, or if this should be allowed.\n\nBe that as it may, perhaps the behaviour should be consistent across the various ways of removing the class attribute.  Currently, it is not.  For an `OBJSXP`, we see:\n\n```\n> bb <- function(s) c(object = is.object(s), S4 = isS4(s))\n> setClass(\"obj\", slots = c(. = \"logical\"))\n> x <- new(\"obj\")\n> bb(x)\nobject     S4 \n  TRUE   TRUE \n> bb(unclass(x))\nobject     S4 \n FALSE   TRUE \n> bb(`class<-`(x, NULL))\nobject     S4 \n FALSE  FALSE \nWarning message:\nIn bb(`class<-`(x, NULL)) :\n  Setting class(x) to NULL;   result will no longer be an S4 object\n> bb(`oldClass<-`(x, NULL))\nobject     S4 \n FALSE  FALSE \n> bb(`attr<-`(x, \"class\", NULL))\nobject     S4 \n FALSE   TRUE \n> bb(`attributes<-`(x, NULL))\nobject     S4 \n FALSE  FALSE \n> bb(`attributes<-`(x, list(notclass = 0)))\nobject     S4 \n FALSE   TRUE\n```\n\nFor non-`OBJSXP`, we see the same:\n\n```\n> bb <- function(s) c(object = is.object(s), S4 = isS4(s))\n> setClass(\"lgl\", contains = \"logical\")\n> y <- new(\"lgl\")\n> bb(y)\nobject     S4 \n  TRUE   TRUE \n> bb(unclass(y))\nobject     S4 \n FALSE   TRUE \n> bb(`class<-`(y, NULL))\nobject     S4 \n FALSE  FALSE \nWarning message:\nIn bb(`class<-`(y, NULL)) :\n  Setting class(x) to NULL;   result will no longer be an S4 object\n> bb(`oldClass<-`(y, NULL))\nobject     S4 \n FALSE  FALSE \n> bb(`attr<-`(y, \"class\", NULL))\nobject     S4 \n FALSE   TRUE \n> bb(`attributes<-`(y, NULL))\nobject     S4 \n FALSE  FALSE \n> bb(`attributes<-`(y, list(notclass = 0)))\nobject     S4 \n FALSE   TRUE \n```\n\nIt seems that some logic could be added to `do_unclass`, `classgets`, and `do_attributesgets` and elsewhere if it is intended that a warning should always be signalled (though since `attributes<-` is used by `methods::getDataPart` to legitimately make an object \"not S4\", maybe that should not warn ...).",
+            "tags": [],
+            "is_private": false,
+            "id": 101679,
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2025-04-08T04:10:05Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18881": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-04-08 04:10:05"
+}

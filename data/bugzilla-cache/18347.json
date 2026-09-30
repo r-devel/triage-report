@@ -1,0 +1,96 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "whiteboard": "",
+        "creation_time": "2022-05-17T22:10:51Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 18347,
+        "dupe_of": {},
+        "severity": "normal",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "summary": "Should R export JAVA_HOME on startup?",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2022-05-17T22:11:45Z",
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18347": {
+        "comments": [
+          {
+            "creation_time": "2022-05-17T22:10:51Z",
+            "count": 0,
+            "bug_id": 18347,
+            "text": "This was originally filed at https://github.com/s-u/rJava/issues/298, where Simon indicated this may instead be a bug in R.\n\nThe core of the issue here is that, even after calling `sudo R CMD javareconf`, R does not export the `JAVA_HOME` environment variable to point at the version of Java it was configured to use (even though it is set in the R installation's `etc/ldpaths`). So, for example, one can have a situation like the following:\n\n```\n$ R --vanilla -s -e 'Sys.getenv(\"JAVA_HOME\")'\n[1] \"\"\n\n$ head $(R RHOME)/etc/ldpaths\n: ${JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.0.1+12/Contents/Home}\n\n$ /usr/libexec/java_home\n/Library/Java/JavaVirtualMachines/temurin-18.jdk/Contents/Home\n```\n\nIn this case, even though R has been configured to use a specific JDK, rJava (and other packages that might consult `JAVA_HOME`) could end up using a different JDK since R did not set `JAVA_HOME`.\n\nIn short -- should R be exporting `JAVA_HOME` on startup, to point at the version of Java it's been configured to use?",
+            "tags": [],
+            "is_private": false,
+            "id": 98748,
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2022-05-17T22:10:51Z"
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 98749,
+            "time": "2022-05-17T22:11:45Z",
+            "creation_time": "2022-05-17T22:11:45Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 18347,
+            "text": "For posterity, my session info:\n\n```\n$ R --vanilla -s -e 'sessionInfo()'\nR version 4.2.0 (2022-04-22)\nPlatform: aarch64-apple-darwin20 (64-bit)\nRunning under: macOS Monterey 12.4\n\nMatrix products: default\nBLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib\nLAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base\n\nloaded via a namespace (and not attached):\n[1] compiler_4.2.0\n```"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18347": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2022-05-17 22:11:45"
+}

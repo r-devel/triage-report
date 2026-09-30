@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19050,
+        "deadline": {},
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-04-13T07:35:54Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Linux",
+        "is_confirmed": true,
+        "last_change_time": "2026-04-13T07:35:54Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "float-to-int overflow in R parser",
+        "url": "",
+        "blocks": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19050": {
+        "comments": [
+          {
+            "creation_time": "2026-04-13T07:35:54Z",
+            "creator": "kevinushey",
+            "bug_id": 19050,
+            "text": "Created attachment 3672\nPatch.\n\nWhen R parses an integer literal suffixed with L whose value exceeds the range of int, the function NumericValue() in src/main/gram.c performs an unchecked (int) a cast at line 4973 where a is the double result of R_atof(). If a is outside [INT_MIN, INT_MAX], this cast is undefined behavior per C11 6.3.1.4.\n\nR already detects this case and falls back to a numeric value (the a != (double) b check at line 4978), but the UB has already occurred by line 4973 before that check runs. In practice the value of b is indeterminate after the overflow, so the comparison may or may not work depending on the compiler.\n\nReproducer:\n\nparse(text = \"99999999999999999999L\")\n\nOr with a hex literal:\n\nparse(text = \"0XEEEEEEEEEEEEEEEEEEEEEEEEEL\")\n\nBoth trigger the following UBSAN diagnostic when R is built with -fsanitize=undefined:\n\ngram.c:4973:10: runtime error: 1e+20 is outside the range of representable values of type 'int'\n\n---\n\n> parse(text = \"0XEEEEEEEEEEEEEEEEEEEEEEEEEL\")\n/home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:4973:10: runtime error: 1.18314e+30 is outside the range of representable values of type 'int'\n    #0 0x7f6f8d153e3f in NumericValue /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:4973:10\n    #1 0x7f6f8d1502a9 in token /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:5854:28\n    #2 0x7f6f8d1502a9 in token_ /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:6092:15\n    #3 0x7f6f8d13e23e in yylex /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:6118:11\n    #4 0x7f6f8d13e23e in Rf_yyparse /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:2186:16\n    #5 0x7f6f8d16722b in R_Parse1 /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:4043:12\n    #6 0x7f6f8d168b64 in R_Parse /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:4202:9\n    #7 0x7f6f8d16d9d6 in R_ParseVector /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:4290:12\n    #8 0x7f6f8d40e750 in do_parse /home/kevin/r-devel/r-afl/r-svn/src/main/source.c:286:6\n    #9 0x7f6f8d07bb65 in bcEval_loop /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:8132:14\n    #10 0x7f6f8d060983 in bcEval /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:7515:16\n    #11 0x7f6f8d05e8dd in Rf_eval /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:1167:8\n    #12 0x7f6f8d0fdffd in R_execClosure /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:2389:22\n    #13 0x7f6f8d0fcb4a in applyClosure_core /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:2302:16\n    #14 0x7f6f8d05f440 in Rf_applyClosure /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:2324:16\n    #15 0x7f6f8d05f440 in Rf_eval /home/kevin/r-devel/r-afl/r-svn/src/main/eval.c:1280:12\n    #16 0x7f6f8d1d36f6 in Rf_ReplIteration /home/kevin/r-devel/r-afl/r-svn/src/main/main.c:264:15\n    #17 0x7f6f8d1d77a0 in R_ReplConsole /home/kevin/r-devel/r-afl/r-svn/src/main/main.c:317:11\n    #18 0x7f6f8d1d75cc in run_Rmainloop /home/kevin/r-devel/r-afl/r-svn/src/main/main.c:1235:5\n    #19 0x7f6f8d1d7892 in Rf_mainloop /home/kevin/r-devel/r-afl/r-svn/src/main/main.c:1242:5\n    #20 0x0000004e9e8c in main /home/kevin/r-devel/r-afl/r-svn/src/main/Rmain.c:29:5\n    #21 0x7f6f8c8e15b4 in __libc_start_call_main (/lib64/libc.so.6+0x35b4) (BuildId: ff0267465bc3d76e21003b3bc5598fd5ee63e261)\n    #22 0x7f6f8c8e1667 in __libc_start_main@GLIBC_2.2.5 (/lib64/libc.so.6+0x3667) (BuildId: ff0267465bc3d76e21003b3bc5598fd5ee63e261)\n    #23 0x000000400704 in _start (/home/kevin/r-devel/r-afl/build/r-triage/bin/exec/R+0x400704) (BuildId: 2ed5596344c88077fa080eaacb0d1386f4be84a8)\n\nSUMMARY: UndefinedBehaviorSanitizer: undefined-behavior /home/kevin/r-devel/r-afl/r-svn/src/main/gram.c:4973:10\nWarning in parse(text = \"0XEEEEEEEEEEEEEEEEEEEEEEEEEL\") :\n  non-integer value 0XEEEEEEEEEEEEEEEEEEEEEEEEEL qualified with L; using numeric value\nexpression(0XEEEEEEEEEEEEEEEEEEEEEEEEEL)",
+            "is_markdown": true,
+            "count": 0,
+            "attachment_id": 3672,
+            "tags": [],
+            "id": 102921,
+            "time": "2026-04-13T07:35:54Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19050": [
+        {
+          "is_patch": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL2dyYW0uYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL2dyYW0uYyAgICAgKHJldmlzaW9uIDg5ODczKQ0KKysrIHNyYy9tYWluL2dyYW0uYyAgICAgKHdvcmtpbmcgY29weSkNCkBAIC00OTcwLDExICs0OTcwLDEzIEBADQogICAgIC8qIE1ha2UgY2VydGFpbiB0aGF0IHRoaW5ncyBhcmUgb2theS4gKi8NCiAgICAgaWYoYyA9PSAnTCcpIHsNCiAgICAgICAgZG91YmxlIGEgPSBSX2F0b2YoeXl0ZXh0KTsNCi0gICAgICAgaW50IGIgPSAoaW50KSBhOw0KICAgICAgICAvKiBXZSBhcmUgYXNrZWQgdG8gY3JlYXRlIGFuIGludGVnZXIgdmlhIHRoZSBMLCBzbyB3ZSBjaGVjayB0aGF0IHRoZQ0KICAgICAgICAgICBkb3VibGUgYW5kIGludCB2YWx1ZXMgYXJlIHRoZSBzYW1lLiBJZiBub3QsIHRoaXMgaXMgYSBwcm9ibGVtIGFuZCB3ZQ0KICAgICAgICAgICB3aWxsIG5vdCBsb3NlIGluZm9ybWF0aW9uIGFuZCBzbyB1c2UgdGhlIG51bWVyaWMgdmFsdWUuDQogICAgICAgICovDQorICAgICAgIGludCBiID0gKGEgPj0gSU5UX01JTiAmJiBhIDw9IElOVF9NQVgpID8gKGludCkgYSA6IE5BX0lOVEVHRVI7DQogICAgICAgIGlmKGEgIT0gKGRvdWJsZSkgYikgew0KICAgICAgICAgICAgaWYoR2VuZXJhdGVDb2RlKSB7DQogICAgICAgICAgICAgICAgaWYoc2VlbmRvdCA9PSAxICYmIHNlZW5leHAgPT0gMCkNCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "size": 754,
+          "last_change_time": "2026-04-13T07:35:54Z",
+          "id": 3672,
+          "is_private": false,
+          "summary": "Patch.",
+          "creation_time": "2026-04-13T07:35:54Z",
+          "bug_id": 19050,
+          "file_name": "file_19050.txt"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-04-13 07:35:54"
+}

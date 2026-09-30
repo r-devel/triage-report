@@ -1,0 +1,123 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Graphics",
+        "version": "R 4.6.x",
+        "creation_time": "2026-08-19T23:58:10Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [
+          "ikrylov",
+          "paul"
+        ],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19140,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "btyner",
+        "flags": [],
+        "platform": "Other",
+        "is_confirmed": true,
+        "op_sys": "Linux",
+        "resolution": "",
+        "creator_detail": {
+          "name": "btyner",
+          "id": 430,
+          "real_name": "Benjamin Tyner"
+        },
+        "status": "CONFIRMED",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "summary": "X11 segfault",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-08-20T11:34:19Z",
+        "cc_detail": [
+          {
+            "real_name": "Ivan Krylov",
+            "id": 3307,
+            "name": "ikrylov"
+          },
+          {
+            "id": 151,
+            "name": "paul",
+            "real_name": "Paul Murrell"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19140": {
+        "comments": [
+          {
+            "text": "On linux, these reliably segfault:\n```\ngrDevices::X11('tiff:')\ngrDevices::X11('tiff::')\n```\nIf needed I can provide a gdb backtrace, but the problem appears to be on line 1390 (under svn revision 90430) of `src/modules/X11/devX11.c` where:\n```\n   else if (!strncmp(dsp, \"tiff::\", 5)) {\n\n```\nit seems to me that the 5 there should be 6 (as it is on line 3329). Here is my `sessionInfo()`,\n\n> R version 4.6.1 (2026-06-24)\n> Platform: x86_64-pc-linux-gnu\n> Running under: Ubuntu 24.04.4 LTS\n> \n> Matrix products: default\n> BLAS:   /home/btyner/R461/lib/R/lib/libRblas.so \n> LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.12.0  LAPACK version 3.12.0\n> \n> locale:\n>  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              \n>  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    \n>  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   \n>  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 \n>  [9] LC_ADDRESS=C               LC_TELEPHONE=C            \n> [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       \n> \n> time zone: America/New_York\n> tzcode source: system (glibc)\n> \n> attached base packages:\n> [1] stats     graphics  grDevices utils     datasets  methods   base     \n> \n> loaded via a namespace (and not attached):\n> [1] compiler_4.6.1",
+            "bug_id": 19140,
+            "count": 0,
+            "is_markdown": true,
+            "creator": "btyner",
+            "creation_time": "2026-08-19T23:58:10Z",
+            "time": "2026-08-19T23:58:10Z",
+            "id": 103455,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "bug_id": 19140,
+            "text": "Can confirm segfaults.  Thanks for report!\n\nHowever, the solution requires more surgery.\n\nAfter the suggestion (5 -> 6), `x11(\"tiff:\")` no longer segfaults, but `x11(\"tiff::\")` still does, as does `x11(\"jpeg::\")`.\n\nOTOH, `x11(\"png::\")` does not and neither does `x11(\"bmp::\")`.\n\nA code comparison of those different cases might illuminate the problem.\n\nPersonally, I don't like the look of this ...\n```\npp = strchr(tmp, ':'); *pp='\\0';\n```\n... especially because `strchr()` is capable of returning a null pointer.",
+            "count": 1,
+            "creation_time": "2026-08-20T02:20:23Z",
+            "id": 103456,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "paul",
+            "time": "2026-08-20T02:20:23Z",
+            "attachment_id": {}
+          },
+          {
+            "creator": "ikrylov",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-08-20T11:34:19Z",
+            "creation_time": "2026-08-20T11:34:19Z",
+            "count": 2,
+            "bug_id": 19140,
+            "text": "Thankfully this is not a documented interface, because there are other code paths that don't validate the `display` string:\n\n```\n# overflow in strcpy(tmp, dsp+6)\njpeg(strrep(\"a\", 9999), type = \"Xlib\")\ntiff(strrep(\"a\", 9999), type = \"Xlib\")\nx11(paste0('jpeg::42:', strrep('a', 9999)))\nx11(paste0('tiff::42:', strrep('a', 9999)))\n```\n\nOnly `jpeg` and `tiff` are susceptible because of the need to pass an additional number (JPEG quality, TIFF compression) before the file path.\n\nTechnically, `xd->quality = atoi(dsp+6);` invokes undefined behaviour in cases like `jpeg::99999999999999999:foo`, but that will surface only with sanitized builds when using the undocumented interface.\n\nEven if the string is well-formed, the bitmap device still doesn't work when initialised by a call to `x11(type = \"cairo\")`:\n\n```\nx11(\"jpeg::42:/dev/null\", 200, 200, type = \"cairo\"); plot.new()\nx11(\"tiff::1:/dev/null\", 200, 200, type = \"cairo\"); plot.new()\nx11(\"png::/dev/null\", 200, 200, type = \"cairo\"); plot.new()\nx11(\"bmp::/dev/null\", 200, 200, type = \"cairo\"); plot.new()\n```\n\n`xd->cc` is only initialised if `type == WINDOW`, so in pixmap cases it stays a null pointer, causing the following call to Cairo to crash.\n\nPerhaps it's best for `x11()` to detect and forbid such syntax altogether? But then things like `DISPLAY='[::1]:0'` should still work. It might be more reliable to change the arguments to `.External2(C_X11, ...)` to pass device type / quality / file path / display address separately.",
+            "tags": [],
+            "is_private": false,
+            "id": 103461
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19140": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-08-20 11:34:19"
+}

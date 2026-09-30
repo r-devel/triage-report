@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "unserialize() leaks the CHARSXP read buffer when the stream errors mid-string",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-09-03T21:10:43Z",
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-09-03T21:10:35Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19157,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19157": {
+        "comments": [
+          {
+            "creation_time": "2026-09-03T21:10:35Z",
+            "creator": "kevinushey",
+            "bug_id": 19157,
+            "text": "ReadItem in src/main/serialize.c reads a CHARSXP of 1000 bytes or more\ninto a CallocCharBuf buffer. Any error signalled while that buffer is\nlive longjmps past the R_Free, leaking the whole buffer: length + 1\nbytes per failing unserialize() call, where length is whatever the\n(possibly corrupt) stream declares -- up to 2 GB. Any truncated or\ncorrupted .rds / workspace file with a declared string length >= 1000\nleaks on every load attempt.\n\nReachable error paths include at least:\n\n- InString signalling \"read error\" for a truncated stream,\n- mkCharLenCE signalling \"embedded nul in string\",\n- allocation failures inside the encoding-conversion path.\n\nConvertChar (same file) has the same defect one level down: it\nCallocCharBufs a conversion buffer and then calls mkCharLenCE, which can\nsignal.\n\nReproducible example -- no hand-crafted bytes needed, just serialize a\nlarge string and truncate the stream inside the string data:\n\n    x <- strrep(\"a\", 1e8)                 # 100e6-byte CHARSXP\n    bad <- head(serialize(x, NULL), 50)   # truncate mid-string\n    rm(x); invisible(gc())\n\n    for (i in 1:5)\n        try(unserialize(bad), silent = TRUE)  # \"read error\" each time\n\nEach failing call leaks 1e8 + 1 bytes. The embedded-nul path leaks the\nsame way after the string data was read in full: corrupt one byte of a\nvalid stream to 0x00 and unserialize (\"embedded nul in string\").\n\nAnalysis: the affected branch in ReadItem is\n\n    } else {\n        char *cbuf = CallocCharBuf(length);        /* <-- leaks */\n        PROTECT(s = ReadChar(stream, cbuf, length, levs));\n        R_Free(cbuf);\n    }\n\nReadChar starts with InString(stream, cbuf, length), which signals \"read\nerror\" as soon as the stream cannot supply length bytes; the R_Free is\nnever reached. The stack-buffer branch (length < 1000) is unaffected,\nwhich is why small corrupt streams do not show the problem.\n\nMeasurements: on unpatched trunk (measured at r90464; serialize.c is\nunchanged through current trunk r90481), macOS leaks with\nMallocStackLogging after the 5-call loop above reports\n\n    Process 27141: 3 leaks for 320028672 total leaked bytes.\n\n    STACK OF 3 INSTANCES OF 'ROOT LEAK: <calloc in R_chk_calloc>':\n    ...\n    4   R    R_Unserialize + 252        serialize.c:2296\n    3   R    ReadItem_Recursive + 4308  serialize.c:2056\n    2   R    ReadItem_Recursive + 6076  serialize.c:2030\n    1   R    R_chk_calloc + 28          memory.c:3551\n\n(leaks scans memory conservatively, so stale stack pointers root one or\ntwo of the five blocks; LeakSanitizer on Linux reports every one.)\nPatched: 0 leaks for 0 total leaked bytes for the same loop.\n\nThis was found by LeakSanitizer in the ClusterFuzzLite batch fuzzing of\nunserialize() in https://github.com/r-devel/r-oss-fuzz, from a 33-byte\ninput declaring a 9,371,648-byte CHARSXP; the defect itself is\nindependent of fuzzing.\n\nProposed fix (patch attached and inline below): use R_alloc under\nvmaxget/vmaxset instead of Calloc/R_Free in both places, so the buffer\nlives on the R heap and is reclaimed by the context unwind when any of\nthese errors is signalled. This is the same idiom the neighbouring\nInStringVec already uses. A side effect worth noting: the temporary\nbuffer now counts against R_MAX_VSIZE, so a corrupt stream declaring an\nabsurd length fails with the ordinary vector-limit error instead of\nCalloc-ing outside the limit. That seems like an improvement for a\nbuffer whose size is attacker-controlled data.\n\nVerification, applied to trunk r90464 and rebuilt:\n\n- serialize.c compiles with no new warnings.\n- The leak goes from ~100 MB per failing call to zero (figures above).\n- Round-trips of short (< 1000 bytes, stack-buffer branch) and long\n  strings, UTF-8 / latin1 / bytes encodings, via raw vectors, file\n  connections, and version = 2 streams: all identical.\n- Truncated and nul-corrupted streams still produce the same error\n  messages (\"read error\", \"embedded nul in string\").\n\nFor triage: this is distinct from the malicious-.rds crash reports in\nPR#19047 -- those are memory-corruption issues, this is a resource leak\non ordinarily corrupt or truncated files.\n\nIndex: src/main/serialize.c\n===================================================================\n--- src/main/serialize.c\t(revision 90481)\n+++ src/main/serialize.c\t(working copy)\n@@ -1658,9 +1658,12 @@ ConvertChar(void *obj, char *inp, size_t inplen, cetype_t enc)\n \t    }\n \t    return mkCharLenCE(buf, (int)(buflen - bufleft), enc);\n \t} else {\n-\t    char *buf = CallocCharBuf(buflen);\n+\t    /* R_alloc, not Calloc: mkCharLenCE can signal errors (e.g. for\n+\t       an embedded nul), which would leak a Calloc'd buffer */\n+\t    const void *vmax = vmaxget();\n+\t    char *buf = R_alloc(buflen + 1, sizeof(char));\n \t    if (TryConvertString(obj, inp, inplen, buf, &bufleft) == -1) {\n-\t\tR_Free(buf);\n+\t\tvmaxset(vmax);\n \t\tif (errno == E2BIG) {\n \t\t    buflen *= 2;\n \t\t    continue;\n@@ -1668,7 +1671,7 @@ ConvertChar(void *obj, char *inp, size_t inplen, cetype_t enc)\n \t\t    return R_NilValue;\n \t    }\n \t    SEXP ans = mkCharLenCE(buf, (int)(buflen - bufleft), enc);\n-\t    R_Free(buf);\n+\t    vmaxset(vmax);\n \t    return ans;\n \t}\n     }\n@@ -2027,9 +2030,12 @@ static SEXP ReadItem_Recursive (int flags, SEXP ref_table, R_inpstream_t stream)\n \t\tchar cbuf[length+1];\n \t\tPROTECT(s = ReadChar(stream, cbuf, length, levs));\n \t    } else {\n-\t\tchar *cbuf = CallocCharBuf(length);\n+\t\t/* R_alloc, not Calloc: ReadChar can signal errors (truncated\n+\t\t   stream, embedded nul), which would leak a Calloc'd buffer */\n+\t\tconst void *vmax = vmaxget();\n+\t\tchar *cbuf = R_alloc((size_t)length + 1, sizeof(char));\n \t\tPROTECT(s = ReadChar(stream, cbuf, length, levs));\n-\t\tR_Free(cbuf);\n+\t\tvmaxset(vmax);\n \t    }\n \t    break;\n \tcase LGLSXP:\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/322,\nwhere CI results can be seen.",
+            "count": 0,
+            "is_markdown": false,
+            "attachment_id": {},
+            "tags": [],
+            "id": 103583,
+            "time": "2026-09-03T21:10:35Z",
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "attachment_id": 3833,
+            "time": "2026-09-03T21:10:43Z",
+            "id": 103584,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-09-03T21:10:43Z",
+            "text": "Created attachment 3833\npatch: use R_alloc for the string read buffers in unserialize",
+            "bug_id": 19157,
+            "is_markdown": false,
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19157": [
+        {
+          "last_change_time": "2026-09-03T21:10:43Z",
+          "size": 1612,
+          "is_private": false,
+          "id": 3833,
+          "creation_time": "2026-09-03T21:10:43Z",
+          "summary": "patch: use R_alloc for the string read buffers in unserialize",
+          "file_name": "unserialize-charsxp-leak.diff",
+          "bug_id": 19157,
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3NlcmlhbGl6ZS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3NlcmlhbGl6ZS5jCShyZXZpc2lvbiA5MDQ4MSkKKysrIHNyYy9tYWluL3NlcmlhbGl6ZS5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNjU4LDkgKzE2NTgsMTIgQEAgQ29udmVydENoYXIodm9pZCAqb2JqLCBjaGFyICppbnAsIHNpemVfdCBpbnBsZW4sIGNldHlwZV90IGVuYykKIAkgICAgfQogCSAgICByZXR1cm4gbWtDaGFyTGVuQ0UoYnVmLCAoaW50KShidWZsZW4gLSBidWZsZWZ0KSwgZW5jKTsKIAl9IGVsc2UgewotCSAgICBjaGFyICpidWYgPSBDYWxsb2NDaGFyQnVmKGJ1Zmxlbik7CisJICAgIC8qIFJfYWxsb2MsIG5vdCBDYWxsb2M6IG1rQ2hhckxlbkNFIGNhbiBzaWduYWwgZXJyb3JzIChlLmcuIGZvcgorCSAgICAgICBhbiBlbWJlZGRlZCBudWwpLCB3aGljaCB3b3VsZCBsZWFrIGEgQ2FsbG9jJ2QgYnVmZmVyICovCisJICAgIGNvbnN0IHZvaWQgKnZtYXggPSB2bWF4Z2V0KCk7CisJICAgIGNoYXIgKmJ1ZiA9IFJfYWxsb2MoYnVmbGVuICsgMSwgc2l6ZW9mKGNoYXIpKTsKIAkgICAgaWYgKFRyeUNvbnZlcnRTdHJpbmcob2JqLCBpbnAsIGlucGxlbiwgYnVmLCAmYnVmbGVmdCkgPT0gLTEpIHsKLQkJUl9GcmVlKGJ1Zik7CisJCXZtYXhzZXQodm1heCk7CiAJCWlmIChlcnJubyA9PSBFMkJJRykgewogCQkgICAgYnVmbGVuICo9IDI7CiAJCSAgICBjb250aW51ZTsKQEAgLTE2NjgsNyArMTY3MSw3IEBAIENvbnZlcnRDaGFyKHZvaWQgKm9iaiwgY2hhciAqaW5wLCBzaXplX3QgaW5wbGVuLCBjZXR5cGVfdCBlbmMpCiAJCSAgICByZXR1cm4gUl9OaWxWYWx1ZTsKIAkgICAgfQogCSAgICBTRVhQIGFucyA9IG1rQ2hhckxlbkNFKGJ1ZiwgKGludCkoYnVmbGVuIC0gYnVmbGVmdCksIGVuYyk7Ci0JICAgIFJfRnJlZShidWYpOworCSAgICB2bWF4c2V0KHZtYXgpOwogCSAgICByZXR1cm4gYW5zOwogCX0KICAgICB9CkBAIC0yMDI3LDkgKzIwMzAsMTIgQEAgc3RhdGljIFNFWFAgUmVhZEl0ZW1fUmVjdXJzaXZlIChpbnQgZmxhZ3MsIFNFWFAgcmVmX3RhYmxlLCBSX2lucHN0cmVhbV90IHN0cmVhbSkKIAkJY2hhciBjYnVmW2xlbmd0aCsxXTsKIAkJUFJPVEVDVChzID0gUmVhZENoYXIoc3RyZWFtLCBjYnVmLCBsZW5ndGgsIGxldnMpKTsKIAkgICAgfSBlbHNlIHsKLQkJY2hhciAqY2J1ZiA9IENhbGxvY0NoYXJCdWYobGVuZ3RoKTsKKwkJLyogUl9hbGxvYywgbm90IENhbGxvYzogUmVhZENoYXIgY2FuIHNpZ25hbCBlcnJvcnMgKHRydW5jYXRlZAorCQkgICBzdHJlYW0sIGVtYmVkZGVkIG51bCksIHdoaWNoIHdvdWxkIGxlYWsgYSBDYWxsb2MnZCBidWZmZXIgKi8KKwkJY29uc3Qgdm9pZCAqdm1heCA9IHZtYXhnZXQoKTsKKwkJY2hhciAqY2J1ZiA9IFJfYWxsb2MoKHNpemVfdClsZW5ndGggKyAxLCBzaXplb2YoY2hhcikpOwogCQlQUk9URUNUKHMgPSBSZWFkQ2hhcihzdHJlYW0sIGNidWYsIGxlbmd0aCwgbGV2cykpOwotCQlSX0ZyZWUoY2J1Zik7CisJCXZtYXhzZXQodm1heCk7CiAJICAgIH0KIAkgICAgYnJlYWs7CiAJY2FzZSBMR0xTWFA6Cg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-03 21:10:43"
+}

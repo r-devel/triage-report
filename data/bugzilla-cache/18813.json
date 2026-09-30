@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Visibility differences between bytecode and interpreted evaluation for [ and [[",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2024-10-25T20:24:40Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "creator": "ikrylov",
+        "alias": [],
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "resolution": "",
+        "creator_detail": {
+          "id": 3307,
+          "name": "ikrylov",
+          "real_name": "Ivan Krylov"
+        },
+        "status": "UNCONFIRMED",
+        "creation_time": "2024-10-25T20:24:40Z",
+        "version": "R 4.4.x",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [],
+        "qa_contact": "",
+        "id": 18813,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Low-level"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18813": {
+        "comments": [
+          {
+            "count": 0,
+            "bug_id": 18813,
+            "text": "As pointed out by Luke Tierney in the [R-devel thread](https://stat.ethz.ch/pipermail/r-devel/2024-October/083686.html), while the `[` and `[[` primitive operations force visibility of their results, their bytecode evaluation counterparts do not:\n\n```\nx <- structure(1, class = \"foo\")\n`[[.foo` <- `[.foo` <- function(x, i) invisible(2)\n\nwithVisible(x[1])\n## $value\n## [1] 2\n## \n## $visible\n## [1] TRUE\n\nwithVisible(eval(compiler::compile(quote(x[1]))))\n## $value\n## [1] 2\n\n## $visible\n## [1] FALSE\n\nwithVisible(x[[1]])\n## $value\n## [1] 2\n\n## $visible\n## [1] TRUE\n\nwithVisible(eval(compiler::compile(quote(x[[1]]))))\n## $value\n## [1] 2\n\n## $visible\n## [1] FALSE\n```\n\nThis discrepancy is not present for `$`, because the `OP(DOLLAR, 2)` branch of `bcEval_loop` sets `R_Visible = TRUE` before continuing. The `@` operator is handled via `OP(CALLSPECIAL, 1)`, which checks the `eval` flag of the primitive operation, so there is no discrepancy there either.\n\nI think that the current code for `OP(STARTSUBSET, 2)` and `OP(STARTSUBSET2, 2)` could take the `eval` flag into account by letting `tryDispatch` access `PRIMPRINT(op)`:\n\n```\nIndex: src/main/eval.c\n===================================================================\n--- src/main/eval.c\t(revision 87265)\n+++ src/main/eval.c\t(working copy)\n@@ -6047,10 +6047,12 @@\n   SEXP pargs, rho1;\n   int dispatched = FALSE;\n   SEXP op = SYMVALUE(install(generic)); /**** avoid this */\n+  int flag = PRIMPRINT(op);\n \n   PROTECT(pargs = promiseArgs(CDR(call), rho));\n   IF_PROMSXP_SET_PRVALUE(CAR(pargs), x);\n \n+  R_Visible = flag != 1;\n   /**** Minimal hack to try to handle the S4 case.  If we do the check\n \tand do not dispatch then some arguments beyond the first might\n \thave been evaluated; these will then be evaluated again by the\n@@ -6077,6 +6079,7 @@\n #else\n   if (! dispatched) DECREMENT_REFCNT(x);\n #endif\n+  if (flag < 2) R_Visible = flag != 1;\n   return dispatched;\n }\n \n```\n\nThis seems to work for the `[` and `[[` S3 methods above and passes `LC_ALL=C.UTF-8 make check-devel`, but I am not confident that this covers all possible cases, so not attaching as a suggested patch.",
+            "creation_time": "2024-10-25T20:24:40Z",
+            "is_private": false,
+            "id": 101271,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "ikrylov",
+            "time": "2024-10-25T20:24:40Z",
+            "attachment_id": {}
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18813": []
+    }
+  },
+  "source_changed": "2024-10-25 20:24:40"
+}

@@ -1,0 +1,260 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-01-14T15:47:41Z",
+        "cc_detail": [
+          {
+            "real_name": "Aakriti Kushwaha",
+            "id": 3743,
+            "name": "aakriti.kushwaha.ak"
+          }
+        ],
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "summary": "seq.Date inconsistent on whether to= can be a string",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "id": 18938,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "aakriti.kushwaha.ak"
+        ],
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2025-08-21T21:42:41Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Misc",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18938": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2025-08-21T21:42:41Z",
+            "attachment_id": {},
+            "count": 0,
+            "text": "c.f.\n\n```\nseq(as.Date(\"2025-01-01\"), \"2025-01-07\")\n# [1] \"2025-01-01\" \"2025-01-02\" \"2025-01-03\" \"2025-01-04\" \"2025-01-05\" \"2025-01-06\" \"2025-01-07\"\n\n## vs.\n\nseq(as.Date(\"2025-01-01\"), \"2025-01-07\", by=1)\n# Error in seq.int(from = unclass(from), to = unclass(to), by = by) : \n#   'to' must be a finite number\n# In addition: Warning message:\n# In seq.Date(as.Date(\"2025-01-01\"), \"2025-01-07\", by = 1) :\n#   NAs introduced by coercion\n```\n\nI think automatic conversion to `Date` is quite appealing, much like `DateVector >= \"2025-01-01\"` 'just works', so it would be good to have it supported.",
+            "bug_id": 18938,
+            "creation_time": "2025-08-21T21:42:41Z",
+            "is_private": false,
+            "id": 102061,
+            "tags": []
+          },
+          {
+            "text": "For \"ragged\" (not equally-spaced) `by=`, we already have `as.POSIXlt` coercion so this works too:\n\n```\nseq(as.Date('2025-01-01'), '2025-08-01', by='month')\n# [1] \"2025-01-01\" \"2025-02-01\" \"2025-03-01\" \"2025-04-01\" \"2025-05-01\" \"2025-06-01\" \"2025-07-01\" \"2025-08-01\"\n```",
+            "bug_id": 18938,
+            "count": 1,
+            "creation_time": "2025-08-21T21:49:26Z",
+            "id": 102062,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2025-08-21T21:49:26Z",
+            "attachment_id": {}
+          },
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2025-08-21T22:01:15Z",
+            "count": 2,
+            "is_markdown": true,
+            "text": "For the POSIXt case, the simple case is already unsupported, so adding such support would be a separate task IMO:\n\n```\nseq(Sys.time(), '2025-08-22 00:00:00')\n# Error in seq.POSIXt(Sys.time(), \"2025-08-22 00:00:00\") : \n#   exactly three of 'to', 'from', 'by' and 'length.out' / 'along.with' must be specified\nseq(Sys.time(), '2025-10-22 00:00:00', by='months')\n# Error in seq.POSIXt(Sys.time(), \"2025-10-22 00:00:00\", by = \"months\") : \n#   'to' must be a \"POSIXt\" object\n```",
+            "bug_id": 18938,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2025-08-21T22:01:15Z",
+            "id": 102063
+          },
+          {
+            "text": "Created attachment 3528\nUse as.Date() coercion in more places in seq.Date\n\nHere's one approach.\n\nI'm fairly confident we could drop the `as.Date()` coercion when `from` or `to` are missing -- there, S3 dispatch should guarantee the one `from`/`to` argument present inherits from Date.\n\nKept here for transparency/clarity.\n\nTesting on GHA:\n\nhttps://github.com/r-devel/r-svn/pull/207",
+            "bug_id": 18938,
+            "count": 3,
+            "creation_time": "2025-08-21T22:07:21Z",
+            "id": 102064,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2025-08-21T22:07:21Z",
+            "attachment_id": 3528
+          },
+          {
+            "attachment_id": 3529,
+            "tags": [],
+            "time": "2025-08-21T22:10:57Z",
+            "id": 102065,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "creation_time": "2025-08-21T22:10:57Z",
+            "text": "Created attachment 3529\nUse as.Date() coercion in more places in seq.Date\n\nAdded more tests.",
+            "bug_id": 18938,
+            "count": 4,
+            "is_markdown": true
+          },
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2025-08-21T22:17:03Z",
+            "attachment_id": {},
+            "count": 5,
+            "bug_id": 18938,
+            "text": "Note that we also have the following working today:\n\n```r\nseq(as.Date('2025-08-01'), 20307, by=1)\n# [1] \"2025-08-01\" \"2025-08-02\" \"2025-08-03\" \"2025-08-04\" \"2025-08-05\" \"2025-08-06\" \"2025-08-07\"\nseq(as.Date('2025-08-01'), '20307', by=1)\n# [1] \"2025-08-01\" \"2025-08-02\" \"2025-08-03\" \"2025-08-04\" \"2025-08-05\" \"2025-08-06\" \"2025-08-07\"\n```\n\nIt seems like a way to write confusing code, so I won't add any associated tests. But at least the former will continue to work under the proposed patch (which is more plausibly useful) because we have since \"recently\" `as.Date(20307)` works. The latter usage will be broken by my proposal, which I think is fine, but still want to call out the potential back-incompatibility.",
+            "creation_time": "2025-08-21T22:17:03Z",
+            "is_private": false,
+            "id": 102066,
+            "tags": []
+          },
+          {
+            "creation_time": "2025-08-21T23:46:02Z",
+            "text": "Created attachment 3530\nUse as.Date() coercion in more places in seq.Date\n\nDeleted this test:\n\n```\n  identical(seq(as.Date(from_str), \"2025-10-01\", by=\"months\"),\n            seq(as.Date(from_str), as.Date(\"2025-10-01\"), by=\"months\"))\n```\n\nWhile it's indeed a good & useful test, it fails on GHA, from what I can tell due to timezone issues:\n\n```\nWarning in .check_tzones(e1, e2) : 'tzone' attributes are inconsistent\nError: identical(seq(as.Date(from_str), \"2025-10-01\", by = \"months\"),  .... is not TRUE\n```\n\nSince that's related to code that's not touched in the current patch, and I'm not reproducing it locally, I'll defer it to future work.",
+            "bug_id": 18938,
+            "count": 6,
+            "tags": [],
+            "id": 102067,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": 3530,
+            "time": "2025-08-21T23:46:02Z"
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-01-14T15:35:37Z",
+            "id": 102568,
+            "creator": "aakriti.kushwaha.ak",
+            "creation_time": "2026-01-14T15:35:37Z",
+            "count": 7,
+            "is_markdown": true,
+            "text": "Hi,\n\nI noticed that seq.Date behaves inconsistently when the 'to' argument is a string. \nI created a small test file that reproduces the behavior:\n\n- seq(as.Date(\"2025-01-01\"), \"2025-01-07\") works\n- seq(as.Date(\"2025-01-01\"), \"2025-01-07\", by = 1) fails\n\nThis test file can be used to reproduce the issue and help with investigating a potential fix. \nI've attached the file below.\n\nThanks!",
+            "bug_id": 18938
+          },
+          {
+            "text": "Created attachment 3597\nSimple test showing Bug 18938: seq.Date fails when ‘to’ is a string with by=1\n\nAttaching a simple test case for Bug 18938. \nIt demonstrates the current inconsistent behavior of seq.Date with string 'to' values.",
+            "bug_id": 18938,
+            "count": 8,
+            "creation_time": "2026-01-14T15:46:09Z",
+            "id": 102569,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "aakriti.kushwaha.ak",
+            "time": "2026-01-14T15:46:09Z",
+            "attachment_id": 3597
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18938": [
+        {
+          "last_change_time": "2025-08-21T22:10:57Z",
+          "size": 1905,
+          "is_private": false,
+          "id": 3528,
+          "creation_time": "2025-08-21T22:07:21Z",
+          "summary": "Use as.Date() coercion in more places in seq.Date",
+          "file_name": "seq-date-char.patch",
+          "bug_id": 18938,
+          "is_patch": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCShyZXZpc2lvbiA4ODY2OCkKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yOTMsOSArMjkzLDkgQEAKICAgICBpZihpcy5uYShieSkpIHN0b3AoIidieScgaXMgTkEiKQogCiAgICAgcmVzIDwtIHN3aXRjaChtaXNzaW5nX2FyZywKLSAgICAgICAgZnJvbSAgICAgICA9IHNlcS5pbnQodG8gICA9IHVuY2xhc3ModG8pLCAgIGJ5ID0gYnksICAgICAgICAgIGxlbmd0aC5vdXQgPSBsZW5ndGgub3V0KSwKLSAgICAgICAgdG8gICAgICAgICA9IHNlcS5pbnQoZnJvbSA9IHVuY2xhc3MoZnJvbSksIGJ5ID0gYnksICAgICAgICAgIGxlbmd0aC5vdXQgPSBsZW5ndGgub3V0KSwKLSAgICAgICAgbGVuZ3RoLm91dCA9IHNlcS5pbnQoZnJvbSA9IHVuY2xhc3MoZnJvbSksIHRvID0gdW5jbGFzcyh0byksIGJ5ID0gYnkpCisgICAgICAgIGZyb20gICAgICAgPSBzZXEuaW50KHRvICAgPSB1bmNsYXNzKGFzLkRhdGUodG8pKSwgICBieSA9IGJ5LCAgICAgICAgICAgICAgICAgICBsZW5ndGgub3V0ID0gbGVuZ3RoLm91dCksCisgICAgICAgIHRvICAgICAgICAgPSBzZXEuaW50KGZyb20gPSB1bmNsYXNzKGFzLkRhdGUoZnJvbSkpLCBieSA9IGJ5LCAgICAgICAgICAgICAgICAgICBsZW5ndGgub3V0ID0gbGVuZ3RoLm91dCksCisgICAgICAgIGxlbmd0aC5vdXQgPSBzZXEuaW50KGZyb20gPSB1bmNsYXNzKGFzLkRhdGUoZnJvbSkpLCB0byA9IHVuY2xhc3MoYXMuRGF0ZSh0bykpLCBieSA9IGJ5KQogICAgICkKICAgICAuRGF0ZShyZXMpCiB9CkluZGV4OiB0ZXN0cy9kYXRldGltZTMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9kYXRldGltZTMuUgkocmV2aXNpb24gODg2NjgpCisrKyB0ZXN0cy9kYXRldGltZTMuUgkod29ya2luZyBjb3B5KQpAQCAtNzg2LDcgKzc4NiwxOSBAQAogc3RvcGlmbm90KGlkZW50aWNhbFBsdCh6MSwgeiksIGlkZW50aWNhbFBsdCh6MiwgeikpCiAjIyBmYWlsZWQgcHJldmlvdXNseSwgaW5jbCBpbiByZXYgODg0NDEKIAorIyMgc3RyaW5ncyBpbiBvbmUgYXJndW1lbnQgb2Ygc2VxLkRhdGUgYWx3YXlzIGdldCBjb2VyY2VkCitmcm9tX3N0ciA8LSAiMjAyNS0wMS0wMSI7IHRvX3N0ciA8LSAiMjAyNS0wMS0wNyIKK2Z1bGxfc2VxIDwtIHNlcShhcy5EYXRlKGZyb21fc3RyKSwgYXMuRGF0ZSh0b19zdHIpKQorc3RvcGlmbm90KGV4cHJzID0geworICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCB0b19zdHIpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcShhcy5EYXRlKGZyb21fc3RyKSwgdG9fc3RyLCBieT0xTCksIGZ1bGxfc2VxKQorICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCB0b19zdHIsIGxlbmd0aC5vdXQ9N0wpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGxlbmd0aC5vdXQ9N0wsIGJ5PTFMKSwgZnVsbF9zZXEpCisgIGlkZW50aWNhbChzZXEoZnJvbT1hcy5EYXRlKGZyb21fc3RyKSwgbGVuZ3RoLm91dD03TCwgYnk9MUwpLCBmdWxsX3NlcSkKIAorICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCAiMjAyNS0xMC0wMSIsIGJ5PSJtb250aHMiKSwKKyAgICAgICAgICAgIHNlcShhcy5EYXRlKGZyb21fc3RyKSwgYXMuRGF0ZSgiMjAyNS0xMC0wMSIpLCBieT0ibW9udGhzIikpCit9KQogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": true
+        },
+        {
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCShyZXZpc2lvbiA4ODY2OCkKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yOTMsOSArMjkzLDkgQEAKICAgICBpZihpcy5uYShieSkpIHN0b3AoIidieScgaXMgTkEiKQogCiAgICAgcmVzIDwtIHN3aXRjaChtaXNzaW5nX2FyZywKLSAgICAgICAgZnJvbSAgICAgICA9IHNlcS5pbnQodG8gICA9IHVuY2xhc3ModG8pLCAgIGJ5ID0gYnksICAgICAgICAgIGxlbmd0aC5vdXQgPSBsZW5ndGgub3V0KSwKLSAgICAgICAgdG8gICAgICAgICA9IHNlcS5pbnQoZnJvbSA9IHVuY2xhc3MoZnJvbSksIGJ5ID0gYnksICAgICAgICAgIGxlbmd0aC5vdXQgPSBsZW5ndGgub3V0KSwKLSAgICAgICAgbGVuZ3RoLm91dCA9IHNlcS5pbnQoZnJvbSA9IHVuY2xhc3MoZnJvbSksIHRvID0gdW5jbGFzcyh0byksIGJ5ID0gYnkpCisgICAgICAgIGZyb20gICAgICAgPSBzZXEuaW50KHRvICAgPSB1bmNsYXNzKGFzLkRhdGUodG8pKSwgICBieSA9IGJ5LCAgICAgICAgICAgICAgICAgICBsZW5ndGgub3V0ID0gbGVuZ3RoLm91dCksCisgICAgICAgIHRvICAgICAgICAgPSBzZXEuaW50KGZyb20gPSB1bmNsYXNzKGFzLkRhdGUoZnJvbSkpLCBieSA9IGJ5LCAgICAgICAgICAgICAgICAgICBsZW5ndGgub3V0ID0gbGVuZ3RoLm91dCksCisgICAgICAgIGxlbmd0aC5vdXQgPSBzZXEuaW50KGZyb20gPSB1bmNsYXNzKGFzLkRhdGUoZnJvbSkpLCB0byA9IHVuY2xhc3MoYXMuRGF0ZSh0bykpLCBieSA9IGJ5KQogICAgICkKICAgICAuRGF0ZShyZXMpCiB9CkluZGV4OiB0ZXN0cy9kYXRldGltZTMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9kYXRldGltZTMuUgkocmV2aXNpb24gODg2NjgpCisrKyB0ZXN0cy9kYXRldGltZTMuUgkod29ya2luZyBjb3B5KQpAQCAtNzg2LDcgKzc4NiwyMiBAQAogc3RvcGlmbm90KGlkZW50aWNhbFBsdCh6MSwgeiksIGlkZW50aWNhbFBsdCh6MiwgeikpCiAjIyBmYWlsZWQgcHJldmlvdXNseSwgaW5jbCBpbiByZXYgODg0NDEKIAorIyMgc3RyaW5ncyBpbiBvbmUgYXJndW1lbnQgb2Ygc2VxLkRhdGUgYWx3YXlzIGdldCBjb2VyY2VkCitmcm9tX3N0ciA8LSAiMjAyNS0wMS0wMSI7IHRvX3N0ciA8LSAiMjAyNS0wMS0wNyIKK2Z1bGxfc2VxIDwtIHNlcShhcy5EYXRlKGZyb21fc3RyKSwgYXMuRGF0ZSh0b19zdHIpKQorc3RvcGlmbm90KGV4cHJzID0geworICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCB0b19zdHIpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcShhcy5EYXRlKGZyb21fc3RyKSwgdG9fc3RyLCBieT0xTCksIGZ1bGxfc2VxKQorICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCB0b19zdHIsIGxlbmd0aC5vdXQ9N0wpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGxlbmd0aC5vdXQ9N0wsIGJ5PTFMKSwgZnVsbF9zZXEpCisgIGlkZW50aWNhbChzZXEoZnJvbT1hcy5EYXRlKGZyb21fc3RyKSwgbGVuZ3RoLm91dD03TCwgYnk9MUwpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGZyb21fc3RyKSwgZnVsbF9zZXEpCisgIGlkZW50aWNhbChzZXEodG89YXMuRGF0ZSh0b19zdHIpLCBmcm9tX3N0ciwgYnk9MUwpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGZyb21fc3RyLCBsZW5ndGgub3V0PTdMKSwgZnVsbF9zZXEpCiAKKyAgaWRlbnRpY2FsKHNlcShhcy5EYXRlKGZyb21fc3RyKSwgIjIwMjUtMTAtMDEiLCBieT0ibW9udGhzIiksCisgICAgICAgICAgICBzZXEoYXMuRGF0ZShmcm9tX3N0ciksIGFzLkRhdGUoIjIwMjUtMTAtMDEiKSwgYnk9Im1vbnRocyIpKQorfSkKIAogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true,
+          "is_patch": true,
+          "creation_time": "2025-08-21T22:10:57Z",
+          "summary": "Use as.Date() coercion in more places in seq.Date",
+          "file_name": "seq-date-char (1).patch",
+          "bug_id": 18938,
+          "last_change_time": "2025-08-21T23:46:02Z",
+          "size": 2101,
+          "is_private": false,
+          "id": 3529
+        },
+        {
+          "id": 3530,
+          "is_private": false,
+          "size": 1992,
+          "last_change_time": "2025-08-21T23:46:02Z",
+          "bug_id": 18938,
+          "file_name": "seq-date-char (2).patch",
+          "summary": "Use as.Date() coercion in more places in seq.Date",
+          "creation_time": "2025-08-21T23:46:02Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCShyZXZpc2lvbiA4ODY2OCkKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9kYXRlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yOTMsOSArMjkzLDkgQEAKICAgICBpZihpcy5uYShieSkpIHN0b3AoIidieScgaXMgTkEiKQogCiAgICAgcmVzIDwtIHN3aXRjaChtaXNzaW5nX2FyZywKLSAgICAgICAgZnJvbSAgICAgICA9IHNlcS5pbnQodG8gICA9IHVuY2xhc3ModG8pLCAgIGJ5ID0gYnksICAgICAgICAgIGxlbmd0aC5vdXQgPSBsZW5ndGgub3V0KSwKLSAgICAgICAgdG8gICAgICAgICA9IHNlcS5pbnQoZnJvbSA9IHVuY2xhc3MoZnJvbSksIGJ5ID0gYnksICAgICAgICAgIGxlbmd0aC5vdXQgPSBsZW5ndGgub3V0KSwKLSAgICAgICAgbGVuZ3RoLm91dCA9IHNlcS5pbnQoZnJvbSA9IHVuY2xhc3MoZnJvbSksIHRvID0gdW5jbGFzcyh0byksIGJ5ID0gYnkpCisgICAgICAgIGZyb20gICAgICAgPSBzZXEuaW50KHRvICAgPSB1bmNsYXNzKGFzLkRhdGUodG8pKSwgICBieSA9IGJ5LCAgICAgICAgICAgICAgICAgICBsZW5ndGgub3V0ID0gbGVuZ3RoLm91dCksCisgICAgICAgIHRvICAgICAgICAgPSBzZXEuaW50KGZyb20gPSB1bmNsYXNzKGFzLkRhdGUoZnJvbSkpLCBieSA9IGJ5LCAgICAgICAgICAgICAgICAgICBsZW5ndGgub3V0ID0gbGVuZ3RoLm91dCksCisgICAgICAgIGxlbmd0aC5vdXQgPSBzZXEuaW50KGZyb20gPSB1bmNsYXNzKGFzLkRhdGUoZnJvbSkpLCB0byA9IHVuY2xhc3MoYXMuRGF0ZSh0bykpLCBieSA9IGJ5KQogICAgICkKICAgICAuRGF0ZShyZXMpCiB9CkluZGV4OiB0ZXN0cy9kYXRldGltZTMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9kYXRldGltZTMuUgkocmV2aXNpb24gODg2NjgpCisrKyB0ZXN0cy9kYXRldGltZTMuUgkod29ya2luZyBjb3B5KQpAQCAtNzg2LDggKzc4NiwyMCBAQAogc3RvcGlmbm90KGlkZW50aWNhbFBsdCh6MSwgeiksIGlkZW50aWNhbFBsdCh6MiwgeikpCiAjIyBmYWlsZWQgcHJldmlvdXNseSwgaW5jbCBpbiByZXYgODg0NDEKIAorIyMgc3RyaW5ncyBpbiBvbmUgYXJndW1lbnQgb2Ygc2VxLkRhdGUgYWx3YXlzIGdldCBjb2VyY2VkCitmcm9tX3N0ciA8LSAiMjAyNS0wMS0wMSI7IHRvX3N0ciA8LSAiMjAyNS0wMS0wNyIKK2Z1bGxfc2VxIDwtIHNlcShhcy5EYXRlKGZyb21fc3RyKSwgYXMuRGF0ZSh0b19zdHIpKQorc3RvcGlmbm90KGV4cHJzID0geworICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCB0b19zdHIpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcShhcy5EYXRlKGZyb21fc3RyKSwgdG9fc3RyLCBieT0xTCksIGZ1bGxfc2VxKQorICBpZGVudGljYWwoc2VxKGFzLkRhdGUoZnJvbV9zdHIpLCB0b19zdHIsIGxlbmd0aC5vdXQ9N0wpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGxlbmd0aC5vdXQ9N0wsIGJ5PTFMKSwgZnVsbF9zZXEpCisgIGlkZW50aWNhbChzZXEoZnJvbT1hcy5EYXRlKGZyb21fc3RyKSwgbGVuZ3RoLm91dD03TCwgYnk9MUwpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGZyb21fc3RyKSwgZnVsbF9zZXEpCisgIGlkZW50aWNhbChzZXEodG89YXMuRGF0ZSh0b19zdHIpLCBmcm9tX3N0ciwgYnk9MUwpLCBmdWxsX3NlcSkKKyAgaWRlbnRpY2FsKHNlcSh0bz1hcy5EYXRlKHRvX3N0ciksIGZyb21fc3RyLCBsZW5ndGgub3V0PTdMKSwgZnVsbF9zZXEpCit9KQogCi0KICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "creator": "michaelchirico4"
+        },
+        {
+          "creator": "aakriti.kushwaha.ak",
+          "data": "IyB0ZXN0LXNlcURhdGUtdG8tc3RyaW5nLlIKIyBCdWcgMTg5Mzg6IHNlcS5EYXRlIGluY29uc2lzdGVudCBvbiB3aGV0aGVyICd0bycgY2FuIGJlIGEgc3RyaW5nCgoKZnJvbV9kYXRlIDwtIGFzLkRhdGUoIjIwMjUtMDEtMDEiKQp0b19zdHIgICA8LSAiMjAyNS0wMS0wNyIKCmNhdCgiQmFzaWMgc2VxIHdpdGhvdXQgJ2J5JzpcbiIpCnByaW50KHNlcShmcm9tX2RhdGUsIHRvX3N0cikpICAjIFdvcmtzIGZpbmUKCmNhdCgiXG5zZXEgd2l0aCBieT0xOlxuIikKdHJ5KHByaW50KHNlcShmcm9tX2RhdGUsIHRvX3N0ciwgYnkgPSAxKSkpICAjIEZhaWxzIHdpdGggZXJyb3IKCiMgRXhwZWN0ZWQgYmVoYXZpb3I6CiMgc2VxKGZyb21fZGF0ZSwgYXMuRGF0ZSh0b19zdHIpLCBieSA9IDEpCiMgWzFdICIyMDI1LTAxLTAxIiAiMjAyNS0wMS0wMiIgIjIwMjUtMDEtMDMiICIyMDI1LTAxLTA0IiAiMjAyNS0wMS0wNSIgIjIwMjUtMDEtMDYiICIyMDI1LTAxLTA3Ig==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": false,
+          "creation_time": "2026-01-14T15:46:09Z",
+          "summary": "Simple test showing Bug 18938: seq.Date fails when ‘to’ is a string with by=1",
+          "file_name": "test-seqDate-toStringBug.R",
+          "bug_id": 18938,
+          "last_change_time": "2026-01-14T15:47:41Z",
+          "size": 484,
+          "is_private": false,
+          "id": 3597
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-01-14 15:47:41"
+}

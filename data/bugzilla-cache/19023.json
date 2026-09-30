@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "last_change_time": "2026-03-20T20:07:45Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "as() fails to pick up ANY method via S3 inheritance",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "component": "S4methods",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19023,
+        "deadline": {},
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-03-20T20:07:45Z",
+        "priority": "P5",
+        "product": "R"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19023": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 102783,
+            "time": "2026-03-20T20:07:45Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19023,
+            "text": "Converting from r-devel thread: https://stat.ethz.ch/pipermail/r-devel/2026-March/084409.html\n\nMinimal example:\n\n```\nsetClass(\"integer64\")\nsetAs(\"ANY\", \"integer64\", \\(from) from)\nx <- structure(1e10, class=c(\"foo\", \"integer64\"))\nas(x, \"integer64\")\n# Error in as(x, \"integer64\") :\n#   internal problem in as(): “foo” is(object, \"integer64\") is TRUE, but the metadata asserts that the 'is' relation is FALSE\n```\n\nAs Martin pointed out, it's not great that the user can see such \"internal problem\".\n\nFor more context, this was originally seen in the {bit64} package. We had rewritten our `c()` S3 method using `as()` for generic coercion, which we had to refactor to use the S3 `as.*` method directly instead.\n\n - https://github.com/r-lib/bit64/pull/253\n - https://github.com/r-lib/bit64/pull/302\n\n`setClass(\"foo\")` / `setClass(\"foo\", contains=\"integer64\")` / `setOldClass(\"foo\")` make the issue go away, too, but in context that would be a breaking change to a downstream non-S4 package.\n\nHonestly I'm a bit lost the right solution here, but it _does_ seem like we misused `as()` by employing it in an S3 context.",
+            "creation_time": "2026-03-20T20:07:45Z",
+            "creator": "michaelchirico4"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19023": []
+    }
+  },
+  "source_changed": "2026-03-20 20:07:45"
+}

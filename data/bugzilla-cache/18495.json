@@ -1,0 +1,263 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Language",
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 18495,
+        "severity": "enhancement",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "kuwisdelu",
+          "maechler"
+        ],
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2023-03-17T22:24:08Z",
+        "version": "R 4.2.x",
+        "whiteboard": "",
+        "status": "TRIAGED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "davis",
+          "id": 3237,
+          "real_name": "Davis Vaughan"
+        },
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "davis",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-06-26T23:50:28Z",
+        "cc_detail": [
+          {
+            "real_name": "Kylie Bemis",
+            "id": 3751,
+            "name": "kuwisdelu"
+          },
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Alternative algorithm for `which()`"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18495": {
+        "comments": [
+          {
+            "creation_time": "2023-03-17T22:24:08Z",
+            "creator": "davis",
+            "bug_id": 18495,
+            "text": "Created attachment 3156\nAlternative `which()` algorithm\n\nI've implemented an alternative algorithm for `which()` which uses less memory and is often faster (up to 3x in some cases).\n\nIf you prefer to see it on GitHub, it lives here:\n\nhttps://github.com/r-devel/r-svn/pull/117\n\nOtherwise, it is attached as a patch.\n\nYou'll notice that I've allocated a `bool` array using `R_alloc()`. I figured that using `bool` was okay since R-admin now states that C99 is required to compile R, and that should be enough to give us access to `bool` (we've also been using `bool` in vctrs and dplyr for quite a while with no issues).\n\nhttps://github.com/wch/r-source/commit/3d6f56e87b82a0a0b55f7b83a94c70d1f26fd578#diff-dc3a9172fa37909f89ff6dc9c8c20ac1a45ada83a8db6e1de1154c5198909d0aR1138\n\nThe implementation first counts up the number of `TRUE` elements and also tracks whether or not the `i`th element is `TRUE` or not inside the bool array. Then it allocates an output of the right size using the count, and fills it where the bool array is `true`.\n\nPreviously, an integer/double vector of the full size of `x` was being allocated, and it seemed to me that we could be less memory intensive by using the bool array without any downsides.\n\nI've ensured that this algorithm is still ALTREP friendly by keeping `ITERATE_BY_REGION()`. We could in theory avoid the `bool` array entirely by calling `ITERATE_BY_REGION()` twice (first loop computes the total size, then allocate the output, then the second loop fills the output), but I was worried about the case of an ALTREP logical vector that might have an expensive `Get_region` or `Elt` method, and the `bool` array approach didn't seem to be any slower.\n\nThe real win in performance comes from writing the algorithm in a completely branchless way. `which()` is naturally a \"jumpy\" function since if the `i`th element is `FALSE`, there is typically nothing that says the `i+1`th element is also `FALSE`, so getting rid of any branches seems to help a decent bit here. Generally, the more equal the mix of `TRUE` and `FALSE` (and `NA`) is, the more dramatic the increase in performance is over the original approach.\n\nThe only time I have seen a decrease in performance is when the distribution is _heavily_ skewed towards `FALSE`, like 96%+ `FALSE`. But that difference in performance rapidly closes as the percent `FALSE` decreases, and, as you'll see in my benchmarks below, once you get down to 90% `FALSE` we've already flipped to the new algorithm being faster, and it continues to be faster for all other cases. And, of course, the new algorithm is more memory friendly for all cases.\n\nThe absolute values of the timings below may vary of course, but I hope that the relative differences are stable. For reference, I am on a 2018 Macbook Pro that still has an Intel chip. I have a feeling that absolute timings on the Apple M1/M2 chips will be much faster than mine, but again, hopefully the relative difference of the approaches holds.\n\n```\nset.seed(1234)\n\n# //////////////////////////////////////////////////////////////////////////////\n\n# Single TRUE\nx <- TRUE\n\nbench::mark(which(x), iterations = 1000000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     1.03us   1.36us   694502.        0B     19.4\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     1.13us    1.6us   602626.        0B     73.5\n\n# Single FALSE\nx <- FALSE\n\nbench::mark(which(x), iterations = 1000000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     1.05us   1.33us   706343.        0B     24.0\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     1.11us   1.38us   688061.        0B     28.9\n\n# //////////////////////////////////////////////////////////////////////////////\n\n# 1 mil elements, 45/45/10 proportions\nx <- sample(c(TRUE, FALSE, NA), 1e6, replace = TRUE, prob = c(.45, .45, .1))\n\nbench::mark(which(x), iterations = 10000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     3.06ms   3.78ms      268.    5.53MB     26.1\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      918us   1.22ms      805.    2.67MB     36.4\n\n# 10 mil elements, same proportions as above\nx <- sample(c(TRUE, FALSE, NA), 1e7, replace = TRUE, prob = c(.45, .45, .1))\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     32.9ms   36.7ms      26.8    55.3MB     30.4\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     11.4ms   12.4ms      79.5    26.7MB     40.7\n\n# 100 mil elements, same proportions as above\nx <- sample(c(TRUE, FALSE, NA), 1e8, replace = TRUE, prob = c(.45, .45, .1))\n\nbench::mark(which(x), iterations = 100)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      380ms    387ms      2.57     553MB     2.57\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      112ms    117ms      8.07     267MB     20.8\n\n# //////////////////////////////////////////////////////////////////////////////\n\n# 10 mil, all `TRUE`\nx <- rep(TRUE, 1e7)\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     16.1ms     17ms      56.8    76.3MB     6.59\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)       11ms     13ms      75.1    47.7MB     5.48\n\n# 10 mil, 98% `TRUE`\nx <- sample(c(TRUE, FALSE), 1e7, replace = TRUE, prob = c(.98, .02))\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     16.2ms   18.3ms      53.9    75.5MB     7.35\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     10.9ms   12.9ms      77.0    46.9MB     4.91\n\n# 10 mil, 90% `TRUE`\nx <- sample(c(TRUE, FALSE), 1e7, replace = TRUE, prob = c(.90, .10))\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     21.3ms   24.1ms      41.3    72.5MB     8.83\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     10.7ms   12.8ms      78.3    43.9MB     4.12\n\n# //////////////////////////////////////////////////////////////////////////////\n\n# 10 mil, all `FALSE`\nx <- rep(FALSE, 1e7)\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     5.14ms   5.78ms      172.    38.1MB     16.4\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     6.28ms   7.23ms      122.    9.54MB     1.23\n\n# 10 mil, 98% `FALSE`\nx <- sample(c(TRUE, FALSE), 1e7, replace = TRUE, prob = c(.02, .98))\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     6.56ms   7.58ms      133.    38.9MB     16.8\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      9.6ms   11.4ms      83.3    10.3MB     1.01\n\n# 10 mil, 90% `FALSE`\nx <- sample(c(TRUE, FALSE), 1e7, replace = TRUE, prob = c(.10, .90))\n\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     10.9ms   13.6ms      72.6      42MB     12.2\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      9.7ms   11.9ms      82.3    13.4MB     1.25\n\n# 100 mil, all `FALSE`\nx <- rep(FALSE, 1e8)\n\nbench::mark(which(x), iterations = 100)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     68.1ms   70.8ms      14.0     381MB     14.0\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     68.2ms   70.1ms      13.7    95.4MB     2.80\n\n# 100 mil, 98% `FALSE`\nx <- sample(c(TRUE, FALSE), 1e8, replace = TRUE, prob = c(.02, .98))\n\nbench::mark(which(x), iterations = 100)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     65.7ms   69.8ms      14.3     389MB     14.3\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      106ms    111ms      8.73     103MB     1.30\n\n# 100 mil, 90% `FALSE`\nx <- sample(c(TRUE, FALSE), 1e8, replace = TRUE, prob = c(.10, .90))\n\nbench::mark(which(x), iterations = 100)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      114ms    124ms      8.00     420MB     8.00\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      105ms    115ms      8.43     134MB     3.61\n```",
+            "count": 0,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": 3156,
+            "id": 99548,
+            "time": "2023-03-17T22:24:08Z",
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "id": 99549,
+            "time": "2023-03-18T14:56:15Z",
+            "is_private": false,
+            "creation_time": "2023-03-18T14:56:15Z",
+            "creator": "maechler",
+            "bug_id": 18495,
+            "text": "You are not claiming that R's logical is equivalent to `bool` are you?\nOne of the things I even teach in introductory courses (not at the very beginning) is that it is important to understand that a logical is not binary but ternary:  `{FALSE, NA, TRUE}`",
+            "count": 1,
+            "is_markdown": true
+          },
+          {
+            "time": "2023-03-18T15:59:32Z",
+            "id": 99550,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "No, definitely not. I'm just saying that sometimes a `bool` array can be useful for internal algorithms, like in this case.",
+            "bug_id": 18495,
+            "count": 2,
+            "is_markdown": true,
+            "creator": "davis",
+            "creation_time": "2023-03-18T15:59:32Z"
+          },
+          {
+            "creator": "maechler",
+            "creation_time": "2023-03-20T09:27:42Z",
+            "is_markdown": true,
+            "count": 3,
+            "text": "(In reply to Davis Vaughan from comment #2)\n> No, definitely not. I'm just saying that sometimes a `bool` array can be\n> useful for internal algorithms, like in this case.\n\nthen.. I'm sorry for my misinterpretation of how/why you'd speed up the `.Internal(which(.))`. I really should read to the end of a text before drawing conclusions, i.e., do what I expect from everybody else (:-()))  -- sorry indeed.",
+            "bug_id": 18495,
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2023-03-20T09:27:42Z",
+            "id": 99553
+          },
+          {
+            "attachment_id": {},
+            "time": "2023-03-20T14:21:00Z",
+            "creator": "davis",
+            "is_markdown": true,
+            "tags": [],
+            "id": 99554,
+            "is_private": false,
+            "creation_time": "2023-03-20T14:21:00Z",
+            "text": "No problem at all!",
+            "bug_id": 18495,
+            "count": 4
+          },
+          {
+            "is_private": false,
+            "time": "2023-03-22T09:54:24Z",
+            "id": 99556,
+            "attachment_id": 3158,
+            "tags": [],
+            "is_markdown": true,
+            "count": 5,
+            "text": "Created attachment 3158\nA branchless-only version",
+            "bug_id": 18495,
+            "creator": "suharto_anggono",
+            "creation_time": "2023-03-22T09:54:24Z"
+          },
+          {
+            "creation_time": "2023-03-22T10:15:47Z",
+            "creator": "suharto_anggono",
+            "bug_id": 18495,
+            "text": "For benchmarks, also consider input with regular (non-random) positions of TRUE and FALSE like the following.\n\nx <- rep(c(TRUE, FALSE), length = 1e7)\nx <- rep(c(TRUE, FALSE), c(.10e7, .90e7))\nx <- rep(c(FALSE, TRUE), c(.90e7, .10e7))\nx <- rep(c(TRUE, FALSE), c(1, 9), length = 1e7)",
+            "is_markdown": false,
+            "count": 6,
+            "attachment_id": {},
+            "tags": [],
+            "id": 99557,
+            "time": "2023-03-22T10:15:47Z",
+            "is_private": false
+          },
+          {
+            "creation_time": "2023-03-22T21:16:59Z",
+            "creator": "davis",
+            "count": 7,
+            "is_markdown": true,
+            "bug_id": 18495,
+            "text": "The proposal by Suharto is more minimal but doesn't reduce the amount of memory used by `which()`, which I do think would be a useful feature.\n\nHere's a few more benchmarks. Nothing looks _dramatically_ different between the two (maybe 15% either way depending on the data). The fact that the new approach uses 30-50% less memory without speed tradeoff is pretty nice though. And I still think that the benchmarks with random data (shown above) are likely more representable of a typical call to `which()`, which shows dramatically larger speedups with the new approach.\n\n```\nx <- rep(c(TRUE, FALSE), length = 1e7)\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     8.99ms   9.38ms      104.    57.2MB     105.\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     10.5ms   11.6ms      84.7    28.6MB     106.\n\nx <- rep(c(TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE), length = 1e7)\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     9.44ms   10.2ms      96.2    54.5MB     96.6\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     10.6ms   12.2ms      81.6    25.9MB     75.0\n\nx <- rep(c(TRUE, TRUE, TRUE, TRUE, FALSE), length = 1e7)\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     13.3ms   14.2ms      68.1    68.7MB     68.8\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     11.6ms   13.6ms      71.9    40.1MB     60.4\n\n\nx <- rep(c(TRUE, FALSE), c(.10e7, .90e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     6.22ms   6.84ms      144.      42MB     65.1\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     6.51ms   8.59ms      115.    13.4MB     15.7\n\n# Switch ordering\nx <- rep(c(FALSE, TRUE), c(.90e7, .10e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      6.5ms   6.84ms      145.      42MB     52.5\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     11.8ms   12.7ms      77.4    13.4MB     9.37\n\n# Switch proportions\nx <- rep(c(TRUE, FALSE), c(.90e7, .10e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     15.5ms     16ms      60.3    72.5MB     117.\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     13.5ms   14.9ms      66.8    43.9MB     70.6\n\n# Switch ordering and proportions\nx <- rep(c(FALSE, TRUE), c(.10e7, .90e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     12.1ms   15.6ms      62.4    72.5MB     121.\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     13.8ms   15.3ms      65.4    43.9MB     68.5\n\n\nx <- rep(c(TRUE, FALSE), c(.40e7, .60e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     9.01ms   10.1ms      99.0    53.4MB     33.5\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dvl> <bch:byt>    <dbl>\n#> 1 which(x)     9.81ms   11.1ms      90.9    24.8MB     30.5\n\n# Switch ordering\nx <- rep(c(FALSE, TRUE), c(.60e7, .40e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)      9.1ms   10.1ms      101.    53.4MB     39.1\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     12.2ms   13.4ms      74.4    24.8MB     17.3\n\n# Switch proportions\nx <- rep(c(TRUE, FALSE), c(.60e7, .40e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     11.1ms   12.4ms      78.0      61MB     44.4\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     11.1ms   12.6ms      79.8    32.4MB     39.8\n\n# Switch ordering and proportions\nx <- rep(c(FALSE, TRUE), c(.40e7, .60e7))\nbench::mark(which(x), iterations = 1000)\n# Before\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     11.8ms   12.3ms      78.9      61MB     41.7\n\n# After\n#>   expression      min   median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr> <bch:tm> <bch:tm>     <dbl> <bch:byt>    <dbl>\n#> 1 which(x)     12.8ms   14.4ms      69.4    32.4MB     35.6\n```",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 99560,
+            "time": "2023-03-22T21:16:59Z"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2026-06-26T23:41:31Z",
+            "id": 103251,
+            "creator": "kuwisdelu",
+            "creation_time": "2026-06-26T23:41:31Z",
+            "is_markdown": true,
+            "count": 8,
+            "text": "The above timings and memory improvements are still valid for current R-devel 90193.\n\nThe branchless patch is simpler, and provides real speedup for the randomized logical vector case, but does not improve memory usage. (Note: I couldn't apply the branchless patch directly, perhaps due to some divergence since 2023, but it's easy enough to make the changes manually. I'll attach a new version of this patch for reference.)\n\nThe alternative which() implementation provided by Davis improves speed in the randomized case and real memory improvements. The code makes sense to me.\n\nAll tests pass locally, and I built and checked a small selection of CRAN packages: __abind__, __bit64__, __data.table__, __dplyr__, and __stringi__. These also passed. That's about as far as I can take this without input from R-core.\n\nFurther details here: https://github.com/r-devel/r-dev-day/issues/158",
+            "bug_id": 18495
+          },
+          {
+            "attachment_id": 3742,
+            "tags": [],
+            "id": 103252,
+            "time": "2026-06-26T23:50:28Z",
+            "is_private": false,
+            "creation_time": "2026-06-26T23:50:28Z",
+            "creator": "kuwisdelu",
+            "bug_id": 18495,
+            "text": "Created attachment 3742\nnew version of branchless which patch",
+            "is_markdown": true,
+            "count": 9
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18495": [
+        {
+          "creation_time": "2023-03-17T22:24:08Z",
+          "summary": "Alternative `which()` algorithm",
+          "file_name": "alternative-which-algorithm.patch",
+          "bug_id": 18495,
+          "last_change_time": "2023-03-17T22:24:08Z",
+          "size": 3900,
+          "is_private": false,
+          "id": 3156,
+          "creator": "davis",
+          "data": "RnJvbSBhZDZkMzNjOTdhZTJkYmZmMjRlNzRjN2U3NWNiMTZlZmViNWNlZjRhIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQpGcm9tOiBEYXZpc1ZhdWdoYW4gPGRhdmlzQHJzdHVkaW8uY29tPgpEYXRlOiBGcmksIDE3IE1hciAyMDIzIDE3OjQyOjQzIC0wNDAwClN1YmplY3Q6IFtQQVRDSF0gSW1wbGVtZW50IGFsdGVybmF0aXZlIGB3aGljaCgpYCBhbGdvcml0aG0KCi0tLQogc3JjL21haW4vc3VtbWFyeS5jIHwgNzUgKysrKysrKysrKysrKysrKysrKysrLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQogMSBmaWxlIGNoYW5nZWQsIDM0IGluc2VydGlvbnMoKyksIDQxIGRlbGV0aW9ucygtKQoKZGlmZiAtLWdpdCBhL3NyYy9tYWluL3N1bW1hcnkuYyBiL3NyYy9tYWluL3N1bW1hcnkuYwppbmRleCA0ZTFiNWMyYWMyMC4uMTJkZWQ4N2Q1MzUgMTAwNjQ0Ci0tLSBhL3NyYy9tYWluL3N1bW1hcnkuYworKysgYi9zcmMvbWFpbi9zdW1tYXJ5LmMKQEAgLTI3LDYgKzI3LDcgQEAKICNpbmNsdWRlIDxSX2V4dC9JdGVybWFjcm9zLmg+CiAKICNpbmNsdWRlIDxmbG9hdC5oPiAvLyBmb3IgREJMX01BWAorI2luY2x1ZGUgPHN0ZGJvb2wuaD4gLy8gZm9yIGJvb2wKIAogI2luY2x1ZGUgImR1cGxpY2F0ZS5oIgogCkBAIC0xMTI1LDYzICsxMTI2LDU1IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb193aGljaChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pCiAgICAgU0VYUCB2ID0gQ0FSKGFyZ3MpOwogICAgIGlmICghaXNMb2dpY2FsKHYpKQogCWVycm9yKF8oImFyZ3VtZW50IHRvICd3aGljaCcgaXMgbm90IGxvZ2ljYWwiKSk7Ci0gICAgUl94bGVuX3QgbGVuID0geGxlbmd0aCh2KSwgaSwgaiA9IDA7CisgICAgUl94bGVuX3QgbGVuID0geGxlbmd0aCh2KSwgY291bnQgPSAwOwogICAgIFNFWFAgYW5zOworICAgIGJvb2wgKndoZXJlID0gKGJvb2wgKikgUl9hbGxvYyhsZW4sIHNpemVvZihib29sKSk7CisgICAgLyogdXNlIGl0ZXJhdGlvbiBtYWNyb3MgdG8gYmUgQUxUUkVQIHNhZmUgYW5kIHB1bGwgcHRyIHJldHJpZXZhbCBvdXQgb2YgdGlnaHQgbG9vcCAqLworICAgIElURVJBVEVfQllfUkVHSU9OKHYsIHB0ciwgaWR4LCBuYiwgaW50LCBMT0dJQ0FMLCB7CisgICAgICAgIGZvciAoUl94bGVuX3QgaSA9IDA7IGkgPCBuYjsgaSsrKSB7CisgICAgICAgICAgICBjb25zdCBib29sIGVsdCA9IHB0cltpXSA9PSBUUlVFOworICAgICAgICAgICAgY291bnQgKz0gZWx0OworICAgICAgICAgICAgd2hlcmVbaWR4ICsgaV0gPSBlbHQ7CisgICAgICAgIH0KKyAgICB9KTsKICNpZmRlZiBMT05HX1ZFQ1RPUl9TVVBQT1JUCiAgICAgaWYgKGxlbiA+IFJfU0hPUlRfTEVOX01BWCkgewotICAgIFJfeGxlbl90IHhvZmZzZXQgPSAxOyAvLyAxIGZvciAxLWJhc2VkIGluZGV4aW5nIG9mIHJlc3BvbnNlCi0gICAgZG91YmxlICpidWYgPSAoZG91YmxlICopIFJfYWxsb2MobGVuLCBzaXplb2YoZG91YmxlKSk7Ci0gICAgSVRFUkFURV9CWV9SRUdJT04odiwgcHRyLCBpZHgsIG5iLCBpbnQsIExPR0lDQUwsIHsKLQkgICAgZm9yKFJfeGxlbl90IGkgPSAwOyBpIDwgbmI7IGkrKykgewotCQlpZihwdHJbaV0gPT0gVFJVRSkgewotCQkgICAgYnVmW2pdID0gKGRvdWJsZSkoeG9mZnNldCArIGkpOyAvLyBvZmZzZXQgaGFzICsxIGJ1aWx0IGluCi0JCSAgICBqKys7Ci0JCX0KLQkgICAgfQotCSAgICB4b2Zmc2V0ICs9IG5iOyAvLyBtb3ZlIHRvIGJlZ2lubmluZyBvZiBuZXh0IGJ1ZmZlciAoKzEgc2luY2UgUi1iYXNlZCkKLQl9KTsKLQotICAgIGxlbiA9IGo7Ci0gICAgUFJPVEVDVChhbnMgPSBhbGxvY1ZlY3RvcihSRUFMU1hQLCBsZW4pKTsKLSAgICAvLyBidWYgaGFzIGRvdWJsZXMgaW4gaXQsIG1lbWNvcHkgaWYgd2UgZm91bmQgYW55IGluZGljZXMuCi0gICAgaWYobGVuKSBtZW1jcHkoUkVBTChhbnMpLCBidWYsIHNpemVvZihkb3VibGUpICogbGVuKTsKKyAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKFJFQUxTWFAsIGNvdW50KSk7CisgICAgZG91YmxlICpwYW5zID0gUkVBTDAoYW5zKTsKKyAgICBmb3IgKFJfeGxlbl90IGkgPSAwLCBqID0gMDsgaiA8IGNvdW50OyBpKyspIHsKKyAgICAgICAgcGFuc1tqXSA9IGkgKyAxOworICAgICAgICBqICs9IHdoZXJlW2ldOworICAgIH0KICAgICB9IGVsc2UKICNlbmRpZgogICAgIHsKLSAgICBpbnQgaW9mZnNldCA9IDE7Ci0gICAgaW50ICpidWYgPSAoaW50ICopIFJfYWxsb2MobGVuLCBzaXplb2YoaW50KSk7Ci0gICAgLyogdXNlIGl0ZXJhdGlvbiBtYWNyb3MgdG8gYmUgQUxUUkVQIHNhZmUgYW5kIHB1bGwgcHRyIHJldHJpZXZhbCBvdXQgb2YgdGlnaHQgbG9vcCAqLwotICAgIElURVJBVEVfQllfUkVHSU9OKHYsIHB0ciwgaWR4LCBuYiwgaW50LCBMT0dJQ0FMLCB7Ci0JICAgIGZvcihpbnQgaSA9IDA7IGkgPCBuYjsgaSsrKSB7Ci0JCWlmKHB0cltpXSA9PSBUUlVFKSB7Ci0JCSAgICBidWZbal0gPSBpb2Zmc2V0ICsgaTsgLy8gb2Zmc2V0IGhhcyArMSBidWlsdCBpbgotCQkgICAgaisrOwotCQl9Ci0JICAgIH0KLQkgICAgaW9mZnNldCArPSBuYjsgLy8gbW92ZSB0byBiZWdpbm5pbmcgb2YgbmV4dCBidWZmZXIKLQl9KTsKLQotICAgIGxlbiA9IGo7Ci0gICAgLy8gYnVmIGhhcyBpbnRzIGluIGl0IGFuZCB3ZSdyZSByZXR1cm5pbmcgaW50cywgbWVtY29weSBpZiB3ZSBmb3VuZCBhbnkgaW5kaWNlczsKLSAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKElOVFNYUCwgbGVuKSk7Ci0gICAgaWYobGVuKSBtZW1jcHkoSU5URUdFUihhbnMpLCBidWYsIHNpemVvZihpbnQpICogbGVuKTsKKyAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKElOVFNYUCwgY291bnQpKTsKKyAgICBpbnQgKnBhbnMgPSBJTlRFR0VSMChhbnMpOworICAgIGZvciAoUl94bGVuX3QgaSA9IDAsIGogPSAwOyBqIDwgY291bnQ7IGkrKykgeworICAgICAgICBwYW5zW2pdID0gaSArIDE7CisgICAgICAgIGogKz0gd2hlcmVbaV07CisgICAgfQogICAgIH0KIAogICAgIFNFWFAgdl9ubXMgPSBnZXRBdHRyaWIodiwgUl9OYW1lc1N5bWJvbCk7CiAgICAgaWYgKHZfbm1zICE9IFJfTmlsVmFsdWUpIHsKLQlTRVhQIGFuc19ubXMgPSBQUk9URUNUKGFsbG9jVmVjdG9yKFNUUlNYUCwgbGVuKSk7CisJU0VYUCBhbnNfbm1zID0gUFJPVEVDVChhbGxvY1ZlY3RvcihTVFJTWFAsIGNvdW50KSk7CiAjaWZkZWYgTE9OR19WRUNUT1JfU1VQUE9SVAotCWlmIChUWVBFT0YoYW5zKSA9PSBSRUFMU1hQKQotCWZvciAoaSA9IDA7IGkgPCBsZW47IGkrKykgeworCWlmIChUWVBFT0YoYW5zKSA9PSBSRUFMU1hQKSB7CisJY29uc3QgZG91YmxlICpwYW5zID0gUkVBTF9STyhhbnMpOworCWZvciAoUl94bGVuX3QgaSA9IDA7IGkgPCBjb3VudDsgaSsrKSB7CiAJICAgIFNFVF9TVFJJTkdfRUxUKGFuc19ubXMsIGksCi0JCQkgICBTVFJJTkdfRUxUKHZfbm1zLCAoUl94bGVuX3QpUkVBTChhbnMpW2ldIC0gMSkpOworCQkJICAgU1RSSU5HX0VMVCh2X25tcywgKFJfeGxlbl90KXBhbnNbaV0gLSAxKSk7CiAJfQotCWVsc2UKKwl9IGVsc2UKICNlbmRpZgotCWZvciAoaSA9IDA7IGkgPCBsZW47IGkrKykgeworICAgICAgICB7CisgICAgICAgIGNvbnN0IGludCAqcGFucyA9IElOVEVHRVJfUk8oYW5zKTsKKwlmb3IgKFJfeGxlbl90IGkgPSAwOyBpIDwgY291bnQ7IGkrKykgewogCSAgICBTRVRfU1RSSU5HX0VMVChhbnNfbm1zLCBpLAotCQkJICAgU1RSSU5HX0VMVCh2X25tcywgKFJfeGxlbl90KUlOVEVHRVIoYW5zKVtpXSAtIDEpKTsKKwkJCSAgIFNUUklOR19FTFQodl9ubXMsIChSX3hsZW5fdClwYW5zW2ldIC0gMSkpOwogCX0KKyAgICAgICAgfQogCXNldEF0dHJpYihhbnMsIFJfTmFtZXNTeW1ib2wsIGFuc19ubXMpOwogCVVOUFJPVEVDVCgxKTsKICAgICB9",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true
+        },
+        {
+          "data": "LS0tIHN1bW1hcnkuYworKysgc3VtbWFyeV9icmFuY2hsZXNzLmMKQEAgLTExMzMsMTAgKzExMzMsOCBAQAogICAgIGRvdWJsZSAqYnVmID0gKGRvdWJsZSAqKSBSX2FsbG9jKGxlbiwgc2l6ZW9mKGRvdWJsZSkpOwogICAgIElURVJBVEVfQllfUkVHSU9OKHYsIHB0ciwgaWR4LCBuYiwgaW50LCBMT0dJQ0FMLCB7CiAJICAgIGZvcihSX3hsZW5fdCBpID0gMDsgaSA8IG5iOyBpKyspIHsKLQkJaWYocHRyW2ldID09IFRSVUUpIHsKIAkJICAgIGJ1ZltqXSA9IChkb3VibGUpKHhvZmZzZXQgKyBpKTsgLy8gb2Zmc2V0IGhhcyArMSBidWlsdCBpbgotCQkgICAgaisrOwotCQl9CisJCSAgICBqICs9IHB0cltpXSA9PSBUUlVFOwogCSAgICB9CiAJICAgIHhvZmZzZXQgKz0gbmI7IC8vIG1vdmUgdG8gYmVnaW5uaW5nIG9mIG5leHQgYnVmZmVyICgrMSBzaW5jZSBSLWJhc2VkKQogCX0pOwpAQCAtMTE1MywxMCArMTE1MSw4IEBACiAgICAgLyogdXNlIGl0ZXJhdGlvbiBtYWNyb3MgdG8gYmUgQUxUUkVQIHNhZmUgYW5kIHB1bGwgcHRyIHJldHJpZXZhbCBvdXQgb2YgdGlnaHQgbG9vcCAqLwogICAgIElURVJBVEVfQllfUkVHSU9OKHYsIHB0ciwgaWR4LCBuYiwgaW50LCBMT0dJQ0FMLCB7CiAJICAgIGZvcihpbnQgaSA9IDA7IGkgPCBuYjsgaSsrKSB7Ci0JCWlmKHB0cltpXSA9PSBUUlVFKSB7CiAJCSAgICBidWZbal0gPSBpb2Zmc2V0ICsgaTsgLy8gb2Zmc2V0IGhhcyArMSBidWlsdCBpbgotCQkgICAgaisrOwotCQl9CisJCSAgICBqICs9IHB0cltpXSA9PSBUUlVFOwogCSAgICB9CiAJICAgIGlvZmZzZXQgKz0gbmI7IC8vIG1vdmUgdG8gYmVnaW5uaW5nIG9mIG5leHQgYnVmZmVyCiAJfSk7Cg==",
+          "creator": "suharto_anggono",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "A branchless-only version",
+          "creation_time": "2023-03-22T09:54:24Z",
+          "bug_id": 18495,
+          "file_name": "branchless.patch",
+          "size": 844,
+          "last_change_time": "2023-03-22T09:54:24Z",
+          "id": 3158,
+          "is_private": false
+        },
+        {
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kuwisdelu",
+          "data": "SW5kZXg6IHNyYy9tYWluL3N1bW1hcnkuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9zdW1tYXJ5LmMJKHJldmlzaW9uIDkwMTk0KQorKysgc3JjL21haW4vc3VtbWFyeS5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMTM3LDEwICsxMTM3LDggQEAKICAgICBkb3VibGUgKmJ1ZiA9IChkb3VibGUgKikgUl9hbGxvYyhsZW4sIHNpemVvZihkb3VibGUpKTsKICAgICBJVEVSQVRFX0JZX1JFR0lPTih2LCBwdHIsIGlkeCwgbmIsIGludCwgTE9HSUNBTCwgewogCSAgICBmb3IoUl94bGVuX3QgaSA9IDA7IGkgPCBuYjsgaSsrKSB7Ci0JCWlmKHB0cltpXSA9PSBUUlVFKSB7Ci0JCSAgICBidWZbal0gPSAoZG91YmxlKSh4b2Zmc2V0ICsgaSk7IC8vIG9mZnNldCBoYXMgKzEgYnVpbHQgaW4KLQkJICAgIGorKzsKLQkJfQorCQlidWZbal0gPSAoZG91YmxlKSh4b2Zmc2V0ICsgaSk7IC8vIG9mZnNldCBoYXMgKzEgYnVpbHQgaW4KKwkJaiArPSBwdHJbaV0gPT0gVFJVRTsKIAkgICAgfQogCSAgICB4b2Zmc2V0ICs9IG5iOyAvLyBtb3ZlIHRvIGJlZ2lubmluZyBvZiBuZXh0IGJ1ZmZlciAoKzEgc2luY2UgUi1iYXNlZCkKIAl9KTsKQEAgLTExNTcsMTAgKzExNTUsOCBAQAogICAgIC8qIHVzZSBpdGVyYXRpb24gbWFjcm9zIHRvIGJlIEFMVFJFUCBzYWZlIGFuZCBwdWxsIHB0ciByZXRyaWV2YWwgb3V0IG9mIHRpZ2h0IGxvb3AgKi8KICAgICBJVEVSQVRFX0JZX1JFR0lPTih2LCBwdHIsIGlkeCwgbmIsIGludCwgTE9HSUNBTCwgewogCSAgICBmb3IoaW50IGkgPSAwOyBpIDwgbmI7IGkrKykgewotCQlpZihwdHJbaV0gPT0gVFJVRSkgewotCQkgICAgYnVmW2pdID0gaW9mZnNldCArIGk7IC8vIG9mZnNldCBoYXMgKzEgYnVpbHQgaW4KLQkJICAgIGorKzsKLQkJfQorCQlidWZbal0gPSBpb2Zmc2V0ICsgaTsgLy8gb2Zmc2V0IGhhcyArMSBidWlsdCBpbgorCQlqICs9IHB0cltpXSA9PSBUUlVFOwogCSAgICB9CiAJICAgIGlvZmZzZXQgKz0gbmI7IC8vIG1vdmUgdG8gYmVnaW5uaW5nIG9mIG5leHQgYnVmZmVyCiAJfSk7Cg==",
+          "is_patch": true,
+          "file_name": "branchless2.patch",
+          "bug_id": 18495,
+          "creation_time": "2026-06-26T23:50:28Z",
+          "summary": "new version of branchless which patch",
+          "is_private": false,
+          "id": 3742,
+          "last_change_time": "2026-06-26T23:50:28Z",
+          "size": 1081
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-06-26 23:50:28"
+}

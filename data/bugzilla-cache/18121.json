@@ -1,0 +1,135 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "component": "Translations",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "deadline": {},
+        "id": 18121,
+        "dupe_of": {},
+        "severity": "minor",
+        "whiteboard": "",
+        "creation_time": "2021-06-05T08:57:05Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "last_change_time": "2021-06-14T00:57:11Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "Inconsistency in .pot files for R vs src translations",
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18121": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 97390,
+            "tags": [],
+            "count": 0,
+            "bug_id": 18121,
+            "text": "`tools::xgettext2pot()` doesn't have any restrictions with respect to line width, whereas `tools::update_pkg_po()` runs command-line `xgettext` for C/C++ files, which defaults to setting `--width=79`, resulting in the following inconsistency:\n\n```\nmax(nchar(readLines(\"src/library/base/po/R.pot\")))\n# [1] 79\nmax(nchar(readLines(\"src/library/base/po/R-base.pot\")))\n# [1] 133\n```\n\nA trivial fix is to provide `--no-wrap` to the `xgettext` cmd in `tools::update_pkg_po()` here:\n\nhttps://github.com/wch/r-source/blob/da944f2022f60c11c4d70f5320ef18163b0a10cc/src/library/tools/R/translations.R#L180-L188\n\nTo achieve consistency the other way is slightly more involved, basically an edit to do add `strwrap()`-ish behavior here, probably with a helper function:\n\nhttps://github.com/wch/r-source/blob/da944f2022f60c11c4d70f5320ef18163b0a10cc/src/library/tools/R/xgettext.R#L181-L182\n\nI am happy to provide either patch. Just tell me (1) that this inconsistency is worth fixing and (2) which approach is preferred.",
+            "creation_time": "2021-06-05T08:57:05Z",
+            "time": "2021-06-05T08:57:05Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          },
+          {
+            "attachment_id": {},
+            "time": "2021-06-05T09:01:30Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "id": 97391,
+            "is_private": false,
+            "creation_time": "2021-06-05T09:01:30Z",
+            "bug_id": 18121,
+            "text": "By the way, no default `--width` is mentioned in the manual for `xgettext`:\n\nhttps://www.gnu.org/software/gettext/manual/html_node/xgettext-Invocation.html\n\nOne must instead trawl through the sources a bit to find `gettext/gettext-tools/write-catalog.c` mentioning the default is the `PAGE_WIDTH` defined in `gettext/gettext-tools/configure.ac`:\n\nhttps://git.savannah.gnu.org/gitweb/?p=gettext.git;a=blob;f=gettext-tools/src/write-catalog.c;h=c25916d1b403dc57257b85771c256bf833448f58;hb=HEAD#l72\n\nhttps://git.savannah.gnu.org/gitweb/?p=gettext.git;a=blob;f=gettext-tools/configure.ac;h=63a0b1ee56f9acd04643d03c51ba37b9c35caa88;hb=HEAD#l327",
+            "count": 1
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "time": "2021-06-06T09:23:28Z",
+            "id": 97392,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "creation_time": "2021-06-06T09:23:28Z",
+            "text": "Noting two more inconsistencies between what `xgettext` makes for the .pot file and what `tools::xgettext2pot()` does:\n\nThe top `msgid \"\"` lines don't match. The R file is missing the `Language` and `Plural-Forms` entries:\n\n```\n# * FROM src/library/base/po/R.pot *\nmsgid \"\"\nmsgstr \"\"\n\"Project-Id-Version: R 4.2.0\\n\"\n\"Report-Msgid-Bugs-To: bugs.r-project.org\\n\"\n\"POT-Creation-Date: 2021-05-03 09:56+0200\\n\"\n\"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n\"\n\"Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n\"\n\"Language-Team: LANGUAGE <LL@li.org>\\n\"\n\"Language: \\n\"\n\"MIME-Version: 1.0\\n\"\n\"Content-Type: text/plain; charset=CHARSET\\n\"\n\"Content-Transfer-Encoding: 8bit\\n\"\n\"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\\n\"\n```\n\n```\n# * FROM src/library/base/po/R-base.pot\nmsgid \"\"\nmsgstr \"\"\n\"Project-Id-Version: R 4.2.0\\n\"\n\"Report-Msgid-Bugs-To: bugs.r-project.org\\n\"\n\"POT-Creation-Date: 2021-05-03 09:56\\n\"\n\"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n\"\n\"Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n\"\n\"Language-Team: LANGUAGE <LL@li.org>\\n\"\n\"MIME-Version: 1.0\\n\"\n\"Content-Type: text/plain; charset=CHARSET\\n\"\n\"Content-Transfer-Encoding: 8bit\\n\"\n```\n\nThe `xgettext` output also adds some template note comment at the top, and marks the `msgid \"\"` message as fuzzy:\n\n```\n# * first 6 lines of src/library/base/po/R.pot *\n# SOME DESCRIPTIVE TITLE.\n# Copyright (C) YEAR The R Core Team\n# This file is distributed under the same license as the R package.\n# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.\n#\n#, fuzzy\n```\n\n - `Language: ` is always written by `xgettext`; it would be easy to add this to `tools::xgettext2pot()`\n - `Plural-Forms: ` is only written if there are plural messages. So `src/library/base/po/R.pot` has it, but none of the others do (e.g. `src/library/stats/po/stats.pot`). It would be straightforward to account for this & add it to `tools::xgettext2pot()`\n - The \"template note\" is governed by the `--copyright-holder` argument: https://git.savannah.gnu.org/gitweb/?p=gettext.git;a=blob;f=gettext-tools/src/xgettext.c;h=e9fb4a0abcca2fd34691c7d82358dc15156ca165;hb=HEAD#l2034. `tools::update_pkg_po()` accepts a `copyright` argument but `tools::xgettext2pot()` doesn't use it. The easiest fix here -- update the signature of `tools::xgettext2pot()` to accept `copyright`, then manually fill in the same strings to match the `xgettext` behavior -- is somewhat fragile (relies on `xgettext` not changing the underlying strings). FWIW if I'm reading the blame correctly, the `copyright=NULL` case hasn't changed since 2001, while the `copyright` template was updated in 2015.\n\nAs always I am happy to file a patch if R-core is interested.",
+            "bug_id": 18121,
+            "is_markdown": true,
+            "count": 2
+          },
+          {
+            "count": 3,
+            "bug_id": 18121,
+            "text": "A related inconsistency: xgettext _always_ wraps at newlines (even if the message fits within `--width`).\n\nSee e.g. https://github.com/wch/r-source/blob/d790a9dee4c82d8249df209c6b8da7070f0737fa/src/library/grDevices/po/grDevices.pot#L341-L346 as compared to https://github.com/wch/r-source/blob/d790a9dee4c82d8249df209c6b8da7070f0737fa/src/library/utils/po/R-utils.pot#L14-L15:\n\n```\n#: devPS.c:3771 devPS.c:3786\n#, c-format\nmsgid \"\"\n\"error from postscript() in running:\\n\"\n\"    %s\"\nmsgstr \"\"\n```\n\nvs\n\n```\nmsgid \"RShowDoc() should be used with a character string argument specifying\\n   a documentation file\"\nmsgstr \"\"\n```",
+            "creation_time": "2021-06-14T00:38:44Z",
+            "is_private": false,
+            "id": 97401,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2021-06-14T00:38:44Z",
+            "attachment_id": {}
+          },
+          {
+            "bug_id": 18121,
+            "text": "Another trivial difference that nonetheless would be easy to fix alongside anything else in this report:\n\n`tools::xgettext2pot()` writes an extra blank line between the metadata and main `msgid` in the `R-*.pot` files, e.g. c.f. https://github.com/wch/r-source/blob/d790a9dee4c82d8249df209c6b8da7070f0737fa/src/library/utils/po/R-utils.pot#L12 vs. https://github.com/wch/r-source/blob/d790a9dee4c82d8249df209c6b8da7070f0737fa/src/library/utils/po/utils.pot#L19\n\nA trivial fix is to eliminate the last element of the metadata written in `tools::xgettext2pot()`:\n\nhttps://github.com/wch/r-source/blob/d790a9dee4c82d8249df209c6b8da7070f0737fa/src/library/tools/R/xgettext.R#L180\n\nbecause each `msgid`/`msgstr` entry is already preceded by a blank just below:\n\nhttps://github.com/wch/r-source/blob/d790a9dee4c82d8249df209c6b8da7070f0737fa/src/library/tools/R/xgettext.R#L182",
+            "is_markdown": true,
+            "count": 4,
+            "creation_time": "2021-06-14T00:57:11Z",
+            "creator": "michaelchirico4",
+            "id": 97402,
+            "time": "2021-06-14T00:57:11Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18121": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2021-06-14 00:57:11"
+}

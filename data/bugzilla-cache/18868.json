@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "S4methods",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2025-03-07T22:06:20Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "id": 18868,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "jaganmn2",
+          "id": 3462,
+          "real_name": "Mikael Jagan"
+        },
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "'reconcilePropertiesAndPrototype' fails to reconcile slot classes inherited from multiple superclasses",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2025-03-07T22:06:20Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18868": {
+        "comments": [
+          {
+            "creation_time": "2025-03-07T22:06:20Z",
+            "bug_id": 18868,
+            "text": "Here, `reconcilePropertiesAndPrototype` (called from `setClass`) tests `extends(\"logical\", \"vector\")` and so does not complain:\n\n```\n> setClass(\"A\", contains = \"VIRTUAL\", slots = c(x = \"logical\"))\n> setClass(\"B\", contains = \"VIRTUAL\", slots = c(x = \"vector\"))\n> setClass(\"AB\", contains = c(\"A\", \"B\"))\n> showClass(\"AB\")\nClass \"AB\" [in \".GlobalEnv\"]\n\nSlots:\n              \nName:        x\nClass: logical\n\nExtends: \"A\", \"B\"\n```\n\nHere, it tests `extends(\"vector\", \"logical\")` and fails unnecessarily:\n\n```\n> setClass(\"BA\", contains = c(\"B\", \"A\"))\nError in reconcilePropertiesAndPrototype(name, slots, prototype, superClasses,  : \n  Definition of slot 'x', in class \"BA\", as \"vector\" conflicts with definition, inherited from class \"A\", as \"logical\"\n```\n\nSurely in both cases it should rather check each of `extends(\"logical\", \"vector\")` and `extends(\"vector\", \"logical\")`, keeping the more specific class (in this case `\"logical\"`) if either is `TRUE` and failing if both are `FALSE`?  Then the behaviour would be robust to the order of superclasses in `contains`.\n\nA work-around is to specify directly the reconciled slot class:\n\n```\n> setClass(\"BA\", contains = c(\"B\", \"A\"), slots = c(x = \"logical\"))\n> showClass(\"BA\")\nClass \"BA\" [in \".GlobalEnv\"]\n\nSlots:\n              \nName:        x\nClass: logical\n\nExtends: \"B\", \"A\"\n```\n\nBut then one loses one of the conveniences of the inheritance mechanism.  I'm exploring a patch ...",
+            "count": 0,
+            "tags": [],
+            "id": 101607,
+            "is_private": false,
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2025-03-07T22:06:20Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18868": []
+    }
+  },
+  "source_changed": "2025-03-07 22:06:20"
+}

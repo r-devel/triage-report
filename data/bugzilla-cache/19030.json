@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-03-26T22:51:02Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Enable constant folding of paste / paste0?",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Wishlist",
+        "assigned_to": "R-core",
+        "id": 19030,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-03-26T22:51:02Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19030": {
+        "comments": [
+          {
+            "creation_time": "2026-03-26T22:51:02Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19030,
+            "text": "Created attachment 3644\nAdd paste, paste0 to compiler:::foldFuns.\n\nA somewhat common pattern in R packages / R code is to use `paste()` and `paste0()` to construct larger strings from literals. For example:\n\n```\n  regex <- paste0(\n    \"^(?<leading_dots>[.]{0,2})\",\n    \"(?<numbers>[0-9]*)\",\n    \"(?<leftovers>[^0-9]?.*$)\"\n  )\n```\n\nCould these functions be constant folded / evaluated at compile-time during byte code compilation? If I understand correctly, they could be added to the `compiler:::foldFuns` list, and the existing infrastructure would handle it correctly out-of-the-box.\n\n```\nIndex: src/library/compiler/R/cmp.R\n===================================================================\n--- src/library/compiler/R/cmp.R\t(revision 89685)\n+++ src/library/compiler/R/cmp.R\t(working copy)\n@@ -502,7 +502,7 @@\n foldFuns <- c(\"+\", \"-\", \"*\", \"/\", \"^\", \"(\",\n               \">\", \">=\", \"==\", \"!=\", \"<\", \"<=\", \"||\", \"&&\", \"!\",\n               \"|\", \"&\", \"%%\",\n-              \"c\", \"rep\", \":\",\n+              \"c\", \"rep\", \":\", \"paste\", \"paste0\",\n               \"abs\", \"acos\", \"acosh\", \"asin\", \"asinh\", \"atan\", \"atan2\",\n               \"atanh\", \"ceiling\", \"choose\", \"cos\", \"cosh\", \"exp\", \"expm1\",\n               \"floor\", \"gamma\", \"lbeta\", \"lchoose\", \"lgamma\", \"log\", \"log10\",\n```\n\n---\n\n```\n$ R --version\nR version 4.5.3 (2026-03-11) -- \"Reassured Reassurer\"\nCopyright (C) 2026 The R Foundation for Statistical Computing\nPlatform: aarch64-apple-darwin20\n```",
+            "attachment_id": 3644,
+            "tags": [],
+            "is_private": false,
+            "id": 102808,
+            "time": "2026-03-26T22:51:02Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19030": [
+        {
+          "summary": "Add paste, paste0 to compiler:::foldFuns.",
+          "creation_time": "2026-03-26T22:51:02Z",
+          "bug_id": 19030,
+          "file_name": "paste-fold.patch",
+          "size": 675,
+          "last_change_time": "2026-03-26T22:51:02Z",
+          "id": 3644,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2NvbXBpbGVyL1IvY21wLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvY29tcGlsZXIvUi9jbXAuUgkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvbGlicmFyeS9jb21waWxlci9SL2NtcC5SCSh3b3JraW5nIGNvcHkpCkBAIC01MDIsNyArNTAyLDcgQEAKIGZvbGRGdW5zIDwtIGMoIisiLCAiLSIsICIqIiwgIi8iLCAiXiIsICIoIiwKICAgICAgICAgICAgICAgIj4iLCAiPj0iLCAiPT0iLCAiIT0iLCAiPCIsICI8PSIsICJ8fCIsICImJiIsICIhIiwKICAgICAgICAgICAgICAgInwiLCAiJiIsICIlJSIsCi0gICAgICAgICAgICAgICJjIiwgInJlcCIsICI6IiwKKyAgICAgICAgICAgICAgImMiLCAicmVwIiwgIjoiLCAicGFzdGUiLCAicGFzdGUwIiwKICAgICAgICAgICAgICAgImFicyIsICJhY29zIiwgImFjb3NoIiwgImFzaW4iLCAiYXNpbmgiLCAiYXRhbiIsICJhdGFuMiIsCiAgICAgICAgICAgICAgICJhdGFuaCIsICJjZWlsaW5nIiwgImNob29zZSIsICJjb3MiLCAiY29zaCIsICJleHAiLCAiZXhwbTEiLAogICAgICAgICAgICAgICAiZmxvb3IiLCAiZ2FtbWEiLCAibGJldGEiLCAibGNob29zZSIsICJsZ2FtbWEiLCAibG9nIiwgImxvZzEwIiwK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-03-26 22:51:02"
+}

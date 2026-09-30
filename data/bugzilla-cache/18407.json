@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Ivan Krylov",
+          "name": "ikrylov",
+          "id": 3307
+        },
+        "status": "UNCONFIRMED",
+        "creator": "ikrylov",
+        "is_creator_accessible": true,
+        "alias": [],
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "last_change_time": "2022-09-20T21:39:39Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Underscore-separated numeric literals",
+        "url": "",
+        "blocks": [],
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Wishlist",
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 18407,
+        "dupe_of": {},
+        "severity": "normal",
+        "creation_time": "2022-09-20T21:39:39Z",
+        "version": "R 4.2.x",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18407": {
+        "comments": [
+          {
+            "creator": "ikrylov",
+            "creation_time": "2022-09-20T21:39:39Z",
+            "is_markdown": true,
+            "count": 0,
+            "text": "Created attachment 3067\nPatch implementing the feature\n\nHello,\n\nFollowing [this discussion from July 2022][1], the attached patch adds the syntax for underscore-separated numeric literals, tests for the new syntax and a paragraph and an example in `?NumericConstants`. I've made sure to only allow underscores in the significant part of the number, between digits, one at a time.\n\nOther programming languages are divided between allowing or disallowing multiple consecutive underscores and regarding the freedom of positioning the underscores. I've chosen the more restricted approach in order to avoid introducing too many new cases where previously invalid syntax becomes valid. Additionally, underscores between a decimal separator and a digit shouldn't be understood as separators because `._1` is currently a valid symbol name (thanks, Bill Dunlap).\n\nThe patch slightly changes the meaning of `static int typeofnext(void)`, adding separate cases for hexadecimal digits and all other characters. Thankfully, it's `static`, and all the previous uses have been compatible with my changes: the comparison is `>` or `>=`, not `==`.\n\nOne thing that might be considered a problem is that when a syntax error is detected in what is meant to be an underscore-separated numeral, the position of the error is one character past the offending underscore.\n\nI would like to acknowledge the help of Tomasz Kalinowski in preparing this feature request.\n\n[1]: https://stat.ethz.ch/pipermail/r-devel/2022-July/081874.html",
+            "bug_id": 18407,
+            "tags": [],
+            "attachment_id": 3067,
+            "is_private": false,
+            "time": "2022-09-20T21:39:39Z",
+            "id": 99048
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18407": [
+        {
+          "creator": "ikrylov",
+          "data": "ZGlmZiAtLWdpdCBhL2RvYy9ORVdTLlJkIGIvZG9jL05FV1MuUmQKaW5kZXggNjUxZjczMTVkMS4uMmJiNzNjN2IwNyAxMDA2NDQKLS0tIGEvZG9jL05FV1MuUmQKKysrIGIvZG9jL05FV1MuUmQKQEAgLTU4LDYgKzU4LDExIEBACiAgICAgICBiYW5kIGZvciB0aGUgdHJlYXRtZW50IGZ1bmN0aW9uIHRyYW5zZm9ybWluZyB0aGUgZGlzdHJpYnV0aW9uIG9mCiAgICAgICBcY29kZXt4fSBpbnRvIHRoZSBkaXN0cmlidXRpb24gb2YgXGNvZGV7eSB9IChTd2l0emVyLCAxOTc2LAogICAgICAgQmlvbWV0cmlrYSkuIENvbnRyaWJ1dGVkIGJ5IFRvcnN0ZW4gSG90aG9ybi4gCisKKyAgICAgIFxpdGVtIFRoZSBwYXJzZXIgbm93IGFjY2VwdHMgdW5kZXJzY29yZXMgaW4gbnVtZXJpYyBsaXRlcmFsIGFzIGEKKyAgICAgIHZpc3VhbCBkaWdpdCBzZXBlcmF0b3IuIEUuZywgdGhlIGxpdGVyYWwgXGNvZGV7MV8wMDBfMDAwfSBpcyBub3cKKyAgICAgIHBhcnNlZCB0aGUgc2FtZSBhcyBcY29kZXsxMDAwMDAwfS4gQ29udHJpYnV0ZWQgYnkgSXZhbiBLcnlsb3YgaW4KKyAgICAgIFxQUnsxODQwN30uCiAgICAgfQogICB9CiAKZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL051bWVyaWNDb25zdGFudHMuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9OdW1lcmljQ29uc3RhbnRzLlJkCmluZGV4IGM3YjFjYjBlNzQuLmFhNmRkMmQ5NjIgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL051bWVyaWNDb25zdGFudHMuUmQKKysrIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vTnVtZXJpY0NvbnN0YW50cy5SZApAQCAtNTcsNiArNTcsMTAgQEAKIAogICBOb3RlIHRoYXQgYSBsZWFkaW5nIHBsdXMgb3IgbWludXMgaXMgbm90IHJlZ2FyZGVkIGJ5IHRoZSBwYXJzZXIgYXMKICAgcGFydCBvZiBhIG51bWVyaWMgY29uc3RhbnQgYnV0IGFzIGEgdW5hcnkgb3BlcmF0b3IgYXBwbGllZCB0byB0aGUgY29uc3RhbnQuCisKKyAgSW4gb3JkZXIgdG8gaGVscCBtYWtlIGxvbmcgbnVtZXJpYyBsaXRlcmFscyBtb3JlIHJlYWRhYmxlLCBpbmRpdmlkdWFsCisgIHVuZGVyc2NvcmVzIGJldHdlZW4gZGlnaXRzIGluIHRoZSBzaWduaWZpY2FudCBwYXJ0IG9mIGEgbnVtYmVyIGFyZQorICBpZ25vcmVkLCBtYWtpbmcgaXQgcG9zc2libGUgdG8gd3JpdGUgXGNvZGV7MTIzXzQ1Nl83ODl9LgogfQogXG5vdGV7CiAgIFdoZW4gYSBzdHJpbmcgaXMgcGFyc2VkIHRvIGlucHV0IGEgbnVtZXJpYyBjb25zdGFudCwgdGhlIG51bWJlciBtYXkgb3IKQEAgLTEwNyw1ICsxMTEsOCBAQCBpZGVudGljYWwoMUwsIGFzLmludGVnZXIoMSkpCiAKICMjIFlvdSBjYW4gY29tYmluZSB0aGUgIjB4IiBwcmVmaXggd2l0aCB0aGUgIkwiIHN1ZmZpeCA6CiBpZGVudGljYWwoMHhGTCwgYXMuaW50ZWdlcigxNSkpCisKKyMjIFVzZSB1bmRlcnNjb3JlcyB0byBzcGxpdCBsb25nIGxpdGVyYWxzOgorMHgxMjNfNDU2Xzc4OXAxCiB9CiBca2V5d29yZHtkb2N1bWVudGF0aW9ufQpkaWZmIC0tZ2l0IGEvc3JjL21haW4vZ3JhbS5jIGIvc3JjL21haW4vZ3JhbS5jCmluZGV4IGQ2NWM3ZjIwNjUuLjU0NGE4NjlkNmIgMTAwNjQ0Ci0tLSBhL3NyYy9tYWluL2dyYW0uYworKysgYi9zcmMvbWFpbi9ncmFtLmMKQEAgLTQzMjIsNyArNDMyMiw5IEBAIHN0YXRpYyBpbnQgdHlwZW9mbmV4dCh2b2lkKQogICAgIGludCBrLCBjOwogCiAgICAgYyA9IHh4Z2V0YygpOwotICAgIGlmIChpc2RpZ2l0KGMpKSBrID0gMTsgZWxzZSBrID0gMjsKKyAgICBpZiAoaXNkaWdpdChjKSkgayA9IDE7CisgICAgZWxzZSBpZiAoKCdhJyA8PSBjICYmIGMgPD0gJ2YnKSB8fCAoJ0EnIDw9IGMgJiYgYyA8PSAnRicpKSBrID0gMjsKKyAgICBlbHNlIGsgPSAzOwogICAgIHh4dW5nZXRjKGMpOwogICAgIHJldHVybiBrOwogfQpAQCAtNDc1Nyw3ICs0NzU5LDcgQEAgc3RhdGljIGludCBOdW1lcmljVmFsdWUoaW50IGMpCiAgICAgWVlURVhUX1BVU0goYywgeXlwKTsKICAgICAvKiBXZSBkb24ndCBjYXJlIGFib3V0IG90aGVyIHRoYW4gQVNDSUkgZGlnaXRzICovCiAgICAgd2hpbGUgKGlzZGlnaXQoYyA9IHh4Z2V0YygpKSB8fCBjID09ICcuJyB8fCBjID09ICdlJyB8fCBjID09ICdFJwotCSAgIHx8IGMgPT0gJ3gnIHx8IGMgPT0gJ1gnIHx8IGMgPT0gJ0wnKQorCSAgIHx8IGMgPT0gJ3gnIHx8IGMgPT0gJ1gnIHx8IGMgPT0gJ0wnIHx8IGMgPT0gJ18nKQogICAgIHsKIAljb3VudCsrOwogCWlmIChjID09ICdMJykgLyogbXVzdCBiZSBhdCB0aGUgZW5kLiAgV29uJ3QgYWxsb3cgMUxlMyAoYXQgcHJlc2VudCkuICovCkBAIC00NzY5LDExICs0NzcxLDE2IEBAIHN0YXRpYyBpbnQgTnVtZXJpY1ZhbHVlKGludCBjKQogCSAgICBpZiAoY291bnQgPiAyIHx8IGxhc3QgIT0gJzAnKSBicmVhazsgIC8qIDB4IG11c3QgYmUgZmlyc3QgKi8KIAkgICAgWVlURVhUX1BVU0goYywgeXlwKTsKIAkgICAgd2hpbGUoaXNkaWdpdChjID0geHhnZXRjKCkpIHx8ICgnYScgPD0gYyAmJiBjIDw9ICdmJykgfHwKLQkJICAoJ0EnIDw9IGMgJiYgYyA8PSAnRicpIHx8IGMgPT0gJy4nKSB7CisJCSAgKCdBJyA8PSBjICYmIGMgPD0gJ0YnKSB8fCBjID09ICcuJyB8fCBjID09ICdfJykgewogCQlpZiAoYyA9PSAnLicpIHsKIAkJICAgIGlmIChzZWVuZG90KSByZXR1cm4gRVJST1I7CiAJCSAgICBzZWVuZG90ID0gMTsKIAkJfQorCQlpZiAoYyA9PSAnXycpIHsKKwkJICAgIC8qIGRpc2FsbG93IHVuZGVyc2NvcmVzIGZvbGxvd2luZyAweCBvciBmb2xsb3dlZCBieSBub24taGV4ZGlnaXQgKi8KKwkJICAgIGlmIChuZCA9PSAwIHx8IHR5cGVvZm5leHQoKSA+PSAzKSBicmVhazsKKwkJICAgIGNvbnRpbnVlOworCQl9CiAJCVlZVEVYVF9QVVNIKGMsIHl5cCk7CiAJCW5kKys7CiAJICAgIH0KQEAgLTQ4MTksNiArNDgyNiwxMSBAQCBzdGF0aWMgaW50IE51bWVyaWNWYWx1ZShpbnQgYykKIAkJYnJlYWs7CiAJICAgIHNlZW5kb3QgPSAxOwogCX0KKwkvKiB1bmRlcnNjb3JlcyBpbiBzaWduaWZpY2FuZCBmb2xsb3dlZCBieSBhIGRpZ2l0IG11c3QgYmUgc2tpcHBlZCAqLworCWlmIChjID09ICdfJykgeworCSAgICBpZiAoc2VlbmV4cCB8fCB0eXBlb2ZuZXh0KCkgPj0gMikgYnJlYWs7CisJICAgIGNvbnRpbnVlOworCX0KIAlZWVRFWFRfUFVTSChjLCB5eXApOwogCWxhc3QgPSBjOwogICAgIH0KZGlmZiAtLWdpdCBhL3NyYy9tYWluL2dyYW0ueSBiL3NyYy9tYWluL2dyYW0ueQppbmRleCBhNjIzODI4NzY4Li41N2VmYTA4NjVmIDEwMDY0NAotLS0gYS9zcmMvbWFpbi9ncmFtLnkKKysrIGIvc3JjL21haW4vZ3JhbS55CkBAIC0yMDkxLDcgKzIwOTEsOSBAQCBzdGF0aWMgaW50IHR5cGVvZm5leHQodm9pZCkKICAgICBpbnQgaywgYzsKIAogICAgIGMgPSB4eGdldGMoKTsKLSAgICBpZiAoaXNkaWdpdChjKSkgayA9IDE7IGVsc2UgayA9IDI7CisgICAgaWYgKGlzZGlnaXQoYykpIGsgPSAxOworICAgIGVsc2UgaWYgKCgnYScgPD0gYyAmJiBjIDw9ICdmJykgfHwgKCdBJyA8PSBjICYmIGMgPD0gJ0YnKSkgayA9IDI7CisgICAgZWxzZSBrID0gMzsKICAgICB4eHVuZ2V0YyhjKTsKICAgICByZXR1cm4gazsKIH0KQEAgLTI1MjYsNyArMjUyOCw3IEBAIHN0YXRpYyBpbnQgTnVtZXJpY1ZhbHVlKGludCBjKQogICAgIFlZVEVYVF9QVVNIKGMsIHl5cCk7CiAgICAgLyogV2UgZG9uJ3QgY2FyZSBhYm91dCBvdGhlciB0aGFuIEFTQ0lJIGRpZ2l0cyAqLwogICAgIHdoaWxlIChpc2RpZ2l0KGMgPSB4eGdldGMoKSkgfHwgYyA9PSAnLicgfHwgYyA9PSAnZScgfHwgYyA9PSAnRScKLQkgICB8fCBjID09ICd4JyB8fCBjID09ICdYJyB8fCBjID09ICdMJykKKwkgICB8fCBjID09ICd4JyB8fCBjID09ICdYJyB8fCBjID09ICdMJyB8fCBjID09ICdfJykKICAgICB7CiAJY291bnQrKzsKIAlpZiAoYyA9PSAnTCcpIC8qIG11c3QgYmUgYXQgdGhlIGVuZC4gIFdvbid0IGFsbG93IDFMZTMgKGF0IHByZXNlbnQpLiAqLwpAQCAtMjUzOCwxMSArMjU0MCwxNiBAQCBzdGF0aWMgaW50IE51bWVyaWNWYWx1ZShpbnQgYykKIAkgICAgaWYgKGNvdW50ID4gMiB8fCBsYXN0ICE9ICcwJykgYnJlYWs7ICAvKiAweCBtdXN0IGJlIGZpcnN0ICovCiAJICAgIFlZVEVYVF9QVVNIKGMsIHl5cCk7CiAJICAgIHdoaWxlKGlzZGlnaXQoYyA9IHh4Z2V0YygpKSB8fCAoJ2EnIDw9IGMgJiYgYyA8PSAnZicpIHx8Ci0JCSAgKCdBJyA8PSBjICYmIGMgPD0gJ0YnKSB8fCBjID09ICcuJykgeworCQkgICgnQScgPD0gYyAmJiBjIDw9ICdGJykgfHwgYyA9PSAnLicgfHwgYyA9PSAnXycpIHsKIAkJaWYgKGMgPT0gJy4nKSB7CiAJCSAgICBpZiAoc2VlbmRvdCkgcmV0dXJuIEVSUk9SOwogCQkgICAgc2VlbmRvdCA9IDE7CiAJCX0KKwkJaWYgKGMgPT0gJ18nKSB7CisJCSAgICAvKiBkaXNhbGxvdyB1bmRlcnNjb3JlcyBmb2xsb3dpbmcgMHggb3IgZm9sbG93ZWQgYnkgbm9uLWhleGRpZ2l0ICovCisJCSAgICBpZiAobmQgPT0gMCB8fCB0eXBlb2ZuZXh0KCkgPj0gMykgYnJlYWs7CisJCSAgICBjb250aW51ZTsKKwkJfQogCQlZWVRFWFRfUFVTSChjLCB5eXApOwogCQluZCsrOwogCSAgICB9CkBAIC0yNTg4LDYgKzI1OTUsMTEgQEAgc3RhdGljIGludCBOdW1lcmljVmFsdWUoaW50IGMpCiAJCWJyZWFrOwogCSAgICBzZWVuZG90ID0gMTsKIAl9CisJLyogdW5kZXJzY29yZXMgaW4gc2lnbmlmaWNhbmQgZm9sbG93ZWQgYnkgYSBkaWdpdCBtdXN0IGJlIHNraXBwZWQgKi8KKwlpZiAoYyA9PSAnXycpIHsKKwkgICAgaWYgKHNlZW5leHAgfHwgdHlwZW9mbmV4dCgpID49IDIpIGJyZWFrOworCSAgICBjb250aW51ZTsKKwl9CiAJWVlURVhUX1BVU0goYywgeXlwKTsKIAlsYXN0ID0gYzsKICAgICB9CmRpZmYgLS1naXQgYS90ZXN0cy9yZWctdGVzdHMtMWQuUiBiL3Rlc3RzL3JlZy10ZXN0cy0xZC5SCmluZGV4IGVmZGU0Y2RjMzQuLjE4NTJmYWUxYzQgMTAwNjQ0Ci0tLSBhL3Rlc3RzL3JlZy10ZXN0cy0xZC5SCisrKyBiL3Rlc3RzL3JlZy10ZXN0cy0xZC5SCkBAIC01OTA1LDYgKzU5MDUsMjkgQEAgc3RvcGlmbm90KGV4cHJzID0gewogIyMgZ2F2ZSBqdXN0IHNpbXBsZUVycm9yIHM7IG5vIGxpbmU6Y29sdW1uIG51bWJlcnMgaW4gUiA8PSA0LjIuMAogCiAKKyMjU3VwcG9ydCBmb3IgcGFyc2luZyBudW1lcmljIGxpdGVyYWxzIHdpdGggdW5kZXJzY29yZSBzZXBlcmF0b3JzCitzdG9waWZub3QoZXhwcnMgPSB7CisgICAgaWRlbnRpY2FsKDEyMywgMV8yXzMpCisgICAgaWRlbnRpY2FsKDEyMzQ1Njc4OTAsIDFfMjM0XzU2N184OTApCisgICAgaWRlbnRpY2FsKDEyMzQ1Njc4OTBMLCAxXzIzNF81NjdfODkwTCkKKyAgICBpZGVudGljYWwoMTIzLCAxXzJfMykKKyAgICBpZGVudGljYWwoMTJlMywgMV8yZTMpCisgICAgaWRlbnRpY2FsKDB4YTIsIDB4YV8yKQorICAgIGlkZW50aWNhbCgweGFhLCAweGFfYSkKKyAgICBpZGVudGljYWwoMHhhYXAxLCAweGFfYXAxKQorfSkKKworZm9yIChzIGluIGMoCisjIFVuZGVyc2NvcmUgbm90IGJldHdlZW4gZGlnaXRzIG9yIG91dHNpZGUgc2lnbmlmaWNhbmQgaXMgaW52YWxpZAorICAgICdfMTIzJywgJzEyM18nLAorICAgICcxMjNfTCcsICcxMjNMXycsCisgICAgJzEyM19lMScsICcxMjNlXzEnLCAnMTIzZTFfJywKKyAgICAnMHhfYScsICcweGFfJywKKyAgICAnMHhhcF8xMicsICcweGFwMV8yJywKKyMgYW5kIHNvIGFyZSBtdWx0aXBsZSB1bmRlcnNjb3JlcyBhbnl3aGVyZQorICAgICcxX18yMycsICcweDFfXzIzJworKSkgYXNzZXJ0RXJyVihzdHIybGFuZyhzKSkKKwogIyMgZmlzaGVyLnRlc3QoKSB3aXRoICJ0b28gZnVsbCIgdGFibGU6ICBQUiMxODMzNgogZCA8LSBtYXRyaXgoYygxLDAsNSwyLDEsOTAKICAgICAgICAgICAgICAsMiwxLDAsMiwzLDg5Cg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2022-09-20T21:39:39Z",
+          "summary": "Patch implementing the feature",
+          "file_name": "underscore-numerals.patch",
+          "bug_id": 18407,
+          "last_change_time": "2022-09-20T21:39:39Z",
+          "size": 5866,
+          "is_private": false,
+          "id": 3067
+        }
+      ]
+    }
+  },
+  "source_changed": "2022-09-20 21:39:39"
+}

@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R 3.2.2",
+        "creation_time": "2015-11-27T23:15:12Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "kevinushey"
+        ],
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 16615,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "summary": "Allow multi-character separator in scan()",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-05-18T20:37:33Z",
+        "cc_detail": [
+          {
+            "real_name": "Kevin Ushey",
+            "name": "kevinushey",
+            "id": 1044
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "mekki",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Mekki MacAulay",
+          "name": "mekki",
+          "id": 2728
+        },
+        "resolution": "",
+        "status": "TRIAGED"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "16615": {
+        "comments": [
+          {
+            "bug_id": 16615,
+            "text": "Overview: \n\nThe scan() function, used by the read functions and others, only allows a single byte as separator (sep).  While this is fine for simple datasets, it's problematic for complex data sets such as those that might contain lengthy comments, byte dumps, embedded newlines, and so on.\n\nIt would be very helpful to be able to specify a multi-character separator.\n\nSteps to Reproduce: (Borrowed from the documentation for base::scan())\n\nsep: by default, scan expects to read ‘white-space’ delimited input fields. Alternatively, sep can be used to specify a character which delimits fields. A field is always delimited by an end-of-line marker unless it is quoted.  If specified this should be the empty character string (the default) or NULL or a character string containing just one single-byte character.\n\n\nActual Results: Only a single separator character can be used.\n\nExpected (desired) Results: Multiple separator characters can be used.  This is particularly important for cases where text files with arbitrary characters, possibly with unmatched quotes (of any type) are being parsed.  The only way to handle such files is to create a ridiculously long separator that is not likely to show up in the dataset, such as sep='|%$!?MYSEPARATOR?!$%|', and work with that.  Incidentally, the write functions allow multi-character separators, but their read counterparts do not (because of the scan() limitation).\n\nBuild Date & Hardware & Additional Builds and Platforms: All (Base).\n\nAdditional Information:  \n\nThis issue has been challenging for many R users who are working on data with either nonstandard separators or arbitrary character content.  In the case of nonstandard separators, most of them have resorted to pre-processing outside of R, which is a shame.  However, in the case of arbitrary character content parsing, external parsing doesn't resolve the issue, since reading back into R simply recreates the issue.  Further, stringsplit()/readLines() based solutions are fine except for the parsing of data with embedded newlines, which also becomes a problem.  The ability to set an arbitrary separator with write() already exists to address this issue.  We just need the ability to read arbitrary separators as a counterpart.\n\nHere are some of the threads that I found while searching for solutions to this issue.  Note that none of them address the arbitrary data parsing cases with embedded newlines:\n\nhttp://stackoverflow.com/questions/18186357/importing-csv-file-with-multiple-character-separator-to-r\n\nhttp://r.789695.n4.nabble.com/multiple-separators-in-sep-argument-for-read-table-td856567.html\n\nhttp://stackoverflow.com/questions/7883859/how-to-read-a-text-file-into-gnu-r-with-a-multiple-byte-separator\n\nhttps://www.mail-archive.com/r-help@r-project.org/msg18035.html\n\nhttp://stackoverflow.com/questions/2732397/why-the-field-separator-character-must-be-only-one-byte\n\nhttp://stackoverflow.com/questions/17223844/one-byte-separator-argument-in-read-table\n\nhttp://stackoverflow.com/questions/29740992/r-invalid-sep-value-must-be-one-byte",
+            "count": 0,
+            "is_markdown": false,
+            "creation_time": "2015-11-27T23:15:12Z",
+            "creator": "mekki",
+            "id": 91260,
+            "time": "2015-11-27T23:15:12Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 103085,
+            "time": "2026-05-18T20:37:33Z",
+            "creation_time": "2026-05-18T20:37:33Z",
+            "creator": "kevinushey",
+            "count": 1,
+            "is_markdown": true,
+            "bug_id": 16615,
+            "text": "Making this change is harder than it looks, unfortunately, and so I think this is unlikely to happen. I suspect the simplest change here would be to recommend an alternate tool for when one wants to read data using multi-byte separators, or to perform some amount of preprocessing and perhaps post-processing to transform separators into a single byte.\n\nSome more analysis below.\n\n---\n\n  The relevant code is src/main/scan.c. The inner reader (fillBuffer, lines\n  ~397-456) consumes one byte at a time and tests it against a single int\n  sepchar, with exactly one byte of pushback (LocalData.save, unscanchar at\n  line 231). Allowing a multi-byte separator changes several things at once:\n\n  1. Look-ahead and rollback. On seeing the first byte of sep, we have to\n     read up to N-1 more bytes and either commit (it was the separator) or\n     back out, copying the consumed prefix into the field. The existing\n     1-byte pushback isn't enough.\n\n  2. CSV-style quoting. The current code peeks one byte after a closing\n     quote to decide \"is this the separator or end-of-line?\" That peek\n     becomes a multi-byte compare with the same rollback issue.\n\n  3. DBCS locales. The reader is byte-oriented but treats DBCS lead/trail\n     bytes specially. A multi-byte separator must not be allowed to straddle\n     a character boundary, which adds another validity check.\n\n  4. strip.white interactions. A separator like \" | \" or \"\\t|\\t\" makes the\n     trim rules ambiguous and needs documented precedence.\n\n  5. Embedded newlines. This is the bigger issue for the use case you\n     describe. scan() unconditionally treats \\n, \\r, and EOF as record\n     terminators (see lines 398-399). Even with a multi-byte field\n     separator, an embedded newline still breaks the record. So multi-byte\n     sep alone wouldn't actually solve the \"arbitrary character content\"\n     problem you mention -- it solves the collision problem, but not the\n     embedded-newline problem.\n\n  None of this is unfixable, but it's a delicate change in a hot,\n  locale-sensitive path, with a wide test surface across scan/read.table/\n  read.csv. The bar to land it is high.\n\n\n  Alternatives\n  ------------\n\n  For the \"delimiter unlikely to collide with data\" case, the canonical\n  solution is a single-byte ASCII control character. C0 0x1E (Record\n  Separator) and 0x1F (Unit Separator) were reserved by ASCII for exactly\n  this purpose and never appear in well-formed text:\n\n      sep = \"\\x1f\"   # Unit Separator: between fields\n                     # \\x1e Record Separator: between records\n\n  This works with current scan() and is strictly stronger than a long\n  sentinel string, because the byte is by construction absent from text\n  payloads.\n\n  If the data already arrives with a multi-byte separator and you can't\n  change the producer, substitute before parsing:\n\n      raw <- readChar(path, file.info(path)$size, useBytes = TRUE)\n      raw <- gsub(\"|%$!?MYSEP?!$%|\", \"\\x1f\", raw,\n                  fixed = TRUE, useBytes = TRUE)\n\n  Reading the whole file in one shot (rather than line-at-a-time) avoids\n  the issue that readLines()-based approaches have with embedded newlines.\n\n  If your fields can also contain literal \\n characters that should not\n  terminate a record, you'll need to substitute those too (e.g. to \\x1e)\n  before handing to scan()."
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "16615": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-05-18 20:37:33"
+}

@@ -1,0 +1,150 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-05-28T23:30:22Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "lawremi"
+        ],
+        "qa_contact": "",
+        "severity": "minor",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19079,
+        "assigned_to": "R-core",
+        "component": "S4methods",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "summary": "S4 packages with group methods error with \"subscript out of bounds\" under unloadNamespace with Imports: methods",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "id": 1249,
+            "name": "lawremi",
+            "real_name": "Michael Lawrence"
+          }
+        ],
+        "last_change_time": "2026-05-29T06:28:25Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "NEW"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19079": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2026-05-28T23:30:22Z",
+            "id": 103128,
+            "attachment_id": 3716,
+            "tags": [],
+            "count": 0,
+            "is_markdown": true,
+            "text": "Created attachment 3716\nPrevent uncaching \"other\" packages' generics\n\nSimilar to Bug #18540, I found that the CRAN package {spam} fails to unload because it uses `Imports: methods` instead of `Depends: methods`:\n\n```\nR_DEFAULT_PACKAGES=NULL Rscript -e \"loadNamespace('spam'); unloadNamespace('spam')\"\n# <environment: namespace:spam>\n# Error in generics[[i]] : subscript out of bounds\n# Calls: unloadNamespace ... .updateMethodsInTable -> .updateMethodsInTable -> .checkGroupSigLength\n# Execution halted\n```\n\nAs discussed there and added in r84688 to WRE, as of now it's generally encouraged to just use `Depends: methods` for S4 packages to work around such issues.\n\nNevertheless, the bug is quite hard to make sense of, so a fix would be nice.\n\nI deployed a friendly LLM (Gemini) to diagnose and fix the issue, and it wrote a very simple fix, as attached here with a corresponding regression test. Its internal reasoning to the root cause is as follows:\n\n---\n\nThe crash is a result of over-eager uncaching combined with R-specific list behaviors:\n\n1.  **Over-eager Uncaching**: When `unloadNamespace(\"myTstS4\")` runs, it calls `methods::cacheMetaData(ns, FALSE, ns)` to clean up S4 metadata.\n    *   Inside `cacheMetaData`, it loops over all generics the package has methods for.\n    *   If `attach = FALSE` (detaching/unloading), it calls `.uncacheGeneric(f, fdef)` for **all** these generics, even if they belong to other packages (e.g., base generics like `Math` or `Ops` defined in `base`/`methods`).\n    *   This completely deletes the generic (e.g., `Math`) from the `methods` internal cache (`.genericTable`).\n\n2.  **Cache Miss in Minimal Session**: Later, `.updateMethodsInTable` is called to remove the package's methods from the generic.\n    *   For a group generic (like `Math`), it loops over its members (e.g., `abs`).\n    *   For each member, it calls `.updateMethodsInTable(abs_generic)`.\n    *   Since `abs` belongs to group `Math`, it calls `getGeneric(\"Math\")` to verify signature lengths in `.checkGroupSigLength`.\n    *   Since `Math` was just removed from the cache, and `methods` is not attached (so it is not on the search path), `getGeneric(\"Math\")` fails to find it and silently returns `NULL`.\n\n3.  **R List Assignment & `unlist()` Gotcha**:\n    *   In `.updateMethodsInTable`, the list of generics is constructed:\n        ```\n        generics <- vector(\"list\", length(groups))\n        for(i in seq_along(groups))\n            generics[[i]] <- getGeneric(groups[[i]])\n        ```\n    *   If `getGeneric` returns `NULL`, the assignment `generics[[i]] <- NULL` **deletes** the element from the list, reducing the list's length (e.g., from 1 to 0).\n    *   Inside `.checkGroupSigLength`, when `recall` is triggered, it calls `Recall(unlist(gnames, FALSE), unlist(generics, FALSE))`.\n    *   `unlist()` silently drops `NULL` elements from lists.\n    *   This causes the `generics` list to become shorter than the `gnames` list.\n    *   In the recursive call, the loop `for(i in seq_along(gnames))` attempts to access `generics[[i]]` where `i` is out of bounds, triggering the `subscript out of bounds` crash.\n\nThe fix restricts uncaching to only those generics that actually belong to the package being unloaded.\n\n---\n\nEven if the suggested fix is found deficient, I hope this diagnosis points the way to a fix.\n\nThis is tested on r-svn: https://github.com/r-devel/r-svn/pull/258",
+            "bug_id": 19079,
+            "creator": "michaelchirico4",
+            "creation_time": "2026-05-28T23:30:22Z"
+          },
+          {
+            "is_private": false,
+            "id": 103129,
+            "time": "2026-05-29T00:38:59Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 19079,
+            "text": "Thanks for the report and the suggested fix.\n\nOne thing to watch out for with S4 generics is that `@package` points to the package defining the function that the generic represents. So for example if a package does `setGeneric(\"nrow\", ...)`, `@package` will be \"base\", and with this fix, the `nrow()` methods would remain. \n\nWhy not see what your friend does with that feedback :)",
+            "creation_time": "2026-05-29T00:38:59Z",
+            "creator": "lawremi"
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": 3717,
+            "time": "2026-05-29T06:28:25Z",
+            "creation_time": "2026-05-29T06:28:25Z",
+            "bug_id": 19079,
+            "text": "Created attachment 3717\nUpdated patch for unloading generics without methods to handle e.g. base generics better\n\nGreat point! I was content to just let the unload process only finish partially in that case, but indeed our friend was able to push further by looking for the definition in the correct environment.\n\nUpdated here and on GitHub with a new test case ensuring `nrow()` reverts to non-generic after unloading the test package: `stopifnot(!isGeneric('nrow'))`",
+            "count": 2,
+            "tags": [],
+            "id": 103130,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19079": [
+        {
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9STWV0aG9kVXRpbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIJKHJldmlzaW9uIDkwMDg1KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JNZXRob2RVdGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC05MDMsOCArOTAzLDkgQEAKICAgICAgICAgICAgIG5leHQgIyMgc2lsZW50bHkgaWdub3JlcyBhbGwgZ2VuZXJpY3Mgbm90IHZpc2libGUgZnJvbSBzZWFyY2hXaGVyZQogICAgICAgICBpZihhdHRhY2gpIHsKICAgICAgICAgICAgIC5jYWNoZUdlbmVyaWMoZiwgZmRlZikKLSAgICAgICAgfSBlbHNlCisgICAgICAgIH0gZWxzZSBpZihpZGVudGljYWwoZmRlZkBwYWNrYWdlLCBwa2cpKSB7CiAgICAgICAgICAgICAudW5jYWNoZUdlbmVyaWMoZiwgZmRlZikKKyAgICAgICAgfQogICAgICAgICBtZXRob2RzIDwtIC51cGRhdGVNZXRob2RzSW5UYWJsZShmZGVmLCB3aGVyZSwgYXR0YWNoKQogICAgICAgICBjYWNoZUdlbmVyaWNzTWV0YURhdGEoZiwgZmRlZiwgYXR0YWNoLCB3aGVyZSwgZmRlZkBwYWNrYWdlLCBtZXRob2RzKQogICAgICAgICBpZigudHIpIG1lc3NhZ2UoIi0tLSBkb25lIGdldHRpbmcgZ2VuZXJpYyAiLCBzUXVvdGUoZikpCkluZGV4OiB0ZXN0cy9yZWctcGFja2FnZXMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctcGFja2FnZXMuUgkocmV2aXNpb24gOTAwODUpCisrKyB0ZXN0cy9yZWctcGFja2FnZXMuUgkod29ya2luZyBjb3B5KQpAQCAtOTcsNiArOTcsNTAgQEAKIHN0b3BpZm5vdChzbUBuYW1lcyA9PSAiZm9vIikKIHVubGluaygibXlUc3RfKiIpCiAKKyMjIFRlc3QgdW5sb2FkaW5nIGEgcGFja2FnZSB0aGF0IGltcG9ydHMgbWV0aG9kcyBhbmQgZGVmaW5lcyBTNCBtZXRob2RzCisjIyBpbiBhIG1pbmltYWwgc2Vzc2lvbiAobWV0aG9kcyBsb2FkZWQgYnV0IG5vdCBhdHRhY2hlZCkuCitsb2NhbCh7CisgIHRtcCA8LSB0ZW1wZmlsZShmaWxlZXh0ID0gIi5SIikKKyAgb24uZXhpdCh1bmxpbmsodG1wKSkKKyAgd3JpdGVMaW5lcyhjKAorICAgICAgInNldENsYXNzKCdmb28nLCBjb250YWlucz0nbnVtZXJpYycpIiwKKyAgICAgICJzZXRNZXRob2QoJ01hdGgnLCAnZm9vJywgZnVuY3Rpb24oeCkgeCkiCisgICksIHRtcCkKKyAgcGFja2FnZS5za2VsZXRvbigibXlUc3RTNCIsIGNvZGVfZmlsZXM9dG1wKQorICBvbi5leGl0KHVubGluaygibXlUc3RTNCIsIHJlY3Vyc2l2ZT1UUlVFKSwgYWRkPVRSVUUpCisKKyAgIyBwYWNrYWdlLnNrZWxldG9uIGF1dG9tYXRpY2FsbHkgYWRkcyBJbXBvcnRzOiBtZXRob2RzIHRvIERFU0NSSVBUSU9OIGluIG5ld2VyIFIuCisgICMgQnV0IHdlIG11c3QgZW5zdXJlIGl0IGltcG9ydHMgbWV0aG9kcyBpbiBOQU1FU1BBQ0UgZm9yIG1pbmltYWwgc2Vzc2lvbi4KKyAgd3JpdGVMaW5lcyhjKCJpbXBvcnQobWV0aG9kcykiLCByZWFkTGluZXMoIm15VHN0UzQvTkFNRVNQQUNFIikpLCAibXlUc3RTNC9OQU1FU1BBQ0UiKQorCisgIGJ1aWxkLnBrZygibXlUc3RTNCIpCisgIG9uLmV4aXQodW5saW5rKFN5cy5nbG9iKCJteVRzdFM0XyoiKSksIGFkZD1UUlVFKQorCisgIGluc3RhbGwucGFja2FnZXMoIm15VHN0UzQiLCBsaWI9Im15TGliIiwgcmVwb3M9TlVMTCwgdHlwZT0ic291cmNlIikKKyAgb24uZXhpdCh1bmxpbmsoIm15TGliL215VHN0UzQiLCByZWN1cnNpdmU9VFJVRSksIGFkZD1UUlVFKQorCisgICMgTm93IHJ1biB0aGUgdW5sb2FkIHRlc3QgaW4gYSBtaW5pbWFsIHNlc3Npb24KKyAgUnNjcmlwdCA8LSBmaWxlLnBhdGgoUi5ob21lKCJiaW4iKSwgIlJzY3JpcHQiKQorICBjbWQgPC0gc3ByaW50ZigibG9hZE5hbWVzcGFjZSgnbXlUc3RTNCcsIGxpYi5sb2M9JyVzJyk7IHVubG9hZE5hbWVzcGFjZSgnbXlUc3RTNCcpIiwKKyAgICAgICAgICAgICAgICAgbm9ybWFsaXplUGF0aCgibXlMaWIiLCB3aW5zbGFzaCA9ICIvIikpCisKKyAgb2xkX2RlZmF1bHRzIDwtIFN5cy5nZXRlbnYoIlJfREVGQVVMVF9QQUNLQUdFUyIsIHVuc2V0ID0gTkEpCisgIFN5cy5zZXRlbnYoUl9ERUZBVUxUX1BBQ0tBR0VTID0gIk5VTEwiKQorICBpZiAoaXMubmEob2xkX2RlZmF1bHRzKSkKKyAgICBvbi5leGl0KFN5cy51bnNldGVudigiUl9ERUZBVUxUX1BBQ0tBR0VTIiksIGFkZD1UUlVFKQorICBlbHNlCisgICAgb24uZXhpdChTeXMuc2V0ZW52KFJfREVGQVVMVF9QQUNLQUdFUyA9IG9sZF9kZWZhdWx0cyksIGFkZD1UUlVFKQorCisgIHJlcyA8LSBzeXN0ZW0yKFJzY3JpcHQsIGMoIi0tdmFuaWxsYSIsICItZSIsIHNoUXVvdGUoY21kKSksCisgICAgICAgICAgICAgICAgIHN0ZG91dD1UUlVFLCBzdGRlcnI9VFJVRSkKKyAgc3RhdHVzIDwtIGF0dHIocmVzLCAic3RhdHVzIikKKyAgaWYgKCFpcy5udWxsKHN0YXR1cykgJiYgc3RhdHVzICE9IDApIHsKKyAgICAgIGNhdCgiRmFpbGVkIHRvIHVubG9hZCBteVRzdFM0IGluIG1pbmltYWwgc2Vzc2lvbjpcbiIpCisgICAgICBjYXQocmVzLCBzZXAgPSAiXG4iKQorICAgICAgc3RvcCgicmVncmVzc2lvbiB0ZXN0IGZhaWxlZCIpCisgIH0KK30pCisKICMjIHRlc3Qgd2FybmluZ3MgZm9yIG1pc3NpbmcvYXV0b2dlbmVyYXRlZCBSZCBjb250ZW50CiBvd2QgPC0gc2V0d2QoIm15VHN0IikgICMgKGN1cnJlbnRseSkgbmVlZGVkIGZvciBcU2V4cHIgbWFjcm9zCiBwcm9tcHQoaWRlbnRpdHksIGZpbGVuYW1lID0gIm1hbi9pZGVudGl0eS5SZCIpCg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true,
+          "is_patch": true,
+          "creation_time": "2026-05-28T23:30:22Z",
+          "summary": "Prevent uncaching \"other\" packages' generics",
+          "file_name": "s4-unload (1).patch",
+          "bug_id": 19079,
+          "last_change_time": "2026-05-29T06:28:25Z",
+          "size": 2857,
+          "is_private": false,
+          "id": 3716
+        },
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9STWV0aG9kVXRpbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIJKHJldmlzaW9uIDkwMDg1KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JNZXRob2RVdGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC04MTUsNiArODE1LDcgQEAKICAgICBmdW5jdGlvbih3aGVyZSwgYXR0YWNoID0gVFJVRSwgc2VhcmNoV2hlcmUgPSBhcy5lbnZpcm9ubWVudCh3aGVyZSksCiAgICAgICAgICAgICAgZG9DaGVjayA9IFRSVUUpCiB7CisgICAgZW52IDwtIGFzLmVudmlyb25tZW50KHdoZXJlKQogICAgICMjIGEgY29sbGVjdGlvbiBvZiBhY3Rpb25zIHBlcmZvcm1lZCBvbiBhdHRhY2ggb3IgZGV0YWNoCiAgICAgIyMgdG8gdXBkYXRlIGNsYXNzIGFuZCBtZXRob2QgaW5mb3JtYXRpb24uCiAgICAgcGtnIDwtIGdldFBhY2thZ2VOYW1lKHdoZXJlKQpAQCAtOTAzLDggKzkwNCw5IEBACiAgICAgICAgICAgICBuZXh0ICMjIHNpbGVudGx5IGlnbm9yZXMgYWxsIGdlbmVyaWNzIG5vdCB2aXNpYmxlIGZyb20gc2VhcmNoV2hlcmUKICAgICAgICAgaWYoYXR0YWNoKSB7CiAgICAgICAgICAgICAuY2FjaGVHZW5lcmljKGYsIGZkZWYpCi0gICAgICAgIH0gZWxzZQorICAgICAgICB9IGVsc2UgaWYoZXhpc3RzKGYsIGVudmlyID0gZW52LCBpbmhlcml0cyA9IEZBTFNFKSkgewogICAgICAgICAgICAgLnVuY2FjaGVHZW5lcmljKGYsIGZkZWYpCisgICAgICAgIH0KICAgICAgICAgbWV0aG9kcyA8LSAudXBkYXRlTWV0aG9kc0luVGFibGUoZmRlZiwgd2hlcmUsIGF0dGFjaCkKICAgICAgICAgY2FjaGVHZW5lcmljc01ldGFEYXRhKGYsIGZkZWYsIGF0dGFjaCwgd2hlcmUsIGZkZWZAcGFja2FnZSwgbWV0aG9kcykKICAgICAgICAgaWYoLnRyKSBtZXNzYWdlKCItLS0gZG9uZSBnZXR0aW5nIGdlbmVyaWMgIiwgc1F1b3RlKGYpKQpJbmRleDogdGVzdHMvcmVnLXBhY2thZ2VzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXBhY2thZ2VzLlIJKHJldmlzaW9uIDkwMDg1KQorKysgdGVzdHMvcmVnLXBhY2thZ2VzLlIJKHdvcmtpbmcgY29weSkKQEAgLTk3LDYgKzk3LDEwMSBAQAogc3RvcGlmbm90KHNtQG5hbWVzID09ICJmb28iKQogdW5saW5rKCJteVRzdF8qIikKIAorIyMgVGVzdCB1bmxvYWRpbmcgYSBwYWNrYWdlIHRoYXQgaW1wb3J0cyBtZXRob2RzIGFuZCBkZWZpbmVzIFM0IG1ldGhvZHMKKyMjIGluIGEgbWluaW1hbCBzZXNzaW9uIChtZXRob2RzIGxvYWRlZCBidXQgbm90IGF0dGFjaGVkKS4KK2xvY2FsKHsKKyAgdG1wIDwtIHRlbXBmaWxlKGZpbGVleHQgPSAiLlIiKQorICBvbi5leGl0KHVubGluayh0bXApKQorICB3cml0ZUxpbmVzKGMoCisgICAgICAic2V0Q2xhc3MoJ2ZvbycsIGNvbnRhaW5zPSdudW1lcmljJykiLAorICAgICAgInNldE1ldGhvZCgnTWF0aCcsICdmb28nLCBmdW5jdGlvbih4KSB4KSIKKyAgKSwgdG1wKQorICBwYWNrYWdlLnNrZWxldG9uKCJteVRzdFM0IiwgY29kZV9maWxlcz10bXApCisgIG9uLmV4aXQodW5saW5rKCJteVRzdFM0IiwgcmVjdXJzaXZlPVRSVUUpLCBhZGQ9VFJVRSkKKworICAjIHBhY2thZ2Uuc2tlbGV0b24gYXV0b21hdGljYWxseSBhZGRzIEltcG9ydHM6IG1ldGhvZHMgdG8gREVTQ1JJUFRJT04gaW4gbmV3ZXIgUi4KKyAgIyBCdXQgd2UgbXVzdCBlbnN1cmUgaXQgaW1wb3J0cyBtZXRob2RzIGluIE5BTUVTUEFDRSBmb3IgbWluaW1hbCBzZXNzaW9uLgorICB3cml0ZUxpbmVzKGMoImltcG9ydChtZXRob2RzKSIsIHJlYWRMaW5lcygibXlUc3RTNC9OQU1FU1BBQ0UiKSksICJteVRzdFM0L05BTUVTUEFDRSIpCisKKyAgYnVpbGQucGtnKCJteVRzdFM0IikKKyAgb24uZXhpdCh1bmxpbmsoU3lzLmdsb2IoIm15VHN0UzRfKiIpKSwgYWRkPVRSVUUpCisKKyAgaW5zdGFsbC5wYWNrYWdlcygibXlUc3RTNCIsIGxpYj0ibXlMaWIiLCByZXBvcz1OVUxMLCB0eXBlPSJzb3VyY2UiKQorICBvbi5leGl0KHVubGluaygibXlMaWIvbXlUc3RTNCIsIHJlY3Vyc2l2ZT1UUlVFKSwgYWRkPVRSVUUpCisKKyAgIyBOb3cgcnVuIHRoZSB1bmxvYWQgdGVzdCBpbiBhIG1pbmltYWwgc2Vzc2lvbgorICBSc2NyaXB0IDwtIGZpbGUucGF0aChSLmhvbWUoImJpbiIpLCAiUnNjcmlwdCIpCisgIGNtZCA8LSBzcHJpbnRmKCJsb2FkTmFtZXNwYWNlKCdteVRzdFM0JywgbGliLmxvYz0nJXMnKTsgdW5sb2FkTmFtZXNwYWNlKCdteVRzdFM0JykiLAorICAgICAgICAgICAgICAgICBub3JtYWxpemVQYXRoKCJteUxpYiIsIHdpbnNsYXNoID0gIi8iKSkKKworICBvbGRfZGVmYXVsdHMgPC0gU3lzLmdldGVudigiUl9ERUZBVUxUX1BBQ0tBR0VTIiwgdW5zZXQgPSBOQSkKKyAgU3lzLnNldGVudihSX0RFRkFVTFRfUEFDS0FHRVMgPSAiTlVMTCIpCisgIGlmIChpcy5uYShvbGRfZGVmYXVsdHMpKQorICAgIG9uLmV4aXQoU3lzLnVuc2V0ZW52KCJSX0RFRkFVTFRfUEFDS0FHRVMiKSwgYWRkPVRSVUUpCisgIGVsc2UKKyAgICBvbi5leGl0KFN5cy5zZXRlbnYoUl9ERUZBVUxUX1BBQ0tBR0VTID0gb2xkX2RlZmF1bHRzKSwgYWRkPVRSVUUpCisKKyAgcmVzIDwtIHN5c3RlbTIoUnNjcmlwdCwgYygiLS12YW5pbGxhIiwgIi1lIiwgc2hRdW90ZShjbWQpKSwKKyAgICAgICAgICAgICAgICAgc3Rkb3V0PVRSVUUsIHN0ZGVycj1UUlVFKQorICBzdGF0dXMgPC0gYXR0cihyZXMsICJzdGF0dXMiKQorICBpZiAoIWlzLm51bGwoc3RhdHVzKSAmJiBzdGF0dXMgIT0gMCkgeworICAgICAgY2F0KCJGYWlsZWQgdG8gdW5sb2FkIG15VHN0UzQgaW4gbWluaW1hbCBzZXNzaW9uOlxuIikKKyAgICAgIGNhdChyZXMsIHNlcCA9ICJcbiIpCisgICAgICBzdG9wKCJyZWdyZXNzaW9uIHRlc3QgZmFpbGVkIikKKyAgfQorfSkKKworIyMgVGVzdCB0aGF0IGEgY3VzdG9tIFM0IGdlbmVyaWMgcmVwcmVzZW50aW5nIGEgYmFzZSBmdW5jdGlvbiAobGlrZSAnbnJvdycpCisjIyBJUyBzdWNjZXNzZnVsbHkgdW5jYWNoZWQgd2hlbiB0aGUgcGFja2FnZSBkZWZpbmluZyBpdCBpcyB1bmxvYWRlZCwKKyMjIGFkZHJlc3NpbmcgdGhlIGNvbmNlcm4gdGhhdCBpdCBtaWdodCByZW1haW4gZ2VuZXJpYyBmb3JldmVyLgorbG9jYWwoeworICB0bXAgPC0gdGVtcGZpbGUoZmlsZWV4dCA9ICIuUiIpCisgIG9uLmV4aXQodW5saW5rKHRtcCkpCisgIHdyaXRlTGluZXMoYygKKyAgICAgICJzZXRDbGFzcygnZm9vJywgY29udGFpbnM9J251bWVyaWMnKSIsCisgICAgICAic2V0R2VuZXJpYygnbnJvdycpIiwKKyAgICAgICJzZXRNZXRob2QoJ25yb3cnLCAnZm9vJywgZnVuY3Rpb24oeCkgNDIpIgorICApLCB0bXApCisgIGlmKGZpbGUuZXhpc3RzKCJteVRzdE5yb3ciKSkgdW5saW5rKCJteVRzdE5yb3ciLCByZWN1cnNpdmU9VFJVRSkKKyAgcGFja2FnZS5za2VsZXRvbigibXlUc3ROcm93IiwgY29kZV9maWxlcz10bXApCisgIG9uLmV4aXQodW5saW5rKCJteVRzdE5yb3ciLCByZWN1cnNpdmU9VFJVRSksIGFkZD1UUlVFKQorCisgIHdyaXRlTGluZXMoYygiaW1wb3J0KG1ldGhvZHMpIiwgImV4cG9ydENsYXNzZXMoZm9vKSIsICJleHBvcnQobnJvdykiKSwgIm15VHN0TnJvdy9OQU1FU1BBQ0UiKQorCisgIGJ1aWxkLnBrZygibXlUc3ROcm93IikKKyAgb24uZXhpdCh1bmxpbmsoU3lzLmdsb2IoIm15VHN0TnJvd18qIikpLCBhZGQ9VFJVRSkKKworICBpbnN0YWxsLnBhY2thZ2VzKCJteVRzdE5yb3ciLCBsaWI9Im15TGliIiwgcmVwb3M9TlVMTCwgdHlwZT0ic291cmNlIikKKyAgb24uZXhpdCh1bmxpbmsoIm15TGliL215VHN0TnJvdyIsIHJlY3Vyc2l2ZT1UUlVFKSwgYWRkPVRSVUUpCisKKyAgIyBSdW4gaW4gbWluaW1hbCBzZXNzaW9uIGFuZCB2ZXJpZnkgaXQgaXMgTk9UIGdlbmVyaWMgYWZ0ZXIgdW5sb2FkCisgIFJzY3JpcHQgPC0gZmlsZS5wYXRoKFIuaG9tZSgiYmluIiksICJSc2NyaXB0IikKKyAgY21kIDwtIHBhc3RlKAorICAgICAgImxpYnJhcnkobWV0aG9kcyk7IiwKKyAgICAgICJsb2FkTmFtZXNwYWNlKCdteVRzdE5yb3cnLCBsaWIubG9jPSdteUxpYicpOyIsCisgICAgICAic3RvcGlmbm90KGlzR2VuZXJpYygnbnJvdycpKTsiLAorICAgICAgInVubG9hZE5hbWVzcGFjZSgnbXlUc3ROcm93Jyk7IiwKKyAgICAgICJzdG9waWZub3QoIWlzR2VuZXJpYygnbnJvdycpKSIKKyAgKQorCisgIG9sZF9kZWZhdWx0cyA8LSBTeXMuZ2V0ZW52KCJSX0RFRkFVTFRfUEFDS0FHRVMiLCB1bnNldCA9IE5BKQorICBTeXMuc2V0ZW52KFJfREVGQVVMVF9QQUNLQUdFUyA9ICJOVUxMIikKKyAgaWYgKGlzLm5hKG9sZF9kZWZhdWx0cykpCisgICAgb24uZXhpdChTeXMudW5zZXRlbnYoIlJfREVGQVVMVF9QQUNLQUdFUyIpLCBhZGQ9VFJVRSkKKyAgZWxzZQorICAgIG9uLmV4aXQoU3lzLnNldGVudihSX0RFRkFVTFRfUEFDS0FHRVMgPSBvbGRfZGVmYXVsdHMpLCBhZGQ9VFJVRSkKKworICByZXMgPC0gc3lzdGVtMihSc2NyaXB0LCBjKCItLXZhbmlsbGEiLCAiLWUiLCBzaFF1b3RlKGNtZCkpLAorICAgICAgICAgICAgICAgICBzdGRvdXQ9VFJVRSwgc3RkZXJyPVRSVUUpCisgIHN0YXR1cyA8LSBhdHRyKHJlcywgInN0YXR1cyIpCisgIGlmICghaXMubnVsbChzdGF0dXMpICYmIHN0YXR1cyAhPSAwKSB7CisgICAgICBjYXQoIkZhaWxlZCB0byB2ZXJpZnkgY3VzdG9tIGJhc2UgZ2VuZXJpYyB1bmNhY2hpbmcgaW4gbWluaW1hbCBzZXNzaW9uOlxuIikKKyAgICAgIGNhdChyZXMsIHNlcCA9ICJcbiIpCisgICAgICBzdG9wKCJyZWdyZXNzaW9uIHRlc3QgZmFpbGVkIikKKyAgfQorfSkKKworCiAjIyB0ZXN0IHdhcm5pbmdzIGZvciBtaXNzaW5nL2F1dG9nZW5lcmF0ZWQgUmQgY29udGVudAogb3dkIDwtIHNldHdkKCJteVRzdCIpICAjIChjdXJyZW50bHkpIG5lZWRlZCBmb3IgXFNleHByIG1hY3JvcwogcHJvbXB0KGlkZW50aXR5LCBmaWxlbmFtZSA9ICJtYW4vaWRlbnRpdHkuUmQiKQo=",
+          "creator": "michaelchirico4",
+          "is_patch": true,
+          "bug_id": 19079,
+          "file_name": "s4-unload (2).patch",
+          "summary": "Updated patch for unloading generics without methods to handle e.g. base generics better",
+          "creation_time": "2026-05-29T06:28:25Z",
+          "id": 3717,
+          "is_private": false,
+          "size": 5069,
+          "last_change_time": "2026-05-29T06:28:25Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-05-29 06:28:25"
+}

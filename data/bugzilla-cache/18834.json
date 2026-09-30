@@ -1,0 +1,134 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "whiteboard": "",
+        "creation_time": "2024-12-08T02:50:36Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "liyaoxiang"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 18834,
+        "severity": "minor",
+        "dupe_of": {},
+        "assigned_to": "R-core",
+        "component": "Documentation",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "summary": "?cbind.data.frame '...' argument could be improved to highlight check.names= should not be provided",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "name": "liyaoxiang",
+            "id": 3659,
+            "real_name": "Yaoxiang Li"
+          }
+        ],
+        "last_change_time": "2026-05-22T15:32:48Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18834": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2024-12-08T02:50:36Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 101421,
+            "creation_time": "2024-12-08T02:50:36Z",
+            "count": 0,
+            "text": "We have this in `?cbind.data.frame`:\n\n```\n  \\item{\\dots}{(generalized) vectors or matrices.  These can be given as named\n    arguments.  Other \\R objects may be coerced as appropriate, or S4\n    methods may be used: see sections \\sQuote{Details} and\n    \\sQuote{Value}.  (For the \\code{\"data.frame\"} method of \\code{cbind}\n    these can be further arguments to \\code{\\link{data.frame}} such as\n    \\code{stringsAsFactors}.)}\n```\n\nI read that and tried passing `check.names=FALSE` to solve an \"ugly name problem\" I was seeing.\n\nThat of course is an error:\n\n```\nError in data.frame(..., check.names = FALSE) : \n  formal argument \"check.names\" matched by multiple actual arguments\n```\n\nSo I would quibble that \"these can be further arguments to `data.frame` besides `check.names`\".\n\n`?cbind.data.frame` as a whole can be said to be accurate because we see this elsewhere (`\\section{Data frame methods}`):\n\n```\n  The \\code{cbind} data frame method is just a wrapper for\n  \\code{\\link{data.frame}(..., check.names = FALSE)}.  This means that\n  it will split matrix columns in data frame arguments.\n```\n\nHowever I read the above in `\\item{\\dots}` and didn't feel the need to read the whole page, and besides this does not address the issue I encountered head-on.\n\nAn alternative/further enhancement would be for `cbind.data.frame` itself to ensure `!hasName(list(...), \"check.names\"), but given `cbind.data.frame()` really is just a trivial wrapper to `data.frame()`, I worry that overcomplicates the implementation.",
+            "bug_id": 18834
+          },
+          {
+            "is_private": false,
+            "id": 103100,
+            "time": "2026-05-22T15:32:25Z",
+            "attachment_id": 3703,
+            "tags": [],
+            "count": 1,
+            "is_markdown": true,
+            "bug_id": 18834,
+            "text": "Created attachment 3703\nDocument cbind.data.frame check.names behavior",
+            "creation_time": "2026-05-22T15:32:25Z",
+            "creator": "liyaoxiang"
+          },
+          {
+            "text": "Thanks for the report. I attached a documentation-only patch that says this explicitly in both places: the ... argument description and the data-frame-method section.\n\nI checked the edited Rd file with tools::parse_Rd() under R 4.6.0.",
+            "bug_id": 18834,
+            "is_markdown": true,
+            "count": 2,
+            "creator": "liyaoxiang",
+            "creation_time": "2026-05-22T15:32:48Z",
+            "time": "2026-05-22T15:32:48Z",
+            "id": 103101,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18834": [
+        {
+          "creator": "liyaoxiang",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvbWFuL2NiaW5kLlJkDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vY2JpbmQuUmQJKHJldmlzaW9uIDkwMDY1KQ0KKysrIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL2NiaW5kLlJkCSh3b3JraW5nIGNvcHkpDQpAQCAtMSw2ICsxLDYgQEANCiAlIEZpbGUgc3JjL2xpYnJhcnkvYmFzZS9tYW4vY2JpbmQuUmQNCiAlIFBhcnQgb2YgdGhlIFIgcGFja2FnZSwgaHR0cHM6Ly93d3cuUi1wcm9qZWN0Lm9yZw0KLSUgQ29weXJpZ2h0IDE5OTUtMjAyNCBSIENvcmUgVGVhbQ0KKyUgQ29weXJpZ2h0IDE5OTUtMjAyNiBSIENvcmUgVGVhbQ0KICUgRGlzdHJpYnV0ZWQgdW5kZXIgR1BMIDIgb3IgbGF0ZXINCiANCiBcbmFtZXtjYmluZH0NCkBAIC0yNyw3ICsyNyw3IEBADQogICAgIG1ldGhvZHMgbWF5IGJlIHVzZWQ6IHNlZSBzZWN0aW9ucyBcc1F1b3Rle0RldGFpbHN9IGFuZA0KICAgICBcc1F1b3Rle1ZhbHVlfS4gIChGb3IgdGhlIFxjb2RleyJkYXRhLmZyYW1lIn0gbWV0aG9kIG9mIFxjb2Rle2NiaW5kfQ0KICAgICB0aGVzZSBjYW4gYmUgZnVydGhlciBhcmd1bWVudHMgdG8gXGNvZGV7XGxpbmt7ZGF0YS5mcmFtZX19IHN1Y2ggYXMNCi0gICAgXGNvZGV7c3RyaW5nc0FzRmFjdG9yc30uKX0NCisgICAgXGNvZGV7c3RyaW5nc0FzRmFjdG9yc30sIGJ1dCBub3QgXGNvZGV7Y2hlY2submFtZXN9Lil9DQogICBcaXRlbXtkZXBhcnNlLmxldmVsfXtpbnRlZ2VyIGNvbnRyb2xsaW5nIHRoZSBjb25zdHJ1Y3Rpb24gb2YgbGFiZWxzIGluDQogICAgIHRoZSBjYXNlIG9mIG5vbi1tYXRyaXgtbGlrZSBhcmd1bWVudHMgKGZvciB0aGUgZGVmYXVsdCBtZXRob2QpOlxjcg0KICAgICBcY29kZXtkZXBhcnNlLmxldmVsID0gMH0gY29uc3RydWN0cyBubyBsYWJlbHM7XGNyDQpAQCAtOTUsNyArOTUsOSBAQA0KIFxzZWN0aW9ue0RhdGEgZnJhbWUgbWV0aG9kc317DQogICBUaGUgXGNvZGV7Y2JpbmR9IGRhdGEgZnJhbWUgbWV0aG9kIGlzIGp1c3QgYSB3cmFwcGVyIGZvcg0KICAgXGNvZGV7XGxpbmt7ZGF0YS5mcmFtZX0oLi4uLCBjaGVjay5uYW1lcyA9IEZBTFNFKX0uICBUaGlzIG1lYW5zIHRoYXQNCi0gIGl0IHdpbGwgc3BsaXQgbWF0cml4IGNvbHVtbnMgaW4gZGF0YSBmcmFtZSBhcmd1bWVudHMuDQorICBpdCB3aWxsIHNwbGl0IG1hdHJpeCBjb2x1bW5zIGluIGRhdGEgZnJhbWUgYXJndW1lbnRzLiAgQXMNCisgIFxjb2Rle2NoZWNrLm5hbWVzID0gRkFMU0V9IGlzIGFscmVhZHkgc3VwcGxpZWQgYnkgdGhlIG1ldGhvZCwgcGFzc2luZw0KKyAgXGNvZGV7Y2hlY2submFtZXN9IGluIFxjb2Rle1xkb3RzfSBpcyBhbiBlcnJvci4NCiANCiAgIFRoZSBcY29kZXtyYmluZH0gZGF0YSBmcmFtZSBtZXRob2QgZmlyc3QgZHJvcHMgYWxsIHplcm8tY29sdW1uIGFuZA0KICAgemVyby1yb3cgYXJndW1lbnRzLiAgKElmIHRoYXQgbGVhdmVzIG5vbmUsIGl0IHJldHVybnMgdGhlIGZpcnN0DQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2026-05-22T15:32:25Z",
+          "summary": "Document cbind.data.frame check.names behavior",
+          "file_name": "file_18834.txt",
+          "bug_id": 18834,
+          "last_change_time": "2026-05-22T15:32:25Z",
+          "size": 1544,
+          "is_private": false,
+          "id": 3703
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-05-22 15:32:48"
+}

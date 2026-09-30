@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc_detail": [],
+        "last_change_time": "2019-12-17T09:02:33Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "vcov.lm should calculate vcov more directly for efficiency",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "cc": [],
+        "qa_contact": "",
+        "id": 17676,
+        "deadline": {},
+        "severity": "enhancement",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2019-12-17T09:02:33Z",
+        "version": "R 3.6.xx",
+        "priority": "P5",
+        "product": "R",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17676": {
+        "comments": [
+          {
+            "creation_time": "2019-12-17T09:02:33Z",
+            "creator": "michaelchirico4",
+            "is_markdown": false,
+            "count": 0,
+            "bug_id": 17676,
+            "text": "Created attachment 2503\nImplementation of vcov.{lm,glm} as described\n\nCurrent code for vcov.lm:\n\n> vcov.lm <- function(object, complete = TRUE, ...)\n>     vcov.summary.lm(summary.lm(object, ...), complete=complete)\n\n> vcov.summary.lm  <- function(object, complete = TRUE, ...)\n>     .vcov.aliased(object$aliased, object$sigma^2 * object$cov.unscaled,\n>     complete=complete)\n\n> ##' Augment a vcov - matrix by NA rows & cols when needed:\n> .vcov.aliased <- function(aliased, vc, complete = TRUE) {\n>     ## Checking for \"NA coef\": \"same\" code as in print.summary.lm() in ./lm.R\n>     :\n>     if(complete && NROW(vc) < (P <- length(aliased)) && any(aliased)) {\n>       ## add NA rows and columns in vcov\n>       cn <- names(aliased)\n>       VC <- matrix(NA_real_, P, P, dimnames = list(cn,cn))\n>       j <- which(!aliased)\n>       VC[j,j] <- vc\n>       VC\n>     } else  # default\n>       vc\n> }\n\nThis means the need to compute everything else summary.lm() does in addition to getting the variance-covariance matrix. Further, in essence we end up doing a sqrt(x^2) round trip, leading to numeric error as compared to using x directly.\n\nSimilarly for vcov.glm (and perhaps other methods, though I'm not as familiar with those)\n\nA few years ago I wrote faster versions as a package (source here: https://github.com/MichaelChirico/vcov), but I think more properly it should be submitted here. \n\nOne remaining point is whether to remove vcov.summary.{lm,glm} methods which are no longer used internally and are unexported, however, man/vcov.Rd is using an alias for them to the ?vcov.lm page. \n\nIt also might make sense to re-use the code here in the summary methods.",
+            "tags": [],
+            "attachment_id": 2503,
+            "is_private": false,
+            "id": 94997,
+            "time": "2019-12-17T09:02:33Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "17676": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvdmNvdi5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL1IvdmNvdi5SCShyZXZpc2lvbiA3NzU4NSkKKysrIHNyYy9saWJyYXJ5L3N0YXRzL1IvdmNvdi5SCSh3b3JraW5nIGNvcHkpCkBAIC0zOCwxMSArMzgsNDYgQEAKICMjIGluaGVyaXQgZnJvbSAic3VtbWFyeS5nbG0iLCBhbmQgc2ltaWxhcmx5IGZvciAibG0iIGFuZCAibWxtIgogCiAjIyBBbGxvdyBmb3IgJ2Rpc3BlcnNpb24nIHRvIGJlIHBhc3NlZCBkb3duIChzZWUgdGhlIGhlbHAgZm9yIHZjb3YpCi12Y292LmdsbSA8LSBmdW5jdGlvbihvYmplY3QsIGNvbXBsZXRlID0gVFJVRSwgLi4uKQotICAgIHZjb3Yuc3VtbWFyeS5nbG0oc3VtbWFyeS5nbG0ob2JqZWN0LCAuLi4pLCBjb21wbGV0ZT1jb21wbGV0ZSkKK3Zjb3YuZ2xtIDwtIGZ1bmN0aW9uKG9iamVjdCwgY29tcGxldGUgPSBUUlVFLCBkaXNwZXJzaW9uID0gTlVMTCwgLi4uKSB7CisgIGlmIChwIDwtIG9iamVjdCRyYW5rKSB7CisgICAgaWYgKGlzLm51bGwoZGlzcGVyc2lvbikpIHsKKyAgICAgIGRpc3BlcnNpb24gPSBpZiAob2JqZWN0JGZhbWlseSRmYW1pbHkgJWluJSBjKCdwb2lzc29uJywgJ2Jpbm9taWFsJykpIHsKKyAgICAgICAgMQorICAgICAgfSBlbHNlIHsKKyAgICAgICAgZGZfciA9IG9iamVjdCRkZi5yZXNpZHVhbAorICAgICAgICBpZiAoZGZfcikgeworICAgICAgICAgIGlmIChhbnkoIW9iamVjdCR3ZWlnaHRzKSkKKyAgICAgICAgICAgIHdhcm5pbmcoJ29ic2VydmF0aW9ucyB3aXRoIHplcm8gd2VpZ2h0IG5vdCcsCisgICAgICAgICAgICAgICAgICAgICd1c2VkIGZvciBjYWxjdWxhdGluZyBkaXNwZXJzaW9uJykKKyAgICAgICAgICB3ID0gb2JqZWN0JHdlaWdodHMKKyAgICAgICAgICBpZHggPSB3ID4gMAorICAgICAgICAgIHN1bSh3W2lkeF0gKiBvYmplY3QkcmVzaWR1YWxzW2lkeF1eMikvZGZfcgorICAgICAgICB9IGVsc2UgTmFOCisgICAgICB9CisgICAgfQorICAgIHAxID0gc2VxX2xlbihwKQorICAgIG5tIDwtIG5hbWVzKG9iamVjdCRjb2VmZmljaWVudHNbb2JqZWN0JHFyJHBpdm90W3AxXV0pCisgICAgY292bWF0ID0gZGlzcGVyc2lvbiAqIGNob2wyaW52KG9iamVjdCRxciRxcltwMSwgcDEsIGRyb3AgPSBGQUxTRV0pCisgICAgZGltbmFtZXMoY292bWF0KSA9IGxpc3Qobm0sIG5tKQorICB9IGVsc2UgY292bWF0ID0gbnVtZXJpYygwTCkKKyAgcmV0dXJuKC52Y292LmFsaWFzZWQoaXMubmEoY29lZihvYmplY3QpKSwgY292bWF0LCBjb21wbGV0ZT1jb21wbGV0ZSkpCit9CiAKLXZjb3YubG0gPC0gZnVuY3Rpb24ob2JqZWN0LCBjb21wbGV0ZSA9IFRSVUUsIC4uLikKLSAgICB2Y292LnN1bW1hcnkubG0oc3VtbWFyeS5sbShvYmplY3QsIC4uLiksIGNvbXBsZXRlPWNvbXBsZXRlKQordmNvdi5sbSA8LSBmdW5jdGlvbihvYmplY3QsIGNvbXBsZXRlPVRSVUUsIC4uLikgeworICBpZiAocCA8LSBvYmplY3QkcmFuaykgeworICAgIHAxID0gc2VxX2xlbihwKQorICAgIHJzcyA9IGlmIChpcy5udWxsKHcgPC0gb2JqZWN0JHdlaWdodHMpKSB7CisgICAgICBzdW0ob2JqZWN0JHJlc2lkdWFsc14yKQorICAgIH0gZWxzZSB7CisgICAgICBzdW0odyAqIG9iamVjdCRyZXNpZHVhbHNeMikKKyAgICB9CisgICAgY292bWF0ID0gcnNzICogY2hvbDJpbnYob2JqZWN0JHFyJHFyW3AxLCBwMSwgZHJvcCA9IEZBTFNFXSkvCisgICAgICBvYmplY3QkZGYucmVzaWR1YWwKKyAgICBubSA9IG5hbWVzKG9iamVjdCRjb2VmZmljaWVudHMpCisgICAgZGltbmFtZXMoY292bWF0KSA9IGxpc3Qobm0sIG5tKQorICB9IGVsc2UgY292bWF0ID0gbnVtZXJpYygwTCkKKyAgcmV0dXJuKC52Y292LmFsaWFzZWQoaXMubmEoY29lZihvYmplY3QpKSwgY292bWF0LCBjb21wbGV0ZT1jb21wbGV0ZSkpCit9CiAKICMjIFRvIGJlIGNvbnNpc3RlbnQgd2l0aCBjb2VmLmFvdigpIHdoaWNoIGhhcyBjb21wbGV0ZSA9IEZBTFNFIDoKIHZjb3YuYW92IDwtIHZjb3YubG0gOyBmb3JtYWxzKHZjb3YuYW92KSRjb21wbGV0ZSA8LSBGQUxTRQpAQCAtNzYsNCArMTExLDMgQEAKIAogc2lnbWEubWxtIDwtIGZ1bmN0aW9uIChvYmplY3QsIC4uLikKICAgICBzcXJ0KGNvbFN1bXMob2JqZWN0JHJlc2lkdWFsc14yKSAvIG9iamVjdCRkZi5yZXNpZHVhbCkKLQpJbmRleDogc3JjL2xpYnJhcnkvc3RhdHMvbWFuL3Zjb3YuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvbWFuL3Zjb3YuUmQJKHJldmlzaW9uIDc3NTg1KQorKysgc3JjL2xpYnJhcnkvc3RhdHMvbWFuL3Zjb3YuUmQJKHdvcmtpbmcgY29weSkKQEAgLTIzLDYgKzIzLDcgQEAKIFx1c2FnZXsKIHZjb3Yob2JqZWN0LCBcZG90cykKIFxTM21ldGhvZHt2Y292fXtsbX0ob2JqZWN0LCBjb21wbGV0ZSA9IFRSVUUsIFxkb3RzKQorXFMzbWV0aG9ke3Zjb3Z9e2dsbX0ob2JqZWN0LCBjb21wbGV0ZSA9IFRSVUUsIGRpc3BlcnNpb24gPSBOVUxMLCBcZG90cykKICMjIGFuZCBhbHNvIGZvciAnW3N1bW1hcnkuXWdsbScgYW5kICdtbG0nCiBcUzNtZXRob2R7dmNvdn17YW92fShvYmplY3QsIGNvbXBsZXRlID0gRkFMU0UsIFxkb3RzKQogCkBAIC00MCw2ICs0MSw4IEBACiAgICAgXGNvZGV7XGxpbmt7Y29lZn0oLil9IGNvbnRhaW5zIFxjb2Rle05BfXMgY29ycmVzcG9uZGluZ2x5LiAgIFdoZW4KICAgICBcY29kZXtjb21wbGV0ZSA9IFRSVUV9LCAgXGNvZGV7dmNvdigpfSBpcyBjb21wYXRpYmxlIHdpdGgKICAgICBcY29kZXtjb2VmKCl9IGFsc28gaW4gdGhpcyBzaW5ndWxhciBjYXNlLn0KKyAgXGl0ZW17ZGlzcGVyc2lvbn17dGhlIGRpc3BlcnNpb24gcGFyYW1ldGVyIGZvciB0aGUgZmFtaWx5IHVzZWQuIFNlZQorICAgIFxjb2Rle1xsaW5re3N1bW1hcnkuZ2xtfSgpfS59CiAgIFxpdGVte1xkb3RzfXsKICAgICBhZGRpdGlvbmFsIGFyZ3VtZW50cyBmb3IgbWV0aG9kIGZ1bmN0aW9ucy4gIEZvciB0aGUKICAgICBcY29kZXtcbGlua3tnbG19fSBtZXRob2QgdGhpcyBjYW4gYmUgdXNlZCB0byBwYXNzIGEK",
+          "creator": "michaelchirico4",
+          "is_patch": true,
+          "bug_id": 17676,
+          "file_name": "patch",
+          "summary": "Implementation of vcov.{lm,glm} as described",
+          "creation_time": "2019-12-17T09:02:33Z",
+          "id": 2503,
+          "is_private": false,
+          "size": 3141,
+          "last_change_time": "2019-12-17T09:02:33Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2019-12-17 09:02:33"
+}

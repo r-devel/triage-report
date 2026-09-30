@@ -1,0 +1,196 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "CONFIRMED",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "last_change_time": "2024-10-31T14:16:22Z",
+        "cc_detail": [
+          {
+            "real_name": "Elin Waring",
+            "name": "elin.waring",
+            "id": 3299
+          },
+          {
+            "name": "ht",
+            "id": 2824,
+            "real_name": "Heather Turner"
+          },
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "print.data.frame does not respect na.print for missing column names  nor for numeric (or logical ..) NA's",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "component": "Misc",
+        "classification": "Unclassified",
+        "keywords": [
+          "HELPWANTED"
+        ],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc": [
+          "elin.waring",
+          "ht",
+          "maechler"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 18702,
+        "severity": "minor",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2024-04-12T22:22:51Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18702": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2024-04-12T22:22:51Z",
+            "id": 100725,
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 0,
+            "text": "In `na.print`, `print.default()` handles missing vector names:\n\n```\nprint(setNames(TRUE, NA_character_), na.print=\"xxx\")\n#  xxx \n# TRUE\n```\n\nHowever, this does not work for `print.data.frame()`:\n\n```\nx = setNames(data.frame(TRUE), NA_character_)\nis.na(names(x))\n# [1] TRUE\nprint(x, na.print=\"xxx\")\n#     NA\n# 1 TRUE\n```\n\nThat means it's impossible to disambiguate columns named `\"NA\"` from missing column names:\n\n```\nprint(setNames(data.frame(TRUE, FALSE), c(\"NA\", NA_character_)), na.print=\"xxx\")\n    NA    NA\n1 TRUE FALSE\n```",
+            "bug_id": 18702,
+            "creator": "michaelchirico4",
+            "creation_time": "2024-04-12T22:22:51Z"
+          },
+          {
+            "attachment_id": {},
+            "time": "2024-04-18T15:03:53Z",
+            "creator": "elin.waring",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 100745,
+            "creation_time": "2024-04-18T15:03:53Z",
+            "count": 1,
+            "text": "This is true. It seems like there are two issues.\n\n Practically, I think the first issue is that normally a character vector prints with quotation marks, which allows differentiation of \"NA\" and NA.\nFactors also print without quotation marks but use  <NA> to print NA values. For both character and factor vectors na.print also works as expected. For matrices the column names that are NA are printed as <NA>.\n\n  However the data frame print method does not put quotation marks around the column names and does not print the NA as <NA>. Hence you cannot distinguish names(df) values of \"NA\" and NA. \n\nThe second issue is that  print.data.frame() also does not respect the na.print option. Its signature does not include it, and, therefore, it is not passed to the print.default after the data frame is coerced to a matrix. \n\n\n\nThat said, there is a question in my mind about whether if there was a na.print option for data frames if it should apply to the data, to the names, or to both. For named vectors and matrices it applies to both, so that would be consistent.",
+            "bug_id": 18702
+          },
+          {
+            "time": "2024-06-15T14:30:49Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "maechler",
+            "is_private": false,
+            "id": 100951,
+            "tags": [],
+            "count": 2,
+            "bug_id": 18702,
+            "text": "(In reply to Elin Waring from comment #1)\n\n> The second issue is that  print.data.frame() also does not respect the\n> na.print option. Its signature does not include it, and, therefore, it is\n> not passed to the print.default after the data frame is coerced to a matrix. \n\nThe above is not true at all:  It is even well documented,\n`?print.data.frame` contains\n\n   Usage:\n\n     ## S3 method for class 'data.frame'\n     print(x, ..., digits = NULL,\n           quote = FALSE, right = TRUE, row.names = TRUE, max = NULL)\n     \n   Arguments:\n\n       x: object of class data.frame.\n\n     ...: optional arguments to `print` methods.\n\nAnd it's also trivial to see in print.data.frame that `...` is explicitly passed: `print(m, ..., `.  Rather the problem is that the character matrix `m` at that point has \"NA\" instead of NA_character_ colnames.\n\nI'm looking into fixing the bug now.",
+            "creation_time": "2024-06-15T14:30:49Z"
+          },
+          {
+            "creation_time": "2024-06-15T16:33:38Z",
+            "count": 3,
+            "bug_id": 18702,
+            "text": "Elin has been right that there *are* several issues here:\n\n1. Very basically: for `names(.)` and `dimnames(.)` there is really not a difference between `\"NA\"`  and `NA_character_`.  \nThis is documented insofar as  ?names has a paragraph\n\n     A name can be character `NA`, but such a name will never be\n     matched and is likely to lead to confusion.\n\nImportant parts of R's internal code indeed has been adapted to this, by *treating*  `NA_character_` names identical to `\"NA\"` ones, e.g. by silently treating them identically:\n```\n> dput(x <- c(`NA` = NA, \"NA\" = \"N.A.\"))\nc(`NA` = NA, `NA` = \"N.A.\")\n> is.na(print(names(x)))\n[1] \"NA\" \"NA\"\n[1] FALSE FALSE\n> \n```\n\n2. The same happens  for data.frame (col)names:  Using `NA_character_`\n instead of \"NA\" is *not* recommended and __likely to lead to confusion__ \nand as you can see, actually the same happens as for atomic vector names: the NA's are all made into (the 2-character) string  `\"NA\"`:\n```\nd1 <- data.frame(num=c(1,NA), ch=c(\"a\",NA),\n                 \"NA\" = c(\"NA\", NA), `NA` = c(NA, FALSE))\nstr(d1) # colnames \"NA.\" and \"NA..\"\n  # Only with explict `check.names = FALSE` you *think* you get `NA_character_` names\nd2 <- data.frame(num=c(1,NA), ch=c(\"a\",NA),\n                 \"NA\" = c(\"NA\", NA), `NA` = c(NA, FALSE), check.names=FALSE)\n```\nNow,\n```\n> str(d2) # colnames[3:4] are both `NA` (but actually, no: they are `\"NA\"` !)\ndata.frame':\t2 obs. of  4 variables:\n $ num: num  1 NA\n $ ch : chr  \"a\" NA\n $ NA : chr  \"NA\" NA\n $ NA : logi  NA FALSE\n\nchNms <- c(\"num\", \"ch\", \"NA\", \"NA\")\nstopifnot(exprs = {\n    identical(chNms,    names(d2))\n    identical(chNms, colnames(d2))\n    identical(chNms, dimnames(d2)[[2]])\n    identical(chNms, variable.names(d2))\n})\n```\n\nMichael's trick to still have true `NA_character_` colnames in a data.frame does work {unfortunately}, and probably too many things would break if we'd change that...\nso I'm continuing the story  even though started with showing that `NA_character` names are generally *not* ok in R..\n\n```\ndN <- d2; names(dN)[3:4] <- NA_character_\nnames(dN) # \"num\" \"ch\"  NA    NA\nchNN <- c(\"num\", \"ch\", NA, NA)\nstopifnot(identical(chNN, names(dN)))\n\n## Interestingly,  as.matrix(.) *does* keep the \"true NA\" names,\n## and can have them (of course) in row or column names:\n(mN <- as.matrix(dN)) # a character matrix --- but with the *same* dimnames, i.e., keeping \"true NA\"\n(m1 <- mN[1,])\nstopifnot(exprs = {\n    identical(chNN, colnames(mN))\n    identical(chNN, names(m1))\n    identical(chNN, rownames(t(mN)))\n})\n\n## Also note, that data.frame *row* names are *not* allowed to be \"true NA\":\ndNN <- dN;      rownames(dNN) <- c(\"1\", \"NA\") # fine\ndNN <- dN; try( rownames(dNN) <- c(\"1\", NA) ) # --> error\n                                        # Error in `.rowNamesDF<-`(x, value = value) :\n                                        #   missing values in 'row.names' are not allowed\n```\n\nNow back to this PR, we can debug and find that the problem really happens \nwhen   `format.data.frame(<data.frame>)` does translate `NA_character_`  to  `\"NA\"`\nand our bug (part 1) is really  a bug in format.data.frame:\n\n```\nstopifnot(identical(chNN, names(dN)))\n> rbind(dN = names(dN),\n        fdN= names(format(dN)))\n    [,1]  [,2] [,3] [,4]\ndN  \"num\" \"ch\" NA   NA  \nfdN \"num\" \"ch\" \"NA\" \"NA\"\n```\nI have now submitted  (a minimal version of) the above as a new PR, bug 18745.\n\nPart 2 of this PR  should remain here:  For data.frames  `na.print` does work differently for  character (and factor)   vs  numeric, logical, ..  \neven when `na.print` works the same for all atomic vectors.",
+            "tags": [],
+            "is_private": false,
+            "id": 100953,
+            "creator": "maechler",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2024-06-15T16:33:38Z"
+          },
+          {
+            "time": "2024-06-16T21:05:53Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "id": 100960,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18702,
+            "text": "Hi Martin, thanks for the update. Unfortunately I'm a bit lost trying to follow your comment+reasoning, my best guess is that Markdown formatting interfered with your examples? Many of them don't parse, in particular many have unquoted `NA` on the LHS of assignment. Are those all with backticks perhaps?",
+            "count": 4,
+            "creation_time": "2024-06-16T21:05:53Z"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2024-06-22T10:33:02Z",
+            "id": 100975,
+            "is_private": false,
+            "creator": "maechler",
+            "creation_time": "2024-06-22T10:33:02Z",
+            "text": "By fixing bug 18745, indeed, we now fixed the original bug report here:\nMichael's initial example now do work as he suggested.\n\nElin (and other people outside of bugzilla) had opened a Part 2 of this PR: \n\nFor data.frames `na.print` does work differently for character (and factor) vs numeric, logical, .., etc,  inspite of the fact that otherwise, `na.print` does work the same for all atomic vectors.\n\n```\n(chNms <- c(\"num\", \"ch\", \"NA\", NA)) \n## [1] \"num\" \"ch\"  \"NA\"  NA\n   \nd1 <- setNames(data.frame(c(1,NA), c(\"a\",NA), c(\"NA\", NA), c(NA, FALSE)),\n               chNms)\nd1 # does show the  NA  and <NA>  in *column* names differently (after fixing bug 18745 ! )\n##   num   ch   NA  <NA>          and also in \"char\" columns, but not the numeric & logical column\n## 1   1    a   NA    NA\n## 2  NA <NA> <NA> FALSE\n\nprint(d1, na.print = \"..\")\n##   num ch NA    ..\n## 1   1  a NA    NA\n## 2  NA .. .. FALSE\n```\n\nso  `na.print` really only changes those which by default are shown as `<NA>`.\n\nThe underlying reason of the current behavior is that  `format(x,  na.encode = FALSE)`  for an atomic `x`, \nonly keeps  `NA` for `character` but not for numeric, complex, or logical ... all well documented in  `?format.default`.\n\nNow we *could* address the issue by extending `format.default()` functionality adding a new optional argument say,\n` keepallNA = FALSE ` (i.e. default `FALSE`),  which when set to TRUE  would keep all `NA`  in the sense as formatting them to `NA_character_`. ... or maybe nicer and slightly less confusing, newly allow  `na.encode` to be one of  {`FALSE`, `TRUE`, `\"all\"`}\nwith the new `na.encode = \"all\"` being the same as the alternative  `keepallNA = TRUE`.\n\nSuch a change should be implemented primarily in the C code which implements the `.Internal(format(....))` call from R.\nIt would be useful in some cases to have this,  even though I'm not sure if the new behavior should become default or only optional for  `print.data.frame()`.\n\n\n.. and finally (to comment 4): yes, part '1.' of my comment 3 was misleading, because the example did *not* construct a data frame with `NA` (col)names..",
+            "bug_id": 18702,
+            "is_markdown": true,
+            "count": 5
+          },
+          {
+            "tags": [],
+            "id": 100976,
+            "is_private": false,
+            "creation_time": "2024-06-22T11:54:33Z",
+            "bug_id": 18702,
+            "text": "The C code is function `do_format()` in  `R/src/main/paste.c` .. a change as mentioned in comment 5  is quite feasible, even when each type (logical, integer, double, complex) has its own handling.\nStill, I'm not convinced yet, it's worth the effort (and small extra complication of the codes and doc).\nJust documenting the current behavior -- which is consistent with `format.default()`'s  use of `na.encode` -- would be a \"cheaper\" alternative to\nclose this issue.",
+            "count": 6,
+            "attachment_id": {},
+            "time": "2024-06-22T11:54:33Z",
+            "creator": "maechler",
+            "is_markdown": true
+          },
+          {
+            "creation_time": "2024-10-31T14:16:22Z",
+            "count": 7,
+            "bug_id": 18702,
+            "text": "Adding a link to this [June 2023 thread on R-devel](https://stat.ethz.ch/pipermail/r-devel/2023-June/082650.html) in which Ben Bolker notes the issue of `print(x, na.print = \"..\")` behaving differently for a non-character column in a data frame vs the same data as a vector is a long-standing issue and one where there is some consensus that `na.encode = FALSE` should apply to non-character vectors as well as character ones.\n\nAlso Ben did volunteer to test a patch across a sample of CRAN packages, although that offer may no longer be open.\n\nI agree it would be better `na.print` to work consistently and it could be a useful feature to be able to format vectors with a custom `NA` encoding.\n\nDeveloping a patch might be a suitable task for an R Dev Day, or a candidate for HELP WANTED?",
+            "tags": [],
+            "is_private": false,
+            "id": 101280,
+            "creator": "ht",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2024-10-31T14:16:22Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18702": []
+    }
+  },
+  "source_changed": "2024-10-31 14:16:22"
+}

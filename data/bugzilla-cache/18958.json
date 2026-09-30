@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "status": "UNCONFIRMED",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "'methods_message' component of 'check_packages_used' internal class should be character(), not \"\", when empty",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2025-10-16T20:31:57Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Misc",
+        "creation_time": "2025-10-16T20:25:27Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "qa_contact": "",
+        "cc": [],
+        "id": 18958,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "minor"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18958": {
+        "comments": [
+          {
+            "time": "2025-10-16T20:25:27Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "id": 102361,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18958,
+            "text": "",
+            "count": 0,
+            "creation_time": "2025-10-16T20:25:27Z"
+          },
+          {
+            "tags": [],
+            "attachment_id": 3557,
+            "time": "2025-10-16T20:31:57Z",
+            "id": 102362,
+            "is_private": false,
+            "creator": "michaelchirico4",
+            "creation_time": "2025-10-16T20:31:57Z",
+            "text": "Created attachment 3557\nChange methods-message to character(), not \"\"\n\n(hit submit by mistake on the original issue)\n\nA minor thing, but using `\"\"` instead of `character()` prevents us from doing nice code like\n\n```\n...\n\nreport <- .check_packages_used(...)\nif (!any(lengths(report)) {\n  return(...)\n}\n...\n```\n\nWe can see that in the patch -- in `format.check_packages_used`, all the other components use an `if (xx <- length(x$...))` check whereas we have `if (nzchar(x$methods_message))`. (in fact, we could simplify a bit further and drop the `if()` since `c(..., character())` will just drop the empty input, but I left it as is to keep the parallel structure).\n\nPS for purely internal, minor things like this, I'm still not sure the preferred way to report among (1) discuss first on r-devel [way too high barrier for an internal change IMO] (2) file on Bugzilla [might give the impression this is a \"bug\" when strictly speaking nothing's \"broken\"] (3) reach out to a single R-core member responsible for recent changes in this part of the code [I think it's best to avoid that except for highly-specific work in one member's core area of expertise]",
+            "bug_id": 18958,
+            "is_markdown": true,
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18958": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IvUUMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL1FDLlIJKHJldmlzaW9uIDg4OTE4KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi9RQy5SCSh3b3JraW5nIGNvcHkpCkBAIC02MjAyLDcgKzYyMDIsNyBAQAogICAgIG1ldGhvZHNfbWVzc2FnZSA8LQogICAgICAgICBpZih1c2VzX21ldGhvZHMgJiYgIm1ldGhvZHMiICVub3RpbiUgYyhkZXBlbmRzLCBpbXBvcnRzKSkKICAgICAgICAgICAgIGdldHRleHQoInBhY2thZ2UgJ21ldGhvZHMnIGlzIHVzZWQgYnV0IG5vdCBkZWNsYXJlZCIpCi0gICAgICAgIGVsc2UgIiIKKyAgICAgICAgZWxzZSBjaGFyYWN0ZXIoKQogCiAgICAgZXh0cmFzIDwtIGxpc3QoCiAgICAgICAgIGJhc2UgPSBjKCJTeXMuanVuY3Rpb24iLCAic2hlbGwiLCAic2hlbGwuZXhlYyIpLApAQCAtNjUwMyw3ICs2NTAzLDcgQEAKICAgICAgICAgICAgICAgICAgICAgICAgc1F1b3RlKHh4KSkKICAgICAgICAgICB9CiAgICAgICB9LAotICAgICAgaWYobnpjaGFyKHgkbWV0aG9kc19tZXNzYWdlKSkgeworICAgICAgaWYobGVuZ3RoKHgkbWV0aG9kc19tZXNzYWdlKSkgewogICAgICAgICAgIHgkbWV0aG9kc19tZXNzYWdlCiAgICAgICB9KQogfQpAQCAtNjYyMSw3ICs2NjIxLDcgQEAKICAgICByZXMgPC0gbGlzdChvdGhlcnMgPSB1bmlxdWUoYmFkX2V4cHJzKSwKICAgICAgICAgICAgICAgICBpbXBvcnRzID0gdW5pcXVlKGJhZF9pbXBvcnRzKSwKICAgICAgICAgICAgICAgICBkYXRhID0gdW5pcXVlKGJhZF9kYXRhKSwKLSAgICAgICAgICAgICAgICBtZXRob2RzX21lc3NhZ2UgPSAiIgorICAgICAgICAgICAgICAgIG1ldGhvZHNfbWVzc2FnZSA9IGNoYXJhY3RlcigpCiAgICAgICAgICAgICAgICwgcGFyc2VfZXJyb3JzID0gdW5pcXVlKHBhcnNlX2Vycm9ycykKICAgICAgICAgICAgICkKICAgICBjbGFzcyhyZXMpIDwtICJjaGVja19wYWNrYWdlc191c2VkIgo=",
+          "creator": "michaelchirico4",
+          "id": 3557,
+          "is_private": false,
+          "size": 1046,
+          "last_change_time": "2025-10-16T20:31:57Z",
+          "bug_id": 18958,
+          "file_name": "methods-message.patch",
+          "summary": "Change methods-message to character(), not \"\"",
+          "creation_time": "2025-10-16T20:31:57Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-10-16 20:31:57"
+}

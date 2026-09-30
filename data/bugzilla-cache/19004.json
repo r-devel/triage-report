@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "Package version: keep formatting",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-09-19T10:29:26Z",
+        "flags": [],
+        "platform": "Other",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "creator": "lluis.revilla",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "lluis.revilla",
+          "id": 3268,
+          "real_name": "Llu�s"
+        },
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-02-14T11:56:06Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19004,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Wishlist"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19004": {
+        "comments": [
+          {
+            "creation_time": "2026-02-14T11:56:06Z",
+            "text": "Created attachment 3610\nPatch using attributes to keep the original version format and a regression test\n\nThis is related to the discussion about round trip of package version numbers:\nhttps://stat.ethz.ch/pipermail/r-devel/2026-January/084342.html\nThere was some interest to expand the accepted format but this patch is very minimal: only focus on keeping the original format of the numeric version.\n\nThe patch uses an attribute to handle the formatting and has a regression test too. It passes `make check-devel` locally other tests can be found only here: https://github.com/r-devel/r-svn/pull/228\n\nI haven't grepped the full CRAN and Bioconductor packages. But I searched and didn't find anything indicating the patch could break packages.",
+            "bug_id": 19004,
+            "count": 0,
+            "tags": [],
+            "id": 102631,
+            "is_private": false,
+            "creator": "lluis.revilla",
+            "is_markdown": true,
+            "attachment_id": 3610,
+            "time": "2026-02-14T11:56:06Z"
+          },
+          {
+            "is_private": false,
+            "id": 103669,
+            "time": "2026-09-19T10:29:26Z",
+            "attachment_id": {},
+            "tags": [],
+            "count": 1,
+            "is_markdown": false,
+            "bug_id": 19004,
+            "text": "*** Bug 19176 has been marked as a duplicate of this bug. ***",
+            "creation_time": "2026-09-19T10:29:26Z",
+            "creator": "lluis.revilla"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19004": [
+        {
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "lluis.revilla",
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvUi92ZXJzaW9uLlIgYi9zcmMvbGlicmFyeS9iYXNlL1IvdmVyc2lvbi5SCmluZGV4IDVjYjgxMjEyZGYuLmZiOWZiMmI1M2UgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvUi92ZXJzaW9uLlIKKysrIGIvc3JjL2xpYnJhcnkvYmFzZS9SL3ZlcnNpb24uUgpAQCAtNjMsNiArNjMsNyBAQCBmdW5jdGlvbih4LCBzdHJpY3QgPSBUUlVFLCByZWdleHAsIGNsYXNzZXMgPSBOVUxMKQogICAgIH0KICAgICBuYW1lcyh5KSA8LSBubXMKICAgICBjbGFzcyh5KSA8LSB1bmlxdWUoYyhjbGFzc2VzLCAibnVtZXJpY192ZXJzaW9uIikpCisgICAgYXR0cih5LCAic291cmNlIikgPC0geAogICAgIHkKIH0KIApAQCAtMzU4LDYgKzM1OSwxMCBAQCBmdW5jdGlvbih4LCBpbmNvbXBhcmFibGVzID0gRkFMU0UsIC4uLikKIGZvcm1hdC5udW1lcmljX3ZlcnNpb24gPC0KIGZ1bmN0aW9uKHgsIC4uLikKIHsKKyAgICBhdHRyIDwtIGF0dHIoeCwgInNvdXJjZSIpCisgICAgaWYgKCFpcy5udWxsKGF0dHIpKSB7CisgICAgICAgIHJldHVybihhdHRyKQorICAgIH0KICAgICB4IDwtIHVuY2xhc3MoeCkKICAgICB5IDwtIHJlcC5pbnQoTkFfY2hhcmFjdGVyXywgbGVuZ3RoKHgpKQogICAgIG5hbWVzKHkpIDwtIG5hbWVzKHgpCmRpZmYgLS1naXQgYS90ZXN0cy9yZWctdGVzdHMtMWUuUiBiL3Rlc3RzL3JlZy10ZXN0cy0xZS5SCmluZGV4IGJjMzU5MWE3MTMuLjk3NDQ0ZjlmMmUgMTAwNjQ0Ci0tLSBhL3Rlc3RzL3JlZy10ZXN0cy0xZS5SCisrKyBiL3Rlc3RzL3JlZy10ZXN0cy0xZS5SCkBAIC0yNTc4LDMgKzI1NzgsNiBAQCBzdG9waWZub3QoaXMubnVsbChuYW1lcyhyZXAuaW50KHgsIDIpKSksCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwKICAgICAgIHRvdGFsID0gcHJvYy50aW1lKCkpCisKKyMjIHBhY2thZ2VfdmVyc2lvbiBjYW4gYmUgY29udmVydGVkIGJhY2sgdG8gaXRzIG93biBvcmlnaW5hbCByZXByZXNlbnRhdGlvbgorc3RvcGlmbm90KGFzLmNoYXJhY3RlcihwYWNrYWdlX3ZlcnNpb24oIjEuMi0xIikpID09ICIxLjItMSIpCg==",
+          "is_private": false,
+          "id": 3610,
+          "last_change_time": "2026-02-14T11:56:06Z",
+          "size": 1087,
+          "file_name": "version_format.patch",
+          "bug_id": 19004,
+          "creation_time": "2026-02-14T11:56:06Z",
+          "summary": "Patch using attributes to keep the original version format and a regression test"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-19 10:29:26"
+}

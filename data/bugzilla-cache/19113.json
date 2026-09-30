@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-07-31T12:56:11Z",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19113,
+        "cc": [],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "blocks": [],
+        "url": "",
+        "summary": "Adding R_isForkedChild to API",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-07-31T12:56:11Z",
+        "cc_detail": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "flags": [],
+        "platform": "Other",
+        "creator": "jeroenooms",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Jeroen Ooms",
+          "name": "jeroenooms",
+          "id": 610
+        },
+        "resolution": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19113": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2026-07-31T12:56:11Z",
+            "id": 103347,
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 0,
+            "text": "The parallel package sets a global variable R_isForkedChild=1 to disable certain behavior within a fork of the R process. This prevents fork() from crashing some embedders.\n\nIt would like to request this to be allowed for packages as well (or some wrapper that set this variable), such that packages can use fork() and get the same behavior as the parallel package.",
+            "bug_id": 19113,
+            "creator": "jeroenooms",
+            "creation_time": "2026-07-31T12:56:11Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19113": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-07-31 12:56:11"
+}

@@ -1,0 +1,217 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R 3.0.2",
+        "creation_time": "2015-01-06T14:07:23Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "btyner",
+          "maechler",
+          "michaelchirico4"
+        ],
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 16135,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "Analyses",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "summary": "error in: convolve( 1:5, 1, type='filter')",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-04-21T20:11:00Z",
+        "cc_detail": [
+          {
+            "id": 430,
+            "name": "btyner",
+            "real_name": "Benjamin Tyner"
+          },
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          },
+          {
+            "real_name": "Michael Chirico",
+            "name": "michaelchirico4",
+            "id": 3256
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "creator": "schwidom",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Frank Schwidom",
+          "id": 2147,
+          "name": "schwidom"
+        },
+        "resolution": "",
+        "status": "TRIAGED"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "16135": {
+        "comments": [
+          {
+            "creation_time": "2015-01-06T14:07:23Z",
+            "creator": "schwidom",
+            "bug_id": 16135,
+            "text": "> convolve( 1:5, c( 1), type='filter')\n\n# leads to:\n\n[1] 2 3 4\n\n# but should output:\n\n[1] 1 2 3 4 5\n\n-----------------------------------------------\n\nby setting the second parameter to 1 there happens inside\nof convolve an list-reversion in the codepiece:\n\n.....        [-c(1L:n1, (n - n1 + 1L):n)]/n  .....\n\nn1 was first defined by length( y) - 1 and is currently 0,\nso that 1L:n1 leads to c( 1, 0)\n\nit would function, if the : operator would return\nc(), when 1:0 is given.\n\na solution could be the introduction of an trueRange-function\nwhich behaves like the range-function in the language python",
+            "is_markdown": false,
+            "count": 0,
+            "tags": [],
+            "attachment_id": {},
+            "id": 89811,
+            "time": "2015-01-06T14:07:23Z",
+            "is_private": false
+          },
+          {
+            "time": "2019-03-24T16:43:03Z",
+            "attachment_id": 2412,
+            "is_markdown": false,
+            "creator": "btyner",
+            "is_private": false,
+            "id": 94300,
+            "tags": [],
+            "count": 1,
+            "text": "Created attachment 2412\npatch for stats::convolve",
+            "bug_id": 16135,
+            "creation_time": "2019-03-24T16:43:03Z"
+          },
+          {
+            "time": "2019-03-28T16:06:34Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "maechler",
+            "id": 94327,
+            "is_private": false,
+            "tags": [],
+            "text": "(In reply to Benjamin Tyner from comment #1)\n> Created attachment 2412 [details]\n> patch for stats::convolve\n\nDidn't have time yet to look... but I have had my own patch for years... which instead of changing the behavior of one type also introduces new 'type's  allowing some back compatibility...\n\nBen, maybe we can look at both... or I also post my patch (several files, notably also documentation) here...",
+            "bug_id": 16135,
+            "count": 2,
+            "creation_time": "2019-03-28T16:06:34Z"
+          },
+          {
+            "count": 3,
+            "is_markdown": false,
+            "bug_id": 16135,
+            "text": "(In reply to Martin Maechler from comment #2)\n> (In reply to Benjamin Tyner from comment #1)\n> > Created attachment 2412 [details]\n> > patch for stats::convolve\n> \n> Didn't have time yet to look... but I have had my own patch for years...\n> which instead of changing the behavior of one type also introduces new\n> 'type's  allowing some back compatibility...\n> \n> Ben, maybe we can look at both... or I also post my patch (several files,\n> notably also documentation) here...\n\nMartin, I'd be interested to see the details of what you're thinking here. To me, the current behavior seems unintuitive:\n\n> convolve( 1:5, rep(1, 5), type='filter')\n[1] 15\n> convolve( 1:5, rep(1, 4), type='filter')\n[1] 10 14\n> convolve( 1:5, rep(1, 3), type='filter')\n[1]  6  9 12\n> convolve( 1:5, rep(1, 2), type='filter')\n[1] 3 5 7 9\n> convolve( 1:5, rep(1, 1), type='filter')\n[1] 2 3 4\n\nas it is hard (for me) to imagine this was the intended outcome.",
+            "creation_time": "2019-04-02T02:54:19Z",
+            "creator": "btyner",
+            "is_private": false,
+            "id": 94338,
+            "time": "2019-04-02T02:54:19Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 102637,
+            "creation_time": "2026-02-20T17:53:51Z",
+            "count": 4,
+            "text": "Created attachment 3611\nUpdated convolve patch with ?convolve improvements and tests\n\nA few observations:\n\n`?convolve` has [1]\n\n> numeric sequences _of the same length_ to be convolved.\n\nBut AIUI that is only required for `type=\"circular\"`, e.g. as written just below [2]:\n\n> If `type == \"circular\"`, [`length(x) = length(y)`] is required\n\nNext, I'm no FFT expert, and I don't have access right now to the Brillinger text linked at the end, but the wording here [3] isn't precise enough for me:\n\n> For `\"open\"` and `\"filter\"`, the sequences are padded with `0`s (from left and right) first; `\"filter\"` returns the middle sub-vector of `\"open\"`, namely, the result of running a weighted mean of `x` with weights `y`.\n\nI think \"middle sub-vector\" in particular is not easily intuited.\n\nThe examples Benjamin provides with `y = rep(1, N)` imply the \"middle sub-vector\" is perhaps more easily understood as \"the sub-vector not requiring 0-padding\" or \"the vector after filtering out those built from 0-padding\" or precisely `k = m, ..., n` when `m<=n` (using the index `k` from the formula [4]).\n\nThat would then imply that the wording \"namely, the result of running a weighted mean of `x` with weights `y`\" is _only for the `length(x)=length(y)` case_.\n\nWith that preamble in mind, I am inclined to agree with Ben that this example is a plain bug -- the result should have length 5, not 3.\n\nThat said, I don't find Ben's patch satisfactory, since it will run into a similar edge case problem when `length(y) > length(x)`, in which case we should return `numeric(0)`, because we always rely on 0-padding, as the current code achieves:\n\n```\n# under proposed patch\nconvolve(1:5, rep(1,6), type='filter')\n# [1] 15 15\n\n# in r-devel\nconvolve(1:5, rep(1,6), type='filter')\n# numeric(0)\n```\n\nI'm attaching a different patch to solve both problems, as well as taking a stab at improving the documentation.\n\nTracked at https://github.com/r-devel/r-svn/pull/235\n\n[1] https://github.com/r-devel/r-svn/blob/5891760c29285562cfb0d1c5513625a93150e2a0/src/library/stats/man/convolve.Rd#L17-L18\n[2] https://github.com/r-devel/r-svn/blob/5891760c29285562cfb0d1c5513625a93150e2a0/src/library/stats/man/convolve.Rd#L46\n[3] https://github.com/r-devel/r-svn/blob/5891760c29285562cfb0d1c5513625a93150e2a0/src/library/stats/man/convolve.Rd#L25-L28\n[4] https://github.com/r-devel/r-svn/blob/5891760c29285562cfb0d1c5513625a93150e2a0/src/library/stats/man/convolve.Rd#L42-L44",
+            "bug_id": 16135,
+            "attachment_id": 3611,
+            "time": "2026-02-20T17:53:51Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": 3613,
+            "time": "2026-02-20T23:26:55Z",
+            "creation_time": "2026-02-20T23:26:55Z",
+            "bug_id": 16135,
+            "text": "Created attachment 3613\nUpdated convolve patch with ?convolve improvements and tests",
+            "count": 5,
+            "tags": [],
+            "id": 102639,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "16135": [
+        {
+          "bug_id": 16135,
+          "file_name": "patch",
+          "summary": "patch for stats::convolve",
+          "creation_time": "2019-03-24T16:43:03Z",
+          "id": 2412,
+          "is_private": false,
+          "size": 478,
+          "last_change_time": "2019-03-24T16:43:03Z",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvZmZ0LlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvUi9mZnQuUgkocmV2aXNpb24gNzYyNjIpCisrKyBzcmMvbGlicmFyeS9zdGF0cy9SL2ZmdC5SCSh3b3JraW5nIGNvcHkpCkBAIC00MCw3ICs0MCw3IEBACiAgICAgfQogICAgIHggPC0gZmZ0KGZmdCh4KSogKGlmKGNvbmopQ29uaihmZnQoeSkpIGVsc2UgZmZ0KHkpKSwgaW52ZXJzZT1UUlVFKQogICAgIGlmKHR5cGUgPT0gImZpbHRlciIpCi0gICAgICAgIChpZihSZWFsKSBSZSh4KSBlbHNlIHgpWy1jKDFMOm4xLCAobi1uMSsxTCk6bildL24KKyAgICAgICAgKGlmKFJlYWwpIFJlKHgpIGVsc2UgeClbKDFMICsgbjEpOihuIC0gbjEpXS9uCiAgICAgZWxzZQogICAgICAgICAoaWYoUmVhbCkgUmUoeCkgZWxzZSB4KS9uCiB9Cg==",
+          "creator": "btyner",
+          "is_patch": true
+        },
+        {
+          "file_name": "convolve.patch",
+          "bug_id": 16135,
+          "creation_time": "2026-02-20T17:53:51Z",
+          "summary": "Updated convolve patch with ?convolve improvements and tests",
+          "is_private": false,
+          "id": 3611,
+          "last_change_time": "2026-02-20T23:26:55Z",
+          "size": 4339,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvZmZ0LlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvUi9mZnQuUgkocmV2aXNpb24gODk0NDMpCisrKyBzcmMvbGlicmFyeS9zdGF0cy9SL2ZmdC5SCSh3b3JraW5nIGNvcHkpCkBAIC0yNSwyMiArMjUsMjMgQEAKIGNvbnZvbHZlIDwtIGZ1bmN0aW9uKHgsIHksIGNvbmo9VFJVRSwgdHlwZT1jKCJjaXJjdWxhciIsIm9wZW4iLCJmaWx0ZXIiKSkKIHsKICAgICB0eXBlIDwtIG1hdGNoLmFyZyh0eXBlKQotICAgIG4gPC0gbGVuZ3RoKHgpCisgICAgbnggPC0gbGVuZ3RoKHgpCiAgICAgbnkgPC0gbGVuZ3RoKHkpCiAgICAgUmVhbCA8LSBpcy5udW1lcmljKHgpICYmIGlzLm51bWVyaWMoeSkKICAgICAjIyBzd2l0Y2godHlwZSwgY2lyY3VsYXIgPSAuLi4sICkKICAgICBpZih0eXBlID09ICJjaXJjdWxhciIpIHsKLSAgICAgICAgaWYobnkgIT0gbikKKyAgICAgICAgaWYobnkgIT0gbngpCiAgICAgICAgICAgICBzdG9wKCJsZW5ndGggbWlzbWF0Y2ggaW4gY29udm9sdXRpb24iKQogICAgIH0KICAgICBlbHNlIHsgIyMgIm9wZW4iIG9yICJmaWx0ZXIiOiBQYWQgd2l0aCB6ZXJvcworICAgICAgICBpZiAodHlwZSA9PSAiZmlsdGVyIiAmJiBueT5ueCkgcmV0dXJuKG51bWVyaWMoKSkKICAgICAgICAgbjEgPC0gbnkgLSAxCiAgICAgICAgIHggPC0gYyhyZXAuaW50KDAsIG4xKSwgeCkKLSAgICAgICAgbiA8LSBsZW5ndGgoeSA8LSBjKHksIHJlcC5pbnQoMCwgbiAtIDEpKSkjIG4gPSBueCtueS0xCisgICAgICAgIG4gPC0gbGVuZ3RoKHkgPC0gYyh5LCByZXAuaW50KDAsIG54IC0gMSkpKSMgbiA9IG54K255LTEKICAgICB9CiAgICAgeCA8LSBmZnQoZmZ0KHgpKiAoaWYoY29uailDb25qKGZmdCh5KSkgZWxzZSBmZnQoeSkpLCBpbnZlcnNlPVRSVUUpCiAgICAgaWYodHlwZSA9PSAiZmlsdGVyIikKLSAgICAgICAgKGlmKFJlYWwpIFJlKHgpIGVsc2UgeClbLWMoMUw6bjEsIChuLW4xKzFMKTpuKV0vbgorICAgICAgICAoaWYoUmVhbCkgUmUoeCkgZWxzZSB4KVtueTpueF0vbgogICAgIGVsc2UKICAgICAgICAgKGlmKFJlYWwpIFJlKHgpIGVsc2UgeCkvbgogfQpJbmRleDogc3JjL2xpYnJhcnkvc3RhdHMvbWFuL2NvbnZvbHZlLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL21hbi9jb252b2x2ZS5SZAkocmV2aXNpb24gODk0NDMpCisrKyBzcmMvbGlicmFyeS9zdGF0cy9tYW4vY29udm9sdmUuUmQJKHdvcmtpbmcgY29weSkKQEAgLTE0LDI0ICsxNCwxNyBAQAogY29udm9sdmUoeCwgeSwgY29uaiA9IFRSVUUsIHR5cGUgPSBjKCJjaXJjdWxhciIsICJvcGVuIiwgImZpbHRlciIpKQogfQogXGFyZ3VtZW50c3sKLSAgXGl0ZW17eCwgeX17bnVtZXJpYyBzZXF1ZW5jZXMgXGVtcGh7b2YgdGhlIHNhbWUgbGVuZ3RofSB0byBiZQotICAgIGNvbnZvbHZlZC59CisgIFxpdGVte3gsIHl9e251bWVyaWMgc2VxdWVuY2VzIHRvIGJlIGNvbnZvbHZlZC59CiAgIFxpdGVte2Nvbmp9e2xvZ2ljYWw7IGlmIFxjb2Rle1RSVUV9LCB0YWtlIHRoZSBjb21wbGV4IFxlbXBoe2Nvbmp1Z2F0ZX0KICAgICBiZWZvcmUgYmFjay10cmFuc2Zvcm1pbmcgKGRlZmF1bHQsIGFuZCB1c2VkIGZvciB1c3VhbCBjb252b2x1dGlvbikufQogICBcaXRlbXt0eXBlfXtjaGFyYWN0ZXI7IHBhcnRpYWxseSBtYXRjaGVkIHRvIFxjb2RleyJjaXJjdWxhciJ9LCBcY29kZXsib3BlbiJ9LAotICAgIFxjb2RleyJmaWx0ZXIifS4gIEZvciBcY29kZXsiY2lyY3VsYXIifSwgdGhlCi0gICAgdHdvIHNlcXVlbmNlcyBhcmUgdHJlYXRlZCBhcyBcZW1waHtjaXJjdWxhcn0sIGkuZS4sIHBlcmlvZGljLgotCi0gICAgRm9yIFxjb2RleyJvcGVuIn0gYW5kIFxjb2RleyJmaWx0ZXIifSwgdGhlIHNlcXVlbmNlcyBhcmUgcGFkZGVkIHdpdGgKLSAgICBcY29kZXswfXMgKGZyb20gbGVmdCBhbmQgcmlnaHQpIGZpcnN0OyBcY29kZXsiZmlsdGVyIn0gcmV0dXJucyB0aGUKLSAgICBtaWRkbGUgc3ViLXZlY3RvciBvZiBcY29kZXsib3BlbiJ9LCBuYW1lbHksIHRoZSByZXN1bHQgb2YgcnVubmluZyBhCi0gICAgd2VpZ2h0ZWQgbWVhbiBvZiBcY29kZXt4fSB3aXRoIHdlaWdodHMgXGNvZGV7eX0ufQorICAgIG9yIFxjb2RleyJmaWx0ZXIifS4gU2VlIFZhbHVlIGZvciBkZXRhaWxzLn0KIH0KIFxkZXRhaWxzewogICBUaGUgRmFzdCBGb3VyaWVyIFRyYW5zZm9ybSwgXGNvZGV7XGxpbmt7ZmZ0fX0sIGlzIHVzZWQgZm9yIGVmZmljaWVuY3kuCiAKLSAgVGhlIGlucHV0IHNlcXVlbmNlcyBcY29kZXt4fSBhbmQgIFxjb2Rle3l9IG11c3QgaGF2ZSB0aGUgc2FtZSBsZW5ndGggaWYKLSAgXGNvZGV7Y2lyY3VsYXJ9IGlzIHRydWUuCisgIFRoZSBpbnB1dCBzZXF1ZW5jZXMgXGNvZGV7eH0gYW5kIFxjb2Rle3l9IG11c3QgaGF2ZSB0aGUgc2FtZSBsZW5ndGggaWYKKyAgXGNvZGV7dHlwZSA9ICJjaXJjdWxhciJ9LgogCiAgIE5vdGUgdGhhdCB0aGUgdXN1YWwgZGVmaW5pdGlvbiBvZiBjb252b2x1dGlvbiBvZiB0d28gc2VxdWVuY2VzCiAgIFxjb2Rle3h9IGFuZCBcY29kZXt5fSBpcyBnaXZlbiBieSBcY29kZXtjb252b2x2ZSh4LCByZXYoeSksIHR5cGUgPSAibyIpfS4KQEAgLTM5LDEwICszMiwxNSBAQAogXHZhbHVlewogICBJZiBcY29kZXtyIDwtIGNvbnZvbHZlKHgsIHksIHR5cGUgPSAib3BlbiIpfQogICBhbmQgXGNvZGV7biA8LSBsZW5ndGgoeCl9LCBcY29kZXttIDwtIGxlbmd0aCh5KX0sIHRoZW4KLSAgXGRlcW57cl9rID0gXHN1bV97aX0geF97ay1tK2l9IHlfe2l9fXtyW2tdID0gc3VtKGk7IHhbay1tK2ldICogeVtpXSl9Ci0gIHdoZXJlIHRoZSBzdW0gaXMgb3ZlciBhbGwgdmFsaWQgaW5kaWNlcyBcZXFue2l9LCBmb3IKLSAgXGVxbntrID0gMSwgXGRvdHMsIG4rbS0xfS4KKyAgXGRlcW57cl9rID0gXHN1bV97aT0xfV57bX0geF97ay1tK2l9IHlfe2l9fXtyW2tdID0gc3VtKGk7IHhbay1tK2ldICogeVtpXSl9CisgIHdoZXJlIFxlcW57eFt0XSA9IDB9IHdoZW5ldmVyIFxlcW57dCA8PSAwfSBvciBcZXFue3QgPiBufSwKKyAgZm9yIFxlcW57ayA9IDEsIFxkb3RzLCBuK20tMX0sIGkuZS4sIFxjb2Rle3h9IGlzIDAtcGFkZGVkIHRvIHRoZSBsZWZ0IGFuZCByaWdodAorICBhcyBuZWVkZWQuCiAKKyAgRm9yIFxjb2Rle3R5cGUgPSAiZmlsdGVyIn0sIGV4Y2x1ZGUgZnJvbSB0aGUgXGNvZGV7dHlwZSA9ICJvcGVuIn0gcmVzdWx0IGFueSBlbnRyeQorICB0aGF0IHJlcXVpcmVkIDAtcGFkZGluZy4gSW4gcGFydGljdWxhciwgZm9yIFxjb2Rle24gPT0gbX0sIHRoaXMgcHJvZHVjZXMgdGhlIHJlc3VsdAorICBvZiBydW5uaW5nIGEgd2VpZ2h0ZWQgbWVhbiBvZiBcY29kZXt4fSB3aXRoIHdlaWdodHMgXGNvZGV7eX0uCisKICAgSWYgXGNvZGV7dHlwZSA9PSAiY2lyY3VsYXIifSwgXGVxbntuID0gbX0gaXMgcmVxdWlyZWQsIGFuZCB0aGUgYWJvdmUgaXMKICAgdHJ1ZSBmb3IgXGVxbntpICwgayA9IDEsXGRvdHMsbn0gd2hlbgogICBcZXFue3hfe2p9IDo9IHhfe24ran19e3hbal0gOj0geFtuK2pdfSBmb3IgXGVxbntqIDwgMX0uCkluZGV4OiBzcmMvbGlicmFyeS9zdGF0cy90ZXN0cy9mZnQuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy90ZXN0cy9mZnQuUgkobm9uZXhpc3RlbnQpCisrKyBzcmMvbGlicmFyeS9zdGF0cy90ZXN0cy9mZnQuUgkod29ya2luZyBjb3B5KQpAQCAtMCwwICsxLDkgQEAKK3N0b3BpZm5vdChleHBycyA9IHsKKyAgIWxlbmd0aChjb252b2x2ZSgxOjUsIHJlcCgxLCA3KSwgdHlwZT0iZmlsdGVyIikpCisgICFsZW5ndGgoY29udm9sdmUoMTo1LCByZXAoMSwgNiksIHR5cGU9ImZpbHRlciIpKQorICBhbGwuZXF1YWwoY29udm9sdmUoMTo1LCByZXAoMSwgNSksIHR5cGU9ImZpbHRlciIpLCAxNSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDQpLCB0eXBlPSJmaWx0ZXIiKSwgYygxMCwgMTQpKQorICBhbGwuZXF1YWwoY29udm9sdmUoMTo1LCByZXAoMSwgMyksIHR5cGU9ImZpbHRlciIpLCBjKDYsIDksIDEyKSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDIpLCB0eXBlPSJmaWx0ZXIiKSwgYygzLCA1LCA3LCA5KSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDEpLCB0eXBlPSJmaWx0ZXIiKSwgYygxLCAyLCAzLCA0LCA1KSkKK30pCg==",
+          "is_patch": true
+        },
+        {
+          "size": 4973,
+          "last_change_time": "2026-02-20T23:26:55Z",
+          "id": 3613,
+          "is_private": false,
+          "summary": "Updated convolve patch with ?convolve improvements and tests",
+          "creation_time": "2026-02-20T23:26:55Z",
+          "bug_id": 16135,
+          "file_name": "convolve.patch",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvZmZ0LlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvUi9mZnQuUgkocmV2aXNpb24gODk0NDMpCisrKyBzcmMvbGlicmFyeS9zdGF0cy9SL2ZmdC5SCSh3b3JraW5nIGNvcHkpCkBAIC0yNSwyMiArMjUsMjMgQEAKIGNvbnZvbHZlIDwtIGZ1bmN0aW9uKHgsIHksIGNvbmo9VFJVRSwgdHlwZT1jKCJjaXJjdWxhciIsIm9wZW4iLCJmaWx0ZXIiKSkKIHsKICAgICB0eXBlIDwtIG1hdGNoLmFyZyh0eXBlKQotICAgIG4gPC0gbGVuZ3RoKHgpCisgICAgbiA8LSBueCA8LSBsZW5ndGgoeCkKICAgICBueSA8LSBsZW5ndGgoeSkKICAgICBSZWFsIDwtIGlzLm51bWVyaWMoeCkgJiYgaXMubnVtZXJpYyh5KQogICAgICMjIHN3aXRjaCh0eXBlLCBjaXJjdWxhciA9IC4uLiwgKQogICAgIGlmKHR5cGUgPT0gImNpcmN1bGFyIikgewotICAgICAgICBpZihueSAhPSBuKQorICAgICAgICBpZihueSAhPSBueCkKICAgICAgICAgICAgIHN0b3AoImxlbmd0aCBtaXNtYXRjaCBpbiBjb252b2x1dGlvbiIpCiAgICAgfQogICAgIGVsc2UgeyAjIyAib3BlbiIgb3IgImZpbHRlciI6IFBhZCB3aXRoIHplcm9zCisgICAgICAgIGlmICh0eXBlID09ICJmaWx0ZXIiICYmIG55Pm54KSByZXR1cm4obnVtZXJpYygpKQogICAgICAgICBuMSA8LSBueSAtIDEKICAgICAgICAgeCA8LSBjKHJlcC5pbnQoMCwgbjEpLCB4KQotICAgICAgICBuIDwtIGxlbmd0aCh5IDwtIGMoeSwgcmVwLmludCgwLCBuIC0gMSkpKSMgbiA9IG54K255LTEKKyAgICAgICAgbiA8LSBsZW5ndGgoeSA8LSBjKHksIHJlcC5pbnQoMCwgbnggLSAxKSkpIyBuID0gbngrbnktMQogICAgIH0KICAgICB4IDwtIGZmdChmZnQoeCkqIChpZihjb25qKUNvbmooZmZ0KHkpKSBlbHNlIGZmdCh5KSksIGludmVyc2U9VFJVRSkKICAgICBpZih0eXBlID09ICJmaWx0ZXIiKQotICAgICAgICAoaWYoUmVhbCkgUmUoeCkgZWxzZSB4KVstYygxTDpuMSwgKG4tbjErMUwpOm4pXS9uCisgICAgICAgIChpZihSZWFsKSBSZSh4KSBlbHNlIHgpW255Om54XS9uCiAgICAgZWxzZQogICAgICAgICAoaWYoUmVhbCkgUmUoeCkgZWxzZSB4KS9uCiB9CkluZGV4OiBzcmMvbGlicmFyeS9zdGF0cy9tYW4vY29udm9sdmUuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvc3RhdHMvbWFuL2NvbnZvbHZlLlJkCShyZXZpc2lvbiA4OTQ0MykKKysrIHNyYy9saWJyYXJ5L3N0YXRzL21hbi9jb252b2x2ZS5SZAkod29ya2luZyBjb3B5KQpAQCAtMTQsMjQgKzE0LDE3IEBACiBjb252b2x2ZSh4LCB5LCBjb25qID0gVFJVRSwgdHlwZSA9IGMoImNpcmN1bGFyIiwgIm9wZW4iLCAiZmlsdGVyIikpCiB9CiBcYXJndW1lbnRzewotICBcaXRlbXt4LCB5fXtudW1lcmljIHNlcXVlbmNlcyBcZW1waHtvZiB0aGUgc2FtZSBsZW5ndGh9IHRvIGJlCi0gICAgY29udm9sdmVkLn0KKyAgXGl0ZW17eCwgeX17bnVtZXJpYyBzZXF1ZW5jZXMgdG8gYmUgY29udm9sdmVkLn0KICAgXGl0ZW17Y29uan17bG9naWNhbDsgaWYgXGNvZGV7VFJVRX0sIHRha2UgdGhlIGNvbXBsZXggXGVtcGh7Y29uanVnYXRlfQogICAgIGJlZm9yZSBiYWNrLXRyYW5zZm9ybWluZyAoZGVmYXVsdCwgYW5kIHVzZWQgZm9yIHVzdWFsIGNvbnZvbHV0aW9uKS59CiAgIFxpdGVte3R5cGV9e2NoYXJhY3RlcjsgcGFydGlhbGx5IG1hdGNoZWQgdG8gXGNvZGV7ImNpcmN1bGFyIn0sIFxjb2RleyJvcGVuIn0sCi0gICAgXGNvZGV7ImZpbHRlciJ9LiAgRm9yIFxjb2RleyJjaXJjdWxhciJ9LCB0aGUKLSAgICB0d28gc2VxdWVuY2VzIGFyZSB0cmVhdGVkIGFzIFxlbXBoe2NpcmN1bGFyfSwgaS5lLiwgcGVyaW9kaWMuCi0KLSAgICBGb3IgXGNvZGV7Im9wZW4ifSBhbmQgXGNvZGV7ImZpbHRlciJ9LCB0aGUgc2VxdWVuY2VzIGFyZSBwYWRkZWQgd2l0aAotICAgIFxjb2RlezB9cyAoZnJvbSBsZWZ0IGFuZCByaWdodCkgZmlyc3Q7IFxjb2RleyJmaWx0ZXIifSByZXR1cm5zIHRoZQotICAgIG1pZGRsZSBzdWItdmVjdG9yIG9mIFxjb2RleyJvcGVuIn0sIG5hbWVseSwgdGhlIHJlc3VsdCBvZiBydW5uaW5nIGEKLSAgICB3ZWlnaHRlZCBtZWFuIG9mIFxjb2Rle3h9IHdpdGggd2VpZ2h0cyBcY29kZXt5fS59CisgICAgb3IgXGNvZGV7ImZpbHRlciJ9LiBTZWUgVmFsdWUgZm9yIGRldGFpbHMufQogfQogXGRldGFpbHN7CiAgIFRoZSBGYXN0IEZvdXJpZXIgVHJhbnNmb3JtLCBcY29kZXtcbGlua3tmZnR9fSwgaXMgdXNlZCBmb3IgZWZmaWNpZW5jeS4KIAotICBUaGUgaW5wdXQgc2VxdWVuY2VzIFxjb2Rle3h9IGFuZCAgXGNvZGV7eX0gbXVzdCBoYXZlIHRoZSBzYW1lIGxlbmd0aCBpZgotICBcY29kZXtjaXJjdWxhcn0gaXMgdHJ1ZS4KKyAgVGhlIGlucHV0IHNlcXVlbmNlcyBcY29kZXt4fSBhbmQgXGNvZGV7eX0gbXVzdCBoYXZlIHRoZSBzYW1lIGxlbmd0aCBpZgorICBcY29kZXt0eXBlID0gImNpcmN1bGFyIn0uCiAKICAgTm90ZSB0aGF0IHRoZSB1c3VhbCBkZWZpbml0aW9uIG9mIGNvbnZvbHV0aW9uIG9mIHR3byBzZXF1ZW5jZXMKICAgXGNvZGV7eH0gYW5kIFxjb2Rle3l9IGlzIGdpdmVuIGJ5IFxjb2Rle2NvbnZvbHZlKHgsIHJldih5KSwgdHlwZSA9ICJvIil9LgpAQCAtMzksMTAgKzMyLDE1IEBACiBcdmFsdWV7CiAgIElmIFxjb2Rle3IgPC0gY29udm9sdmUoeCwgeSwgdHlwZSA9ICJvcGVuIil9CiAgIGFuZCBcY29kZXtuIDwtIGxlbmd0aCh4KX0sIFxjb2Rle20gPC0gbGVuZ3RoKHkpfSwgdGhlbgotICBcZGVxbntyX2sgPSBcc3VtX3tpfSB4X3trLW0raX0geV97aX19e3Jba10gPSBzdW0oaTsgeFtrLW0raV0gKiB5W2ldKX0KLSAgd2hlcmUgdGhlIHN1bSBpcyBvdmVyIGFsbCB2YWxpZCBpbmRpY2VzIFxlcW57aX0sIGZvcgotICBcZXFue2sgPSAxLCBcZG90cywgbittLTF9LgorICBcZGVxbntyX2sgPSBcc3VtX3tpPTF9XnttfSB4X3trLW0raX0geV97aX19e3Jba10gPSBzdW0oaTsgeFtrLW0raV0gKiB5W2ldKX0KKyAgd2hlcmUgXGVxbnt4W3RdID0gMH0gd2hlbmV2ZXIgXGVxbnt0IDw9IDB9IG9yIFxlcW57dCA+IG59LAorICBmb3IgXGVxbntrID0gMSwgXGRvdHMsIG4rbS0xfSwgaS5lLiwgXGNvZGV7eH0gaXMgMC1wYWRkZWQgdG8gdGhlIGxlZnQgYW5kIHJpZ2h0CisgIGFzIG5lZWRlZC4KIAorICBGb3IgXGNvZGV7dHlwZSA9ICJmaWx0ZXIifSwgZXhjbHVkZSBmcm9tIHRoZSBcY29kZXt0eXBlID0gIm9wZW4ifSByZXN1bHQgYW55IGVudHJ5CisgIHRoYXQgcmVxdWlyZWQgMC1wYWRkaW5nLiBJbiBwYXJ0aWN1bGFyLCBmb3IgXGNvZGV7biA9PSBtfSwgdGhpcyBwcm9kdWNlcyB0aGUgcmVzdWx0CisgIG9mIHJ1bm5pbmcgYSB3ZWlnaHRlZCBtZWFuIG9mIFxjb2Rle3h9IHdpdGggd2VpZ2h0cyBcY29kZXt5fS4KKwogICBJZiBcY29kZXt0eXBlID09ICJjaXJjdWxhciJ9LCBcZXFue24gPSBtfSBpcyByZXF1aXJlZCwgYW5kIHRoZSBhYm92ZSBpcwogICB0cnVlIGZvciBcZXFue2kgLCBrID0gMSxcZG90cyxufSB3aGVuCiAgIFxlcW57eF97an0gOj0geF97bitqfX17eFtqXSA6PSB4W24ral19IGZvciBcZXFue2ogPCAxfS4KSW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3Rlc3RzL2ZmdC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL3Rlc3RzL2ZmdC5SCShub25leGlzdGVudCkKKysrIHNyYy9saWJyYXJ5L3N0YXRzL3Rlc3RzL2ZmdC5SCSh3b3JraW5nIGNvcHkpCkBAIC0wLDAgKzEsMTkgQEAKK3N0b3BpZm5vdChleHBycyA9IHsKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDUpKSwgcmVwKDE1LCA1TCkpCisKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDcpLCB0eXBlPSJvcGVuIiksIGMoMSwgMywgNiwgMTAsIDE1LCAxNSwgMTUsIDE0LCAxMiwgOSwgNSkpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCA2KSwgdHlwZT0ib3BlbiIpLCBjKDEsIDMsIDYsIDEwLCAxNSwgMTUsIDE0LCAxMiwgOSwgNSkpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCA1KSwgdHlwZT0ib3BlbiIpLCBjKDEsIDMsIDYsIDEwLCAxNSwgMTQsIDEyLCA5LCA1KSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDQpLCB0eXBlPSJvcGVuIiksIGMoMSwgMywgNiwgMTAsIDE0LCAxMiwgOSwgNSkpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCAzKSwgdHlwZT0ib3BlbiIpLCBjKDEsIDMsIDYsIDksIDEyLCA5LCA1KSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDIpLCB0eXBlPSJvcGVuIiksIGMoMSwgMywgNSwgNywgOSwgNSkpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCAxKSwgdHlwZT0ib3BlbiIpLCBjKDEsIDIsIDMsIDQsIDUpKQorCisgICFsZW5ndGgoY29udm9sdmUoMTo1LCByZXAoMSwgNyksIHR5cGU9ImZpbHRlciIpKQorICAhbGVuZ3RoKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDYpLCB0eXBlPSJmaWx0ZXIiKSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDUpLCB0eXBlPSJmaWx0ZXIiKSwgMTUpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCA0KSwgdHlwZT0iZmlsdGVyIiksIGMoMTAsIDE0KSkKKyAgYWxsLmVxdWFsKGNvbnZvbHZlKDE6NSwgcmVwKDEsIDMpLCB0eXBlPSJmaWx0ZXIiKSwgYyg2LCA5LCAxMikpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCAyKSwgdHlwZT0iZmlsdGVyIiksIGMoMywgNSwgNywgOSkpCisgIGFsbC5lcXVhbChjb252b2x2ZSgxOjUsIHJlcCgxLCAxKSwgdHlwZT0iZmlsdGVyIiksIGMoMSwgMiwgMywgNCwgNSkpCit9KQo=",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-04-21 20:11:00"
+}

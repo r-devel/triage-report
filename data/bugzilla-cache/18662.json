@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "Consider signing R binaries + DLLs?",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2024-01-31T08:47:31Z",
+        "cc_detail": [
+          {
+            "id": 1330,
+            "name": "martyn.plummer",
+            "real_name": "Martyn Plummer"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "flags": [],
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "is_confirmed": false,
+        "op_sys": "Windows 64-bit",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "status": "UNCONFIRMED",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-01-30T17:16:11Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [
+          "martyn.plummer"
+        ],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "enhancement",
+        "deadline": {},
+        "id": 18662,
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Windows GUI / Window specific"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18662": {
+        "comments": [
+          {
+            "tags": [],
+            "id": 100571,
+            "is_private": false,
+            "creation_time": "2024-01-30T17:16:11Z",
+            "text": "Currently, the R installer (checked with R 4.3.2) is signed with a digital signature courtesy of Martyn Plummer. Is it worth considering signing the other binary artifacts within the installer as well; that is, the executables and DLLs published with R?",
+            "bug_id": 18662,
+            "count": 0,
+            "attachment_id": {},
+            "time": "2024-01-30T17:16:11Z",
+            "creator": "kevinushey",
+            "is_markdown": true
+          },
+          {
+            "creator": "martyn.plummer",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2024-01-31T08:47:31Z",
+            "creation_time": "2024-01-31T08:47:31Z",
+            "count": 1,
+            "text": "I don't think there is any real advantage to signing the exe and dll files in the R installation.\n\nSigning the installer has two big advantages for the user:\n\n* Modern browsers will do their best block the download of unsigned binaries.\n* When the installer is launched, the user is prompted to verify that they want it to make changes. It is then useful to verify the provenance of the installer.\n\nThere are not any corresponding blocks or prompts when the user launches R.",
+            "bug_id": 18662,
+            "tags": [],
+            "is_private": false,
+            "id": 100572
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18662": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2024-01-31 08:47:31"
+}

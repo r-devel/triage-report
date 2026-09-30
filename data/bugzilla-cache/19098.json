@@ -1,0 +1,155 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-09-22T16:22:48Z",
+        "cc_detail": [
+          {
+            "real_name": "Ivan Krylov",
+            "id": 3307,
+            "name": "ikrylov"
+          },
+          {
+            "real_name": "Luke Tierney",
+            "id": 34,
+            "name": "luke"
+          },
+          {
+            "name": "nnovica",
+            "id": 3763,
+            "real_name": "Novica Nakov"
+          }
+        ],
+        "blocks": [],
+        "url": "",
+        "summary": "Ctrl-D does not exit R console on Windows",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "status": "TRIAGED",
+        "creator_detail": {
+          "id": 3340,
+          "name": "Thomas.SOEIRO",
+          "real_name": "Thomas Soeiro"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "flags": [],
+        "platform": "Other",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "Thomas.SOEIRO",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19098,
+        "deadline": {},
+        "cc": [
+          "ikrylov",
+          "luke",
+          "nnovica"
+        ],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 4.6.x",
+        "creation_time": "2026-07-07T09:40:50Z",
+        "component": "Windows GUI / Window specific",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19098": {
+        "comments": [
+          {
+            "id": 103271,
+            "time": "2026-07-07T09:40:50Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "bug_id": 19098,
+            "text": "Ctrl-D does not exit the R console on Windows. It returns:\n\n```\n>\n+\n```\n\nIt worked in R 4.4.0 and it works on Linux.\n\nPerhaps it is related to bug 18982?",
+            "count": 0,
+            "is_markdown": true,
+            "creation_time": "2026-07-07T09:40:50Z",
+            "creator": "Thomas.SOEIRO"
+          },
+          {
+            "is_private": false,
+            "time": "2026-09-20T07:36:27Z",
+            "id": 103679,
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 1,
+            "text": "I tried to reproduce this on Win 11 with R 4.6.1 both in PowerShell and Git Bash and got the same behavior as explained in the first comment.",
+            "bug_id": 19098,
+            "creator": "nnovica",
+            "creation_time": "2026-09-20T07:36:27Z"
+          },
+          {
+            "creator": "luke",
+            "creation_time": "2026-09-20T12:15:46Z",
+            "is_markdown": true,
+            "count": 2,
+            "text": "(In reply to Thomas Soeiro from comment #0)\n> Ctrl-D does not exit the R console on Windows. It returns:\n> \n> ```\n> >\n> +\n> ```\n> \n> It worked in R 4.4.0 and it works on Linux.\n> \n> Perhaps it is related to bug 18982?\n\nWhat do you mean by 'R console'? The console in Rgui or Rterm run in a shell (if so which shell)?",
+            "bug_id": 19098,
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-09-20T12:15:46Z",
+            "id": 103680
+          },
+          {
+            "creation_time": "2026-09-22T14:21:29Z",
+            "bug_id": 19098,
+            "text": "When running `R.exe` or `Rterm.exe` version 4.5.1 using the usual Windows console host or the `mintty.exe` terminal from Rtools, pressing Ctrl+D offers to exit R (\"Save workspace image? [y/n/c]:\"). With Rterm.exe version 4.6.1, Ctrl+D causes R to prompt for continuation.\n\nThis is due to the fix for Bug 15941. In both R-4.5 and R >= 4.6, typing Ctrl+D at the beginnig of the line on Windows returns an empty string to the REPL. (`R_ReadConsole(...)` returns nonzero with `*state->buf == '\\0'`.) Prior to R-4.6, this terminated R_ReplConsole due to the parser returning an EOF condition:\n\n```\nR_ReplConsole (rho=0x192f435e018, savestack=0, browselevel=0) at main.c:318\n318             if(status < 0) {\n(gdb) l\n313         state.bufp = state.buf;\n314         if(R_Verbose)\n315             REprintf(\" >R_ReplConsole(): before \\\"for(;;)\\\" {main.c}\\n\");\n316         for(;;) {\n317             status = Rf_ReplIteration(rho, savestack, browselevel, &state);\n318             if(status < 0) {\n319               if (state.status == PARSE_INCOMPLETE)\n320                 error(_(\"unexpected end of input\"));\n321               return;\n322             }\n(gdb) p status\n$21 = -1\n(gdb) p state.status\n$22 = PARSE_EOF\n```\n\nIn R >= 4.6, when the parser is in the EOF state, the REPL keeps asking the console for more information:\n\n```\n#0  Rf_ReplIteration (rho=rho@entry=0x1b59b2ad298, savestack=savestack@entry=0,\n    browselevel=browselevel@entry=0, state=state@entry=0x18769fe9f0) at main.c:296\n296             R_IoBufferReadReset(&R_ConsoleIob);\n(gdb) l 228\n...\n228         R_CurrentExpr = R_Parse1Buffer(&R_ConsoleIob, 0, &state->status);\n229\n230         switch(state->status) {\n...\n290         case PARSE_EOF:\n291             /* the parser thinks it is EOF but it may not have seen all of the\n292                input, so postpone the decision to exit until there is really\n293                no more input (the parser may be seeing a sequence of spaces)\n294                PR#15941 */\n295         case PARSE_INCOMPLETE:\n296             R_IoBufferReadReset(&R_ConsoleIob);\n297             state->prompt_type = 2;\n298             return(2);\n299         }\n(gdb) p state->status\n$21 = PARSE_EOF\n```\n\nOn Linux, pressing Ctrl+D makes `R_ReadConsole()` -> `Rstd_ReadConsole()` return 0 (because `readline` sets `rl_data.readline_eof`). `getline()` should return 1 (EOF) instead of 0 (success) when it sees a `^D` at the beginning of the input line, causing `R_ReadConsole()` to return 0 on Windows as well:\n\n```\nIndex: src/gnuwin32/getline/getline.c\n===================================================================\n--- src/gnuwin32/getline/getline.c\t(revision 90582)\n+++ src/gnuwin32/getline/getline.c\t(working copy)\n@@ -781,7 +781,7 @@\n \t\t    gl_buf[0] = 0;\n \t\t    gl_cleanup();\n \t\t    gl_putc('\\n');\n-\t\t    return 0;\n+\t\t    return 1;\n \t\t} else {\n \t\t    gl_del(0);\n \t\t}\n```\n\n(this passes `make check-devel` on Windows and doesn't touch any code paths on non-Windows)",
+            "count": 3,
+            "tags": [],
+            "id": 103693,
+            "is_private": false,
+            "creator": "ikrylov",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-09-22T14:21:29Z"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 103694,
+            "time": "2026-09-22T16:22:48Z",
+            "is_private": false,
+            "creation_time": "2026-09-22T16:22:48Z",
+            "creator": "Thomas.SOEIRO",
+            "bug_id": 19098,
+            "text": "In response to comment 2: (probably no longer necesssary with Ivan analysis; thanks Ivan!)\n\nI can reproduce in:\n\n- Rterm.exe\n- R.exe executed in cmd.exe\n- R.exe executed in PowerShell\n- R.exe executed in mintty.exe from Cygwin (or RTools according to comment 3)\n\n\"Ctrl-*\" commands do not work in RGui.exe. I guess this is expected, since Ctrl-C is used for copying there.\n\n```\n> sessionInfo()\nR version 4.6.1 (2026-06-24 ucrt)\nPlatform: x86_64-w64-mingw32/x64\nRunning under: Windows 11 x64 (build 22631)\n\nMatrix products: default\n  LAPACK version 3.12.1\n\nlocale:\n[1] LC_COLLATE=French_France.utf8  LC_CTYPE=French_France.utf8\n[3] LC_MONETARY=French_France.utf8 LC_NUMERIC=C\n[5] LC_TIME=French_France.utf8\n\ntime zone: Europe/Paris\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base\n\nloaded via a namespace (and not attached):\n[1] compiler_4.6.1\n```",
+            "count": 4,
+            "is_markdown": true
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19098": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-22 16:22:48"
+}

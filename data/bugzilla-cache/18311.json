@@ -1,0 +1,149 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "deadline": {},
+        "id": 18311,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "elin.waring",
+          "tomas.kalibera"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2022-03-03T21:14:03Z",
+        "version": "R-devel (trunk)",
+        "component": "Windows GUI / Window specific",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "real_name": "Elin Waring",
+            "id": 3299,
+            "name": "elin.waring"
+          },
+          {
+            "name": "tomas.kalibera",
+            "id": 2442,
+            "real_name": "Tomas Kalibera"
+          }
+        ],
+        "last_change_time": "2022-03-09T14:46:29Z",
+        "blocks": [],
+        "url": "",
+        "summary": "TRE and perl disagree on length of unicode characters",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": []
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18311": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 18311,
+            "text": "For example:\n\n```\ntext <- \"\\U0001f4c4,\\u2728\"\ngregexpr(\",\", text, perl = FALSE)\ngregexpr(\",\", text, perl = TRUE)\n```\n\nI see:\n\n```\n> text <- \"\\U0001f4c4,\\u2728\"\n> gregexpr(\",\", text, perl = FALSE)\n[[1]]\n[1] 3\nattr(,\"match.length\")\n[1] 1\n\n> gregexpr(\",\", text, perl = TRUE)\n[[1]]\n[1] 2\nattr(,\"match.length\")\n[1] 1\n```\n\nIt seems like (from a cursory glance) \\U0001f4c4 is considered to have a length of 2, versus 1 for the perl engine. I only see this on Windows, not other platforms.\n\n```\n> substring(text, 1)\n[1] \"📄,✨\"\n> substring(text, 2)\n[1] \",✨\"\n> substring(text, 3)\n[1] \"✨\"\n```\n\n---\n\n```\n> sessionInfo()\nR Under development (unstable) (2022-02-13 r81727 ucrt)\nPlatform: x86_64-w64-mingw32/x64 (64-bit)\nRunning under: Windows 10 x64 (build 22567)\n\nMatrix products: default\n\nlocale:\n[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8   \n[3] LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          \n[5] LC_TIME=English_United States.utf8    \n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.2.0 tools_4.2.0   \n```",
+            "creation_time": "2022-03-03T21:14:03Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 98520,
+            "time": "2022-03-03T21:14:03Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "time": "2022-03-04T10:08:39Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "elin.waring",
+            "id": 98522,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18311,
+            "text": "I can confirm that on my mac the lengths are both 1. I looked around at Perl information and there do seem to be system specific aspects of handling unicode.\n\ne.g https://perldoc.perl.org/perluniintro#Perl's-Unicode-Support  says \n\n> \"Internally, Perl currently uses either whatever the native eight-bit \n> character set of the platform (for example Latin-1)  \n>  is, defaulting to UTF-8, to encode Unicode strings.\"\n\nWindows 10, I believe, is UTF-16. Macos is UTF-8, so that may explain the difference. \n\nSo it's expected according to Perl, but probably unexpected for R users.",
+            "count": 1,
+            "creation_time": "2022-03-04T10:08:39Z"
+          },
+          {
+            "is_markdown": false,
+            "creator": "tomas.kalibera",
+            "time": "2022-03-04T14:09:51Z",
+            "attachment_id": {},
+            "count": 2,
+            "text": "Thanks, yes, this is a bug. The problem originates from TRE which uses wchar_t to represent complete characters, so on Windows non-BMP characters won't be handled correctly. It could be fixed in the R's customized copy of TRE e.g. by using UTF-32. Unfortunately, TRE is no longer maintained. The Perl regular expressions should work fine for non-BMP characters and it has support for Unicode properties (and PCRE2 is maintained).",
+            "bug_id": 18311,
+            "creation_time": "2022-03-04T14:09:51Z",
+            "is_private": false,
+            "id": 98524,
+            "tags": []
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2022-03-06T04:06:57Z",
+            "text": "Is switching R to use PCRE2 regular expressions by default an option for the future? Perhaps with a thin compatibility layer, so that some regular expressions which are interpreted differently between TRE and PCRE2 can be handled?\n\nI'm mainly thinking of patterns starting with a '*', e.g.\n\n    \"*[.]R$\"\n\nwhich appears to be treated like \".*[.]R$\" by TRE, but is an error for the PCRE2 engine. I'm sure there are other examples, though.",
+            "bug_id": 18311,
+            "is_markdown": true,
+            "count": 3,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2022-03-06T04:06:57Z",
+            "id": 98533,
+            "is_private": false
+          },
+          {
+            "creation_time": "2022-03-09T14:46:29Z",
+            "text": "(In reply to Kevin Ushey from comment #3)\n> Is switching R to use PCRE2 regular expressions by default an option for the\n> future? Perhaps with a thin compatibility layer, so that some regular\n> expressions which are interpreted differently between TRE and PCRE2 can be\n> handled?\n\nFor now the strategy is to keep support for both engines in R and fix the most pressing (or easiest to fix) bugs in TRE ourselves in our copy of it. Support for surrogate pairs in the text as mentioned here should be doable, but there is at least one hard to fix open bug. Of course there is still hope that someone might pick up maintaining TRE.\n\nAnother option would be to find a replacement implementation for POSIX extended regular expressions, but we also use TRE for approximate matching. With a compatibility layer on top of PCRE2, in addition to maintaining that, we would still need to find a solution for the approximate matching. That's why the strategy has not changed so far.\n\n> I'm mainly thinking of patterns starting with a '*', e.g.\n> \n>     \"*[.]R$\"\n> \n> which appears to be treated like \".*[.]R$\" by TRE, but is an error for the\n> PCRE2 engine. I'm sure there are other examples, though.\n\nThere are differences between the regular expressions supported, but actually this is a good example of another problem. Starting an extended regular expression with an asterisk is undefined behavior according to POSIX, so one should not use it at all. An alternative implementation or compatibility layer would have to be according to the specification. See ?regex and the referenced specifications.",
+            "bug_id": 18311,
+            "count": 4,
+            "tags": [],
+            "id": 98546,
+            "is_private": false,
+            "creator": "tomas.kalibera",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2022-03-09T14:46:29Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18311": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2022-03-09 14:46:29"
+}

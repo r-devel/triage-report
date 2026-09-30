@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2021-05-06T02:07:11Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 18096,
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Low-level",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "[patch] sort() did not return ALTREP for already increasing int vectors",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2021-05-06T02:07:11Z",
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "creator": "gabembecker",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Gabriel Becker",
+          "name": "gabembecker",
+          "id": 1299
+        }
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18096": {
+        "comments": [
+          {
+            "attachment_id": 2837,
+            "time": "2021-05-06T02:07:11Z",
+            "creator": "gabembecker",
+            "is_markdown": true,
+            "tags": [],
+            "id": 97281,
+            "is_private": false,
+            "creation_time": "2021-05-06T02:07:11Z",
+            "text": "Created attachment 2837\npatch to ensure already sorted increasing ints receive ALTREP wrapper\n\nContext: sort.int\n\nCurrently the sorted_fpass internal checks integer vectors for being already sorted(increasing) in order to return quickly from sort.int in the as.factor case (among others).\n\nBut code that receives the fast-pass result wasn't updatead to understand that it could receive true from a non-altrep so the vectors are not being returned a known-sorted ALTREP form (a contract of sort for ints and numerics since we introduced that change).\n\nThis patch changes the fastpass to have 3 possible outcomes: 0 (no shortcut do sort), 1 (ALTREP that is already known-sorted) and 2 (is already sorted but needs a wrapper).\n\nPassed make check-devel for me and exhibits fixed behavior",
+            "bug_id": 18096,
+            "count": 0
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18096": [
+        {
+          "is_private": false,
+          "id": 2837,
+          "last_change_time": "2021-05-06T02:07:11Z",
+          "size": 4051,
+          "file_name": "sort_int_bug_patch.diff",
+          "bug_id": 18096,
+          "creation_time": "2021-05-06T02:07:11Z",
+          "summary": "patch to ensure already sorted increasing ints receive ALTREP wrapper",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "gabembecker",
+          "data": "SW5kZXg6IFJkZXZlbHJhdy9zcmMvbGlicmFyeS9iYXNlL1Ivc29ydC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIFJkZXZlbHJhdy9zcmMvbGlicmFyeS9iYXNlL1Ivc29ydC5SCShyZXZpc2lvbiA4MDI2MykKKysrIFJkZXZlbHJhdy9zcmMvbGlicmFyeS9iYXNlL1Ivc29ydC5SCSh3b3JraW5nIGNvcHkpCkBAIC04MywxMSArODMsMTQgQEAKICAgICAjIyBmYXN0cGFzcwogICAgIGRlY3JlYXNpbmcgPC0gYXMubG9naWNhbChkZWNyZWFzaW5nKQogICAgIGlmIChpcy5udWxsKHBhcnRpYWwpICYmICFpbmRleC5yZXR1cm4gJiYgaXMubnVtZXJpYyh4KSkgewotICAgICAgICBpZiAoLkludGVybmFsKHNvcnRlZF9mcGFzcyh4LCBkZWNyZWFzaW5nLCBuYS5sYXN0KSkpIHsKKyAgICAgICAgZnByZXMgPC0gLkludGVybmFsKHNvcnRlZF9mcGFzcyh4LCBkZWNyZWFzaW5nLCBuYS5sYXN0KSkKKyAgICAgICAgaWYgKGZwcmVzID4gMCkgeyAjIyBib3RoIHNvcnRlZCBhbHRyZXAgKDEpIGFuZCBpbmNyIGludCBub24tYWx0cmVwICgyKSBjYXNlcwogICAgICAgICAgICAgIyMgc3RyaXAgYXR0cmlidXRlcyBvdGhlciB0aGFuICduYW1lcycKICAgICAgICAgICAgIGF0dHIgPC0gYXR0cmlidXRlcyh4KQogICAgICAgICAgICAgaWYgKCEgaXMubnVsbChhdHRyKSAmJiAhIGlkZW50aWNhbChuYW1lcyhhdHRyKSwgIm5hbWVzIikpCiAgICAgICAgICAgICAgICAgYXR0cmlidXRlcyh4KSA8LSBsaXN0KG5hbWVzID0gbmFtZXMoeCkpCisgICAgICAgICAgICBpZihmcHJlcyA9PSAyTCkgIyMgaW50IG5vbi1hbHRyZXAgY2FzZSAob25seSByZXR1cm5zIDIgaWYgbm8gTkFzKQorICAgICAgICAgICAgICAgIHggPC0gLmRvU29ydFdyYXAoeCwgZGVjcmVhc2luZywgbmEubGFzdCwgbm9OQSA9IFRSVUUpCiAgICAgICAgICAgICByZXR1cm4oeCkKICAgICAgICAgfQogICAgIH0KQEAgLTE4Myw3ICsxODYsNyBAQAogICAgICMjIGZhc3RwYXNzLCB0YWtlIGFkdmFudGFnZSBvZiBBTFRSRVAgbWV0YWRhdGEKICAgICBkZWNyZWFzaW5nIDwtIGFzLmxvZ2ljYWwoZGVjcmVhc2luZykKICAgICBpZiAobGVuZ3RoKHopID09IDFMICYmIGlzLm51bWVyaWMoeCA8LSB6W1sxTF1dKSAmJiAhaXMub2JqZWN0KHgpICYmIGxlbmd0aCh4KSA+IDApIHsKLSAgICAgICAgaWYgKC5JbnRlcm5hbChzb3J0ZWRfZnBhc3MoeCwgZGVjcmVhc2luZywgbmEubGFzdCkpKQorICAgICAgICBpZiAoLkludGVybmFsKHNvcnRlZF9mcGFzcyh4LCBkZWNyZWFzaW5nLCBuYS5sYXN0KSkgPiAwKQogICAgICAgICAgICAgcmV0dXJuKHNlcV9hbG9uZyh4KSkKICAgICB9CiAKQEAgLTIyOCw3ICsyMzEsNyBAQAogICAgICMjIGZhc3RwYXNzLCB0YWtlIGFkdmFudGFnZSBvZiBBTFRSRVAgbWV0YWRhdGEKICAgICBkZWNyZWFzaW5nIDwtIGFzLmxvZ2ljYWwoZGVjcmVhc2luZykKICAgICBpZihpcy5udWxsKHBhcnRpYWwpICYmIGlzLm51bWVyaWMoeCkgJiYgIWlzLm9iamVjdCh4KSAmJiBsZW5ndGgoeCkgPiAwKSB7Ci0gICAgICAgIGlmICguSW50ZXJuYWwoc29ydGVkX2ZwYXNzKHgsIGRlY3JlYXNpbmcsIG5hLmxhc3QpKSkKKyAgICAgICAgaWYgKC5JbnRlcm5hbChzb3J0ZWRfZnBhc3MoeCwgZGVjcmVhc2luZywgbmEubGFzdCkpID4gMCkKICAgICAgICAgICAgIHJldHVybihzZXFfYWxvbmcoeCkpCiAgICAgfQogCkluZGV4OiBSZGV2ZWxyYXcvc3JjL21haW4vc29ydC5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIFJkZXZlbHJhdy9zcmMvbWFpbi9zb3J0LmMJKHJldmlzaW9uIDgwMjYzKQorKysgUmRldmVscmF3L3NyYy9tYWluL3NvcnQuYwkod29ya2luZyBjb3B5KQpAQCAtNDIwLDEyICs0MjAsMTcgQEAKICAgICByZXR1cm4oYW5zKTsgLyogd3JhcHBpbmcgd2l0aCBtZXRhZGF0YSBoYXBwZW5zIGF0IGVuZCBvZiBzb3J0LmludCAqLwogfQogCi1SYm9vbGVhbiBmYXN0cGFzc19zb3J0Y2hlY2soU0VYUCB4LCBpbnQgd2FudGVkKSB7CisvKiByZXR1cm4gMCBmb3Igbm90IGtub3duIHRvIGJlIHNvcnRlZAorICAgMSBmb3IgYWxyZWFkeSBhbiBBTFRSRVAgd2hpY2ggaXMgc29ydGVkIGFzIGRlc2lyZWQKKyAgIDIgZm9yIG5vbi1hbHRyZXAgaW5jcmVhc2luZyBpbnQgdGhhdCBuZWVkcyBhIHdyYXBwZXIgKGFuZCBoYXMgbm8gbmFzIGFzIHBlciB0aGUgaW1wbGVtZW50ZWQgY2hlY2spCisqLworaW50IGZhc3RwYXNzX3NvcnRjaGVjayhTRVhQIHgsIGludCB3YW50ZWQpIHsKICAgICBpZighS05PV05fU09SVEVEKHdhbnRlZCkpIAotCXJldHVybiBGQUxTRTsKKwlyZXR1cm4gMDsKIAogICAgIGludCBzb3J0ZWQgPSBVTktOT1dOX1NPUlRFRE5FU1M7Ci0gICAgUmJvb2xlYW4gbm9OQSA9IEZBTFNFLCBkb25lID0gRkFMU0U7CisgICAgUmJvb2xlYW4gbm9OQSA9IEZBTFNFOworICAgIGludCBkb25lID0gMDsKIAogICAgIHN3aXRjaChUWVBFT0YoeCkpIHsKICAgICBjYXNlIElOVFNYUDoKQEAgLTQ0NCwxOSArNDQ5LDE5IEBACiAgICAgLyogd2Uga25vdyB3YW50ZWQgaXMgbm90IE5BX0lOVEVHRVIgb3IgMCBhdCB0aGlzIHBvaW50IGJlY2F1c2UKICAgICAgICBvZiB0aGUgaW1tZWRpYXRlIHJldHVybiBhdCB0aGUgYmVnaW5uaW5nIGZvciB0aGF0IGNhc2UgKi8KICAgICBpZighS05PV05fU09SVEVEKHNvcnRlZCkpIHsKLQlkb25lID0gRkFMU0U7CisJZG9uZSA9IDA7CiAgICAgfSBlbHNlIGlmKHNvcnRlZCA9PSB3YW50ZWQpIHsgICAKLQlkb25lID0gVFJVRTsKKwlkb25lID0gMTsKIAkvKiBpZiB0aGVyZSBhcmUgbm8gTkFzLCBuYS5sYXN0IGNhbiBiZSBpZ25vcmVkICovCiAgICAgfSBlbHNlIGlmKG5vTkEgJiYgc29ydGVkICogd2FudGVkID4gMCkgewogCS8qIHNhbWUgc2lnbiwgdGh1cyBzYW1lIGRpcmVjdGlvbiBvZiBzb3J0ICovCi0JZG9uZSA9IFRSVUU7CisJZG9uZSA9IDE7CiAgICAgfQogCiAgICAgLyogSW5jcmVhc2luZywgdXN1YWxseSBmYWlybHkgc2hvcnQsIHNlcXVlbmNlcyBvZiBpbnRlZ2VycyBvZnRlbgogICAgICAgIGFyaXNlIGFzIGxldmVscyBpbiBhcy5mYWN0b3IuICBBIHF1aWNrIGNoZWNrIGhlcmUgYWxsb3dzIGEgZmFzdAogICAgICAgIHJldHVybiBpbiBzb3J0LmludC4gKi8KLSAgICBpZiAoISBkb25lICYmIFRZUEVPRih4KSA9PSBJTlRTWFAgJiYgd2FudGVkID4gMCAmJiAhIEFMVFJFUCh4KSkgeworICAgIGlmIChkb25lID09IDAgJiYgVFlQRU9GKHgpID09IElOVFNYUCAmJiB3YW50ZWQgPiAwICYmICEgQUxUUkVQKHgpKSB7CiAJUl94bGVuX3QgbGVuID0gWExFTkdUSCh4KTsKIAlpZiAobGVuID4gMCkgewogCSAgICBpbnQgKnB4ID0gSU5URUdFUih4KTsKQEAgLTQ2NSwxMCArNDcwLDEwIEBACiAJCWZvciAoUl94bGVuX3QgaSA9IDE7IGkgPCBsZW47IGkrKykgewogCQkgICAgaW50IG5leHQgPSBweFtpXTsKIAkJICAgIGlmIChuZXh0IDwgbGFzdCB8fCBuZXh0ID09IE5BX0lOVEVHRVIpCi0JCQlyZXR1cm4gRkFMU0U7CisJCQlyZXR1cm4gMDsKIAkJICAgIGVsc2UgbGFzdCA9IG5leHQ7CiAJCX0KLQkJcmV0dXJuIFRSVUU7CisJCXJldHVybiAyOyAvKiBub3QgYWxyZWFkeSBhbiBhbHRyZXAgc28gbmVlZHMgd3JhcHBpbmcgKi8KIAkgICAgfQogCX0KICAgICB9CkBAIC01MDAsOSArNTA1LDkgQEAKICAgICBpbnQgbmFsYXN0ID0gYXNJbnRlZ2VyKENBRERSKGFyZ3MpKTsgCiAgICAgaW50IHdhbnRlZCA9IG1ha2VTb3J0RW51bShkZWNyLCBuYWxhc3QpOwogICAgIFNFWFAgeCA9IFBST1RFQ1QoQ0FSKGFyZ3MpKTsKLSAgICBSYm9vbGVhbiB3YXNzb3J0ZWQgPSBmYXN0cGFzc19zb3J0Y2hlY2soeCwgd2FudGVkKTsKKyAgICBpbnQgd2Fzc29ydGVkID0gZmFzdHBhc3Nfc29ydGNoZWNrKHgsIHdhbnRlZCk7CiAgICAgVU5QUk9URUNUKDEpOwotICAgIHJldHVybiBTY2FsYXJMb2dpY2FsKHdhc3NvcnRlZCk7CisgICAgcmV0dXJuIFNjYWxhckludGVnZXIod2Fzc29ydGVkKTsKIH0KIAogCg=="
+        }
+      ]
+    }
+  },
+  "source_changed": "2021-05-06 02:07:11"
+}

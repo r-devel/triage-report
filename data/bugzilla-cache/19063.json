@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 19063,
+        "severity": "normal",
+        "dupe_of": {},
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-04-27T16:17:02Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-04-27T16:32:53Z",
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "truncate overly-long paths in dir.create()"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19063": {
+        "comments": [
+          {
+            "time": "2026-04-27T16:17:02Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "id": 102985,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19063,
+            "text": "For example, using a build of R with ASAN on macOS:\n\n```\n> R.version\n               _\nplatform       aarch64-apple-darwin25.4.0\narch           aarch64\nos             darwin25.4.0\nsystem         aarch64, darwin25.4.0\nstatus         Under development (unstable)\nmajor          4\nminor          7.0\nyear           2026\nmonth          04\nday            23\nsvn rev        89955\nlanguage       R\nversion.string R Under development (unstable) (2026-04-23 r89955)\nnickname       Unsuffered Consequences\n\n> long <- paste0(\"/tmp/\", strrep(\"a\", 16000))\n> dir.create(long)\n=================================================================\n==9044==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x0001040e1c20 at pc 0x000100899120 bp 0x00016fa58f50 sp 0x00016fa58700\nWRITE of size 16006 at 0x0001040e1c20 thread T0\n    #0 0x00010089911c in strcpy+0x534 (libclang_rt.asan_osx_dynamic.dylib:arm64+0x4d11c)\n    #1 0x000102aceeec in do_dircreate platform.c:2697\n    #2 0x0001029d0198 in bcEval_loop eval.c:8128\n    #3 0x0001029a5260 in bcEval eval.c:7511\n    #4 0x0001029a4160 in Rf_eval eval.c:1167\n    #5 0x0001029a84b8 in R_execClosure eval.c:2387\n    #6 0x0001029a6d2c in applyClosure_core eval.c:2300\n    #7 0x0001029a484c in Rf_applyClosure eval.c:2322\n    #8 0x0001029a484c in Rf_eval eval.c:1278\n    #9 0x000102a63048 in Rf_ReplIteration main.c:264\n    #10 0x000102a65330 in R_ReplConsole main.c:317\n    #11 0x000102a65164 in run_Rmainloop main.c:1235\n    #12 0x000102a65438 in Rf_mainloop main.c:1242\n    #13 0x0001003a5a88 in main Rmain.c:29\n    #14 0x00018a597da0 in start+0x1b4c (dyld:arm64e+0x1fda0)\n\nAddress 0x0001040e1c20 is located in stack of thread T0 at offset 1056 in frame\n    #0 0x000102acece4 in do_dircreate platform.c:2681\n\n  This frame has 2 object(s):\n    [32, 1056) 'dir' (line 2684)\n    [1184, 1328) 'sb' (line 2706) <== Memory access at offset 1056 partially underflows this variable\nHINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork\n      (longjmp and C++ exceptions *are* supported)\nSUMMARY: AddressSanitizer: stack-buffer-overflow platform.c:2697 in do_dircreate\nShadow bytes around the buggy address:\n  0x0001040e1980: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1a00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1a80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1b00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1b80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n=>0x0001040e1c00: 00 00 00 00[f2]f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2\n  0x0001040e1c80: f2 f2 f2 f2 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8\n  0x0001040e1d00: f8 f8 f8 f8 f8 f8 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\n  0x0001040e1d80: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\n  0x0001040e1e00: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\n  0x0001040e1e80: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07\n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\n=================================================================\n==9044==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x0001040e1c20 at pc 0x000100863004 bp 0x00016fa58f50 sp 0x00016fa58720\nREAD of size 16006 at 0x0001040e1c20 thread T0\n    #0 0x000100863000 in strlen+0x26c (libclang_rt.asan_osx_dynamic.dylib:arm64+0x17000)\n    #1 0x000102aceef4 in do_dircreate platform.c:2698\n    #2 0x0001029d0198 in bcEval_loop eval.c:8128\n    #3 0x0001029a5260 in bcEval eval.c:7511\n    #4 0x0001029a4160 in Rf_eval eval.c:1167\n    #5 0x0001029a84b8 in R_execClosure eval.c:2387\n    #6 0x0001029a6d2c in applyClosure_core eval.c:2300\n    #7 0x0001029a484c in Rf_applyClosure eval.c:2322\n    #8 0x0001029a484c in Rf_eval eval.c:1278\n    #9 0x000102a63048 in Rf_ReplIteration main.c:264\n    #10 0x000102a65330 in R_ReplConsole main.c:317\n    #11 0x000102a65164 in run_Rmainloop main.c:1235\n    #12 0x000102a65438 in Rf_mainloop main.c:1242\n    #13 0x0001003a5a88 in main Rmain.c:29\n    #14 0x00018a597da0 in start+0x1b4c (dyld:arm64e+0x1fda0)\n\nAddress 0x0001040e1c20 is located in stack of thread T0 at offset 1056 in frame\n    #0 0x000102acece4 in do_dircreate platform.c:2681\n\n  This frame has 2 object(s):\n    [32, 1056) 'dir' (line 2684)\n    [1184, 1328) 'sb' (line 2706) <== Memory access at offset 1056 partially underflows this variable\nHINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork\n      (longjmp and C++ exceptions *are* supported)\nSUMMARY: AddressSanitizer: stack-buffer-overflow platform.c:2698 in do_dircreate\nShadow bytes around the buggy address:\n  0x0001040e1980: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1a00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1a80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1b00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n  0x0001040e1b80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n=>0x0001040e1c00: 00 00 00 00[f2]f2 f2 f2 f2 f2 f2 f2 f2 f2 f2 f2\n  0x0001040e1c80: f2 f2 f2 f2 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8\n  0x0001040e1d00: f8 f8 f8 f8 f8 f8 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\n  0x0001040e1d80: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\n  0x0001040e1e00: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\n  0x0001040e1e80: f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3 f3\nShadow byte legend (one shadow byte represents 8 application bytes):\n  Addressable:           00\n  Partially addressable: 01 02 03 04 05 06 07\n  Heap left redzone:       fa\n  Freed heap region:       fd\n  Stack left redzone:      f1\n  Stack mid redzone:       f2\n  Stack right redzone:     f3\n  Stack after return:      f5\n  Stack use after scope:   f8\n  Global redzone:          f9\n  Global init order:       f6\n  Poisoned by user:        f7\n  Container overflow:      fc\n  Array cookie:            ac\n  Intra object redzone:    bb\n  ASan internal:           fe\n  Left alloca redzone:     ca\n  Right alloca redzone:    cb\nplatform.c:2700:13: runtime error: index 16005 out of bounds for type 'char[1024]'\n    #0 0x000102acf494 in do_dircreate platform.c:2700\n    #1 0x0001029d0198 in bcEval_loop eval.c:8128\n    #2 0x0001029a5260 in bcEval eval.c:7511\n    #3 0x0001029a4160 in Rf_eval eval.c:1167\n    #4 0x0001029a84b8 in R_execClosure eval.c:2387\n    #5 0x0001029a6d2c in applyClosure_core eval.c:2300\n    #6 0x0001029a484c in Rf_applyClosure eval.c:2322\n    #7 0x0001029a484c in Rf_eval eval.c:1278\n    #8 0x000102a63048 in Rf_ReplIteration main.c:264\n    #9 0x000102a65330 in R_ReplConsole main.c:317\n    #10 0x000102a65164 in run_Rmainloop main.c:1235\n    #11 0x000102a65438 in Rf_mainloop main.c:1242\n    #12 0x0001003a5a88 in main Rmain.c:29\n    #13 0x00018a597da0 in start+0x1b4c (dyld:arm64e+0x1fda0)\n\nSUMMARY: UndefinedBehaviorSanitizer: undefined-behavior platform.c:2700:13\n=================================================================\n==9044==ERROR: AddressSanitizer: stack-use-after-return on address 0x0001040e56a4 at pc 0x000102acefb8 bp 0x00016fa58f50 sp 0x00016fa58f48\nREAD of size 1 at 0x0001040e56a4 thread T0\n    #0 0x000102acefb4 in do_dircreate platform.c:2701\n    #1 0x0001029d0198 in bcEval_loop eval.c:8128\n    #2 0x0001029a5260 in bcEval eval.c:7511\n    #3 0x0001029a4160 in Rf_eval eval.c:1167\n    #4 0x0001029a84b8 in R_execClosure eval.c:2387\n    #5 0x0001029a6d2c in applyClosure_core eval.c:2300\n    #6 0x0001029a484c in Rf_applyClosure eval.c:2322\n    #7 0x0001029a484c in Rf_eval eval.c:1278\n    #8 0x000102a63048 in Rf_ReplIteration main.c:264\n    #9 0x000102a65330 in R_ReplConsole main.c:317\n    #10 0x000102a65164 in run_Rmainloop main.c:1235\n    #11 0x000102a65438 in Rf_mainloop main.c:1242\n    #12 0x0001003a5a88 in main Rmain.c:29\n    #13 0x00018a597da0 in start+0x1b4c (dyld:arm64e+0x1fda0)\n\nAddress 0x0001040e56a4 is located in stack of thread T0 at offset 1700 in frame\n    #0 0x616161616161616d  (<unknown module>)\n```",
+            "count": 0,
+            "creation_time": "2026-04-27T16:17:02Z"
+          },
+          {
+            "tags": [],
+            "attachment_id": 3685,
+            "id": 102986,
+            "time": "2026-04-27T16:17:36Z",
+            "is_private": false,
+            "creation_time": "2026-04-27T16:17:36Z",
+            "creator": "kevinushey",
+            "bug_id": 19063,
+            "text": "Created attachment 3685\nCandidate patch.",
+            "is_markdown": true,
+            "count": 1
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "attachment_id": 3686,
+            "time": "2026-04-27T16:32:53Z",
+            "creation_time": "2026-04-27T16:32:53Z",
+            "count": 2,
+            "bug_id": 19063,
+            "text": "Created attachment 3686\nAlternate patch (error rather than silent truncation)",
+            "tags": [],
+            "is_private": false,
+            "id": 102987
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19063": [
+        {
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3BsYXRmb3JtLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vcGxhdGZvcm0uYwkocmV2aXNpb24gODk5NjEpCisrKyBzcmMvbWFpbi9wbGF0Zm9ybS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yNjk0LDcgKzI2OTQsOSBAQAogICAgIGlmIChyZWN1cnNpdmUgPT0gTkFfTE9HSUNBTCkgcmVjdXJzaXZlID0gMDsKICAgICBtb2RlID0gYXNJbnRlZ2VyKENBREREUihhcmdzKSk7CiAgICAgaWYgKG1vZGUgPT0gTkFfTE9HSUNBTCkgbW9kZSA9IDA3Nzc7Ci0gICAgc3RyY3B5KGRpciwgUl9FeHBhbmRGaWxlTmFtZSh0cmFuc2xhdGVDaGFyRlAoU1RSSU5HX0VMVChwYXRoLCAwKSkpKTsKKyAgICBzdHJuY3B5KGRpciwgUl9FeHBhbmRGaWxlTmFtZSh0cmFuc2xhdGVDaGFyRlAoU1RSSU5HX0VMVChwYXRoLCAwKSkpLAorCSAgICBSX1BBVEhfTUFYIC0gMSk7CisgICAgZGlyW1JfUEFUSF9NQVggLSAxXSA9ICdcMCc7CiAgICAgaWYgKHN0cmxlbihkaXIpID09IDApIGVycm9yKF8oInplcm8tbGVuZ3RoICdwYXRoJyBhcmd1bWVudCIpKTsKICAgICAvKiByZW1vdmUgdHJhaWxpbmcgc2xhc2hlcyAqLwogICAgIHAgPSBkaXIgKyBzdHJsZW4oZGlyKSAtIDE7Cg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2026-04-27T16:17:36Z",
+          "summary": "Candidate patch.",
+          "file_name": "do-dircreate-strncpy.patch",
+          "bug_id": 19063,
+          "last_change_time": "2026-04-27T16:17:36Z",
+          "size": 664,
+          "is_private": false,
+          "id": 3685
+        },
+        {
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3BsYXRmb3JtLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vcGxhdGZvcm0uYwkocmV2aXNpb24gODk5NjEpCisrKyBzcmMvbWFpbi9wbGF0Zm9ybS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yNjk0LDcgKzI2OTQsMTAgQEAKICAgICBpZiAocmVjdXJzaXZlID09IE5BX0xPR0lDQUwpIHJlY3Vyc2l2ZSA9IDA7CiAgICAgbW9kZSA9IGFzSW50ZWdlcihDQURERFIoYXJncykpOwogICAgIGlmIChtb2RlID09IE5BX0xPR0lDQUwpIG1vZGUgPSAwNzc3OwotICAgIHN0cmNweShkaXIsIFJfRXhwYW5kRmlsZU5hbWUodHJhbnNsYXRlQ2hhckZQKFNUUklOR19FTFQocGF0aCwgMCkpKSk7CisgICAgY29uc3QgY2hhciAqcSA9IFJfRXhwYW5kRmlsZU5hbWUodHJhbnNsYXRlQ2hhckZQKFNUUklOR19FTFQocGF0aCwgMCkpKTsKKyAgICBpZiAoc3RybGVuKHEpID4gUl9QQVRIX01BWCAtIDEpIC8vIGFsbG93IGZvciB0ZXJtaW5hdG9yCisJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJwYXRoIik7CisgICAgc3RyY3B5KGRpciwgcSk7CiAgICAgaWYgKHN0cmxlbihkaXIpID09IDApIGVycm9yKF8oInplcm8tbGVuZ3RoICdwYXRoJyBhcmd1bWVudCIpKTsKICAgICAvKiByZW1vdmUgdHJhaWxpbmcgc2xhc2hlcyAqLwogICAgIHAgPSBkaXIgKyBzdHJsZW4oZGlyKSAtIDE7Cg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2026-04-27T16:32:53Z",
+          "summary": "Alternate patch (error rather than silent truncation)",
+          "file_name": "do-dircreate-strncpy-error.patch",
+          "bug_id": 19063,
+          "last_change_time": "2026-04-27T16:32:53Z",
+          "size": 739,
+          "is_private": false,
+          "id": 3686
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-04-27 16:32:53"
+}

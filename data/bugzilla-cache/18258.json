@@ -1,0 +1,221 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "component": "Language",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [
+          "gabembecker"
+        ],
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 18258,
+        "deadline": {},
+        "whiteboard": "",
+        "version": "R 4.0.x",
+        "creation_time": "2021-12-19T20:48:16Z",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Ofek Shilon",
+          "name": "ofekshilon",
+          "id": 3428
+        },
+        "resolution": "",
+        "status": "TRIAGED",
+        "is_creator_accessible": true,
+        "creator": "ofekshilon",
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "flags": [],
+        "platform": "Other",
+        "last_change_time": "2026-06-26T04:12:49Z",
+        "cc_detail": [
+          {
+            "real_name": "Gabriel Becker",
+            "name": "gabembecker",
+            "id": 1299
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "'trace' only half-works for generated functions in packages",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18258": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2021-12-19T20:48:16Z",
+            "id": 98235,
+            "tags": [],
+            "attachment_id": {},
+            "count": 0,
+            "is_markdown": true,
+            "text": "Create a package named 'testTrace' with only two functions:\n```\nfunctionFactory <- function() {\n  return(function(...) print(...))\n}\n\ngeneratedF <- functionFactory()\n```\ngeneratedF is non-standard in the fact that `parent.env(environment(generatedF)` is *not* the package namespace - and it seems that methods::.TraceWithMethods relies on it.  So tracing `generatedF` is proving to be problematic.\n\nConsider two ways of invoking `generatedF`:\n(1) `generatedF(3)`\n(2) `get(\"generatedF\", asNamespace(\"testTrace\"))(3)`    \n   (I believe 2 is essentially as dependent packages invoke it)\n\nConsider also 3 ways of setting a trace:\nA. trace(generatedF, tracer=function() print(\"1\"))\n This causes (1) to be traced, but not (2).\nB. trace(generatedF, tracer=function() print(\"1\"), where=asNamespace(\"testTrace\"))\nC. trace(generatedF, tracer=function() print(\"1\"), where=functionFactory)\n These cause (2) to be traced, but not (1).",
+            "bug_id": 18258,
+            "creator": "ofekshilon",
+            "creation_time": "2021-12-19T20:48:16Z"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 102154,
+            "creation_time": "2025-09-02T10:00:06Z",
+            "count": 1,
+            "bug_id": 18258,
+            "text": "I can confirm that this is present in R-devel (as of yesterday). Patch and test code attached.\n\nThe issue is actually with `environment(generatedF)` (which is not the namespace) rather than `parent.env(environment(generatedF))` (which is the namespace).\n\nThe culprit ultimately lies in `methods:::.assignOverBinding`. This is what is used to assign the new `functionWithTrace` object over the original object when `trace` is invoked with a tracer argument (or any argument beyond what, in fact). `.assignOverBinding` contains:\n\n```\nfunction (what, value, where, verbose = TRUE) \n{\n <snip>\n     if (is.function(value)) {\n        fenv <- environment(value)\n        if (is.null(fenv)) \n            fenv <- baseenv()\n        if (!identical(fenv, where) && exists(what, envir = fenv, \n            inherits = FALSE) && bindingIsLocked(what, fenv)) {\n            unlockBinding(what, fenv)\n            assign(what, value, fenv)\n            lockBinding(what, fenv)\n        }\n    }\n    if (exists(what, envir = where, inherits = FALSE) && bindingIsLocked(what, \n        where)) {\n        unlockBinding(what, where)\n        assign(what, value, where)\n        lockBinding(what, where)\n    }\n    else assign(what, value, where)\n}\n```\n\nFor \"standard\" package functions, e.g., `functionFactory`, `fenv` is the namespace while `where` will be the package environment, and the namespace has a binding for the symbol, so \n\n```\n!identical(fenv, where) && exists(what, envir = fenv, \n            inherits = FALSE) && bindingIsLocked(what, fenv)\n```\nevaluates to `TRUE`, thus unlocking, assignment into, and locking of `fenv` (again, the package namespace) occurs.\n\nWith `generatedF`, however, `fenv` is a call frame from when `functionFactory` was called to create it. `fenv` is again not equal to `where` (pkg environment) but `fenv` *does not have a binding for the symbol* so the condition above evaluates to `FALSE`. This means that the traced function object is assigned into the pkg environment (`where`) but NOT into `fenv` **or** the package namespace.\n\n`.assignOverBinding` is used in a couple of other contexts, so my proposed patch leaves the default behavior as is but adds a `findFunBinding` argument, defaulting to `FALSE` that, if `TRUE`, walks up the parent chain of `fenv` until it finds an environment with a binding for `what` (the function name being traced) and uses that as `fenv` for purposes of the condition and subsequent conditional assignment. This fixes the inconsistent behavior between tracing `generatedF` and `functionFactory`. I have added specific regression tests and have attached a wide test suite in the form of a script.",
+            "attachment_id": {},
+            "time": "2025-09-02T10:00:06Z",
+            "creator": "gabembecker",
+            "is_markdown": true
+          },
+          {
+            "text": "Created attachment 3533\npatch to ensure traced fun is assigned to namespace for generated funcs\n\nWork in collaboration with Heather Turner",
+            "bug_id": 18258,
+            "count": 2,
+            "creation_time": "2025-09-02T10:01:29Z",
+            "id": 102155,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "gabembecker",
+            "time": "2025-09-02T10:01:29Z",
+            "attachment_id": 3533
+          },
+          {
+            "time": "2025-09-02T10:03:44Z",
+            "attachment_id": 3534,
+            "is_markdown": true,
+            "creator": "gabembecker",
+            "id": 102156,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18258,
+            "text": "Created attachment 3534\ntest suite script for tracing in various forms\n\ngenerates resdf containing informatino including `bugged` column which indicates disagreement in behavior between standard and factory generated package functions. Requires test pkgs included in other attachments.",
+            "count": 3,
+            "creation_time": "2025-09-02T10:03:44Z"
+          },
+          {
+            "count": 4,
+            "text": "Created attachment 3535\ntest package for use with test suite",
+            "bug_id": 18258,
+            "creation_time": "2025-09-02T10:04:46Z",
+            "is_private": false,
+            "id": 102157,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "gabembecker",
+            "time": "2025-09-02T10:04:46Z",
+            "attachment_id": 3535
+          },
+          {
+            "count": 5,
+            "bug_id": 18258,
+            "text": "Created attachment 3536\nsecond test package for use with test suite",
+            "creation_time": "2025-09-02T10:05:21Z",
+            "is_private": false,
+            "id": 102158,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "gabembecker",
+            "time": "2025-09-02T10:05:21Z",
+            "attachment_id": 3536
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18258": [
+        {
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "gabembecker",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3RyYWNlLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3RyYWNlLlJkCShyZXZpc2lvbiA4ODc1NCkKKysrIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3RyYWNlLlJkCSh3b3JraW5nIGNvcHkpCkBAIC0xMDksNiArMTA5LDEyIEBACiAgIFxjb2RleyJmdW5jdGlvbiJ9IGFuZCB3aGljaCBjb250YWlucyB0aGUgb3JpZ2luYWwsIHVudHJhY2VkIHZlcnNpb24uCiAgIEEgY2FsbCB0byBcY29kZXt1bnRyYWNlfSByZS1hc3NpZ25zIHRoaXMgdmVyc2lvbi4KIAorICBJbiB0aGUgY2FzZSBvZiBwYWNrYWdlIGZ1bmN0aW9ucyB3aGVuIFxjb2Rle3doZXJlfSBpcyB1bnNwZWNpZmllZCAob3IKKyAgaXMgdGhlIGdsb2JhbCBlbnZpcm9ubWVudCksIFxjb2Rle3RyYWNlfSBhbmQgXGNvZGV7dW50cmFjZX0KKyAgYXNzaWduIHRoZWlyIHJlc3BlY3RpdmUgdmVyc2lvbnMgb2YgdGhlIGZ1bmN0aW9uIGludG8gYm90aCB0aGUKKyAgcGFja2FnZSBuYW1lc3BhY2UgKFxjb2Rle2FzTmFtZXNwYWNlKCI8cGtnbmFtZT4iKX0pIGFuZCB0aGUgcGFja2FnZQorICBldmlyb25tZW50IChcY29kZXthcy5lbnZpcm9ubWVudCgicGFja2FnZTo8cGtnbmFtZT4iKX0pLgorCiAgIElmIHRoZSBhcmd1bWVudCBcY29kZXt0cmFjZXJ9IG9yIFxjb2Rle2V4aXR9IGlzIHRoZSBuYW1lIG9mIGEKICAgZnVuY3Rpb24sIHRoZSB0cmFjaW5nIGV4cHJlc3Npb24gd2lsbCBiZSBhIGNhbGwgdG8gdGhhdCBmdW5jdGlvbiwgd2l0aAogICBubyBhcmd1bWVudHMuICBUaGlzIGlzIHRoZSBlYXNpZXN0IGFuZCBtb3N0IGNvbW1vbiBjYXNlLCB3aXRoIHRoZQpJbmRleDogc3JjL2xpYnJhcnkvbWV0aG9kcy9SL3RyYWNlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL3RyYWNlLlIJKHJldmlzaW9uIDg4NzU0KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9SL3RyYWNlLlIJKHdvcmtpbmcgY29weSkKQEAgLTI4OCw3ICsyODgsNyBAQAogICAgIH0KICAgICBpZihpcy5udWxsKHNpZ25hdHVyZSkpIHsKICAgICAgICAgaWYoYmluZGluZ0lzTG9ja2VkKHdoYXQsIHdoZXJlRikpCi0gICAgICAgICAgICAuYXNzaWduT3ZlckJpbmRpbmcod2hhdCwgbmV3RnVuLCB3aGVyZUYsIGdsb2JhbCkKKyAgICAgICAgICAgIC5hc3NpZ25PdmVyQmluZGluZyh3aGF0LCBuZXdGdW4sIHdoZXJlRiwgZ2xvYmFsLCBmaW5kRnVuQmluZGluZyA9IFRSVUUpCiAgICAgICAgIGVsc2UKICAgICAgICAgICAgIGFzc2lnbih3aGF0LCBuZXdGdW4sIHdoZXJlRikKICAgICAgICAgaWYgKGxlbmd0aChwbmFtZSkgIT0gMCkgewpAQCAtNTQzLDcgKzU0Myw3IEBACiAgICAgY2xhc3NOYW1lCiB9CiAKLS5hc3NpZ25PdmVyQmluZGluZyA8LSBmdW5jdGlvbih3aGF0LCB2YWx1ZSwgd2hlcmUsIHZlcmJvc2UgPSBUUlVFKSB7CisuYXNzaWduT3ZlckJpbmRpbmcgPC0gZnVuY3Rpb24od2hhdCwgdmFsdWUsIHdoZXJlLCB2ZXJib3NlID0gVFJVRSwgZmluZEZ1bkJpbmRpbmcgPSBGQUxTRSkgewogICAgIGlmKHZlcmJvc2UpIHsKICAgICAgICAgcG5hbWUgPC0gZ2V0UGFja2FnZU5hbWUod2hlcmUpCiAgICAgICAgIG1zZyA8LQpAQCAtNTU4LDYgKzU1OCwxNiBAQAogICAgICAgICBmZW52IDwtIGVudmlyb25tZW50KHZhbHVlKQogICAgICAgICBpZihpcy5udWxsKGZlbnYpKSAjIHByaW1pdGl2ZXMKICAgICAgICAgICBmZW52IDwtIGJhc2VlbnYoKQorICAgICAgICAjIyBmaXggZm9yIFBSIzE4MjU4LCBmb3IgZnVuY3Rpb25zIGdlbmVyYXRlZCB2aWEKKyAgICAgICAgIyMgZmFjdG9yaWVzIHdpdGhpbiBwYWNrYWdlIGNvZGUsIHRoZWlyIGVudmlyb25tZW50IGlzCisgICAgICAgICMjIHRoZSBmYWN0b3J5IGZ1bmN0aW9uJ3MgY2FsbCBmcmFtZSwgd2hpY2ggZG9lc24ndCBoYXZlCisgICAgICAgICMjIHRoZSBib3VuZCBzeW1ib2wuIFdhbGsgdXAgdGhlIHBhcmVudCBjaGFpbiB1bnRpbCB3ZQorICAgICAgICAjIyBmaW5kIHRoZSBzeW1ib2wgdG8gZmluZCB0aGUgbmFtZXNwYWNlLgorICAgICAgICB3aGlsZShmaW5kRnVuQmluZGluZyAmJgorICAgICAgICAgICAgICAhZXhpc3RzKHdoYXQsIGVudmlyID0gZmVudiwgaW5oZXJpdHMgPSBGQUxTRSkgJiYKKyAgICAgICAgICAgICAgIWlkZW50aWNhbChmZW52LCAuR2xvYmFsRW52KSkgeworICAgICAgICAgICAgICAgICAgZmVudiA8LSBwYXJlbnQuZW52KGZlbnYpCisgICAgICAgICAgICAgIH0KICAgICAgICAgaWYoIWlkZW50aWNhbChmZW52LCB3aGVyZSkgJiYgZXhpc3RzKHdoYXQsIGVudmlyID0gZmVudiwgaW5oZXJpdHMgPSBGQUxTRSAjPwogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKSAmJiBiaW5kaW5nSXNMb2NrZWQod2hhdCwgZmVudikpIHsKICAgICAgICAgICAgIHVubG9ja0JpbmRpbmcod2hhdCwgZmVudikKQEAgLTU2NSw2ICs1NzUsNyBAQAogICAgICAgICAgICAgbG9ja0JpbmRpbmcod2hhdCwgZmVudikKICAgICAgICAgfQogICAgIH0KKyAgICAjIyB3aGVyZSBpcyB0aGUgcGFja2FnZSBlbnZpcm9ubWVudCB3aGVuIHRyYWNpbmcgcGFja2FnZSBmdW5jdGlvbnMKICAgICBpZihleGlzdHMod2hhdCwgZW52aXIgPSB3aGVyZSwgaW5oZXJpdHMgPSBGQUxTRSkgJiYgYmluZGluZ0lzTG9ja2VkKHdoYXQsIHdoZXJlKSkgewogICAgICAgdW5sb2NrQmluZGluZyh3aGF0LCB3aGVyZSkKICAgICAgIGFzc2lnbih3aGF0LCB2YWx1ZSwgd2hlcmUpCkluZGV4OiB0ZXN0cy9Qa2dzL3BrZ0MvREVTQ1JJUFRJT04KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvUGtncy9wa2dDL0RFU0NSSVBUSU9OCShyZXZpc2lvbiA4ODc1NCkKKysrIHRlc3RzL1BrZ3MvcGtnQy9ERVNDUklQVElPTgkod29ya2luZyBjb3B5KQpAQCAtNSw3ICs1LDcgQEAKIERhdGU6IDIwMTktMDEtMjEKIEF1dGhvcjogUiBDb3JlCiBNYWludGFpbmVyOiBSIENvcmUgVGVhbSA8Ui1jb3JlQHNvbWV3aGVyZS5uZXQ+Ci1EZXNjcmlwdGlvbjogUmVncmVzc2lvbiBUZXN0aW5nLiAgSW1wb3J0IGZyb20gJ3BrZ0EnOyBuYW1lICJQa2dDIiBpbiBkaXIgInBrZ0MiLgorRGVzY3JpcHRpb246IFJlZ3Jlc3Npb24gVGVzdGluZy4gIEltcG9ydCBmcm9tICdwa2dBJzsgbmFtZSAiUGtnQyIgaW4gZGlyICJwa2dDIi4gRnVuY3Rpb24gZmFjdG9yeSBhbmQgZ2VuZXJhdGVkIGZ1bmN0aW9uLgogSW1wb3J0czogbWV0aG9kcywgcGtnQQogTGF6eUxvYWQ6IHllcwogTGljZW5zZTogQXJ0aXN0aWMtMi4wCkluZGV4OiB0ZXN0cy9Qa2dzL3BrZ0MvTkFNRVNQQUNFCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL1BrZ3MvcGtnQy9OQU1FU1BBQ0UJKHJldmlzaW9uIDg4NzU0KQorKysgdGVzdHMvUGtncy9wa2dDL05BTUVTUEFDRQkod29ya2luZyBjb3B5KQpAQCAtMywzICszLDcgQEAKIGltcG9ydENsYXNzZXNGcm9tKHBrZ0EsICJjbGFzc0EiKSMgYnV0IG5vdCAiY2xhc3NBcHAiCiAKIGV4cG9ydCh1bmlxdWUsIG5pbCkKKworIyMgZm9yIFBSIzE4Mjg1CitleHBvcnQoZnVuY3Rpb25GYWN0b3J5KQorZXhwb3J0KGdlbmVyYXRlZEYpCkluZGV4OiB0ZXN0cy9Qa2dzL3BrZ0MvUi9mLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvUGtncy9wa2dDL1IvZi5SCShyZXZpc2lvbiA4ODc1NCkKKysrIHRlc3RzL1BrZ3MvcGtnQy9SL2YuUgkod29ya2luZyBjb3B5KQpAQCAtMzAsMyArMzAsOCBAQAogIyMgICAgICAgICBjbGFzcyAic3VtbWFyeU1wZnIiIHRvICJjbGFzc0FwcCIgaGVyZSAuLiA6CiBzZXRDbGFzc1VuaW9uKCJudW1lcmljQSIsIGMoIm51bWVyaWMiLCAiY2xhc3NBIiwgIm1hdHJpeCIpKQogCisjIyBmb3IgUFIjMTgyNTgKKworZnVuY3Rpb25GYWN0b3J5IDwtIGZ1bmN0aW9uKCkgZnVuY3Rpb24oeCkgaW52aXNpYmxlKHgpCisKK2dlbmVyYXRlZEYgPC0gZnVuY3Rpb25GYWN0b3J5KCkKSW5kZXg6IHRlc3RzL3JlZy1wYWNrYWdlcy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy1wYWNrYWdlcy5SCShyZXZpc2lvbiA4ODc1NCkKKysrIHRlc3RzL3JlZy1wYWNrYWdlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC02NTAsOSArNjUwLDQ3IEBACiBzdHIoYXAgPC0gYXZhaWxhYmxlLnBhY2thZ2VzKHJlcG91cmwsIGZpbHRlcnMgPSBsaXN0KCkpKQogY2hlY2tNYXRyaXgoYXAsIDQpCiAKKyMjIFBSIzE4MjU4CiAKK2xpYnJhcnkoInBrZ0MiKQogCitmZl93YXN0cmFjZWQgPC0gRkFMU0UKK2dmX3dhc3RyYWNlZCA8LSBGQUxTRQogCitmZl90cmFjZXIgPC0gZnVuY3Rpb24oKSBmZl93YXN0cmFjZWQgPDwtIFRSVUUKK2dmX3RyYWNlciA8LSBmdW5jdGlvbigpIGdmX3dhc3RyYWNlZCA8PC0gVFJVRQorCityZXNldF90cmFjZXMgPC0gZnVuY3Rpb24oKSB7CisgICAgZmZfd2FzdHJhY2VkIDw8LSBGQUxTRQorICAgIGdmX3dhc3RyYWNlZCA8PC0gRkFMU0UKK30KKwordHJhY2UoZ2VuZXJhdGVkRiwgdHJhY2VyID0gZ2ZfdHJhY2VyKQordHJhY2UoZnVuY3Rpb25GYWN0b3J5LCB0cmFjZXIgPSBmZl90cmFjZXIpCisKK2Z1bmN0aW9uRmFjdG9yeSgpCitnZW5lcmF0ZWRGKDUpCisKK3N0b3BpZm5vdChmZl93YXN0cmFjZWQgJiYgZ2Zfd2FzdHJhY2VkKQorcmVzZXRfdHJhY2VzKCkKKworcGtnQTo6ZnVuY3Rpb25GYWN0b3J5KCkKK3BrZ0E6OmdlbmVyYXRlZEYoNSkKKworc3RvcGlmbm90KGZmX3dhc3RyYWNlZCAmJiBnZl93YXN0cmFjZWQpCityZXNldF90cmFjZXMoKQorCitwa2dBOjo6ZnVuY3Rpb25GYWN0b3J5KCkKK3BrZ0E6OjpnZW5lcmF0ZWRGKDUpCisKK3N0b3BpZm5vdChmZl93YXN0cmFjZWQgJiYgZ2Zfd2FzdHJhY2VkKQorcmVzZXRfdHJhY2VzKCkKKworZ2V0KCJmdW5jdGlvbkZhY3RvcnkiLCBhc05hbWVzcGFjZSgicGtnQSIpKSgpCitnZXQoImdlbmVyYXRlZEYiLCBhc05hbWVzcGFjZSgicGtnQSIpKSg1KQorCisKKwogIyMgY2xlYW4gdXAKIHJtTCA8LSBjKCJteUxpYiIsIGlmKGhhcy5zeW1saW5rKSAibXlMaWJfMiIsICJteVRzdCIsICJteVRzdDIiLAogICAgICAgICAgIlBSMTc1MDEuUmNoZWNrIikK",
+          "is_patch": true,
+          "file_name": "trace_bug_patch.diff",
+          "bug_id": 18258,
+          "creation_time": "2025-09-02T10:01:29Z",
+          "summary": "patch to ensure traced fun is assigned to namespace for generated funcs",
+          "is_private": false,
+          "id": 3533,
+          "last_change_time": "2025-09-02T10:01:29Z",
+          "size": 5352
+        },
+        {
+          "creator": "gabembecker",
+          "data": "IyMgZm9yIGJ1ZyBodHRwczovL2J1Z3Muci1wcm9qZWN0Lm9yZy9zaG93X2J1Zy5jZ2k/aWQ9MTgyNTgKCiMjaW5zdGFsbC5wYWNrYWdlcygifi9nYWJlL2NoZWNrZWRvdXQvdHJhY2VidWd0ZXN0IiwgcmVwb3MgPSBOVUxMLCB0eXBlID0gInNvdXJjZSIpCiMjaW5zdGFsbC5wYWNrYWdlcygifi9nYWJlL2NoZWNrZWRvdXQvaW1wb3J0dHJhY2VidWd0ZXN0IiwgcmVwb3MgPSBOVUxMLCB0eXBlID0gInNvdXJjZSIpCmxpYnJhcnkodHJhY2VidWd0ZXN0KQpsaWJyYXJ5KGltcG9ydHRyYWNlYnVndGVzdCkKCmZmX3dhc3RyYWNlZCA8LSBGQUxTRQpnZl93YXN0cmFjZWQgPC0gRkFMU0UKCnJlc2V0X3RyYWNlY2hlY2tzIDwtIGZ1bmN0aW9uKCkgewogICAgZmZfd2FzdHJhY2VkIDw8LSBGQUxTRQogICAgZ2Zfd2FzdHJhY2VkIDw8LSBGQUxTRQp9Cgp0cmFjZXJfZ2YgPC0gZnVuY3Rpb24oKSBnZl93YXN0cmFjZWQgPDwtIFRSVUUKdHJhY2VyX2ZmIDwtIGZ1bmN0aW9uKCkgZmZfd2FzdHJhY2VkIDw8LSBUUlVFCgoKcnVuX3RyYWNlX2NoZWNrcyA8LSBmdW5jdGlvbih0cmFjZV93aGVyZSkgewogICAgCiAKICAgIHdocmVudiA8LSBzd2l0Y2godHJhY2Vfd2hlcmUsCiAgICAgICAgICAgICAgICAgICAgIG5vbmUgPSAuR2xvYmFsRW52LAogICAgICAgICAgICAgICAgICAgICBmdW5jID0gZnVuY3Rpb25GYWN0b3J5LAogICAgICAgICAgICAgICAgICAgICBucyA9IGFzTmFtZXNwYWNlKCJ0cmFjZWJ1Z3Rlc3QiKSwKICAgICAgICAgICAgICAgICAgICAgInBrZy1lbnYiID0gYXMuZW52aXJvbm1lbnQoInBhY2thZ2U6dHJhY2VidWd0ZXN0IikpCiAgICAKICAgIHRyYWNlKGdlbmVyYXRlZEYsIHdoZXJlID0gd2hyZW52LCB0cmFjZXIgPSB0cmFjZXJfZ2YpCiAgICB0cmFjZShmdW5jdGlvbkZhY3RvcnksIHdoZXJlID0gd2hyZW52LCB0cmFjZXIgPSB0cmFjZXJfZmYpCiAgICBvbi5leGl0KHVudHJhY2UoZ2VuZXJhdGVkRiwgd2hlcmUgPSB3aHJlbnYpLCBhZGQgPSBUUlVFKQogICAgb24uZXhpdCh1bnRyYWNlKGZ1bmN0aW9uRmFjdG9yeSwgd2hlcmUgPSB3aHJlbnYpLCBhZGQgPSBUUlVFKQoKICAgIG1ha2VfcmV0X2RmIDwtIGZ1bmN0aW9uKGNhbGxfdHlwZSkgewogICAgICAgIGZvcmNlKGZmX3dhc3RyYWNlZCkKICAgICAgICBmb3JjZShnZl93YXN0cmFjZWQpCiAgICAgICAgbGlzdChkYXRhLmZyYW1lKHRyYWNlX3doZXJlID0gdHJhY2Vfd2hlcmUsCiAgICAgICAgICAgICAgICAgICAgICAgIGZ1bmMgPSBjKCJmZiIsICJnZiIpLAogICAgICAgICAgICAgICAgICAgICAgICBmdW5jX3R5cGUgPSBjKCJzdGFuZGFyZCIsICJnZW5lcmF0ZWQiKSwKICAgICAgICAgICAgICAgICAgICAgICAgY2FsbF90eXBlID0gY2FsbF90eXBlLAogICAgICAgICAgICAgICAgICAgICAgICB3YXNfdHJhY2VkID0gYyhmZl93YXN0cmFjZWQsIGdmX3dhc3RyYWNlZCksCiAgICAgICAgICAgICAgICAgICAgICAgIGJ1Z2dlZCA9IChnZl93YXN0cmFjZWQgIT0gZmZfd2FzdHJhY2VkKSkpCiAgICB9CgogICAgcmV0IDwtIGxpc3QoKQogICAgIyMgc2FtZSBiZWhhdmlvcgogICAgZnVuY3Rpb25GYWN0b3J5KCkKICAgIGdlbmVyYXRlZEYoNSkKCiAgICByZXQgPC0gYyhyZXQsIG1ha2VfcmV0X2RmKCJkaXJlY3QiKSkKICAgIHJlc2V0X3RyYWNlY2hlY2tzKCkKCiAgICBmZl93cmFwcGVyKCkKICAgIGdmX3dyYXBwZXIoNSkKICAgIHJldCA8LSBjKHJldCwgbWFrZV9yZXRfZGYoImltcG9ydGVkIikpCiAgICByZXNldF90cmFjZWNoZWNrcygpCgogICAgIyMgbm90IHNhbWUgYmVoYXZpb3IKICAgIHRyYWNlYnVndGVzdDo6ZnVuY3Rpb25GYWN0b3J5KCkKICAgIHRyYWNlYnVndGVzdDo6Z2VuZXJhdGVkRig1KQogICAgcmV0IDwtIGMocmV0LCBtYWtlX3JldF9kZigiOjoiKSkKICAgIHJlc2V0X3RyYWNlY2hlY2tzKCkKCiAgICAjIyBub3Qgc2FtZSBiZWhhdmlvcgogICAgdHJhY2VidWd0ZXN0Ojo6ZnVuY3Rpb25GYWN0b3J5KCkKICAgIHRyYWNlYnVndGVzdDo6OmdlbmVyYXRlZEYoNSkKICAgIHJldCA8LSBjKHJldCwgbWFrZV9yZXRfZGYoIjo6OiIpKQogICAgcmVzZXRfdHJhY2VjaGVja3MoKQoKICAgICMjIG5vdCBzYW1lIGJlaGF2aW9yCiAgICBnZXQoImZ1bmN0aW9uRmFjdG9yeSIsIGVudmlyID0gYXNOYW1lc3BhY2UoInRyYWNlYnVndGVzdCIpKSgpCiAgICBnZXQoImdlbmVyYXRlZEYiLCBlbnZpciA9IGFzTmFtZXNwYWNlKCJ0cmFjZWJ1Z3Rlc3QiKSkoNSkKICAgIHJldCA8LSBjKHJldCwgbWFrZV9yZXRfZGYoImdldC1ucyIpKQogICAgcmVzZXRfdHJhY2VjaGVja3MoKQoKICAgICMjIHNhbWUgYmVoYXZpb3IKICAgIGdldCgiZnVuY3Rpb25GYWN0b3J5IiwgZW52aXIgPSBhcy5lbnZpcm9ubWVudCgicGFja2FnZTp0cmFjZWJ1Z3Rlc3QiKSkoKQogICAgZ2V0KCJnZW5lcmF0ZWRGIiwgZW52aXIgPSBhcy5lbnZpcm9ubWVudCgicGFja2FnZTp0cmFjZWJ1Z3Rlc3QiKSkoNSkKICAgIHJldCA8LSBjKHJldCwgbWFrZV9yZXRfZGYoImdldC1wa2ciKSkKICAgIGRvLmNhbGwocmJpbmQsIHJldCkKfQoKCnJlc2xzdCA8LSBsYXBwbHkoYygibm9uZSIsICJmdW5jIiwgIm5zIiwgInBrZy1lbnYiKSwgcnVuX3RyYWNlX2NoZWNrcykKcmVzZGYgPC0gZG8uY2FsbChyYmluZCwgcmVzbHN0KQo=",
+          "content_type": "text/x-matlab",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": false,
+          "creation_time": "2025-09-02T10:03:44Z",
+          "summary": "test suite script for tracing in various forms",
+          "file_name": "trace_test_suite.R",
+          "bug_id": 18258,
+          "last_change_time": "2025-09-02T10:03:44Z",
+          "size": 2639,
+          "is_private": false,
+          "id": 3534
+        },
+        {
+          "id": 3535,
+          "is_private": false,
+          "size": 1615,
+          "last_change_time": "2025-09-02T10:04:46Z",
+          "bug_id": 18258,
+          "file_name": "tracebugtest_1.0.tar.gz",
+          "summary": "test package for use with test suite",
+          "creation_time": "2025-09-02T10:04:46Z",
+          "is_patch": false,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "application/x-gzip",
+          "data": "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",
+          "creator": "gabembecker"
+        },
+        {
+          "flags": [],
+          "content_type": "application/x-gzip",
+          "is_obsolete": false,
+          "creator": "gabembecker",
+          "data": "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",
+          "is_patch": false,
+          "file_name": "importtracebugtest_1.0.tar.gz",
+          "bug_id": 18258,
+          "creation_time": "2025-09-02T10:05:21Z",
+          "summary": "second test package for use with test suite",
+          "is_private": false,
+          "id": 3536,
+          "last_change_time": "2025-09-02T10:05:21Z",
+          "size": 1639
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-06-26 04:12:49"
+}

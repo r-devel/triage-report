@@ -1,0 +1,147 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc_detail": [
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2024-10-03T09:39:34Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "Allow for loops to accept language objects as sequence variables",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "status": "CONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "qa_contact": "",
+        "cc": [
+          "maechler"
+        ],
+        "deadline": {},
+        "id": 18803,
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2024-10-01T18:18:01Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18803": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 18803,
+            "text": "For static analysis, it can be useful to recurse through function bodies. This can typically done with code of the form, for example:\n\n```\nrecurse <- function(object, callback, ...) {\n  callback(object, ...)\n  for (i in seq_along(object))\n    if (is.call(object[[i]]))\n      recurse(object[[i]], callback, ...)\n}\n```\n\nIt would be useful (and slightly more performant) if we could iterate instead via:\n\n```\nrecurse <- function(object, callback, ...) {\n  callback(object, ...)\n  for (el in object)\n    if (is.call(el))\n      recurse(el, callback, ...)\n}\n```\n\nbut unfortunately R doesn't accept language objects for iteration in a for loop, even though pairlists are accepted. E.g.\n\n```\n> data <- pairlist(as.symbol(\"rnorm\"), 42)\n> for (el in data) {\n+   print(el)\n+ }\nrnorm\n[1] 42\n> \n> for (el in as.call(data)) {\n+   print(el)\n+ }\nError in for (el in as.call(data)) { : invalid for() loop sequence\n```\n\nIf I understand correctly, it would be straightforward to allow this:\n\n```\ndiff --git a/src/main/eval.c b/src/main/eval.c\nindex a0cf1966f5..73108a2fca 100644\n--- a/src/main/eval.c\n+++ b/src/main/eval.c\n@@ -2835,6 +2835,7 @@ attribute_hidden SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)\n            break;\n\n        case LISTSXP:\n+       case LANGSXP:\n            /* make sure loop variable is not modified via other vars */\n            ENSURE_NAMEDMAX(CAR(val));\n            defineVar(sym, CAR(val), rho);\n```\n\nPerhaps related; I believe `lapply()` could also accept pairlists and language objects as-is, but those are currently coerced to R lists. That would still lead to an underlying implementation that iterates using indexes though, so I think the change for `for` loops would be more useful.",
+            "creation_time": "2024-10-01T18:18:01Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 101231,
+            "time": "2024-10-01T18:18:01Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "count": 1,
+            "is_markdown": true,
+            "bug_id": 18803,
+            "text": "Here's a more complete version of the patch.\n\n```\n--- a/src/main/eval.c\n+++ b/src/main/eval.c\n@@ -2835,6 +2835,7 @@ attribute_hidden SEXP do_for(SEXP call, SEXP op, SEXP args, SEXP rho)\n            break;\n\n        case LISTSXP:\n+       case LANGSXP:\n            /* make sure loop variable is not modified via other vars */\n            ENSURE_NAMEDMAX(CAR(val));\n            defineVar(sym, CAR(val), rho);\n@@ -7657,7 +7658,7 @@ static SEXP bcEval_loop(struct bcEval_locals *ploc)\n #endif\n        if (isVector(seq))\n          loopinfo->len = XLENGTH(seq);\n-       else if (isList(seq) || isNull(seq))\n+       else if (isList(seq) || isLanguage(seq))\n          loopinfo->len = length(seq);\n        else errorcall(GETCONST(constants, callidx),\n                       _(\"invalid for() loop sequence\"));\n@@ -7788,6 +7789,7 @@ static SEXP bcEval_loop(struct bcEval_locals *ploc)\n            ENSURE_NAMEDMAX(value);\n            break;\n          case LISTSXP:\n+         case LANGSXP:\n            value = CAR(seq);\n            SET_FOR_LOOP_SEQ(CDR(seq));\n            ENSURE_NAMEDMAX(value);\n```",
+            "creation_time": "2024-10-02T03:24:37Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 101232,
+            "time": "2024-10-02T03:24:37Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "time": "2024-10-02T03:51:15Z",
+            "attachment_id": 3408,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 101233,
+            "tags": [],
+            "count": 2,
+            "text": "Created attachment 3408\nExample patch.",
+            "bug_id": 18803,
+            "creation_time": "2024-10-02T03:51:15Z"
+          },
+          {
+            "creator": "maechler",
+            "creation_time": "2024-10-03T09:39:34Z",
+            "text": "(In reply to Kevin Ushey from comment #0)\n.....\n> Perhaps related; I believe `lapply()` could also accept pairlists and\n> language objects as-is, but those are currently coerced to R lists. That\n> would still lead to an underlying implementation that iterates using indexes\n> though, so I think the change for `for` loops would be more useful.\n\nHonestly, I would hate us to add a feature that works with `for(x in <OBJ>) ..`\nbut fails with `lapply(<OBJ>, ...)` {and vapply; sapply would come for free}.\n\nApart from that I agree it would be nice to loop over language objects, indeed;\nas I'm not a computer scientist, nor a real expert on the \"dangers\" of allowing that,  I am waiting for comments of such experts.",
+            "bug_id": 18803,
+            "is_markdown": true,
+            "count": 3,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2024-10-03T09:39:34Z",
+            "id": 101234,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18803": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9tYWluL2V2YWwuYyBiL3NyYy9tYWluL2V2YWwuYw0KaW5kZXggYTBjZjE5NjZmNS4uNDhhNTc5NDYxNCAxMDA2NDQNCi0tLSBhL3NyYy9tYWluL2V2YWwuYw0KKysrIGIvc3JjL21haW4vZXZhbC5jDQpAQCAtMjc5OCw3ICsyNzk4LDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2ZvcihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogICAgICAgIFBST1RFQ1QodmFsID0gdG1wKTsNCiAgICAgfQ0KDQotICAgIGlmIChpc0xpc3QodmFsKSB8fCBpc051bGwodmFsKSkNCisgICAgaWYgKGlzTGlzdCh2YWwpIHx8IGlzTGFuZ3VhZ2UodmFsKSkNCiAgICAgICAgbiA9IGxlbmd0aCh2YWwpOw0KICAgICBlbHNlDQogICAgICAgIG4gPSBYTEVOR1RIKHZhbCk7DQpAQCAtMjgzNSw2ICsyODM1LDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2ZvcihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogICAgICAgICAgICBicmVhazsNCg0KICAgICAgICBjYXNlIExJU1RTWFA6DQorICAgICAgIGNhc2UgTEFOR1NYUDoNCiAgICAgICAgICAgIC8qIG1ha2Ugc3VyZSBsb29wIHZhcmlhYmxlIGlzIG5vdCBtb2RpZmllZCB2aWEgb3RoZXIgdmFycyAqLw0KICAgICAgICAgICAgRU5TVVJFX05BTUVETUFYKENBUih2YWwpKTsNCiAgICAgICAgICAgIGRlZmluZVZhcihzeW0sIENBUih2YWwpLCByaG8pOw0KQEAgLTc2NTcsNyArNzY1OCw3IEBAIHN0YXRpYyBTRVhQIGJjRXZhbF9sb29wKHN0cnVjdCBiY0V2YWxfbG9jYWxzICpwbG9jKQ0KICNlbmRpZg0KICAgICAgICBpZiAoaXNWZWN0b3Ioc2VxKSkNCiAgICAgICAgICBsb29waW5mby0+bGVuID0gWExFTkdUSChzZXEpOw0KLSAgICAgICBlbHNlIGlmIChpc0xpc3Qoc2VxKSB8fCBpc051bGwoc2VxKSkNCisgICAgICAgZWxzZSBpZiAoaXNMaXN0KHNlcSkgfHwgaXNMYW5ndWFnZShzZXEpKQ0KICAgICAgICAgIGxvb3BpbmZvLT5sZW4gPSBsZW5ndGgoc2VxKTsNCiAgICAgICAgZWxzZSBlcnJvcmNhbGwoR0VUQ09OU1QoY29uc3RhbnRzLCBjYWxsaWR4KSwNCiAgICAgICAgICAgICAgICAgICAgICAgXygiaW52YWxpZCBmb3IoKSBsb29wIHNlcXVlbmNlIikpOw0KQEAgLTc3ODgsNiArNzc4OSw3IEBAIHN0YXRpYyBTRVhQIGJjRXZhbF9sb29wKHN0cnVjdCBiY0V2YWxfbG9jYWxzICpwbG9jKQ0KICAgICAgICAgICAgRU5TVVJFX05BTUVETUFYKHZhbHVlKTsNCiAgICAgICAgICAgIGJyZWFrOw0KICAgICAgICAgIGNhc2UgTElTVFNYUDoNCisgICAgICAgICBjYXNlIExBTkdTWFA6DQogICAgICAgICAgICB2YWx1ZSA9IENBUihzZXEpOw0KICAgICAgICAgICAgU0VUX0ZPUl9MT09QX1NFUShDRFIoc2VxKSk7DQogICAgICAgICAgICBFTlNVUkVfTkFNRURNQVgodmFsdWUpOw0K",
+          "creator": "kevinushey",
+          "is_patch": true,
+          "bug_id": 18803,
+          "file_name": "file_18803.txt",
+          "summary": "Example patch.",
+          "creation_time": "2024-10-02T03:51:15Z",
+          "id": 3408,
+          "is_private": false,
+          "size": 1419,
+          "last_change_time": "2024-10-02T03:51:15Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2024-10-03 09:39:34"
+}

@@ -1,0 +1,130 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2025-01-31T14:54:26Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "ajinkyakokandakar"
+        ],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 18847,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "summary": "Making output of install.packages() more consistent and informative",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "real_name": "Ajinkya Kokandakar",
+            "name": "ajinkyakokandakar",
+            "id": 3673
+          }
+        ],
+        "last_change_time": "2025-02-22T15:07:20Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "jeroenooms",
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "flags": [],
+        "platform": "Other",
+        "creator_detail": {
+          "real_name": "Jeroen Ooms",
+          "name": "jeroenooms",
+          "id": 610
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18847": {
+        "comments": [
+          {
+            "time": "2025-01-31T14:54:26Z",
+            "id": 101490,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "(Followup up on email discussion):\n\nThe output of `install.packages()` varies by platform and is a bit brief in the case of binary packages, when there is no verbose installation output, especially now that downloading happens in parallel. Perhaps it can be tweaked a bit.\n\nFor example, currently when we install binary packages on MacOS we only see the following:\n\n```\n> install.packages(\"V8\")\nalso installing the dependencies 'Rcpp', 'jsonlite', 'curl'\n\ntrying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.5/Rcpp_1.0.14.tgz'\ntrying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.5/jsonlite_1.8.9.tgz'\ntrying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.5/curl_6.2.0.tgz'\ntrying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.5/V8_6.0.0.tgz'\n\nThe downloaded binary packages are in\n\t/var/folders/46/wtyv3f9n7g1657wntpn0cl540000gn/T/RtmpeIo4bC/downloaded_packages\n\n```\n\nIn the above output, there is no confirmation that the package installation was successful. Instead we get a message that downloaded packages are to be found in some temporary directory, making it seem as if the user has to do something with this? This is confusing.\n\nThe messaging could be improved by not showing this irrelevant tempdir to the user. Instead install.packages() could end with a short success summary with the actual installation dir:\n\n```\n  Successfully installed packages 'V8', 'Rcpp', 'jsonlite', 'curl'\n     /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library\n```\n\nAlso I think \"trying URL\" could be replaced by \"Downloading\" (stating that those are URLs, and that downloads may fail, is both redundant).\n\n\nOn Windows the situation is similar except for every installation is followed with:\n\n```\npackage 'jsonlite' successfully unpacked and MD5 sums checked\n```\n\nWhich is slightly more informative, although it still does not make it explicit if/where the package was installed. Also on Windows the final line reads:\n\n```\n The downloaded binary packages are in\n  \tC:\\Users\\runneradmin\\AppData\\Local\\Temp\\Rtmp2ZBwka\\downloaded_packages\n```\n\nleaving the user guessing what to do next. Finally when we install binary packages on Linux (e.g. from https://p3m.dev/) we see:\n\n```\n* installing *binary* package 'jsonlite' ...\n  * DONE (jsonlite)\n```\n\nI guess this is the most informative of the platforms.",
+            "bug_id": 18847,
+            "count": 0,
+            "is_markdown": true,
+            "creator": "jeroenooms",
+            "creation_time": "2025-01-31T14:54:26Z"
+          },
+          {
+            "is_private": false,
+            "id": 101576,
+            "tags": [],
+            "count": 1,
+            "text": "I made an example patch here:\n\n  - view: https://github.com/r-devel/r-svn/pull/195/files\n  - diff: https://github.com/r-devel/r-svn/pull/195.diff\n\nIt is a minimal set of changes to ensure that install.packages() always ends with a summary of how many packages where installed, and where. I hope something along these lines can be considered.",
+            "bug_id": 18847,
+            "creation_time": "2025-02-22T09:59:48Z",
+            "time": "2025-02-22T09:59:48Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "jeroenooms"
+          },
+          {
+            "creator": "jeroenooms",
+            "creation_time": "2025-02-22T10:03:11Z",
+            "text": "Bugzilla seem to filter break hyperlinks? Again they are here:\n\nhttps://github.com/r-devel/r-svn/pull/195 (view)\nhttps://github.com/r-devel/r-svn/pull/195.diff (diff)",
+            "bug_id": 18847,
+            "is_markdown": true,
+            "count": 2,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2025-02-22T10:03:11Z",
+            "id": 101577,
+            "is_private": false
+          },
+          {
+            "creator": "ajinkyakokandakar",
+            "creation_time": "2025-02-22T15:07:20Z",
+            "count": 3,
+            "is_markdown": true,
+            "text": "This is super useful! I have the same gripe with `install.packages` on macOS.",
+            "bug_id": 18847,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2025-02-22T15:07:20Z",
+            "id": 101581
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18847": []
+    }
+  },
+  "source_changed": "2025-02-22 15:07:20"
+}

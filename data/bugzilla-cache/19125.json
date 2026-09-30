@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "id": 19125,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "minor",
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-08-04T17:34:22Z",
+        "version": "R-devel (trunk)",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-08-04T17:34:22Z",
+        "blocks": [],
+        "url": "",
+        "summary": "Integer arithmetic means '%z' for minute-level offsets is incorrect",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19125": {
+        "comments": [
+          {
+            "creation_time": "2026-08-04T17:34:22Z",
+            "creator": "michaelchirico4",
+            "bug_id": 19125,
+            "text": "Created attachment 3775\nExpress tz offset in seconds and thereby avoid truncation error\n\n```\nstrptime(\"2020-01-01 -0001\", \"%Y-%m-%d %z\", tz = \"UTC\")\n# [1] \"2020-01-01 00:00:36 UTC\"\n```\n\nThe problem is the `/30` is truncated to integer. We can overcome this by moving the `*3600/100` step earlier and avoiding `/` as much as possible.\n\nIn fact, I think it's much more natural to express this calculation in the units of seconds, as in the patch, but I may be missing a subtlety.",
+            "count": 0,
+            "is_markdown": true,
+            "attachment_id": 3775,
+            "tags": [],
+            "id": 103371,
+            "time": "2026-08-04T17:34:22Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19125": [
+        {
+          "data": "SW5kZXg6IHNyYy9tYWluL1JzdHJwdGltZS5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL1JzdHJwdGltZS5oCShyZXZpc2lvbiA5MDM1MCkKKysrIHNyYy9tYWluL1JzdHJwdGltZS5oCSh3b3JraW5nIGNvcHkpCkBAIC01MTAsMTcgKzUxMCwxNCBAQAogCQkgICAgKytuOwogCQl9CiAJCWlmIChuICE9IDQpIHJldHVybiBOVUxMOwotCQllbHNlIHsKLQkJICAgIC8qIFdlIGhhdmUgdG8gY29udmVydCB0aGUgbWludXRlcyBpbnRvIGRlY2ltYWwuICAqLwotCQkgICAgaWYgKHZhbCAlIDEwMCA+PSA2MCkgcmV0dXJuIE5VTEw7Ci0JCSAgICB2YWwgPSAodmFsIC8gMTAwKSAqIDEwMCArICgodmFsICUgMTAwKSAqIDUwKSAvIDMwOwotCQl9CisgICAgICAgICAgICAgICAgLyogV2UgaGF2ZSB0byBjb252ZXJ0IHRoZSBtaW51dGVzIGludG8gZGVjaW1hbC4gICovCisgICAgICAgICAgICAgICAgaWYgKHZhbCAlIDEwMCA+PSA2MCkgcmV0dXJuIE5VTEw7CisgICAgICAgICAgICAgICAgb2ZmID0gKHZhbCAvIDEwMCkgKiAzNjAwICsgKCh2YWwgJSAxMDApICogNjApOwogCQkvKiBodHRwczovL2VuLndpa2lwZWRpYS5vcmcvd2lraS9MaXN0X29mX1VUQ190aW1lX29mZnNldHMgKi8KLQkJaWYgKHZhbCA+IDE0MDApIHsKKwkJaWYgKG9mZiA+IDE0KjM2MDApIHsKIAkJICAgIHdhcm5pbmcoInZhbHVlcyBmb3IgJSV6IG91dHNpZGUgKy8tMTQwMCBhcmUgYW4gZXJyb3IiKTsKIAkJICAgIHJldHVybiBOVUxMOwogCQl9Ci0JCW9mZiA9ICgodmFsICogMzYwMCkgLyAxMDApOwogCQlpZiAobmVnKSBvZmYgPSAtb2ZmOwogCQkqcG9mZnNldCA9IG9mZjsKIAkgICAgfQpAQCAtOTk2LDE2ICs5OTMsMTMgQEAKIAkJICAgICsrbjsKIAkJfQogCQlpZiAobiAhPSA0KSByZXR1cm4gTlVMTDsKLQkJZWxzZSB7Ci0JCSAgICAvKiBXZSBoYXZlIHRvIGNvbnZlcnQgdGhlIG1pbnV0ZXMgaW50byBkZWNpbWFsLiAgKi8KLQkJICAgIGlmICh2YWwgJSAxMDAgPj0gNjApIHJldHVybiBOVUxMOwotCQkgICAgdmFsID0gKHZhbCAvIDEwMCkgKiAxMDAgKyAoKHZhbCAlIDEwMCkgKiA1MCkgLyAzMDsKLQkJfQotCQlpZiAodmFsID4gMTQwMCkgeworICAgICAgICAgICAgICAgIC8qIFdlIGhhdmUgdG8gY29udmVydCB0aGUgbWludXRlcyBpbnRvIGRlY2ltYWwuICAqLworICAgICAgICAgICAgICAgIGlmICh2YWwgJSAxMDAgPj0gNjApIHJldHVybiBOVUxMOworICAgICAgICAgICAgICAgIG9mZiA9ICh2YWwgLyAxMDApICogMzYwMCArICgodmFsICUgMTAwKSAqIDYwKTsKKwkJaWYgKHZhbCA+IDE0KjM2MDApIHsKIAkJICAgIHdhcm5pbmcoInZhbHVlcyBmb3IgJSV6IG91dHNpZGUgKy8tMTQwMCBhcmUgYW4gZXJyb3IiKTsKIAkJICAgIHJldHVybiBOVUxMOwogCQl9Ci0JCW9mZiA9ICh2YWwgKiAzNjAwKSAvIDEwMDsKIAkJaWYgKG5lZykgb2ZmID0gLW9mZjsKIAkJKnBvZmZzZXQgPSBvZmY7CiAJICAgIH0KSW5kZXg6IHRlc3RzL2RhdGV0aW1lMy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL2RhdGV0aW1lMy5SCShyZXZpc2lvbiA5MDM1MCkKKysrIHRlc3RzL2RhdGV0aW1lMy5SCSh3b3JraW5nIGNvcHkpCkBAIC05OTcsNiArOTk3LDE0IEBACiBzdG9waWZub3QoZF9zZWMgPT0gMzY1KjI0KjM2MDApCiAjIyB0aGUgbmVnYXRpdmUgdmFsdWUgc3RlbW1pbmcgZnJvbSBDIGxldmVsIGludGVnZXIgYWRkaXRpb24gb3ZlcmZsb3cKIAorc3RvcGlmbm90KGV4cHJzID0geworICBmb3JtYXQoc3RycHRpbWUoIjIwMjAtMDEtMDEgLTAwMDEiLCAiJVktJW0tJWQgJXoiLCB0eiA9ICJVVEMiKSwgIiVUIikgPT0gIjAwOjAxOjAwIgorICBmb3JtYXQoc3RycHRpbWUoIjIwMjAtMDEtMDEgLTAwMDIiLCAiJVktJW0tJWQgJXoiLCB0eiA9ICJVVEMiKSwgIiVUIikgPT0gIjAwOjAyOjAwIgorICBmb3JtYXQoc3RycHRpbWUoIjIwMjAtMDEtMDEgLTAwMDMiLCAiJVktJW0tJWQgJXoiLCB0eiA9ICJVVEMiKSwgIiVUIikgPT0gIjAwOjAzOjAwIgorICBmb3JtYXQoc3RycHRpbWUoIjIwMjAtMDEtMDEgLTAxMDMiLCAiJVktJW0tJWQgJXoiLCB0eiA9ICJVVEMiKSwgIiVUIikgPT0gIjAxOjAzOjAwIgorICBmb3JtYXQoc3RycHRpbWUoIjIwMjAtMDEtMDEgLTAyMDEiLCAiJVktJW0tJWQgJXoiLCB0eiA9ICJVVEMiKSwgIiVUIikgPT0gIjAyOjAxOjAwIgorICBmb3JtYXQoc3RycHRpbWUoIjIwMjAtMDEtMDEgLTAzMDIiLCAiJVktJW0tJWQgJXoiLCB0eiA9ICJVVEMiKSwgIiVUIikgPT0gIjAzOjAyOjAwIgorfSkKIAogCiAjIyBrZWVwIGF0IGVuZAo=",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true,
+          "summary": "Express tz offset in seconds and thereby avoid truncation error",
+          "creation_time": "2026-08-04T17:34:22Z",
+          "bug_id": 19125,
+          "file_name": "strptime-z-minutes.patch",
+          "size": 2381,
+          "last_change_time": "2026-08-04T17:34:22Z",
+          "id": 3775,
+          "is_private": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-08-04 17:34:22"
+}

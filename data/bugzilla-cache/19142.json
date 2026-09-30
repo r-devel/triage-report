@@ -1,0 +1,163 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "id": 18,
+            "name": "maechler"
+          }
+        ],
+        "last_change_time": "2026-08-26T16:08:53Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "summary": "Error for match.arg(<non-string>, ...) is not very illustrative",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "cc": [
+          "maechler"
+        ],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "minor",
+        "deadline": {},
+        "id": 19142,
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-08-26T06:16:31Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Language",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19142": {
+        "comments": [
+          {
+            "attachment_id": 3800,
+            "tags": [],
+            "is_private": false,
+            "id": 103476,
+            "time": "2026-08-26T06:16:31Z",
+            "creation_time": "2026-08-26T06:16:31Z",
+            "creator": "michaelchirico4",
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19142,
+            "text": "Created attachment 3800\nHandle wrong input type the same as any other in match.arg\n\n```\nmatch.arg(TRUE, c('a', 'b', 'c'))\n# Error in match.arg(TRUE, c(\"a\", \"b\", \"c\")) : \n#   'arg' must be NULL or a character vector\n```\n\nThis message is typically seen by a user mis-using a function with an enum-ish argument, so I see two problems here:\n\n 1. It implies a _vector_ is accepted (which is true only for `isTRUE(several.ok) || startsWith(several.ok, \"all\")`)\n 2. It suggests that _any_ character vector will do, when in fact there are only 3 valid values.\n\nI think it would be better to just show the \"normal\" `match.arg()` error here:\n\n```\nmatch.arg('d', c('a', 'b', 'c'))\n# Error in match.arg(\"d\", c(\"a\", \"b\", \"c\")) : \n#   'arg' should be one of \"a\", \"b\", \"c\"\n```\n\n(also a nit: the first error uses \"must\" while the second uses \"should\")\n\n(of course, enough familiarity with Go has me also wondering if this should obey the want/got approach more and report what was received in addition to what is expected: https://pkg.go.dev/testing)\n\n----\n\nIn filing this bug I saw another deficiency in the case of `several.ok`:\n\n```\nmatch.arg(letters, c('a', 'b'), several.ok='all')\n# Error in match.arg(letters, c(\"a\", \"b\"), several.ok = \"all\") : \n#   'arg' should be one of \"a\", \"b\"\n```\n\nThis is also a bit misleading -- `letters` _does_ have `\"a\"` and `\"b\"`; what's wrong is that there are _some_ mismatched inputs. The error could reflect that; I have elected not to pursue that nuance in the initial patch here.\n\nI _have_ elected to retain the `NULL or` clarification in the updated error, which might not be desirable (e.g. I presume it will break a number of CRAN packages assuming base error messages are highly predictable: https://github.com/search?q=org%3Acran+%2F%27arg%27+should+be+one+of+%2F+path%3Atests&type=code)."
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": 3801,
+            "time": "2026-08-26T06:48:24Z",
+            "creation_time": "2026-08-26T06:48:24Z",
+            "bug_id": 19142,
+            "text": "Created attachment 3801\nHandle wrong input type the same as any other in match.arg\n\nSpeak of the devil (existing tests assuming the old error message wording)",
+            "count": 1,
+            "tags": [],
+            "id": 103477,
+            "is_private": false
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-08-26T10:40:36Z",
+            "id": 103478,
+            "is_private": false,
+            "creator": "maechler",
+            "creation_time": "2026-08-26T10:40:36Z",
+            "text": "Well, given that in so many places people grep for the error message,\nsuch a change would cost quite a bit of human time fixing all these instances.\n\nAlso, note that  `\"a\"`  _is_ a character vector length one,\nso \"character vector\" is correct.\nIf we'd write the function from scratch today, I'd simply use \"character\" instead \n(as all \"character\" are atomic vector, even if of length 0 or 1, see above),\nbut given the human time above, I don't think we should change it now.\n\nAlso (your '2.') the \"suggestion\" of _any_ character vector is really not true,\nin the context of R (or programming in general, outside of language processing).\nIt is typical notably for this function that not every string / character vector will match, and given that an error is a desired outcome for non-matching input,\n\nI propose to close this with something as 'WORKSFORME' or 'WONTFIX'.",
+            "bug_id": 19142,
+            "is_markdown": true,
+            "count": 2
+          },
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-08-26T16:08:53Z",
+            "attachment_id": {},
+            "text": "I just want to make sure my intent here is understood. I don't mean to argue that \"character vector\" is incorrect, rather that it could be more helpful.\n\nA more minimal change would be to just edit \"character vector\" to \"character string\" in the `isFALSE(several.ok)` case, for example.\n\nWe could also simply omit the 'or NULL' part from the error message in the patch; this would still lead to some CRAN churn, but less [1].\n\nI don't think we should be _too_ beholden to what CRAN authors mistakenly (IMHO [2] [3]) hard-code in their test suites if we can substantially improve the R user experience. The proposed error is self-documenting -- the user immediately sees how to proceed.\n\n[1] E.g. https://github.com/search?q=org%3Acran+%2Fmust+be+NULL+or+a+character%2F+path%3Atest+-path%3A_snaps&type=code. I'm of course happy to quantify this more formally if requested.\n\n[2] data.table, for example, takes great pains to _only_ test error messages _under its control_: https://github.com/Rdatatable/data.table/blob/e26cf1b6b95474d90d3db462409e2d59e371b740/inst/tests/tests.Rraw#L200-L225\n\n[3] I myself have just this month had to update a CRAN package because of a change to R's own messages, a fragility of my own making: https://github.com/r-lib/bit64/commit/b4f08213072de64f9b0448582290605ce7f4ab01",
+            "bug_id": 19142,
+            "count": 3,
+            "creation_time": "2026-08-26T16:08:53Z",
+            "id": 103479,
+            "is_private": false,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19142": [
+        {
+          "last_change_time": "2026-08-26T06:48:24Z",
+          "size": 1877,
+          "is_private": false,
+          "id": 3800,
+          "creation_time": "2026-08-26T06:16:31Z",
+          "summary": "Handle wrong input type the same as any other in match.arg",
+          "file_name": "match-arg.patch",
+          "bug_id": 19142,
+          "is_patch": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9tYXRjaC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2Jhc2UvUi9tYXRjaC5SCShyZXZpc2lvbiA5MDQ0NykKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9tYXRjaC5SCSh3b3JraW5nIGNvcHkpCkBAIC00Nyw4ICs0Nyw2IEBACiAJCQllbnZpciA9IHN5cy5mcmFtZShzeXNQKSkKICAgICB9CiAgICAgaWYgKGlzLm51bGwoYXJnKSkgcmV0dXJuKGNob2ljZXNbMUxdKQotICAgIGVsc2UgaWYoIWlzLmNoYXJhY3RlcihhcmcpKQotCXN0b3AoIidhcmcnIG11c3QgYmUgTlVMTCBvciBhIGNoYXJhY3RlciB2ZWN0b3IiKQogICAgIGFsbC5tYXRjaCA8LSBGQUxTRQogICAgIGlmKCFpcy5sb2dpY2FsKHNldmVyYWwub2spKSB7CiAgICAgICAgIGlmKGlzLmNoYXJhY3RlcihzZXZlcmFsLm9rKSAmJiBzdGFydHNXaXRoKHNldmVyYWwub2ssICJhbGwiKSkKQEAgLTYyLDExICs2MCwxMiBAQAogICAgIH0gZWxzZSBpZihsZW5ndGgoYXJnKSA9PSAwTCkgc3RvcCgiJ2FyZycgbXVzdCBiZSBvZiBsZW5ndGggPj0gMSIpCiAKICAgICAjIyBoYW5kbGUgZWFjaCBlbGVtZW50IG9mIGFyZyBzZXBhcmF0ZWx5Ci0gICAgaSA8LSBwbWF0Y2goYXJnLCBjaG9pY2VzLCBub21hdGNoID0gMEwsIGR1cGxpY2F0ZXMub2sgPSBUUlVFKQotICAgIGlmKGFsbChpMCA8LSBpID09IDBMKSB8fCAoYWxsLm1hdGNoICYmIGFueShpMCkpKQorICAgIGlmKCFpcy5jaGFyYWN0ZXIoYXJnKSB8fAorICAgICAgIGFsbChpMCA8LSAoaSA8LSBwbWF0Y2goYXJnLCBjaG9pY2VzLCBub21hdGNoID0gMEwsIGR1cGxpY2F0ZXMub2sgPSBUUlVFKSkgPT0gMEwpIHx8CisgICAgICAgKGFsbC5tYXRjaCAmJiBhbnkoaTApKSkKICAgICAgICAgc3RvcChzcHJpbnRmKG5nZXR0ZXh0KGxlbmd0aChjaHMgPC0gdW5pcXVlKGNob2ljZXNbbnpjaGFyKGNob2ljZXMpXSkpLAotICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIidhcmcnIHNob3VsZCBiZSAlcyIsCi0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiJ2FyZycgc2hvdWxkIGJlIG9uZSBvZiAlcyIpLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIidhcmcnIHNob3VsZCBiZSBOVUxMIG9yICVzIiwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICInYXJnJyBzaG91bGQgYmUgTlVMTCBvciBvbmUgb2YgJXMiKSwKICAgICAgICAgICAgICAgICAgICAgIHBhc3RlKGRRdW90ZShjaHMpLCBjb2xsYXBzZT0iLCAiKSksCiAgICAgICAgICAgICAgZG9tYWluID0gTkEpCiAKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDQ0NykKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zNjk3LDYgKzM2OTcsMTIgQEAKICAgICBpZGVudGljYWwoZHJvcChhcGVybShhLCBjKDEsIDIsIDMpLCByZXNpemUgPSBGQUxTRSkpLCBhcGVybShtLCBjKDEsIDIpLCByZXNpemUgPSBGQUxTRSkpCiApCiAKKyMjIG1hdGNoLmFyZyBoYW5kbGluZyBvZiBub24tY2hhcmFjdGVyIGlucHV0CitzdG9waWZub3QoaWRlbnRpY2FsKAorICB0cnlDbXNnKG1hdGNoLmFyZyhUUlVFLCBjKCdhJywgJ2InLCAnYycpKSksCisgIHRyeUNtc2cobWF0Y2guYXJnKCdkJywgIGMoJ2EnLCAnYicsICdjJykpKQorKSkKKwogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true
+        },
+        {
+          "file_name": "file_19142.txt",
+          "bug_id": 19142,
+          "creation_time": "2026-08-26T06:48:24Z",
+          "summary": "Handle wrong input type the same as any other in match.arg",
+          "is_private": false,
+          "id": 3801,
+          "last_change_time": "2026-08-26T06:48:24Z",
+          "size": 3116,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9tYXRjaC5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvYmFzZS9SL21hdGNoLlIgIChyZXZpc2lvbiA5MDQ0NykNCisrKyBzcmMvbGlicmFyeS9iYXNlL1IvbWF0Y2guUiAgKHdvcmtpbmcgY29weSkNCkBAIC00Nyw4ICs0Nyw2IEBADQogICAgICAgICAgICAgICAgICAgICAgICBlbnZpciA9IHN5cy5mcmFtZShzeXNQKSkNCiAgICAgfQ0KICAgICBpZiAoaXMubnVsbChhcmcpKSByZXR1cm4oY2hvaWNlc1sxTF0pDQotICAgIGVsc2UgaWYoIWlzLmNoYXJhY3RlcihhcmcpKQ0KLSAgICAgICBzdG9wKCInYXJnJyBtdXN0IGJlIE5VTEwgb3IgYSBjaGFyYWN0ZXIgdmVjdG9yIikNCiAgICAgYWxsLm1hdGNoIDwtIEZBTFNFDQogICAgIGlmKCFpcy5sb2dpY2FsKHNldmVyYWwub2spKSB7DQogICAgICAgICBpZihpcy5jaGFyYWN0ZXIoc2V2ZXJhbC5vaykgJiYgc3RhcnRzV2l0aChzZXZlcmFsLm9rLCAiYWxsIikpDQpAQCAtNjIsMTEgKzYwLDEyIEBADQogICAgIH0gZWxzZSBpZihsZW5ndGgoYXJnKSA9PSAwTCkgc3RvcCgiJ2FyZycgbXVzdCBiZSBvZiBsZW5ndGggPj0gMSIpDQogDQogICAgICMjIGhhbmRsZSBlYWNoIGVsZW1lbnQgb2YgYXJnIHNlcGFyYXRlbHkNCi0gICAgaSA8LSBwbWF0Y2goYXJnLCBjaG9pY2VzLCBub21hdGNoID0gMEwsIGR1cGxpY2F0ZXMub2sgPSBUUlVFKQ0KLSAgICBpZihhbGwoaTAgPC0gaSA9PSAwTCkgfHwgKGFsbC5tYXRjaCAmJiBhbnkoaTApKSkNCisgICAgaWYoIWlzLmNoYXJhY3RlcihhcmcpIHx8DQorICAgICAgIGFsbChpMCA8LSAoaSA8LSBwbWF0Y2goYXJnLCBjaG9pY2VzLCBub21hdGNoID0gMEwsIGR1cGxpY2F0ZXMub2sgPSBUUlVFKSkgPT0gMEwpIHx8DQorICAgICAgIChhbGwubWF0Y2ggJiYgYW55KGkwKSkpDQogICAgICAgICBzdG9wKHNwcmludGYobmdldHRleHQobGVuZ3RoKGNocyA8LSB1bmlxdWUoY2hvaWNlc1tuemNoYXIoY2hvaWNlcyldKSksDQotICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIidhcmcnIHNob3VsZCBiZSAlcyIsDQotICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIidhcmcnIHNob3VsZCBiZSBvbmUgb2YgJXMiKSwNCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiJ2FyZycgc2hvdWxkIGJlIE5VTEwgb3IgJXMiLA0KKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICInYXJnJyBzaG91bGQgYmUgTlVMTCBvciBvbmUgb2YgJXMiKSwNCiAgICAgICAgICAgICAgICAgICAgICBwYXN0ZShkUXVvdGUoY2hzKSwgY29sbGFwc2U9IiwgIikpLA0KICAgICAgICAgICAgICBkb21haW4gPSBOQSkNCiANCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWQuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZC5SICAgICAgICAocmV2aXNpb24gOTA0NDcpDQorKysgdGVzdHMvcmVnLXRlc3RzLTFkLlIgICAgICAgICh3b3JraW5nIGNvcHkpDQpAQCAtNTQ3MCw4ICs1NDcwLDggQEANCiAobTIgPC0gdHJ5Q21zZyhtYXRjaC5hcmcoIiIsIGNob2ljZXMgPSBjKCIiLCAiYSIsICJiIikpKSkNCiBzdG9waWZub3QoIWdyZXBsKGRRdW90ZSgiIiksIG0xKSwgIWdyZXBsKGRRdW90ZSgiIiksIG0yKSkNCiBpZihlbmdsaXNoTXNncykNCi0gICAgc3RvcGlmbm90KGdyZXBsKCInYXJnJyBzaG91bGQgYmUgIiwgbTEpLA0KLSAgICAgICAgICAgICAgZ3JlcGwoIidhcmcnIHNob3VsZCBiZSBvbmUgIiwgYyhtMSwgbTIpKSB8PiBpZGVudGljYWwoIGMoRkFMU0UsVFJVRSkgKSkNCisgICAgc3RvcGlmbm90KGdyZXBsKCInYXJnJyBzaG91bGQgYmUgTlVMTCBvciAiLCBtMSksDQorICAgICAgICAgICAgICBncmVwbCgiJ2FyZycgc2hvdWxkIGJlIE5VTEwgb3Igb25lICIsIGMobTEsIG0yKSkgfD4gaWRlbnRpY2FsKCBjKEZBTFNFLFRSVUUpICkpDQogIyMgd2FzICAnYXJnJyBzaG91bGQgYmUgb25lIG9mIOKAnOKAnSwg4oCcYeKAnSAoICwg4oCcYuKAnSApDQogDQogDQpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlINCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NCi0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUiAgICAgICAgKHJldmlzaW9uIDkwNDQ3KQ0KKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SICAgICAgICAod29ya2luZyBjb3B5KQ0KQEAgLTQxOSw3ICs0MTksNyBAQA0KICMgd2Vic2l0ZSBkb2VzIG5vdCBtYXR0ZXIgYXMgd2lsbCBub3QgYmUgY29udGFjdGVkLg0KIEVkbCA8LSB0cnlDaWQoZG93bmxvYWQuZmlsZSgiaHR0cDovL2NyYW4uci1wcm9qZWN0Lm9yZy8iLCAicGluZy50eHQiKSkNCiBzdG9waWZub3QoaW5oZXJpdHMoRWRsLCAiZXJyb3IiKSwNCi0gICAgICAgICAgIWVuZ2xpc2hNc2dzIHx8IGdyZXBsKCJzaG91bGQgYmUgb25lIG9mIC5hdXRvLiwiLCBjb25kaXRpb25NZXNzYWdlKEVkbCkpKQ0KKyAgICAgICAgICAhZW5nbGlzaE1zZ3MgfHwgZ3JlcGwoInNob3VsZCBiZSBOVUxMIG9yIG9uZSBvZiAuYXV0by4sIiwgY29uZGl0aW9uTWVzc2FnZShFZGwpKSkNCiBvcHRpb25zKG9wKQ0KICMjIGVycm9yIHdhcyAgIm9iamVjdCAnc3RhdHVzJyBub3QgZm91bmQiICBpbiBSIDw9IDQuMi4yDQogDQpAQCAtMzY5Nyw2ICszNjk3LDEyIEBADQogICAgIGlkZW50aWNhbChkcm9wKGFwZXJtKGEsIGMoMSwgMiwgMyksIHJlc2l6ZSA9IEZBTFNFKSksIGFwZXJtKG0sIGMoMSwgMiksIHJlc2l6ZSA9IEZBTFNFKSkNCiApDQogDQorIyMgbWF0Y2guYXJnIGhhbmRsaW5nIG9mIG5vbi1jaGFyYWN0ZXIgaW5wdXQNCitzdG9waWZub3QoaWRlbnRpY2FsKA0KKyAgdHJ5Q21zZyhtYXRjaC5hcmcoVFJVRSwgYygnYScsICdiJywgJ2MnKSkpLA0KKyAgdHJ5Q21zZyhtYXRjaC5hcmcoJ2QnLCAgYygnYScsICdiJywgJ2MnKSkpDQorKSkNCisNCiAjIyBrZWVwIGF0IGVuZA0KIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsDQogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSk=",
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-08-26 16:08:53"
+}

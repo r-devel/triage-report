@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R 4.6.x",
+        "creation_time": "2026-05-15T16:21:42Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "kevinushey"
+        ],
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19074,
+        "assigned_to": "R-core",
+        "component": "Misc",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "summary": "parallel::makeCluster(<cluster>, type = \"PSOCK\") does not give an error",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "name": "kevinushey",
+            "id": 1044,
+            "real_name": "Kevin Ushey"
+          }
+        ],
+        "last_change_time": "2026-05-20T21:16:52Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "is_creator_accessible": true,
+        "creator": "henrikb",
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Henrik Bengtsson",
+          "id": 1036,
+          "name": "henrikb"
+        },
+        "resolution": "",
+        "status": "TRIAGED"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19074": {
+        "comments": [
+          {
+            "creation_time": "2026-05-15T16:21:42Z",
+            "creator": "henrikb",
+            "bug_id": 19074,
+            "text": "Doing:\n\n```\ncl <- parallel::makeCluster(2)\ncl2 <- parallel::makeCluster(cl)\n```\n\nCreates two different 'PSOCK' clusters each with two cluster nodes. Should the latter be an error?\n\nMore specifically, this happens with:\n\n```\nparallel::makeCluster(cl, type = \"PSOCK\") # default\nparallel::makeCluster(cl, type = \"SOCK\")\n```\n\nwhile we do indeed get errors if we try:\n\n```\n> parallel::makeCluster(cl, type = \"FORK\")\nError in makeForkCluster(nnodes = spec, ...) :\n  'list' object cannot be coerced to type 'integer'\n\n> parallel::makeCluster(cl, type = \"MPI\")\nError in Rmpi::mpi.comm.spawn(slave = mpitask, slavearg = args, nslaves = count,  :\n  'list' object cannot be coerced to type 'double'\n```",
+            "count": 0,
+            "is_markdown": true,
+            "attachment_id": {},
+            "tags": [],
+            "id": 103079,
+            "time": "2026-05-15T16:21:42Z",
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-05-19T19:10:07Z",
+            "id": 103090,
+            "creator": "kevinushey",
+            "creation_time": "2026-05-19T19:10:07Z",
+            "is_markdown": true,
+            "count": 1,
+            "text": "I dug into this. The PSOCK case isn't intentionally accepting a cluster -- it's just that nothing validates names\nin makePSOCKcluster, and the cluster's internal structure happens to satisfy a code path that was meant for\nsomething else.\n\nSpecifically: with cl (a SOCKcluster, i.e. a list of SOCKnode objects) passed as names:\n\n- is.numeric(names) is FALSE, so the integer branch at snowSOCK.R:164 is skipped.\n- local is FALSE, so the sequential else-branch at snowSOCK.R:246-251 runs:\nfor (i in seq_along(cl))\n    cl[[i]] <- newPSOCKnode(names[[i]], options = options, rank = i)\n- Each names[[i]] is a SOCKnode, which is a list. In newPSOCKnode (snowSOCK.R:87-90):\nif (is.list(machine)) {\n    options <- addClusterOptions(options, machine)\n    machine <- machine$host\n}\n- That branch was inherited from snow to support per-host option lists like list(host = \"foo\", port = 1234, ...). A\n SOCKnode happens to be a list with a $host element (\"localhost\"), so it slips through and a fresh worker is\nlaunched on localhost.\n\nNet effect: a brand-new, independent cluster of the same node count is created; the original cl is left alive. So\nmakeCluster(cl) silently leaks an entire second cluster.\n\nFORK and MPI fail fast only because their starters coerce eagerly -- makeForkCluster does as.integer(nnodes) at the\n top (forkCluster.R:24) and snow's makeMPIcluster does similarly with as.double(). makePSOCKcluster has no\nequivalent sanity check.\n\nSo yes, this should be an error. Two ways to fix it, depending on how broad we want to be.\n\nOption A: narrow check\n\nJust reject inputs that already inherit from \"cluster\". Minimal, covers the reported case uniformly across all\ntypes:\n\n```\nIndex: src/library/parallel/R/snow.R\n===================================================================\n--- src/library/parallel/R/snow.R     (revision 89220)\n+++ src/library/parallel/R/snow.R     (working copy)\n@@ -169,6 +169,8 @@\n makeCluster <-\n     function (spec, type = getClusterOption(\"type\"), ...)\n {\n+    if (inherits(spec, \"cluster\"))\n+        stop(\"'spec' is already a cluster object\")\n     switch(type,\n            PSOCK = makePSOCKcluster(names = spec, ...),\n            FORK = makeForkCluster(nnodes = spec, ...),\n\nIndex: src/library/parallel/R/snowSOCK.R\n===================================================================\n--- src/library/parallel/R/snowSOCK.R (revision 89220)\n+++ src/library/parallel/R/snowSOCK.R (working copy)\n@@ -152,6 +152,8 @@\n\n makePSOCKcluster <- function(names, ...)\n {\n+    if (inherits(names, \"cluster\"))\n+        stop(\"'names' is already a cluster object\")\n     options <- addClusterOptions(defaultClusterOptions, list(...))\n     manual <- getClusterOption(\"manual\", options)\n     homogeneous <- getClusterOption(\"homogeneous\", options)\n```\n\nOption B: positively validate spec/names\n\nSame fix for the cluster case, but also catches other unexpected values (NULL, data.frame, environment, ...) with a clear\nmessage. The trick that lets us preserve the (undocumented) PSOCK list-of-host-specs form while still rejecting\ncluster objects is is.null(oldClass(x)) -- a SOCKcluster/SOCKnode has a class attribute, a hand-written host spec\nlist (list(host = ..., port = ..., ...)) does not.\n\n```\nIndex: src/library/parallel/R/snow.R\n===================================================================\n--- src/library/parallel/R/snow.R     (revision 89220)\n+++ src/library/parallel/R/snow.R     (working copy)\n@@ -169,6 +169,10 @@\n makeCluster <-\n     function (spec, type = getClusterOption(\"type\"), ...)\n {\n+    if (!(is.numeric(spec) || is.character(spec) ||\n+          (is.list(spec) && is.null(oldClass(spec)))))\n+        stop(\"'spec' must be a numeric count, a character vector \",\n+             \"of host names, or a list of host specifications\")\n     switch(type,\n            PSOCK = makePSOCKcluster(names = spec, ...),\n            FORK = makeForkCluster(nnodes = spec, ...),\n\nIndex: src/library/parallel/R/snowSOCK.R\n===================================================================\n--- src/library/parallel/R/snowSOCK.R (revision 89220)\n+++ src/library/parallel/R/snowSOCK.R (working copy)\n@@ -152,6 +152,15 @@\n\n makePSOCKcluster <- function(names, ...)\n {\n+    ok <- is.numeric(names) || is.character(names)\n+    if (!ok && is.list(names) && is.null(oldClass(names)))\n+        ok <- all(vapply(names, function(el)\n+                         is.character(el) ||\n+                             (is.list(el) && is.null(oldClass(el))),\n+                         logical(1)))\n+    if (!ok)\n+        stop(\"'names' must be a numeric count, a character vector \",\n+             \"of host names, or a list of host specifications\")\n     options <- addClusterOptions(defaultClusterOptions, list(...))\n     manual <- getClusterOption(\"manual\", options)\n     homogeneous <- getClusterOption(\"homogeneous\", options)\n```\n\nI'd lean toward B since the cryptic 'list' object cannot be coerced to type 'integer' from FORK is also a smell,\nand a single check at makeCluster cleans that up too. But A is much smaller if we want to keep the patch minimal.",
+            "bug_id": 19074
+          },
+          {
+            "creation_time": "2026-05-20T21:16:52Z",
+            "creator": "henrikb",
+            "bug_id": 19074,
+            "text": "Thanks for this deep dive - and sorry for not being more explicit. Yes, it's an coincidence that we happens to get a new valid cluster from that incorrect call. Another example is:\n\n```\n> cl <- parallel::makeCluster(raw(2))\n> print(cl)\nsocket cluster with 2 nodes on host '00'\n```\n\nI don't think we want to gatekeep it already in `makeCluster()`, because we cannot predict what additional cluster `type`:s exist out there, or will be added in the future. There might be valid cases where the specification are not the common ones that we already know of.\n\nI suspect this is the reason for why argument `spec` is documented in very broad terms;\n\n    spec: A specification appropriate to the type of cluster.\n\nInstead, I think it should be up to each cluster type to check for valid `spec` and `...` input, e.g. `parallel::makePSOCKcluster()` and `parallel::makeForkCluster()`.  So, in this case it's `parallel::makePSOCKcluster()` that needs to be patched.",
+            "is_markdown": true,
+            "count": 2,
+            "tags": [],
+            "attachment_id": {},
+            "id": 103093,
+            "time": "2026-05-20T21:16:52Z",
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19074": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-05-20 21:16:52"
+}

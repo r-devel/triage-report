@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-09-03T23:43:32Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "MASS, boot are Suggests for parallel",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "component": "Misc",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "id": 19156,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "minor",
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-09-03T17:40:59Z",
+        "version": "R-devel (trunk)"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19156": {
+        "comments": [
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2026-09-03T17:40:59Z",
+            "text": "Created attachment 3830\nAdd MASS, boot to DESCRIPTION for parallel\n\n`library(boot)` is used in several package examples, tests, and the vignette; `MASS::` is used in several package examples and the e.g.\n\nhttps://github.com/r-devel/r-svn/blob/d24a7e7156e9b6411190046dcd231c31b5ba3578/src/library/parallel/vignettes/parallel.Rnw#L596\n\nhttps://github.com/r-devel/r-svn/blob/d24a7e7156e9b6411190046dcd231c31b5ba3578/src/library/parallel/man/clusterApply.Rd#L201\n\nhttps://github.com/r-devel/r-svn/blob/d24a7e7156e9b6411190046dcd231c31b5ba3578/src/library/parallel/vignettes/parallel.Rnw#L628\n\nhttps://github.com/r-devel/r-svn/blob/d24a7e7156e9b6411190046dcd231c31b5ba3578/src/library/parallel/tests/snow1.RR#L23\n\nhttps://github.com/r-devel/r-svn/blob/d24a7e7156e9b6411190046dcd231c31b5ba3578/src/library/parallel/man/unix/mclapply.Rd#L190\n\n---\n\nAIUI this makes MASS and boot Suggests dependencies for parallel. Certainly it's hard to see why they would be excluded when MASS is listed as Suggests for stats:\n\nhttps://github.com/r-devel/r-svn/blob/d24a7e7156e9b6411190046dcd231c31b5ba3578/src/library/stats/DESCRIPTION.in#L11",
+            "bug_id": 19156,
+            "count": 0,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": 3830,
+            "time": "2026-09-03T17:40:59Z",
+            "id": 103577,
+            "is_private": false
+          },
+          {
+            "attachment_id": 3831,
+            "tags": [],
+            "is_private": false,
+            "time": "2026-09-03T17:42:05Z",
+            "id": 103578,
+            "creator": "michaelchirico4",
+            "creation_time": "2026-09-03T17:42:05Z",
+            "count": 1,
+            "is_markdown": true,
+            "text": "Created attachment 3831\nAdd MASS, boot to DESCRIPTION for parallel\n\n(I am trying out the feature to paste a diff as an attachment; it seems the option to mark it as being a patch is supported only in the 'Create new attachment' flow, but not in the initial report \"Add attachment\" flow)",
+            "bug_id": 19156
+          },
+          {
+            "time": "2026-09-03T23:43:32Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 103586,
+            "tags": [],
+            "count": 2,
+            "text": "We could also consider splines as Suggests for stats based on its requirement for the profile.nls `plot()` method:\n\nhttps://github.com/r-devel/r-svn/blob/971d3fbb1bc65c8f27c6c2783e920236d304fe0d/src/library/stats/R/nls-profile.R#L238-L239",
+            "bug_id": 19156,
+            "creation_time": "2026-09-03T23:43:32Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19156": [
+        {
+          "bug_id": 19156,
+          "file_name": "file_19156.txt",
+          "summary": "Add MASS, boot to DESCRIPTION for parallel",
+          "creation_time": "2026-09-03T17:40:59Z",
+          "id": 3830,
+          "is_private": false,
+          "size": 480,
+          "last_change_time": "2026-09-03T17:42:05Z",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3BhcmFsbGVsL0RFU0NSSVBUSU9OLmluDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvcGFyYWxsZWwvREVTQ1JJUFRJT04uaW4gKHJldmlzaW9uIDkwNDgyKQ0KKysrIHNyYy9saWJyYXJ5L3BhcmFsbGVsL0RFU0NSSVBUSU9OLmluICh3b3JraW5nIGNvcHkpDQpAQCAtMTAsNyArMTAsNyBAQA0KICAgIGFuZCByYW5kb20tbnVtYmVyIGdlbmVyYXRpb24uDQogTGljZW5zZTogUGFydCBvZiBSIEBWRVJTSU9OQA0KIEltcG9ydHM6IHRvb2xzLCBjb21waWxlciwgc3RhdHMNCi1TdWdnZXN0czogbWV0aG9kcw0KK1N1Z2dlc3RzOiBtZXRob2RzLCBNQVNTLCBib290DQogRW5oYW5jZXM6IHNub3csIFJtcGksIG1pcmFpLCBwYXJhbGxlbGx5DQogTmVlZHNDb21waWxhdGlvbjogeWVzDQogRW5jb2Rpbmc6IFVURi04",
+          "creator": "michaelchirico4",
+          "is_patch": false
+        },
+        {
+          "file_name": "file_19156.txt",
+          "bug_id": 19156,
+          "creation_time": "2026-09-03T17:42:05Z",
+          "summary": "Add MASS, boot to DESCRIPTION for parallel",
+          "is_private": false,
+          "id": 3831,
+          "last_change_time": "2026-09-03T17:42:05Z",
+          "size": 480,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3BhcmFsbGVsL0RFU0NSSVBUSU9OLmluDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvcGFyYWxsZWwvREVTQ1JJUFRJT04uaW4gKHJldmlzaW9uIDkwNDgyKQ0KKysrIHNyYy9saWJyYXJ5L3BhcmFsbGVsL0RFU0NSSVBUSU9OLmluICh3b3JraW5nIGNvcHkpDQpAQCAtMTAsNyArMTAsNyBAQA0KICAgIGFuZCByYW5kb20tbnVtYmVyIGdlbmVyYXRpb24uDQogTGljZW5zZTogUGFydCBvZiBSIEBWRVJTSU9OQA0KIEltcG9ydHM6IHRvb2xzLCBjb21waWxlciwgc3RhdHMNCi1TdWdnZXN0czogbWV0aG9kcw0KK1N1Z2dlc3RzOiBtZXRob2RzLCBNQVNTLCBib290DQogRW5oYW5jZXM6IHNub3csIFJtcGksIG1pcmFpLCBwYXJhbGxlbGx5DQogTmVlZHNDb21waWxhdGlvbjogeWVzDQogRW5jb2Rpbmc6IFVURi04",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-03 23:43:32"
+}

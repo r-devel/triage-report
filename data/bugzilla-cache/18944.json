@@ -1,0 +1,205 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-07-08T15:29:43Z",
+        "cc_detail": [
+          {
+            "real_name": "Kurt Hornik",
+            "id": 308,
+            "name": "Kurt.Hornik"
+          },
+          {
+            "real_name": "Eric Lindblad",
+            "name": "lindblad",
+            "id": 3359
+          }
+        ],
+        "blocks": [],
+        "url": "",
+        "summary": "Add a preparsing filter step to aspell() in order to make LaTex spell checking more robust",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "name": "gabembecker",
+          "id": 1299,
+          "real_name": "Gabriel Becker"
+        },
+        "resolution": "",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "flags": [],
+        "platform": "Other",
+        "is_creator_accessible": true,
+        "creator": "gabembecker",
+        "alias": [],
+        "dupe_of": {},
+        "severity": "enhancement",
+        "id": 18944,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [
+          "Kurt.Hornik",
+          "lindblad"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 4.5.x",
+        "creation_time": "2025-09-05T09:08:11Z",
+        "component": "Misc",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18944": {
+        "comments": [
+          {
+            "creation_time": "2025-09-05T09:08:11Z",
+            "creator": "gabembecker",
+            "bug_id": 18944,
+            "text": "Created attachment 3540\npatch to add pre-parsing filter step to aspell() with motivating reg test\n\nKurt proposed a pair of issues related to making spell checking more robust. This is our attempt to address the first, as paraphrased by Heather Turner in (https://github.com/r-devel/r-dev-day/issues/85):\n\n>For files in LaTeX, both Aspell and Hunspell provide filters; only the former is extensible via lists of additional macros (LaTeX commands) to be handled. Neither provides filtering of non-text inside \\verb or filtering of environments (including verbatim ones). In 2010, Duncan Murdoch added a LaTeX parser to the tools package and has recently made considerable enhancements to this parser, as well as implementing a new one, currently in CRAN package parseLatex. Package utils provides experimental code for R-based LaTeX filtering using these parsers, which allows specifying additional filter rules for both commands and environments, and specifying (additional) verbatim commands and environments. However, parsers fail when they cannot parse, in which case the filtering does not work. It would be nice to explore how the C++ codes for LaTeX filtering in Aspell or Hunspell handle things, and either try to implement extensible filters which do not attempt full parsing (in R or C) using the ideas in these codes, or maybe teach the parser to optionally be more graceful when only filtering is desired.\n\nOur proposed approach is to add a *pre-parsing* filter step to the `aspell()` R function which, when specified, can be a filter which is explicitly expected to operate only on raw text and not assume it's able to parse the input. The result of this filter is then passed to the traditional filters, which can assume the ability to parse. In principle this could be useful for any format, though I'm only aware of it being useful for LaTex because of imperfections in the R LaTeX parsers that are unable to handle urls with `%` in them within certain TeX commands out of the box. We've added a regression test with an Rnw file that trips errors in `R 4.5.1` using the settings for R vignettes, but passes with the patch.\n\nThis work is joint with Heather, proposed patch attached.",
+            "count": 0,
+            "is_markdown": true,
+            "attachment_id": 3540,
+            "tags": [],
+            "id": 102198,
+            "time": "2025-09-05T09:08:11Z",
+            "is_private": false
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2025-09-12T16:05:48Z",
+            "id": 102233,
+            "creator": "lindblad",
+            "creation_time": "2025-09-12T16:05:48Z",
+            "count": 1,
+            "is_markdown": true,
+            "text": "Hoping this is not off-topic.\n\nHere are a couple of hunspell issues.\n\n`https://github.com/hunspell/hunspell/issues/662`\n\n\"aspell handles this: by allowing the user to specify\"\n\n\"might have been contributed but never acted upon\"\n\n`https://github.com/hunspell/hunspell/issues/300`\n\nFrom Sourceforge with a downloadable patch.\n\n`https://sourceforge.net/p/hunspell/patches/18/`\n\n\"Add command line option to extend the built-in TeX command list.\"\n\n\n\"implementation against 1.2.8\"",
+            "bug_id": 18944
+          },
+          {
+            "id": 102498,
+            "time": "2025-12-22T19:40:20Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "bug_id": 18944,
+            "text": "Sorry for the late reply.\naspell() already has a 'filter' argument which allows specifying a filter *pipeline*, so I would prefer not adding a new argument for more filters.\nI guess the preparsing filter could simply be made into a regular filter?",
+            "count": 2,
+            "is_markdown": true,
+            "creation_time": "2025-12-22T19:40:20Z",
+            "creator": "Kurt.Hornik"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 102502,
+            "creation_time": "2025-12-23T19:55:47Z",
+            "count": 3,
+            "bug_id": 18944,
+            "text": "\nHoping again not to be off-topic.\n\nSee the aspell entry in info for a comparison to other spell checker engines.\n\n> https://sourceforge.net/p/hunspell/patches/18/\n\nAs regards the above link's patch would the R community have interest in reaching out to the Hunspell developers?",
+            "attachment_id": {},
+            "time": "2025-12-23T19:55:47Z",
+            "creator": "lindblad",
+            "is_markdown": true
+          },
+          {
+            "id": 102538,
+            "is_private": false,
+            "tags": [],
+            "text": "Personally, I think it would be nice if hunspell gained better support for (La)TeX preprocessing, but then even what Aspell offers is by far not good enough (no support for user defined environments or verb(atim) things).\nSo afaic the best would be having a fully customizable (La)TeX filter which can be used for all spell checkers, perhaps even written in R.\nFor now, the best we have is the filter based on the LaTeX parsing code in either tools or the {parseLatex} package ...",
+            "bug_id": 18944,
+            "count": 4,
+            "creation_time": "2025-12-31T13:43:11Z",
+            "time": "2025-12-31T13:43:11Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "Kurt.Hornik"
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-06-26T17:11:28Z",
+            "creator": "gabembecker",
+            "is_markdown": true,
+            "tags": [],
+            "id": 103241,
+            "is_private": false,
+            "creation_time": "2026-06-26T17:11:28Z",
+            "bug_id": 18944,
+            "text": "Hi Kurt,\n\nComing back to this, the reason we proposed a pre-processing filter is that the filter (pipeline, as you pointed out) occurs *after* parsing, which is where the failure is occuring, so a filter won't be able to fix the issue.",
+            "count": 5
+          },
+          {
+            "creator": "Kurt.Hornik",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-07-01T07:52:20Z",
+            "creation_time": "2026-07-01T07:52:20Z",
+            "count": 6,
+            "text": "Oh dear ... apparently I last worked on the new LaTeX aspell filter 2 years ago.\n\nClearly, currently one cannot compose filters.  So to \"enhance\" an\navailable filter for pre or maybe also post processing one needs to\ncreate a new filter wrapping around the available one, which is not\nsuper-convenient as the available one are not directly accessible.  \n\nThat could be changed by exporting utils:::aspell_filter_db, which I\nguess I should do in any case.\n\nCurrently,\n\nR> names(utils:::aspell_filter_db)\n[1] \"LaTeX\"        \"Sweave+LaTeX\" \"md\"           \"Sweave\"       \"Rd\"          \n[6] \"R\"            \"dcf\"          \"pot\"     \n\nwhere the first two are undocumented (and the second has a \"Try to merge\ninto the Sweave filter.\" FIXME).  The unfortunately-still-undocumented\nLaTeX filter wraps around utils:::aspell_filter_LaTeX_worker() which has\n\nR> args(utils:::aspell_filter_LaTeX_worker)\nfunction (x, cmds = NULL, envs = NULL, parser = tools::parseLatex, \n    ...) \n\nwhich I should document and say that one can also use the\nparseLatex::parseLatex parser, which iirc these days handles errors\n(more) gracefully.  (Need to re-run my test codes and discuss results\nwith Duncan.)\n\nOne could add a 'before' argument to the LaTeX filter/worker, and use as\nsomething like\n\n  if(is.function(before))\n    x <- before(x)\n\nbefore calling the parser on x.\n\nGood enough ...?",
+            "bug_id": 18944,
+            "tags": [],
+            "is_private": false,
+            "id": 103267
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-07-08T15:29:43Z",
+            "id": 103274,
+            "is_private": false,
+            "creator": "Kurt.Hornik",
+            "creation_time": "2026-07-08T15:29:43Z",
+            "text": "I have now added the 'before' to the LaTeX filter, and also finally added\ndocumentation for it.",
+            "bug_id": 18944,
+            "is_markdown": true,
+            "count": 7
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18944": [
+        {
+          "summary": "patch to add pre-parsing filter step to aspell() with motivating reg test",
+          "creation_time": "2025-09-05T09:08:11Z",
+          "bug_id": 18944,
+          "file_name": "latex_prep_filter.diff",
+          "size": 9892,
+          "last_change_time": "2025-09-05T09:08:11Z",
+          "id": 3540,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL05BTUVTUEFDRQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9OQU1FU1BBQ0UJKHJldmlzaW9uIDg4NzE3KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvTkFNRVNQQUNFCSh3b3JraW5nIGNvcHkpCkBAIC00LDcgKzQsNyBAQAogCiBleHBvcnQoIkFkb2JlX2dseXBocyIsICJIVE1MaGVhZGVyIiwgIlJjbWQiLCAiUmQySFRNTCIsICJwa2cySFRNTCIsICJSZDJleCIsCiAgICAgICAgIlJkMmxhdGV4IiwgIlJkMnR4dCIsICJSZDJ0eHRfb3B0aW9ucyIsICJSZFRleHRGaWx0ZXIiLCAiUmRfZGIiLAotICAgICAgICJSZGlmZiIsICJSZGluZGV4IiwgIlN3ZWF2ZVRlWEZpbHRlciIsICJhZGRfZGF0YWxpc3QiLAorICAgICAgICJSZGlmZiIsICJSZGluZGV4IiwgIlN3ZWF2ZVRlWEZpbHRlciIsICJibGFua1VSTHMiLCAidXJsX3JlZ2V4IiwgImFkZF9kYXRhbGlzdCIsCiAgICAgICAgImFzLlJjb25jb3JkYW5jZSIsCiAgICAgICAgImFzc2VydENvbmRpdGlvbiIsICJhc3NlcnRFcnJvciIsICJhc3NlcnRXYXJuaW5nIiwgImJpYnN0eWxlIiwKICAgICAgICAiYnVpbGRWaWduZXR0ZSIsICJidWlsZFZpZ25ldHRlcyIsICJjaGFyc2V0X3RvX1VuaWNvZGUiLApJbmRleDogc3JjL2xpYnJhcnkvdG9vbHMvUi9Td2VhdmV0b29scy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3Rvb2xzL1IvU3dlYXZldG9vbHMuUgkocmV2aXNpb24gODg3MTcpCisrKyBzcmMvbGlicmFyeS90b29scy9SL1N3ZWF2ZXRvb2xzLlIJKHdvcmtpbmcgY29weSkKQEAgLTE2LDcgKzE2LDIyIEBACiAjICBBIGNvcHkgb2YgdGhlIEdOVSBHZW5lcmFsIFB1YmxpYyBMaWNlbnNlIGlzIGF2YWlsYWJsZSBhdAogIyAgaHR0cHM6Ly93d3cuUi1wcm9qZWN0Lm9yZy9MaWNlbnNlcy8KIAordXJsVGVYQ21kcyA8LSBjKCJocmVmIiwgInVybCIpCiAKK2JsYW5rVVJMcyA8LSBmdW5jdGlvbihsaW5lcykgeworICAgICMjIGNvdWxkIGNvbWJpbmUgdGhlc2UgaW50byBvbmUgbW9yZSBjb21wbGljYXRlZCByZWdleCB0aGF0CisgICAgbGluZXMgPC0gZ3N1YihwYXN0ZTAoIlxcKCIsIHBhc3RlKHVybFRlWENtZHMsIGNvbGxhcHNlID0gInwiKSwgIilbe11bXn1dK1t9XSIpLAorICAgICAgICAgIiIsCisgICAgICAgICBsaW5lcykKKyAgICBsaW5lcyA8LSBnc3ViKHVybF9yZWdleCwKKyAgICAgICAgICAgICAgICAgICIiLAorICAgICAgICAgICAgICAgICAgbGluZXMpCisgICAgbGluZXMKK30KKworIyMgVGhpcyBpcyBub3cgb2ZmaWNpYWxseSBjb25zaWRlcmVkIGEgcHJlcGFyc2UtZmlsdGVyCisjIyBpdCBhbHdheXMgYWN0ZWQgYXMgc3VjaCwgYXMgaXQgd2FzIHVzZWQgdmlhCisjIyBhc3BlbGxfZmlsdGVyX0xhVGVYX3dvcmtlcihTd2VhdmVUZVhGaWx0ZXIoaWZpbGUsIC4uLikpCiBTd2VhdmVUZVhGaWx0ZXIgPC0KIGZ1bmN0aW9uKGlmaWxlLCBlbmNvZGluZyA9ICJ1bmtub3duIikKIHsKQEAgLTU3LDUgKzcyLDUgQEAKICAgICAJc3RhdGUgPC0gcmVjcyR0eXBlW2ldCiAgICAgCWxhc3QgPC0gbGluZQogICAgIH0KLSAgICBsaW5lcworICAgIGxpbmVzIDwtIGJsYW5rVVJMcyhsaW5lcykKIH0KSW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IvdXJsdG9vbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL3VybHRvb2xzLlIJKHJldmlzaW9uIDg4NzE3KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi91cmx0b29scy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yMTMsNiArMjEzLDkgQEAKICAgICB1cmxzCiB9CiAKKyMjIHB1bGxlZCBvdXQgZm9yIHVzZSBpbiBTd2VhdmUvdGV4IGFzcGVsbCBwcmUtcGFyc2luZyBmaWx0ZXJzCit1cmxfcmVnZXggPC0gIigoaHR0cHM/fHM/ZnRwcz8pOi8vW1s6YWxudW06XS8uOkArXFxffiUjPz0mOywtXStbWzphbG51bTpdL10pIgorCiAuZ2V0X3VybHNfZnJvbV9ERVNDUklQVElPTl9EZXNjcmlwdGlvbl9maWVsZCA8LQogZnVuY3Rpb24odikKIHsKQEAgLTIyNCw3ICsyMjcsNyBAQAogICAgIHVybHMgPC0gYyh1cmxzLCAuZ3JlZ2V4ZWNfYXRfcG9zKHBhdHRlcm4sIHYsIG0sIDNMKSkKICAgICByZWdtYXRjaGVzKHYsIG0pIDwtICIiCiAgICAgcGF0dGVybiA8LQotICAgICAgICAiKFtePlwiP10pKChodHRwcz98ZnRwKTovL1tbOmFsbnVtOl0vLjpAK1xcX34lIz89JjssLV0rW1s6YWxudW06XS9dKSIKKyAgICAgICAgcGFzdGUwKCIoW14+XCI/XSkiLCB1cmxfcmVnZXgpCiAgICAgbSA8LSBncmVnZXhwcihwYXR0ZXJuLCB2KQogICAgIHVybHMgPC0gYyh1cmxzLCAuZ3JlZ2V4ZWNfYXRfcG9zKHBhdHRlcm4sIHYsIG0sIDNMKSkKICAgICByZWdtYXRjaGVzKHYsIG0pIDwtICIiCkluZGV4OiBzcmMvbGlicmFyeS91dGlscy9SL2FzcGVsbC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3V0aWxzL1IvYXNwZWxsLlIJKHJldmlzaW9uIDg4NzE3KQorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9hc3BlbGwuUgkod29ya2luZyBjb3B5KQpAQCAtMTgsNyArMTgsNyBAQAogCiBhc3BlbGwgPC0KIGZ1bmN0aW9uKGZpbGVzLCBmaWx0ZXIsIGNvbnRyb2wgPSBsaXN0KCksIGVuY29kaW5nID0gInVua25vd24iLAotICAgICAgICAgcHJvZ3JhbSA9IE5VTEwsIGRpY3Rpb25hcmllcyA9IGNoYXJhY3RlcigpKQorICAgICAgICAgcHJvZ3JhbSA9IE5VTEwsIGRpY3Rpb25hcmllcyA9IGNoYXJhY3RlcigpLCBwcmVwYXJzZV9maWx0ZXIgPSBOVUxMKQogewogICAgICMjIFRha2UgdGhlIGdpdmVuIGZpbGVzIGFuZCBmZWVkIHRoZW0gdGhyb3VnaCBzcGVsbCBjaGVja2VyIGluCiAgICAgIyMgSXNwZWxsIHBpcGUgbW9kZS4KQEAgLTYxLDYgKzYxLDggQEAKICAgICAgICAgICAgIHdhcm5pbmcoZ2V0dGV4dGYoIkZpbHRlciAnJXMnIGlzIG5vdCBhdmFpbGFibGUuIiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZmlsdGVyX25hbWUpLAogICAgICAgICAgICAgICAgICAgICBkb21haW4gPSBOQSkKKyAgICAgICAgaWYoaXMubnVsbChwcmVwYXJzZV9maWx0ZXIpKQorICAgICAgICAgICAgcHJlcGFyc2VfZmlsdGVyIDwtIGZpbHRlcl9uYW1lCiAgICAgfQogICAgIGVsc2UgaWYoaXMubGlzdChmaWx0ZXIpKSB7CiAgICAgICAgICMjIFN1cHBvcnQKQEAgLTc0LDYgKzc2LDggQEAKICAgICAgICAgICAgIHdhcm5pbmcoZ2V0dGV4dGYoIkZpbHRlciAnJXMnIGlzIG5vdCBhdmFpbGFibGUuIiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZmlsdGVyX25hbWUpLAogICAgICAgICAgICAgICAgICAgICBkb21haW4gPSBOQSkKKyAgICAgICAgaWYoaXMubnVsbChwcmVwYXJzZV9maWx0ZXIpKQorICAgICAgICAgICAgcHJlcGFyc2VfZmlsdGVyIDwtIGZpbHRlcl9uYW1lCiAgICAgfQogICAgIGVsc2UgaWYoIWlzLmZ1bmN0aW9uKGZpbHRlcikpCiAgICAgICAgIHN0b3AoIkludmFsaWQgJ2ZpbHRlcicgYXJndW1lbnQuIikKQEAgLTEyNCw2ICsxMjgsMTcgQEAKICAgICAgICAgfQogICAgIH0KIAorICAgIGlmKGlzLmNoYXJhY3RlcihwcmVwYXJzZV9maWx0ZXIpKSB7CisgICAgICAgICMjIExvb2sgdXAgZmlsdGVyIGluIGFzcGVsbCBmaWx0ZXIgZGIuCisgICAgICAgIHByZXBfZmlsdGVyX25hbWUgPC0gcHJlcGFyc2VfZmlsdGVyWzFMXQorICAgICAgICBwcmVwYXJzZV9maWx0ZXIgPC0gYXNwZWxsX3ByZXBfZmlsdGVyX2RiW1twcmVwX2ZpbHRlcl9uYW1lXV0KKyAgICAgICAgIyMgV2FybiBpZiB0aGUgZmlsdGVyIHdhcyBub3QgZm91bmQgaW4gdGhlIGRiLgorICAgICAgICBpZihpcy5udWxsKHByZXBhcnNlX2ZpbHRlcikpCisgICAgICAgICAgICB3YXJuaW5nKGdldHRleHRmKCJQcmUtcGFyc2UgZmlsdGVyICclcycgaXMgbm90IGF2YWlsYWJsZS4iLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwcmVwX2ZpbHRlcl9uYW1lKSwKKyAgICAgICAgICAgICAgICAgICAgZG9tYWluID0gTkEpCisKKyAgICB9CiAgICAgIyMgTm8gc3BlY2lhbCBleHBhbnNpb24gb2YgY29udHJvbCBhcmd1bWVudCBmb3Igbm93LgogICAgIGNvbnRyb2wgPC0gYXMuY2hhcmFjdGVyKGNvbnRyb2wpCiAKQEAgLTE1NSw2ICsxNzAsMTcgQEAKICAgICAgICAgICAgIG1lc3NhZ2UoZ2V0dGV4dGYoIlByb2Nlc3NpbmcgZmlsZSAlcyIsIGZuYW1lKSwKICAgICAgICAgICAgICAgICAgICAgZG9tYWluID0gTkEpCiAKKyAgICAgICAgIyMgYXBwbHkgcHJlcGFyc2UgZmlsdGVyIGFuZCB3cml0ZSB0byB0ZW1wb3JhcnkgZmlsZQorICAgICAgICAjIyB3aGljaCB3aWxsIGJlIHBhc3NlZCB0byBmaWx0ZXIgKHdoaWNoIGNhbiBhc3N1bWUKKyAgICAgICAgIyMgaXQncyBhYmxlIHRvIHBhcnNlIHRoZSB0ZXh0LCBlLmcuLCBpbiB0aGUgTGFUZVgKKyAgICAgICAgIyMgY2FzZSkKKyAgICAgICAgaWYoIWlzLm51bGwocHJlcGFyc2VfZmlsdGVyKSkgeworICAgICAgICAgICAgcHJlcF90ZmlsZSA8LSB0ZW1wZmlsZSgpCisgICAgICAgICAgICBwcmVwX2xpbmVzIDwtIHByZXBhcnNlX2ZpbHRlcihmaWxlKQorICAgICAgICAgICAgd3JpdGVMaW5lcyhwcmVwX2xpbmVzLCBwcmVwX3RmaWxlKQorICAgICAgICAgICAgZmlsZSA8LSBwcmVwX3RmaWxlCisgICAgICAgIH0KKwogICAgICAgICBsaW5lcyA8LSBpZihpcy5udWxsKGZpbHRlcikpCiAgICAgICAgICAgICByZWFkTGluZXMoZmlsZSwgZW5jb2RpbmcgPSBlbmMsIHdhcm4gPSBGQUxTRSkKICAgICAgICAgZWxzZSB7CkBAIC0xMjYxLDYgKzEyODcsMTAgQEAKIGZ1bmN0aW9uKGlmaWxlLCBlbmNvZGluZyA9ICJ1bmtub3duIiwgLi4uKQogICAgIGFzcGVsbF9maWx0ZXJfTGFUZVhfd29ya2VyKHJlYWRMaW5lcyhpZmlsZSwgZW5jb2RpbmcgPSBlbmNvZGluZyksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4uKQorCisjIyBzd2VhdmUgYml0cyBub3cgdGFrZW4gY2FyZSBvZiBpbiBwcmVwYXJzZSBmaWx0ZXIKK2FzcGVsbF9maWx0ZXJfZGIkYFN3ZWF2ZStMYVRlWGAgPC0gYXNwZWxsX2ZpbHRlcl9kYiRMYVRlWAorCiBhc3BlbGxfZmlsdGVyX0xhVGVYX3dvcmtlciA8LQogZnVuY3Rpb24oeCwgY21kcyA9IE5VTEwsIGVudnMgPSBOVUxMLCBwYXJzZXIgPSB0b29sczo6cGFyc2VMYXRleCwgLi4uKQogewpAQCAtMTM1MCwxNiArMTM4MCw2IEBACiAgICAgICAibm9jaXRlIHAiLCAicHNmaWcgcCIsICJzZWxlY3RsYW5ndWFnZSBwIiwgImluY2x1ZGVncmFwaGljcyBvcCIsCiAgICAgICAiYmliaXRlbSBvcCIsICJnZW9tZXRyeSBwIikKIAotIyMgPEZJWE1FPgotIyMgVHJ5IHRvIG1lcmdlIGludG8gdGhlIFN3ZWF2ZSBmaWx0ZXIuCi0jIyBOb3RlIHRoYXQgY3VycmVudGx5IHdlIGNhbm5vdCBwYXNzIGZpbHRlciBhcmdzIHdoZW4gdXNpbmcKLSMjIGFzcGVsbF9wYWNrYWdlX3ZpZ25ldHRlcygpLgotYXNwZWxsX2ZpbHRlcl9kYiRgU3dlYXZlK0xhVGVYYCA8LQotZnVuY3Rpb24oaWZpbGUsIGVuY29kaW5nID0gInVua25vd24iLCAuLi4pCi0gICAgYXNwZWxsX2ZpbHRlcl9MYVRlWF93b3JrZXIodG9vbHM6OlN3ZWF2ZVRlWEZpbHRlcihpZmlsZSwgZW5jb2RpbmcpLAotICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uLikKLSMjIDwvRklYTUU+Ci0KICMjIEZvciBzcGVsbCBjaGVja2luZyBwYWNrYWdlcy4KIAogYXNwZWxsX3BhY2thZ2UgPC0KQEAgLTE1NzMsMyArMTU5MywxMSBAQAogICAgIHdyaXRlTGluZXMobmV3LCB0eHQsIHVzZUJ5dGVzID0gVFJVRSkKICAgICBzYXZlUkRTKG5ldywgcmRzKQogfQorCisjIyBTaG91bGQgd2UgZGVmYXVsdCB0byB0b29sczo6OmJsYW5rVVJMcyBldmVyeXdoZXJlPyBDdXJyZW50bHkgSSBkb24ndAorIyMgdG8gcHJlc2VydmUgZXhhY3QgYmFja3dhcmRzIGNvbXBhdGliaWxpdHksIGJ1dCBpdCBzZWVtcworIyMgbGlrZSBhIGdvb2QgaWRlYS4uLgorYXNwZWxsX3ByZXBfZmlsdGVyX2RiIDwtIGxpc3QoIlN3ZWF2ZStMYVRlWCIgPSB0b29sczo6U3dlYXZlVGVYRmlsdGVyLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgTGFUZVggPSB0b29sczo6OmJsYW5rVVJMcykKKworCkluZGV4OiBzcmMvbGlicmFyeS91dGlscy9tYW4vYXNwZWxsLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3V0aWxzL21hbi9hc3BlbGwuUmQJKHJldmlzaW9uIDg4NzE3KQorKysgc3JjL2xpYnJhcnkvdXRpbHMvbWFuL2FzcGVsbC5SZAkod29ya2luZyBjb3B5KQpAQCAtMzQsNiArMzQsMTIgQEAKICAgICBzZXBhcmF0b3Igc3BlY2lmeSBSIHN5c3RlbSBkaWN0aW9uYXJpZXMgKGluIHN1YmRpcmVjdG9yeQogICAgIFxmaWxle3NoYXJlL2RpY3Rpb25hcmllc30gb2YgdGhlIFIgaG9tZSBkaXJlY3RvcnkpLiAgVGhlIGZpbGUKICAgICBleHRlbnNpb24gKGN1cnJlbnRseSwgb25seSBcZmlsZXsucmRzfSkgY2FuIGJlIG9taXR0ZWQufQorICBcaXRlbXtwcmVwYXJzZV9maWx0ZXJ9e2FuIG9wdGlvbmFsIFxlbXBoe3ByZS1wYXJzaW5nfSBmaWx0ZXIsIGluCisgICAgdGhlIHNhbWUgZm9ybWF0IGFzIFxjb2Rle2ZpbHRlcn0sIGkuZS4sIGNoYXJhY3RlciwgbGlzdCwgb3IKKyAgICBmdW5jdGlvbi4gU2VlIFxib2xke0RldGFpbHN9IGZvciB0aGUgZGlzdGluY3Rpb24gYmV0d2VlbiB0aGlzCisgICAgYW5kIFxjb2Rle2ZpbHRlcn0uIElmIFxjb2Rle2ZpbHRlcn0gaXMgYSBjaGFyYWN0ZXIgb3IgbGlzdCwgdGhpcyB3aWxsCisgICAgZGVmYXVsdCB0byBhIGJ1aWx0LWluIHByZS1wYXJzaW5nIGZpbHRlciBvZiB0aGUgc2FtZSBuYW1lLCBpZgorICAgIGF2YWlsYWJsZS59CiB9CiBcZGV0YWlsc3sKICAgVGhlIHNwZWxsIGNoZWNrIHByb2dyYW1zIGVtcGxveWVkIG11c3Qgc3VwcG9ydCB0aGUgc28tY2FsbGVkIElzcGVsbApAQCAtNTEsNiArNTcsMTMgQEAKICAgZW5kaW5ncyBpbiBmaWxlcyBhbmQgVW5peC1zdHlsZSBwYXRocywgd2hpY2ggaXMgaW5jb21wYXRpYmxlIHdpdGgKICAgXGNvZGV7YXNwZWxsKCl9LgogCisgIFByZS1wYXJzaW5nIGZpbHRlcnMgKFxjb2Rle3ByZXBhcnNlX2ZpbHRlcn0pIHNob3VsZCBvcGVyYXRlIG9uIHRoZQorICByYXcgdGV4dCBvZiBcY29kZXtmaWxlfSwgd2hpbGUgc3RhbmRhcmQgZmlsdGVycyAoXGNvZGV7ZmlsdGVyfSkgY2FuCisgIGFzc3VtZSB0aGV5IHdpbGwgYmUgYWJsZSB0byBwYXJzZSB0aGUgd2l0aG91dCBlcnJvci4gQ3VycmVudGx5LAorICB0aGlzIGlzIG1vc3QgcmVsZXZhbnQgZm9yIExhVGVYLWJhc2VkIGZpbGUgZm9ybWF0cywgd2hlcmUgdGhlCisgIGN1cnJlbnRseSBhdmFpbGFibGUgcGFyc2VycyBkbyBub3Qgc3VwcG9ydCBjb3JuZXItY2FzZXMgc3VjaCBhcworICBVUkxzIHdpdGggdGhlICUgc3ltYm9sIGluIHRoZW0uCisKICAgVGhlIGN1cnJlbnRseSBhdmFpbGFibGUgYnVpbHQtaW4gZmlsdGVycyBhcmUgXGNvZGV7IlJkIn0KICAgKGNvcnJlc3BvbmRpbmcgdG8gXGNvZGV7XGxpbmt7UmRUZXh0RmlsdGVyfX0sIHdpdGggYWRkaXRpb25hbCBhcmd1bWVudAogICBcY29kZXtpZ25vcmV9IGFsbG93aW5nIHRvIGdpdmUgcmVndWxhciBleHByZXNzaW9ucyBmb3IgcGFydHMgb2YgdGhlCkBAIC04Miw2ICs5NSwxNCBAQAogICAoXGZpbGV7Lm1kfSBhbmQgXGZpbGV7LlJtZH0gZmlsZXMpLCBhbmQgbmVlZHMgcGFja2FnZXMKICAgXENSQU5wa2d7Y29tbW9ubWFya30gYW5kIFxDUkFOcGtne3htbDJ9IHRvIGJlIGF2YWlsYWJsZS4KIAorICBQcmUtcGFyc2luZyBmaWx0ZXIgXGNvZGV7IlN3ZWF2ZStMYVRlWCJ9IGlzIGZvciBjb2Rle1N3ZWF2ZX0gZG9jdW1lbnRzCisgIGFuZCBpbnZva2VzIFxjb2Rle1xsaW5rW3BrZzp0b29sc117U3dlYXZlVGVYRmlsdGVyfX0gLSBzbyBuYW1lZCBmb3IKKyAgYmFja3dhcmRzIGNvbXBhdGFiaWxpdHkgLSB3aGljaCByZW1vdmVzIFN3ZWF2ZSBjb2RlIGNodW5rcyBhcyB3ZWxsCisgIGFzIGJsYW5raW5nIG91dCBVUkxzIHZpYSBcY29kZXtcbGlua1twa2c6dG9vbHNde2JsYW5rVVJMc319LgorCisgIFByZS1wYXJzaW5nIGZpbHRlciBcY29kZXsiTGFUZVgifSBibGFua3Mgb3V0IFVSTHMgdmlhCisgIFxjb2Rle1xsaW5rW3BrZzp0b29sc117YmxhbmtVUkxzfX0uCisKICAgVGhlIHByaW50IG1ldGhvZCBmb3IgdGhlIG9iamVjdHMgcmV0dXJuZWQgYnkgXGNvZGV7YXNwZWxsfSBoYXMgYW4KICAgXGNvZGV7aW5kZW50fSBhcmd1bWVudCBjb250cm9sbGluZyB0aGUgaW5kZW50YXRpb24gb2YgdGhlIHBvc2l0aW9ucyBvZgogICBwb3NzaWJseSBtaXNzcGVsbGVkIHdvcmRzLiAgVGhlIGRlZmF1bHQgaXMgMjsgRW1hY3MgdXNlcnMgbWF5IGZpbmQgaXQKSW5kZXg6IHRlc3RzL3BhcnNlX2Vycm9yLlJudwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9wYXJzZV9lcnJvci5SbncJKG5vbmV4aXN0ZW50KQorKysgdGVzdHMvcGFyc2VfZXJyb3IuUm53CSh3b3JraW5nIGNvcHkpCkBAIC0wLDAgKzEsMjAgQEAKKyUgRmlsZSB0ZXN0cy9wYXJzZV9lcnJvci5SbncKKworXGRvY3VtZW50Y2xhc3NbYTRwYXBlcl17YXJ0aWNsZX0KK1xiZWdpbntkb2N1bWVudH0KKworQSBkb2N1dW1lbnQgd2l0aCBzb21lIHNwZWVsaW5nIGVycm9ycyBhbmQgYSBVUkwgdGhhdCB3b24ndAorcGFyc2UgYXMgb2YgXGNvZGV7UiA0LjUuMX0gYXQgXHVybHtodHRwOi8vc29tZS5zaXRlL3dpdGglMjBzcGFjZXN9CisKK0Fsc28gc29tZSBjb2RlOgorCisKKzw8Y29kZT4+PQoreCA8LSA1Cit5IDwtICJiYWQgc3BlbGxpbmcgaWdub3JlZWVlZCBoZXJlIgorQAorCitcZW1waHtlbXBoYWlzaXplZWQgc3BlbGxpbmcgZXJyb3J9IGFyZSBjYXVnaHQgYXMgd2VsbC4KKworCitcZW5ke2RvY3VtZW50fQpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDg4NzE3KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTIxOTgsNiArMjE5OCwxNSBAQAogIyMgX2NsYXNzZWRfIHdhcm5pbmcKIAogCisjIyBwcmVwYXJzZV9maWx0ZXIgYWxsb3dzIHJvYnVzdG5lc3MgdG8gY29ybmVyIGNhc2VzIG5vdAorIyMgc3VwcG9ydGVkIGJ5IFIgbGF0ZXggcGFyc2VyIGZvciBhc3BlbGwKK3JlcyA8LSBhc3BlbGwoZmlsZS5wYXRoKFN5cy5nZXRlbnYoJ1NSQ0RJUicpLCAicGFyc2VfZXJyb3IuUm53IiksCisgICAgICAgICAgICAgICAgICAgICBmaWx0ZXIgPSAiTGFUZVgiLAorICAgICAgICAgICAgICAgICAgICAgcHJlcGFyc2VfZmlsdGVyID0gIlN3ZWF2ZStMYVRlWCIsCisgICAgICAgICAgICAgICAgICAgICBjb250cm9sID0gdXRpbHM6Ojphc3BlbGxfY29udHJvbF9SX3ZpZ25ldHRlc1tbYmFzZW5hbWUodXRpbHM6Ojphc3BlbGxfZmluZF9wcm9ncmFtKCkpXV0pCitzdG9waWZub3QoaWRlbnRpY2FsKHJlc1tbMV1dLCAjIG1pc3NwZWxsZWQgd29yZHMKKyAgICAgICAgICAgICAgICAgICAgYygiZG9jdXVtZW50IiwgInNwZWVsaW5nIiwgImVtcGhhaXNpemVlZCIpKQorICAgICAgICAgICkKIAogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCg==",
+          "creator": "gabembecker",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-07-08 15:29:43"
+}

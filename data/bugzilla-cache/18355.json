@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "trace() wipes out attributes",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2022-06-16T17:29:35Z",
+        "cc_detail": [
+          {
+            "real_name": "Elin Waring",
+            "name": "elin.waring",
+            "id": 3299
+          }
+        ],
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2022-06-08T17:20:15Z",
+        "version": "R 4.2.x",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 18355,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "elin.waring"
+        ],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Documentation"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18355": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 98778,
+            "time": "2022-06-08T17:20:15Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 18355,
+            "text": "`trace()` deletes a functions attributes; filing this under 'Documentation' since maybe this is just a behavior that needs documenting:\n\n```\nfoo = function() {\n  1+1\n}\nattr(foo, \"key\") = \"value\"\n\ninvisible(trace(foo, browser))\n\"key\" %in% names(attributes(foo))\n# [1] FALSE\n```",
+            "creation_time": "2022-06-08T17:20:15Z",
+            "creator": "michaelchirico4"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 98784,
+            "creation_time": "2022-06-11T11:09:05Z",
+            "count": 1,
+            "text": "This is true, but `untrace(foo)` returns them. Maybe the documentation should be changed from\n\n> The trace function operates by constructing a revised version of the function  \n> (or of the method, if signature is supplied), and assigning the new object back  \n> where the original was found.\n\nto specify that the trace version  only includes the body of the function.",
+            "bug_id": 18355,
+            "attachment_id": {},
+            "time": "2022-06-11T11:09:05Z",
+            "creator": "elin.waring",
+            "is_markdown": true
+          },
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2022-06-16T17:29:35Z",
+            "text": "(In reply to Elin Waring from comment #1)\n> This is true, but `untrace(foo)` returns them.\n\nThat's right, but not too surprising -- the `trace()`'d object attaches the original as an attribute:\n\n```\nfoo1 = function() {\n  1+1\n}\nfoo2 = foo1\ninvisible(trace(foo1, browser))\n\nidentical(attributes(foo1)$original, foo2)\n# [1] TRUE\n```\n\nWhich is simply \"plonked\" back into place on `untrace()`.\n\nThe question is whether the `trace()`'d object is _supposed_ to retain its attributes. In my case, doing so is useful because the function is an S3 object whose methods refer to the attributes. So `trace()` breaks the associated methods because the referred attributes are gone.\n\n(NB: this is related to https://bugs.r-project.org/show_bug.cgi?id=18354, where it's now confirmed that `trace()` is supposed to be working better with S3-classed functions)",
+            "bug_id": 18355,
+            "count": 2,
+            "is_markdown": true,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2022-06-16T17:29:35Z",
+            "id": 98814,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18355": []
+    }
+  },
+  "source_changed": "2022-06-16 17:29:35"
+}

@@ -1,0 +1,149 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "blocks": [],
+        "url": "",
+        "summary": "Wishlist: warn user when .Rbuildignore omits files",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "real_name": "Michael Chirico",
+            "id": 3256,
+            "name": "michaelchirico4"
+          },
+          {
+            "id": 6,
+            "name": "murdoch.duncan",
+            "real_name": "Duncan Murdoch"
+          }
+        ],
+        "last_change_time": "2024-04-16T19:19:33Z",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2014-01-31T19:11:03Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 15652,
+        "dupe_of": {},
+        "severity": "enhancement",
+        "qa_contact": "",
+        "cc": [
+          "michaelchirico4",
+          "murdoch.duncan"
+        ],
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "15652": {
+        "comments": [
+          {
+            "creation_time": "2014-01-31T19:11:03Z",
+            "text": "When developing packages, authors can use .Rbuildignore to remove unneeded files / folders when building a package tarball. However, I have found in a few cases that the rules I define in this file strip out files that I didn't expect it to.\n\nThis is, of course, my fault since R-exts 1.3.2 is very clear on how .Rbuildignore is used (perl-like regular expressions), but could R potentially be helpful and warn the user if files are removed that typically would / should not be?\n\nMy example is R scripts (.r, .R) residing within the R/ subdirectory of a package. I think it's unlikely that users would want to strip R files out of this directory when building a tarball, but a poorly written .Rbuildignore could strip those files out, and cause unexpected errors on installation. Similarly, I imagine users typically would not want .cpp, .c, .f, etc. files stripped out of the src/ subdirectory. Another example is the build/ directory.\n\nThis is mostly because other errors observed later can be hard to diagnose without understanding that .Rbuildignore can, and will, strip these files as well.",
+            "bug_id": 15652,
+            "count": 0,
+            "tags": [],
+            "id": 88576,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2014-01-31T19:11:03Z"
+          },
+          {
+            "is_private": false,
+            "id": 88577,
+            "time": "2014-01-31T19:59:29Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": false,
+            "count": 1,
+            "bug_id": 15652,
+            "text": "It doesn't seem particularly easy for R CMD build to recognize when a programmer didn't mean to write what they wrote, but it does sound reasonable to allow a \"verbose\" option that reports on which files are being ignored.\n\nSo then if you get a perplexing \"function not found\" kind of error, you can rebuild with the verbose option and see what exactly happened during the build.\n\nHowever, the hard part of writing verbose options is deciding exactly what should be reported.  There are a lot of steps in R CMD build, and each of them might be doing something that should be reported to the user under a verbose option.  So this looks like a lot of work.  I don't think I'll volunteer to do it...",
+            "creation_time": "2014-01-31T19:59:29Z",
+            "creator": "murdoch.duncan"
+          },
+          {
+            "is_private": false,
+            "time": "2014-02-03T12:03:45Z",
+            "id": 88582,
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": false,
+            "count": 2,
+            "text": "Actually, I will volunteer to do this, i.e. to add a --verbose option.",
+            "bug_id": 15652,
+            "creator": "murdoch.duncan",
+            "creation_time": "2014-02-03T12:03:45Z"
+          },
+          {
+            "bug_id": 15652,
+            "text": ".Rbuildignore does not 'remove' files: it omits them from the tarball.",
+            "count": 3,
+            "is_markdown": false,
+            "creation_time": "2014-03-08T10:26:44Z",
+            "creator": "ripley",
+            "id": 88743,
+            "time": "2014-03-08T10:26:44Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "is_private": false,
+            "id": 100736,
+            "tags": [],
+            "count": 4,
+            "bug_id": 15652,
+            "text": "This still seems like it would be useful. Here's where the exclusion happens:\n\nhttps://github.com/r-devel/r-svn/blob/3cbe3848e6f06e133dbd9ec6057e6817acb43d18/src/library/tools/R/build.R#L1094\n\nWe can add a `printLog()` there but that will blow up the generally concise info printed to console in normal `R CMD build`; I agree a new `--verbose` option would be more appropriate, which could more generally add a lot more detail to the `R CMD build` output.",
+            "creation_time": "2024-04-16T19:19:33Z",
+            "time": "2024-04-16T19:19:33Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "15652": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2024-04-16 19:19:33"
+}

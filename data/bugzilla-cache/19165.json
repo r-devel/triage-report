@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-09-10T19:23:42Z",
+        "blocks": [],
+        "url": "",
+        "summary": "as.complex()/as.numeric() on an invalid multibyte string reads past the end (Mbrtowc)",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19165,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-09-10T19:23:34Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19165": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103616,
+            "time": "2026-09-10T19:23:34Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": false,
+            "count": 0,
+            "bug_id": 19165,
+            "text": "In a multibyte locale, coercing a character string that is not valid in the\nlocale's encoding -- e.g. as.complex() or as.numeric() of hostile input --\ncan read past the end of the string. The out-of-bounds read is in Mbrtowc()\n(src/main/util.c), which builds a human-readable rendering of the offending\nbytes for its error message. Found by fuzzing R with libFuzzer +\nAddressSanitizer (oss-fuzz testcase 5931425707393024).\n\nReproducible example (run in a UTF-8 locale; tested on R-devel r90518,\nx86_64 Linux / glibc 2.31 under AddressSanitizer):\n\n    Sys.setlocale(\"LC_CTYPE\", \"en_US.UTF-8\")        # any UTF-8 locale\n    x <- rawToChar(as.raw(c(0xff, rep(0x5c, 300))))  # invalid multibyte bytes\n    as.complex(x)\n    ## Error: invalid multibyte string at '<ff>\\\\\\...'\n\nOn an ordinary build this prints the error above; under AddressSanitizer,\nor when the string happens to end near an unmapped page, the rendering\nreads past the end of the string first:\n\n    AddressSanitizer: SEGV on unknown address (wild-addr-read)\n        #0 utf8_internal_loop_single       (glibc iconv)\n        #2 __mbrtowc                        (glibc)\n        #3 Rf_mbrtowc                      src/main/util.c:1627\n        #4 Rf_isBlankString               src/main/util.c:453\n        #5 Rf_ComplexFromString           src/main/coerce.c:281\n\nAnalysis:\n\nComplexFromString() calls isBlankString(), which for the multibyte case\ncalls Mbrtowc(&wc, s, R_MB_CUR_MAX, ...). On the invalid bytes mbrtowc()\nfails, and Mbrtowc() renders the string one character at a time for its\nerror message:\n\n    for(p = s, q = err; *p; ) {\n        if(p > s) used = mbrtowc(NULL, p, n, ps);   /* n from the caller */\n        if(used == 0) break;\n        else if((int) used > 0) { ...; n -= used; }\n        else { snprintf(...); p++; n--; }\n    }\n\nn starts at the caller's fixed count (R_MB_CUR_MAX), not strlen(s), and is\ndecremented in step with p. Once the two fall out of step n underflows to a\nhuge size_t, so mbrtowc() is told far more bytes remain than actually do,\nand glibc's UTF-8 converter copies up to MAX_NEEDED_INPUT bytes into its\nown buffer bounded only by that count -- reading past the end of s. When s\nends near a heap page the read faults; otherwise it silently reads adjacent\nmemory. The fault is not deterministic (it depends on where the string\nlands), which is why the oss-fuzz testcase is flagged a one-time crasher;\nthe over-read itself is present on every call with an oversized count.\n\nProposed patch: attached as mbrtowc-invalid-string-overread.diff. It bounds\neach mbrtowc() call by the number of bytes actually left before the\nterminating nul, tracked in a dedicated counter that cannot underflow.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/337,\nwhere CI results (green on all platforms) can be seen.",
+            "creation_time": "2026-09-10T19:23:34Z",
+            "creator": "kevinushey"
+          },
+          {
+            "text": "Created attachment 3843\nbound mbrtowc() by the remaining bytes when rendering an invalid string",
+            "bug_id": 19165,
+            "count": 1,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-09-10T19:23:42Z",
+            "time": "2026-09-10T19:23:42Z",
+            "id": 103617,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3843
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19165": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwNTE4KQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNjIyLDE5ICsxNjIyLDI2IEBAIHNpemVfdCBNYnJ0b3djKHdjaGFyX3QgKndjLCBjb25zdCBjaGFyICpzLCBzaXplX3QgbiwgbWJzdGF0ZV90ICpwcykKIAlzaXplX3Qgc3ogPSA0KnN0cmxlbihzKSArIDE7CiAJY2hhciBlcnJbc3pdLCAqcTsKIAljb25zdCBjaGFyICpwOworCS8qIEJvdW5kIGVhY2ggbWJydG93YygpIGJ5IHRoZSBieXRlcyBhY3R1YWxseSBsZWZ0IGJlZm9yZSB0aGUKKwkgICB0ZXJtaW5hdGluZyBudWwuICBUaGUgcHJldmlvdXMgY29kZSBwYXNzZWQgdGhlIGNhbGxlcidzIGZpeGVkCisJICAgY291bnQgJ24nICh0eXBpY2FsbHkgUl9NQl9DVVJfTUFYKSBhbmQgZGVjcmVtZW50ZWQgaXQgaW4gc3RlcCB3aXRoCisJICAgJ3AnOyBvbmNlIGl0IGZlbGwgb3V0IG9mIHN0ZXAgaXQgdW5kZXJmbG93ZWQgdG8gYSBodWdlIHNpemVfdCwgc28KKwkgICBtYnJ0b3djKCkgd2FzIHRvbGQgZmFyIG1vcmUgYnl0ZXMgd2VyZSBhdmFpbGFibGUgdGhhbiByZW1haW5lZCBhbmQKKwkgICBjb3VsZCByZWFkIHBhc3QgdGhlIGVuZCBvZiAncycgaW50byB1bm1hcHBlZCBtZW1vcnkuICovCisJc2l6ZV90IG5iID0gc3RybGVuKHMpOwogCWZvcihwID0gcywgcSA9IGVycjsgKnA7ICkgewogCSAgICAvKiBkb24ndCBkbyB0aGUgZmlyc3QgdG8ga2VlcCBwcyBzdGF0ZSBzdHJhaWdodCAqLwotCSAgICBpZihwID4gcykgdXNlZCA9IG1icnRvd2MoTlVMTCwgcCwgbiwgcHMpOworCSAgICBpZihwID4gcykgdXNlZCA9IG1icnRvd2MoTlVMTCwgcCwgbmIsIHBzKTsKIAkgICAgaWYodXNlZCA9PSAwKSBicmVhazsKIAkgICAgZWxzZSBpZigoaW50KSB1c2VkID4gMCkgewogCQltZW1jcHkocSwgcCwgdXNlZCk7CiAJCXAgKz0gdXNlZDsKIAkJcSArPSB1c2VkOyBzeiAtPSB1c2VkOwotCQluIC09IHVzZWQ7CisJCW5iIC09IHVzZWQ7CiAJICAgIH0gZWxzZSB7CiAJCXNucHJpbnRmKHEsIHN6LCAiPCUwMng+IiwgKHVuc2lnbmVkIGNoYXIpICpwKyspOwogCQlxICs9IDQ7IHN6IC09IDQ7Ci0JCW4tLTsKKwkJbmItLTsKIAkgICAgfQogCX0KIAkqcSA9ICdcMCc7Cg==",
+          "creator": "kevinushey",
+          "id": 3843,
+          "is_private": false,
+          "size": 1219,
+          "last_change_time": "2026-09-10T19:23:42Z",
+          "bug_id": 19165,
+          "file_name": "mbrtowc-invalid-string-overread.diff",
+          "summary": "bound mbrtowc() by the remaining bytes when rendering an invalid string",
+          "creation_time": "2026-09-10T19:23:42Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-10 19:23:42"
+}

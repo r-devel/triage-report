@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Translations",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2024-01-03T15:48:05Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 18644,
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "checkPoFile() should endeavor to point out non-ASCII format entries",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2024-01-03T15:48:05Z"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18644": {
+        "comments": [
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2024-01-03T15:48:05Z",
+            "count": 0,
+            "is_markdown": true,
+            "text": "Consider:\n\n```\n# \\UFF53: ｓ = \"FULLWIDTH LATIN SMALL LETTER S\"\ncat('msgid \"%s\"\\nmsgstr \"%\\UFF53\"\\n', file=po <- tempfile(fileext=\".po\"))\ntools::checkPoFile(po)\n# /tmp/RtmpnmXGUH/file1c15537729694.po:2\n# unrecognised format specification '%ｓ'\n# %s\n# %ｓ\n```\n\nWe can imagine seeing this error with hazy eyes and not quite knowing what's wrong. I'm sure there are better UTF-8-vs-ASCII twin examples out there too. Moreover this type of mistake is common as translators may forget to switch keyboards as they are writing messages.\n\nSo I think we should try and do better to point out \"Maybe you meant '%s'?\".\n\nI know that we can use `iconv(\"%ｓ\", to=\"ASCII//TRANSLIT\")` to find the ASCII `s` that was intended, but I'm not sure how robust this is across platforms, and also not sure they best way to incorporate that to the existing code -- the current error is coming from the C routine `getfmts`:\n\nhttps://github.com/r-devel/r-svn/blob/f12b29bb485bc6ca4e0dce83ce7b03d9987de760/src/library/tools/src/getfmts.c#L96\n\nFiling the issue first to probe interest before getting too involved in a patch.",
+            "bug_id": 18644,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2024-01-03T15:48:05Z",
+            "id": 100483
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18644": []
+    }
+  },
+  "source_changed": "2024-01-03 15:48:05"
+}

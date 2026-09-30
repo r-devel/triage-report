@@ -1,0 +1,207 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2022-09-20T04:57:38Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "henrikb",
+          "jaganmn2",
+          "maechler"
+        ],
+        "qa_contact": "",
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 18406,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "summary": "seq_len should get a reverse (?) argument",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2023-05-03T19:44:29Z",
+        "cc_detail": [
+          {
+            "id": 1036,
+            "name": "henrikb",
+            "real_name": "Henrik Bengtsson"
+          },
+          {
+            "name": "jaganmn2",
+            "id": 3462,
+            "real_name": "Mikael Jagan"
+          },
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "is_confirmed": false,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18406": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "id": 99044,
+            "time": "2022-09-20T04:57:38Z",
+            "is_private": false,
+            "creation_time": "2022-09-20T04:57:38Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18406,
+            "text": "Unless I'm missing something, there's no safe way to generate the following directly with base functions:\n\n```\nrev(seq_len(N))\n```\n\nThe key being that when `N == 0`, the output is `integer(0)`, imitating the safety of `seq_len()` for that same edge case.\n\nThis use case is also quite common (e.g. I'm seeing hundreds of usages like `seq(n, 1)` or `n:1` in a cursory [regex] glance at our nonrandom ~10% subset of CRAN)\n\nThe performance cost of the workaround is small but noteworthy in the non-edge case:\n\n```\nsystem.time(rev(seq_len(1e8)))\n#    user  system elapsed \n#   0.584   0.798   1.408 \nsystem.time(1e8:1)\n#    user  system elapsed \n#       0       0       0 \n```\n\nsince `1e8:1` uses `ALTREP`.\n\nThe first solution that comes to me is a new `reverse` (or some other name) argument to `seq_len()`:\n\n```\nseq_len(1e8, reverse = TRUE)\n```\n\nAs an alternative/in addition, `rev()` should not expand the `ALTREP`.",
+            "is_markdown": true,
+            "count": 0
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 99045,
+            "time": "2022-09-20T15:13:04Z",
+            "creation_time": "2022-09-20T15:13:04Z",
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 18406,
+            "text": "How about `seq.int(from = n, by = -1L, length.out = n)`?"
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2022-09-20T17:07:06Z",
+            "creation_time": "2022-09-20T17:07:06Z",
+            "text": "Thanks! That definitely beats the `rev()` option on performance, less so on readability. Especially if `n` is the result of some expensive calculation, we won't want to do\n\n```\nseq.int(expensive_n(), by = -1, length.out = expensive_n())\n```\n\nso will wind up writing two statements:\n\n```\nn <- expensive_n()\nseq.int(n, by = -1, length.out = n)\n``` \n\nWhich already looks ripe for a wrapper function.\n\nTo be fair, in most practical cases, the expensive calculation will produce a data.frame or matrix, which is stored anyway, but code like `seq.int(nrow(x), by = -1, length.out = nrow(x))` is not very appealing either.\n\nIs this down to whether this n↘1 case is important enough to get specific treatment in `base`?",
+            "bug_id": 18406,
+            "count": 2,
+            "tags": [],
+            "id": 99046,
+            "is_private": false
+          },
+          {
+            "creator": "jaganmn2",
+            "creation_time": "2022-09-20T17:30:33Z",
+            "count": 3,
+            "is_markdown": true,
+            "text": "Note that `seq.int` handles arguments of type `\"double\"` differently from `seq_len`.  Fractional `from` results in a sequence of type `\"double\"` rather than `\"integer\"`, and fractional `length.out` is rounded _up_.\n\nSo my suggestion isn't strictly equivalent to `rev(seq_len(n))`.",
+            "bug_id": 18406,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2022-09-20T17:30:33Z",
+            "id": 99047
+          },
+          {
+            "creator": "maechler",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2022-09-21T04:08:53Z",
+            "creation_time": "2022-09-21T04:08:53Z",
+            "count": 4,
+            "text": "So this is about speed mostly, right?\n\nI'm really not an ALTREP expert, but I think a much better solution would be to make  `rev()` ALTREP-aware  which would make the use of  `rev()` \nmore generally more attractive.\n\nI think the idiom  `rev(seq(...))`  to be well readable/understandable\nand then if you want to be clothe according to latest fashion, you can also use\n```\nseq(...) |> rev\n```",
+            "bug_id": 18406,
+            "tags": [],
+            "is_private": false,
+            "id": 99049
+          },
+          {
+            "is_private": false,
+            "id": 99050,
+            "tags": [],
+            "count": 5,
+            "bug_id": 18406,
+            "text": "For motivation, I put it in the same boat as `seq_len()`.\n\nYes, speed, but `1e8:1` _is_ fast already, so robustness is a crucial component too -- speed without sacrificing that one (all-too-common) edge case of `n=0`.",
+            "creation_time": "2022-09-21T15:30:05Z",
+            "time": "2022-09-21T15:30:05Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          },
+          {
+            "is_private": false,
+            "time": "2022-09-21T16:19:22Z",
+            "id": 99051,
+            "attachment_id": {},
+            "tags": [],
+            "count": 6,
+            "is_markdown": true,
+            "text": "FWIW, `seq_len(-n)` is currently an error for positive `n`.  I can imagine arguments for that returning `rev(seq_len(n))` (but with ALTREP) instead.  Then users could do any of `seq_len(n)`, `-seq_len(n)`, `seq_len(-n)` and `-seq_len(-n)` ...\n\nI agree with Martin's comment that it would be nice if `rev` (actually `rev.default`) were aware of ALTREP, and maybe even _sortedness_.",
+            "bug_id": 18406,
+            "creator": "jaganmn2",
+            "creation_time": "2022-09-21T16:19:22Z"
+          },
+          {
+            "creator": "suharto_anggono",
+            "creation_time": "2022-09-22T04:02:58Z",
+            "text": "(In reply to Mikael Jagan from comment #1)\n> How about `seq.int(from = n, by = -1L, length.out = n)`?\n\nWithout repeating `n`:\n\n    seq.int(to = 1L, by = -1L, length.out = n)\n\n.",
+            "bug_id": 18406,
+            "is_markdown": true,
+            "count": 7,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2022-09-22T04:02:58Z",
+            "id": 99055,
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "time": "2023-05-03T19:44:29Z",
+            "id": 99767,
+            "is_private": false,
+            "creator": "henrikb",
+            "creation_time": "2023-05-03T19:44:29Z",
+            "text": "> ... I think a much better solution would be to make `rev()` ALTREP-aware which would make the use of `rev()` more generally more attractive.\n\nI agree with this. Currently, in R 4.3.0 and R-devel (2023-05-02 r84376), `rev()` _does expand_ the ALTREP representation of `1:n`, e.g.\n\n```\n> x <- seq_len(1e6)\n> .Internal(inspect(x))\n@564d70ec7cf8 13 INTSXP g0c0 [REF(65535)]  1 : 1000000 (compact)\n\n> rx <- rev(x)\n> .Internal(inspect(rx))\n@7ff53c83b010 13 INTSXP g0c7 [REF(1)] (len=1000000, tl=0) 1000000,999999,999998,999997,999996,...\n```\n\n`rev()` is a generic function and with an integer vector, as here, we end up in S3 method `rev.default()`;\n\n```\n> rev.default\nfunction (x) \nif (length(x)) x[length(x):1L] else x\n<bytecode: 0x55d5ef37cb90>\n<environment: namespace:base>\n```\n\nSo, to make `rev.default()` ALTREP aware, we would have to implement this in C.  That shouldn't be \"too hard\" to do.\n\nAnother advantage of making `rev.default()` ALP aware would be that it would avoid memory issue with long `1:n` vectors.  Right now, it might fail as in:\n\n```\n> x <- seq_len(1e10)\n> .Internal(inspect(x))\n@55d5f0ba7518 14 REALSXP g0c0 [REF(65535)]  1 : 10000000000 (compact)\n> rx <- rev(x)\nError: cannot allocate vector of size 74.5 Gb\n```",
+            "bug_id": 18406,
+            "count": 8,
+            "is_markdown": true
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18406": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2023-05-03 19:44:29"
+}

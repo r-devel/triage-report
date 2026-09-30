@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "qa_contact": "",
+        "cc": [],
+        "id": 19028,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "creation_time": "2026-03-24T19:00:53Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Wishlist",
+        "assigned_to": "R-core",
+        "cc_detail": [],
+        "last_change_time": "2026-03-24T19:00:53Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Should object.size() be ALTREP aware?",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": true
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19028": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2026-03-24T19:00:53Z",
+            "id": 102805,
+            "attachment_id": 3642,
+            "tags": [],
+            "is_markdown": true,
+            "count": 0,
+            "text": "Created attachment 3642\nALTREP-aware objectsize function.\n\nFor example:\n\n```\n> x <- 1:1e12\n> format(object.size(x), units = \"auto\")\n[1] \"7.3 Tb\"\n```\n\nWhether this is correct, I guess, is a matter of perspective -- the actual current size of this object is far smaller thanks to the compact ALTREP representation, but certain operations could still force materialization of this into a vector that would be 7.3 Tb in size.\n\nA minimal proposed patch; note that I omit the size of `ALTREP_CLASS(x)` here. I also include null checks as I'm not certain if there are guarantees that the altrep data for an object are non-null.\n\n```\nIndex: src/library/utils/src/size.c\n===================================================================\n--- src/library/utils/src/size.c\t(revision 89685)\n+++ src/library/utils/src/size.c\t(working copy)\n@@ -44,6 +44,18 @@\n     SEXP tmp, dup;\n     bool isVec = false;\n \n+    if (ALTREP(s)) {\n+\tSEXP data1 = R_altrep_data1(s);\n+\tSEXP data2 = R_altrep_data2(s);\n+\tcnt += sizeof(SEXPREC);\n+\tif (data1 != NULL && data1 != R_NilValue)\n+\t    cnt += objectsize(data1);\n+\tif (data2 != NULL && data2 != R_NilValue)\n+\t    cnt += objectsize(data2);\n+\tcnt += objectsize(ATTRIB(s));\n+\treturn(cnt);\n+    }\n+\n     switch (TYPEOF(s)) {\n     case NILSXP:\n \treturn(0);\n```",
+            "bug_id": 19028,
+            "creator": "kevinushey",
+            "creation_time": "2026-03-24T19:00:53Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19028": [
+        {
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL3NyYy9zaXplLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvdXRpbHMvc3JjL3NpemUuYwkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvbGlicmFyeS91dGlscy9zcmMvc2l6ZS5jCSh3b3JraW5nIGNvcHkpCkBAIC00NCw2ICs0NCwxOCBAQAogICAgIFNFWFAgdG1wLCBkdXA7CiAgICAgYm9vbCBpc1ZlYyA9IGZhbHNlOwogCisgICAgaWYgKEFMVFJFUChzKSkgeworCVNFWFAgZGF0YTEgPSBSX2FsdHJlcF9kYXRhMShzKTsKKwlTRVhQIGRhdGEyID0gUl9hbHRyZXBfZGF0YTIocyk7CisJY250ICs9IHNpemVvZihTRVhQUkVDKTsKKwlpZiAoZGF0YTEgIT0gTlVMTCAmJiBkYXRhMSAhPSBSX05pbFZhbHVlKQorCSAgICBjbnQgKz0gb2JqZWN0c2l6ZShkYXRhMSk7CisJaWYgKGRhdGEyICE9IE5VTEwgJiYgZGF0YTIgIT0gUl9OaWxWYWx1ZSkKKwkgICAgY250ICs9IG9iamVjdHNpemUoZGF0YTIpOworCWNudCArPSBvYmplY3RzaXplKEFUVFJJQihzKSk7CisJcmV0dXJuKGNudCk7CisgICAgfQorCiAgICAgc3dpdGNoIChUWVBFT0YocykpIHsKICAgICBjYXNlIE5JTFNYUDoKIAlyZXR1cm4oMCk7Cg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2026-03-24T19:00:53Z",
+          "summary": "ALTREP-aware objectsize function.",
+          "file_name": "objectsize-altrep.patch",
+          "bug_id": 19028,
+          "last_change_time": "2026-03-24T19:00:53Z",
+          "size": 649,
+          "is_private": false,
+          "id": 3642
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-03-24 19:00:53"
+}

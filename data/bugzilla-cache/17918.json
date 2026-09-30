@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2020-09-08T10:48:11Z",
+        "whiteboard": "",
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 17918,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Wishlist",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "summary": "Improve debugcall and debugcallonce to support calls to funs via :: :::, patch included",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2020-09-08T10:48:11Z",
+        "cc_detail": [],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "gabembecker",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1299,
+          "name": "gabembecker",
+          "real_name": "Gabriel Becker"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "17918": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "gabembecker",
+            "time": "2020-09-08T10:48:11Z",
+            "attachment_id": 2698,
+            "bug_id": 17918,
+            "text": "Created attachment 2698\nPatch to debugcall to support :: and :::\n\nSplit from https://bugs.r-project.org/bugzilla/show_bug.cgi?id=17901 at request of Martin Maechler.\n\nImprove debugcall and debugcallonce so that they do not throw an error when the call expresssion passed to it is of the form `pkg::fun(...)` or `pkg:::fun(...)`\n\nAdded tests that this works. Passes make check devel for me.",
+            "count": 0,
+            "creation_time": "2020-09-08T10:48:11Z",
+            "id": 96453,
+            "is_private": false,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "17918": [
+        {
+          "summary": "Patch to debugcall to support :: and :::",
+          "creation_time": "2020-09-08T10:48:11Z",
+          "bug_id": 17918,
+          "file_name": "debugcall_final.diff",
+          "size": 2147,
+          "last_change_time": "2020-09-08T10:48:11Z",
+          "id": 2698,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL1IvZGVidWdjYWxsLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvdXRpbHMvUi9kZWJ1Z2NhbGwuUgkocmV2aXNpb24gNzkxNTMpCisrKyBzcmMvbGlicmFyeS91dGlscy9SL2RlYnVnY2FsbC5SCSh3b3JraW5nIGNvcHkpCkBAIC0xNyw5ICsxNywyNCBAQAogIyMgIGh0dHBzOi8vd3d3LlItcHJvamVjdC5vcmcvTGljZW5zZXMvCiAKIC5kZWJ1Z2NhbGwgPC0gZnVuY3Rpb24oY2FsbCwgb3ApIHsKLSAgICBmdW5zeW0gPC0gZGVwYXJzZShjYWxsW1sxTF1dKQotICAgIGZ1bmMgPC0gZ2V0KGZ1bnN5bSwgcGFyZW50LmZyYW1lKDJMKSwgbW9kZT0iZnVuY3Rpb24iKQotICAgIAorICAgIGZ1bnN5bSA8LSBjYWxsW1sxXV0KKyAgICAjIyBoYW5kbGUgcGtnOjpmdW4ob2JqKSBhbmQgcGtnOjo6ZnVuKG9iaikgY2FsbHMKKyAgICBpZihpcy5jYWxsKGZ1bnN5bSkpIHsKKyAgICAgICAgc3Vic3ltICA8LSBmdW5zeW1bWzFdXQorICAgICAgICBpZihpZGVudGljYWwoc3Vic3ltLCBhcy5uYW1lKCI6OiIpKSB8fAorICAgICAgICAgICBpZGVudGljYWwoc3Vic3ltLCBhcy5uYW1lKCI6OjoiKSkpIHsKKyAgICAgICAgICAgIGZuYW1lIDwtIGRlcGFyc2UoZnVuc3ltW1szXV0pCisgICAgICAgICAgICBuc3BhY2UgPC0gYXNOYW1lc3BhY2UoZGVwYXJzZShmdW5zeW1bWzJdXSkpCisgICAgICAgICAgICBmdW5jIDwtIGdldChmbmFtZSwgZW52aXIgPSBuc3BhY2UsIG1vZGUgPSAiZnVuY3Rpb24iKQorICAgICAgICB9IGVsc2UgeyAjIyBnb3Qgc29tZSBvdGhlciB1bnN1cHBvcmVkIGZvcm0gb2YgY29tcG91bmQgY2FsbAorICAgICAgICAgICAgc3RvcChnZXR0ZXh0ZigiVW5hYmxlIHRvIGRldGVybWluZSBmdW5jdGlvbiB0byB0cmFjZSBpbiBleHByZXNzaW9uICVzIiwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgZGVwYXJzZShjYWxsKSksIGRvbWFpbiA9IE5BKQorICAgICAgICB9CisgICAgfSBlbHNlIHsKKyAgICAgICAgZm5hbWUgPC0gZGVwYXJzZShmdW5zeW0pCisgICAgICAgIG5zcGFjZSA8LSBhcy5lbnZpcm9ubWVudChwYXJlbnQuZnJhbWUoMUwpKQorICAgIH0KKyAgICBmdW5jIDwtIGdldChmbmFtZSwgbnNwYWNlLCBtb2RlPSJmdW5jdGlvbiIpCiAgICAgaGF2ZS5tZXRob2RzIDwtIGlzTmFtZXNwYWNlTG9hZGVkKCJtZXRob2RzIikKICAgICBmdW5jIDwtIGlmKGlzLnByaW1pdGl2ZShmdW5jKSkgewogICAgICAgICBpZiAoaGF2ZS5tZXRob2RzKSBtZXRob2RzOjpnZXRHZW5lcmljKGZ1bmMpCkBAIC0zMSw3ICs0Niw3IEBACiAKICAgICBlbnYgPC0gcGFyZW50LmZyYW1lKDJMKQogICAgIHNpZyA8LSBOVUxMCi0gICAgczRHZW5lcmljIDwtIGhhdmUubWV0aG9kcyAmJiBtZXRob2RzOjppc0dlbmVyaWMoZnVuc3ltKQorICAgIHM0R2VuZXJpYyA8LSBoYXZlLm1ldGhvZHMgJiYgbWV0aG9kczo6aXNHZW5lcmljKGZuYW1lLCB3aGVyZSA9IG5zcGFjZSkKICAgICBpZighczRHZW5lcmljKSB7CiAgICAgICAgIHMzcmV0IDwtIGlzUzNzdGRHZW5lcmljKGZ1bmMpCiAgICAgICAgIGlmKHMzcmV0KSB7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWQuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWQuUgkocmV2aXNpb24gNzkxNTMpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWQuUgkod29ya2luZyBjb3B5KQpAQCAtNDM4Nyw2ICs0Mzg3LDE0IEBACiAKIAogCisjIyBkZWJ1Z2NhbGwgd2l0aCA6OiA6OjosIGVycm9yIGluIFIgPD0gNC4wLjIgKHRoYXQgaGF2ZSBkZWJ1Z2NhbGwpCitkZWJ1Z2NhbGwocHJpbnQoaXJpcykpCit1bmRlYnVnY2FsbChwcmludChpcmlzKSkKK2RlYnVnY2FsbChiYXNlOjpwcmludChpcmlzKSkKK3VuZGVidWdjYWxsKGJhc2U6OnByaW50KGlyaXMpKQorZGVidWdjYWxsKGJhc2U6OjpwcmludChpcmlzKSkKK3VuZGVidWdjYWxsKGJhc2U6OjpwcmludChpcmlzKSkKKwogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
+          "creator": "gabembecker",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2020-09-08 10:48:11"
+}

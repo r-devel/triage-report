@@ -1,0 +1,316 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [
+          "atheriel",
+          "bob",
+          "elin.waring",
+          "ikrylov",
+          "maechler",
+          "simon.urbanek"
+        ],
+        "deadline": {},
+        "id": 18288,
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2022-01-18T20:27:59Z",
+        "version": "R 4.1.x",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "id": 610,
+          "name": "jeroenooms",
+          "real_name": "Jeroen Ooms"
+        },
+        "resolution": "",
+        "status": "REOPENED",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "jeroenooms",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "cc_detail": [
+          {
+            "id": 3476,
+            "name": "atheriel",
+            "real_name": "Aaron Jacobs"
+          },
+          {
+            "id": 2801,
+            "name": "bob",
+            "real_name": "Bob Rudis"
+          },
+          {
+            "name": "elin.waring",
+            "id": 3299,
+            "real_name": "Elin Waring"
+          },
+          {
+            "real_name": "Ivan Krylov",
+            "id": 3307,
+            "name": "ikrylov"
+          },
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          },
+          {
+            "id": 5,
+            "name": "simon.urbanek",
+            "real_name": "Simon Urbanek"
+          }
+        ],
+        "last_change_time": "2026-04-11T10:44:42Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "Add support for SHA2 (256-bit) hashing",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18288": {
+        "comments": [
+          {
+            "creation_time": "2022-01-18T20:27:59Z",
+            "bug_id": 18288,
+            "text": "## Summary\n\n - Adds a function `sha256sum()` with the same api as `md5sum()`\n - Introduces a `SHA2` field to PACKAGES files, as a secure alternative to MD5sum checksums\n\nPatch file: https://github.com/r-devel/r-svn/pull/76.diff\nVisual diff: https://github.com/r-devel/r-svn/pull/76/files\n\n## Details\n\nThe `sha256sum()` function implements the 256-bit version of SHA-2, which has widely replaced MD5 as the standard hash function for integrity checking and secure hash-based content lookups.\n\nI tried to implement it as the most simple generalization of the existing md5 hashing code. Tested to give the correct results on both unix and Windows.\n\nThe implementation of the sha2 algorithm is [copied from freebsd](https://raw.githubusercontent.com/freebsd/pkg/master/libpkg/sha256.c), which is a slightly fixed version of public domain code by Brad Conte (a Google employee). This seems to be a widely used implementation. Alternatively we could depend on openssl, which provides a sha256 implementation with nearly [the same api](https://www.openssl.org/docs/man1.1.1/man3/SHA256.html) but is about 2-3x faster. But this would introduce a hard dependency on libssl, which may be undesired, hence I took the same approach as the existing md5sum implementation.",
+            "count": 0,
+            "tags": [],
+            "id": 98361,
+            "is_private": false,
+            "creator": "jeroenooms",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2022-01-18T20:27:59Z"
+          },
+          {
+            "is_private": false,
+            "id": 98381,
+            "tags": [],
+            "count": 1,
+            "bug_id": 18288,
+            "text": "This seems really useful since MD5 is really inappropriate for anything requiring even minimal security.  SHA-256 is also not the ideal option for cryptographic purposes, but it is relatively fast and much stronger.  \nWhat makes me nervous overall  is that the documentation for md5sum() and for the proposed function does not warn that these should never be used for purposes that require cryptographic security.",
+            "creation_time": "2022-01-22T22:20:54Z",
+            "time": "2022-01-22T22:20:54Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "elin.waring"
+          },
+          {
+            "time": "2022-01-27T12:46:18Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "jeroenooms",
+            "id": 98402,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18288,
+            "text": "Some more information and motivation about the transition from MD5 to SHA256 in Debian (10 years ago) can be found here: https://wiki.debian.org/Sha256sumsInPackages\n\n\n\n(In reply to Elin Waring from comment #1)\n> This seems really useful since MD5 is really inappropriate for anything\n> requiring even minimal security.  SHA-256 is also not the ideal option for\n> cryptographic purposes, but it is relatively fast and much stronger.  \n> What makes me nervous overall  is that the documentation for md5sum() and\n> for the proposed function does not warn that these should never be used for\n> purposes that require cryptographic security.\n\nNot sure where you found this. MD5 is indeed obsolete and can easily be forged these days. From the wikipedia on md5 [1]:\n\n > The security of the MD5 hash function is severely compromised. A collision attack exists that can find collisions within seconds on a computer with a 2.6 GHz Pentium 4 processor.\n\nHowever, SHA256 is pretty much the gold standard for secure hashing. It is used by all major Linux package managers to verify the integrity of downloaded files, and also by networks like docker and bitcoin to uniquely identify a piece of data. Not a single SHA256 collision has been found yet, and forging it seems very unlikely to be possible in the upcoming decade.\n\n[1] https://en.wikipedia.org/wiki/MD5#Security",
+            "count": 2,
+            "creation_time": "2022-01-27T12:46:18Z"
+          },
+          {
+            "creator": "bob",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2022-01-27T13:50:33Z",
+            "creation_time": "2022-01-27T13:50:33Z",
+            "bug_id": 18288,
+            "text": "Claiming SHA-256 is not ideal likely stems from coming at it from a purely theoretical perspective. \n\nTLDR: SHA-256 is pretty much the current _practical_ gold standard when it comes to digital signatures. I can dump stats from all the TLS certs we have (billions++) in our database to show that SHA-256 is overwhelmingly used (I can't fathom that anyone is potentially, then, suggesting our SSL-everywhere internet isn't \"safe\" from a confidentiality perspective).\n\nThere are no foreseeable — even with any advent of \"commodity\" \"quantum\" computers — method for practical generation of collisions. And that's just in theory.\n\nFrom a risk management standpoint, we're talking about generating a signature for a CRAN package, making any \"SHA-256 is not ideal\" posit almost irrelevant.\n\nSHA-256 is a very decent trade-off between size/speed/safety and I heartily support this change. MD5 shld die in a fire.\n\nHaving said that… \n\n_Computationally_, SHA-512 would be faster to generate on modern 64-bit systems (which I have to assume is what CRAN and all of us are running on), so I don't know what matters most to CRAN and/or CRAN mirrors.",
+            "count": 3,
+            "tags": [],
+            "id": 98403,
+            "is_private": false
+          },
+          {
+            "attachment_id": {},
+            "time": "2022-01-29T00:22:36Z",
+            "creator": "elin.waring",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 98405,
+            "creation_time": "2022-01-29T00:22:36Z",
+            "count": 4,
+            "text": "No it really comes from dealing with writing applications that have passwords. For many years bcrypt was the best but now scrypt.  But R no one should be using R for passwords or similar, and they shouldn't be rolling their own. What I said was specifically that it's okay for this purpose, but there should be a warning against other purposes because that would be dangerous.",
+            "bug_id": 18288
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2022-02-10T10:40:05Z",
+            "id": 98445,
+            "is_private": false,
+            "creator": "jeroenooms",
+            "creation_time": "2022-02-10T10:40:05Z",
+            "text": "Some additional evidence:\n\nLibraries and Operating systems have explicitly started to mark MD5 as deprecated and flagging warnings. For example, the [check log from Simon's PKI package](https://www.r-project.org/nosvn/R.check/r-release-macos-arm64/PKI-00check.html) shows on MacOS:\n\n```\nwarning: 'CC_MD5' is deprecated: first deprecated in macOS 10.15 - This function is cryptographically broken and should not be used in security contexts. Clients should migrate to SHA256 (or stronger). [-Wdeprecated-declarations]\n```",
+            "bug_id": 18288,
+            "is_markdown": true,
+            "count": 5
+          },
+          {
+            "time": "2022-02-10T21:45:21Z",
+            "id": 98449,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "I'm also strongly supportive of this change. In addition to the arguments in favour of SHA256 checksums above, I'll also note the following:\n\n* Many R users operate in regulated environments (e.g. under FIPS-140) that prohibit the use of MD5. I imagine they currently hope that no one notices that R uses MD5 for a near-essential purpose (installing packages). It could be a very positive change for those folks if R and CRAN moved toward using SHA256 instead.\n\n* If this patch is accepted, I'd further propose another patch to make it optional to link against OpenSSL. This could (a) grant the speed boost to folks that want it and manage their OpenSSL toolchain already, such as downstream Linux distros; and (b) open up the possibility of using R with FIPS-validated cryptographic modules.\n\nIn my view this patch does not go quite far enough in allowing users to totally sidestep all use of MD5 with packages -- but it represents a significant step forward in its own right.",
+            "bug_id": 18288,
+            "count": 6,
+            "is_markdown": true,
+            "creator": "atheriel",
+            "creation_time": "2022-02-10T21:45:21Z"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 98465,
+            "creation_time": "2022-02-14T02:02:51Z",
+            "count": 7,
+            "bug_id": 18288,
+            "text": "There are two steps here, right? Add the support first. Then work with CRAN to implement without disruption. The option to link against OpenSSL also sounds great. I'd suggest adding a warning similar to what is shown in comment 5 to the MD5 function.\n\nIt's important to acknowledge the risks that using MD5 for checksums creates.",
+            "attachment_id": {},
+            "time": "2022-02-14T02:02:51Z",
+            "creator": "elin.waring",
+            "is_markdown": true
+          },
+          {
+            "bug_id": 18288,
+            "text": "Just a quick comment: this has nothing to do with openssl, there are very efficient native SHA256 implementations so openssl is irrelevant here (or too heavy-weight for something so simple). Also some of the arguments here seem to miss the point - MD5 is used internally by R for a quick consistency check and NOT for cryptography. For the latter there are very good packages on CRAN so this does not look like anything urgent to address. That said, most likely this will be implemented as a side-effect of package signing once we get there.",
+            "count": 8,
+            "is_markdown": false,
+            "creation_time": "2022-02-14T02:52:01Z",
+            "creator": "simon.urbanek",
+            "id": 98466,
+            "time": "2022-02-14T02:52:01Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "text": "I don't understand what you are alluding to with \"a side-effect of package signing, once we get there\". This is exactly the motivation of this proposal, and the patch gets you 95% there. \n\nSHA256 provides a secure integrity check for the individual package files referenced in the `PACKAGES.rds` file. The only step that remains for repositories that wish to support this, is to generate a signature for the `PACKAGES.rds` file and publish that in the same directory. For example to do Debian-style signing you generate a gpg signature:\n\n  gpg --sign PACKAGES.rds\n\nOr alternatively in R using `openssl::signature_create()` or `sodium::sig_sign()` or similar. This would be sufficient for clients to first verify the integrity of the PACKAGES.rds file, and subsequently the individual package files via their sha256 checksum. \n\nThere is even an example in the gpg R package vignette of verifying such a Debian style Release+Release.gpg file in R: https://cran.r-project.org/web/packages/gpg/vignettes/intro.html#Debian_example . In combination with the a sha256 function in R, this provides all the ingredients for package signing.\n\nEither way, I'll close this for now due to lack of interest.",
+            "bug_id": 18288,
+            "count": 9,
+            "creation_time": "2022-03-29T22:48:59Z",
+            "id": 98593,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "jeroenooms",
+            "time": "2022-03-29T22:48:59Z",
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 98594,
+            "creation_time": "2022-03-30T03:29:32Z",
+            "count": 10,
+            "bug_id": 18288,
+            "text": "The infrastructure for package signing is there for almost a decade (that's what PKI was written for), but it is not yet part of R itself. Once it's in R then SHA256 support will be part of it anyway - that's was I was referring to.\n\nFWIW when this is done it makes more sense to use the native routines (in both Windows and macOS they are part of the system) as they are many times faster than the proposed implementation. I wouldn't necessarily close it, it's a reasonable wish.",
+            "attachment_id": {},
+            "time": "2022-03-30T03:29:32Z",
+            "creator": "simon.urbanek",
+            "is_markdown": true
+          },
+          {
+            "creation_time": "2022-04-13T14:07:06Z",
+            "creator": "atheriel",
+            "bug_id": 18288,
+            "text": "A couple things I want to clear up here in the hopes of moving it forward.\n\n(In reply to Simon Urbanek from comment #8)\n> Also some of the arguments here seem to miss the point - MD5 is used\n> internally by R for a quick consistency check and NOT for cryptography.\n\nCan someone correct me if I am wrong, but are file checksums not a security/cryptography issue by definition? Using MD5 makes it feasible to generate a malicious package bundle with the same checksum as a good one. SHA256 prevents this. Many other language package managers seem to be moving to it for this reason, even if they do not support true signature verification.\n\nIf you could manage to serve a malicious bundle to an unsuspecting user (say, but infiltrating one of CRAN's mirrors, or intercepting traffic from one that doesn't use TLS), it would be easier to hide due to MD5.\n\n> That said, most likely this will be implemented as a side-effect of package\n> signing once we get there.\n\nI'm sure I speak for other community members when I say package signing sounds fantastic, but I can't find a record of any movement there since 2016. Should we open another bug?\n\n> Just a quick comment: this has nothing to do with openssl, there are very\n> efficient native SHA256 implementations so openssl is irrelevant here (or\n> too heavy-weight for something so simple).\n\nOpenSSL is *not* irrelevant because regulated environments that are supposed to abide by FIPS-140 can use its validated modules but *cannot* legally use these \"very efficient native SHA256 implementations\". Typically R users in these environments must request an exemption, and at least one source tells me this is becoming harder.\n\nI'm aware that using OpenSSL might be undesirable for maintenance reasons, of course, and am happy to consider it out-of-scope for this patch.",
+            "count": 11,
+            "is_markdown": true,
+            "attachment_id": {},
+            "tags": [],
+            "id": 98623,
+            "time": "2022-04-13T14:07:06Z",
+            "is_private": false
+          },
+          {
+            "is_private": false,
+            "id": 98626,
+            "time": "2022-04-14T22:49:18Z",
+            "attachment_id": {},
+            "tags": [],
+            "count": 12,
+            "is_markdown": true,
+            "bug_id": 18288,
+            "text": "(In reply to Aaron Jacobs from comment #11)\n> Can someone correct me if I am wrong, but are file checksums not a\n> security/cryptography issue by definition? Using MD5 makes it feasible to\n> generate a malicious package bundle with the same checksum as a good one.\n\n\nAlthough it's not the point here (see below), it does not. If you look at the possible exploits of MD5 they are mainly concerned with creating hash collisions, but those require very specific payload modifications (not arbitrary!) which would make, e.g, any R code inoperable. Similarly, the only exploit that allows specific payload injection requires control over the source so it's equally moot in our scenario.\n\n\n> SHA256 prevents this. Many other language package managers seem to be moving\n> to it for this reason, even if they do not support true signature\n> verification.\n> \n> If you could manage to serve a malicious bundle to an unsuspecting user\n> (say, but infiltrating one of CRAN's mirrors, or intercepting traffic from\n> one that doesn't use TLS), it would be easier to hide due to MD5.\n\n\nIf you could do that why bother with collisions if you can simply change the hash? ;) Again, SHA256 won't help in this scenario at all.\n\nAs I said earlier, this has nothing to do with cryptography - the way MD5 is used is simply as an integrity check (just like CRC, for example), it has nothing to do with any guarantees of modification since there is no signing nor external validation of the hash. \n\n\n> OpenSSL is *not* irrelevant because regulated environments that are supposed\n> to abide by FIPS-140 can use its validated modules but *cannot* legally use\n> these \"very efficient native SHA256 implementations\". Typically R users in\n> these environments must request an exemption, and at least one source tells\n> me this is becoming harder.\n> \n> I'm aware that using OpenSSL might be undesirable for maintenance reasons,\n> of course, and am happy to consider it out-of-scope for this patch.\n\n\nI'm not an expect on FIPS-140 so cannot really comment, but my (limited) understanding that it only covers cryptography and not the use we're talking about here. But if anyone is actually involved in FIPS-140 certification I would like to hear more as my understanding is that you would have to certify R and its \"modules\" which I don't think is realistic. This is likely less relevant here but rather any other inclusion of cryptographic code to R if we ever consider to do so.",
+            "creation_time": "2022-04-14T22:49:18Z",
+            "creator": "simon.urbanek"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2022-04-16T02:53:49Z",
+            "id": 98629,
+            "is_private": false,
+            "creator": "elin.waring",
+            "creation_time": "2022-04-16T02:53:49Z",
+            "text": "MD5 is very quick to crack for anyone who want to attack it with modern computer power. \n\nThe reasons we use integrity checks is because either there could be malicious mirrors or because there could be an attack on the R website or there could be someone using this function as part of a separate attack that is designed to replace a valid file with a malicious one.  Yes, this would have to be crafted so no it is not like a typical brute force attach aimed at thousands of computers at once.  More likely, if anything, it would allow repackaging of code that can run bots or do key logging from a computer.  For people who are targeting specific installations it would be well worth it to do such crafting. As mentioned, this might be the case for a number of settings.  Here is a link to some documentation about the FIPs140\n\nhttps://help.vidizmo.com/en/support/solutions/articles/17000113689-understanding-fips-140-2-compliance\n\nShort version of requirements in an applied setting:\n\nhttps://www.ibm.com/docs/sr/itcam-app-mgr/7.2.1?topic=aic-complying-fips-requirements",
+            "bug_id": 18288,
+            "count": 13,
+            "is_markdown": true
+          },
+          {
+            "id": 99963,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18288,
+            "text": "An evil or broken into mirror could always serve valid MD5, SHA-256, Keccak, BLAKE3 checksums because they reside in the `PACKAGES*` files on the same server as the tarballs. Instead of computing MD5 collisions, an attacker would overwrite both the package file and the checksum file. There is no easy cryptographic solution to this.\n\nIt's true that knowing _true_ and _cryptographic_ hash of a package will protect from installing a modified copy of it, but plausible attacks can be constructed for many suggested ways of finding these hashes out. Signatures are subject to the same problem as the packages: you need to trust the identity and reliability of the one doing the signing. Now either `install.packages('mlr', dependencies = TRUE)` requires you to track down up to 272 different people and personally verify their public key fingerprints, or you're down to trusting somebody else (somebody else who can be broken into and/or serve you fake key fingerprints on their own volition) to do the verification. (One possible trade-off is downloading `PACKAGES` from CRAN but the tarballs from a mirror. This increases security but lowers availability.)\n\nThere is another reason why we may need strong cryptographic hashes. Currently, when a package uses an external dependency that doesn't fit in the source tarball, it is required to download a fixed version and check its cryptographic hash. For example, the [Rust policy] currently mentions `tools::md5sum()`, which is unfortunately not strong enough for the task. (Thankfully, Rust and Go have built-in strong hashes in the list of dependencies.) A C package, on the other hand, would benefit from being able to run `tools::sha256sum()` on a freshly-downloaded external dependency tarball. Currently, this is achievable using `cmake`'s `file(DOWNLOAD <url> EXPECTED_HASH SHA256=<value>)`, but that's less convenient and implies `SystemRequirements: cmake`.\n\n[Rust policy]: https://cran.r-project.org/web/packages/using_rust.html",
+            "count": 14,
+            "creation_time": "2023-07-12T11:07:28Z",
+            "time": "2023-07-12T11:07:28Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "ikrylov"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 102915,
+            "time": "2026-04-11T10:44:42Z",
+            "creation_time": "2026-04-11T10:44:42Z",
+            "creator": "ikrylov",
+            "count": 15,
+            "is_markdown": true,
+            "bug_id": 18288,
+            "text": "`tools::sha256sum()` appeared in R-4.5.0. SHA-256 hashing for packages with signature verification via GnuPG is present in the 4.6.0 beta. I think this issue can be considered fixed."
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18288": []
+    }
+  },
+  "source_changed": "2026-04-11 10:44:42"
+}

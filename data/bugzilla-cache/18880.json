@@ -1,0 +1,185 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Missing cross references between help pages?",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-09-21T14:50:09Z",
+        "cc_detail": [
+          {
+            "real_name": "Kurt Hornik",
+            "id": 308,
+            "name": "Kurt.Hornik"
+          },
+          {
+            "real_name": "Sebastian Meyer",
+            "name": "seb.meyer",
+            "id": 274
+          },
+          {
+            "name": "tomas.kalibera",
+            "id": 2442,
+            "real_name": "Tomas Kalibera"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "lluis.revilla",
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Llu�s",
+          "name": "lluis.revilla",
+          "id": 3268
+        },
+        "status": "CONFIRMED",
+        "creation_time": "2025-04-06T16:12:31Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "qa_contact": "",
+        "cc": [
+          "Kurt.Hornik",
+          "seb.meyer",
+          "tomas.kalibera"
+        ],
+        "id": 18880,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "enhancement",
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Documentation"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18880": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "lluis.revilla",
+            "time": "2025-04-06T16:12:31Z",
+            "attachment_id": {},
+            "count": 0,
+            "text": "Base R help documentation is extensive and includes many help pages (~1400).\nOn version 4.5 R exports new functions to explore the alias and cross references. \nUsing these new functions (and the help of a package developed on top of it), I think there is some room for improvement on three areas:\n\n1) Help pages that are **not possible to reach** from other help pages (excluding the package index).\n\n2) Help pages **without cross reference** to other help pages.\n\n3) Help pages **not receiving any cross reference** from any other help page (excluding the package index).\n\nNot all help pages need to be referenced or have a link but I think in many cases it will help new and old users to navigate through the documentation.\n\nFor 1), there are three groups of help pages (see below), but I'm not sure there are related help pages they could be linked to.\n\nFor 2) and 3) while I have some suggestions based on my experience.\nI think there are some help files that could benefit from a link (point 2 on the list above):\n\nzutils.Rd: link from and to regex.Rd \nsocketSelect.Rd links to connections\nSys.getpid.Rd links to system and system2, as they can create processes that might need tracking inside R. \nstrrep.Rd link to rep \nmat.or.vec.Rd link to matrix (and viceversa) as well as diag, that sometimes is also used to create square matrices of a given size.\ndet.Rd a link to a matrix or mat.or.vec as they can generate matrices where the determinant can be called. \nappend.Rd To list() and c()\nasplit.Rd to split.Rd\nis.single.Rd: Returns an error. Maybe remove it or link it to is.numeric ?replace.Rd to list.Rd or vector.Rd  (It doesn't have examples)\nfixPrevious.Rd to class.Rd\nsplitIndices.Rd to split.RdtoTitleCase.Rd to chartr.Rd\nurltools.Rd to doitools.Rd \nfind_gs_cmd.Rd to extSoftVersion(). \ndoitools.Rd to urltools.Rd (Could it also have a doi alias?)\nreadRegistry.Rd to DLL.version.Rd \nDLL.version.Rd to readRegistry.Rd\nRHOME.Rd to Rhome.Rd\naskYesNo to readline: it is mentioned on \"See Also\" section but not linked. \nURLencode.Rd to URL\n\nI'm sure there are other help pages that could benefit from other cross-references. Perhaps a call for help on the r-devel mailing list might provide more  help pages that would benefit from a cross-reference (either on their own pages or from other pages). \n\n\nScript to find the help pages with these conditions: \n\n\n```\nif (!requireNamespace(\"remotes\")) {\n  install.packages(\"remotes)\nremotes::install_github(\"llrs/reppo.data\")\nlibrary(\"repo.data\")\n# 1)\nbhc <- base_help_cliques()\nbhc\n##   from_pkg          from_Rd clique to_pkg            to_Rd  n\n## 1     grid absolute.size.Rd      1   grid  widthDetails.Rd  1\n## 2     grid  widthDetails.Rd      1   grid absolute.size.Rd  1\n## 3     grid    gridCoords.Rd      2   grid    grobCoords.Rd  1\n## 4     grid    grobCoords.Rd      2   grid    gridCoords.Rd  1\n## 5    tools    HTMLheader.Rd      3   <NA>             <NA> NA\n## 6    tools        toHTML.Rd      3  tools    HTMLheader.Rd  2\n# 2)\nbhwl <- base_help_pages_wo_links()\nnrow(bhwl)\n## 163\n# 3)\nbhnl <- base_help_pages_not_linked()\nnrow(bhnl)\n## 333\n```",
+            "bug_id": 18880,
+            "creation_time": "2025-04-06T16:12:31Z",
+            "is_private": false,
+            "id": 101678,
+            "tags": []
+          },
+          {
+            "is_markdown": true,
+            "creator": "Kurt.Hornik",
+            "time": "2025-04-09T09:28:10Z",
+            "attachment_id": {},
+            "count": 1,
+            "text": "Dear Lluis,\n\nCan you please explain\n\n  1) Help pages that are not possible to reach from other help pages (excluding the package index).\n  \nsome more?",
+            "bug_id": 18880,
+            "creation_time": "2025-04-09T09:28:10Z",
+            "is_private": false,
+            "id": 101681,
+            "tags": []
+          },
+          {
+            "time": "2025-04-09T18:38:15Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "lluis.revilla",
+            "id": 101682,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18880,
+            "text": "Dear Kurt, \n\nWith 1) I refer to help pages that may have cross reference to other help pages but they form a network not tied to the global base R network of help pages.\n\nFor example grid's absolute.size.Rd has two cross references that are resolved to a single help page, grids' widthDetails.Rd, which in turn only links back to grids' absolute.size.Rd. \nWithout going to grid's index help page (or starting from a different help page) the user can't navigate outside these two help pages and relate these functions to other content.\n\nI found this disconnected links network happens on three different pairs of help pages (in base R) and are shown at the bottom of the first comment (the output of `bhc`).",
+            "count": 2,
+            "creation_time": "2025-04-09T18:38:15Z"
+          },
+          {
+            "creation_time": "2025-08-27T17:42:50Z",
+            "bug_id": 18880,
+            "text": "I don't think any of 1, 2, 3 are problems. In my view, a help page A should link to page B (via a specific alias) if B is particularly important for understanding A. It depends on the context and also a bit on the writer what is regarded particularly important.\n\nOne doesn't have to just follow links when reading the documentation, but there is also fuzzy matching (help.search()), which one can use to navigate, and I do that often myself, to things not linked explicitly.\n\nI would consider (time permitting, a reasonable amount of) proposals to add links with concrete wording and patches, if those are selected based on context and understanding of the content of the pages (not on the metrics 1-3), expecting style that matches current practice.\n\nBut, the question is whether it is worth the effort. In addition to that this doesn't seem very important overall, this is also very subjective, the chance that the changes wouldn't be added is high. Looking at the first four cases from your list, I would agree with the first two, but not the second two. I wouldn't be calling for external contributions for this to later reject ~50% of them (for reasons hard to explain, as it is subjective).",
+            "count": 3,
+            "tags": [],
+            "id": 102102,
+            "is_private": false,
+            "creator": "tomas.kalibera",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2025-08-27T17:42:50Z"
+          },
+          {
+            "creation_time": "2026-09-19T10:36:55Z",
+            "creator": "lluis.revilla",
+            "bug_id": 18880,
+            "text": "Created attachment 3861\nDocumentation changes\n\nThis is a patch with some changes on the documentation files of several functions listed on the original message.\n\nThey focus mainly on the links and examples of these functions.",
+            "is_markdown": true,
+            "count": 4,
+            "attachment_id": 3861,
+            "tags": [],
+            "id": 103670,
+            "time": "2026-09-19T10:36:55Z",
+            "is_private": false
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-09-21T14:50:09Z",
+            "id": 103682,
+            "is_private": false,
+            "creator": "seb.meyer",
+            "creation_time": "2026-09-21T14:50:09Z",
+            "text": "Thank you, Lluis. I agree with what Tomas wrote in Comment 3. Your analysis helps to identify missing links, but only a careful selection with a suitable integration into existing help pages would be added.\n\nYour patch (attachment 3861) for cross references within 'base' was helpful and I just committed a tweaked subset of it in r90576:\n\n- there was a typo in your 'Extract.Rd' addition (\"modyfying\"); I reworded that sentence. While at it, I noticed that an example for `[<-` was missing, so I added one.\n- I replaced `\\link{matrix}` by `\\code{\\link{matrix}}` (mainly for the sake of ESS).\n- I chose to reference `socketSelect` in the context of the other socket functions in the Details section rather than in `\\seealso`.\n- I don't think `?matrix` needs to reference `%*%` and `det`: there is much more you can do with matrices and I don't see a point in starting such a list.\n- I did not reference `?.standard_regexps` (\"Miscellaneous Internal/Programming Utilities\") from `?regex` given its role as an internal utility function.\n\nYour 'replace.Rd' added examples, but in a (second) `\\value` section. I committed an amended `?replace` and also `?split` (with more examples) in r90578.\n\nI did not touch `?mat.or.vec` (where you added a `\\value` section). Its existence as an exported base function surprised me; I think I have never seen it before. It is not used anywhere else in the trunk, but grepping BIOC/CRAN finds a number of packages relying on it.",
+            "bug_id": 18880,
+            "count": 5,
+            "is_markdown": true
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18880": [
+        {
+          "is_private": false,
+          "id": 3861,
+          "last_change_time": "2026-09-19T10:36:55Z",
+          "size": 7164,
+          "file_name": "links.patch",
+          "bug_id": 18880,
+          "creation_time": "2026-09-19T10:36:55Z",
+          "summary": "Documentation changes",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "lluis.revilla",
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL0V4dHJhY3QuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9FeHRyYWN0LlJkCmluZGV4IDhlNGE1YmQ3OWYuLjkwN2NkNzRhM2IgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL0V4dHJhY3QuUmQKKysrIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vRXh0cmFjdC5SZApAQCAtMzI3LDYgKzMyNyw3IEBAIHgkbmFtZSA8LSB2YWx1ZQogCiAgIFxjb2Rle1xsaW5re1N5bnRheH19IGZvciBvcGVyYXRvciBwcmVjZWRlbmNlLCBhbmQgdGhlCiAgIFNlY3Rpb24gXG1hbnVhbHtSLWxhbmd9e0luZGV4aW5nfS4KKyAgXGNvZGV7XGxpbmt7cmVwbGFjZX19IGZvciByZXBsYWNpbmcgd2l0aG91dCBtb2R5ZnlpbmcgdGhlIG9yaWdpbmFsIG9iamVjdC4KIAogICBcY29kZXtcbGlua3tOVUxMfX0gZm9yIGRldGFpbHMgb2YgaW5kZXhpbmcgbnVsbCBvYmplY3RzLgogfQpkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vYXBwZW5kLlJkIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vYXBwZW5kLlJkCmluZGV4IGQwOThkMGM4NGMuLmNmMjY3ODY2MzEgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2FwcGVuZC5SZAorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9hcHBlbmQuUmQKQEAgLTI0LDYgKzI0LDkgQEAgYXBwZW5kKHgsIHZhbHVlcywgYWZ0ZXIgPSBsZW5ndGgoeCkpCiBccmVmZXJlbmNlc3sKICAgXGJpYnNob3d7UjpCZWNrZXIrQ2hhbWJlcnMrV2lsa3M6MTk4OH0KIH0KK1xzZWVhbHNveworICBcY29kZXtcbGlua3tjfX0gZm9yIGNvbWJpbmluZyB2ZWN0b3JzLgorfQogXGV4YW1wbGVzewogYXBwZW5kKDE6NSwgMDoxLCBhZnRlciA9IDMpCiB9CmRpZmYgLS1naXQgYS9zcmMvbGlicmFyeS9iYXNlL21hbi9hc3BsaXQuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9hc3BsaXQuUmQKaW5kZXggNGYxNWFhOTYxYy4uYjY0YWJjZjcxOCAxMDA2NDQKLS0tIGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vYXNwbGl0LlJkCisrKyBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2FzcGxpdC5SZApAQCAtNiw3ICs2LDcgQEAKIGFzcGxpdCh4LCBNQVJHSU4sIGRyb3AgPSBGQUxTRSkKIH0KIFxhcmd1bWVudHN7Ci0gIFxpdGVte3h9e2FuIGFycmF5LCBpbmNsdWRpbmcgYSBtYXRyaXgufQorICBcaXRlbXt4fXthbiBcbGlua3thcnJheX0sIGluY2x1ZGluZyBhIFxsaW5re21hdHJpeH0ufQogICBcaXRlbXtNQVJHSU59e2EgdmVjdG9yIGdpdmluZyB0aGUgbWFyZ2lucyB0byBzcGxpdCBieS4KICAgICBFLmcuLCBmb3IgYSBtYXRyaXggXGNvZGV7MX0gaW5kaWNhdGVzIHJvd3MsIFxjb2RlezJ9IGluZGljYXRlcwogICAgIGNvbHVtbnMsIFxjb2Rle2MoMSwgMil9IGluZGljYXRlcyByb3dzIGFuZCBjb2x1bW5zLgpkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vYy5SZCBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2MuUmQKaW5kZXggNTBmMTkwYmM1NS4uZDcyMjM2YmUyYiAxMDA2NDQKLS0tIGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vYy5SZAorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9jLlJkCkBAIC02Niw2ICs2Niw4IEBAIGMoXGRvdHMpCiBcc2VlYWxzb3sKICAgXGNvZGV7XGxpbmt7dW5saXN0fX0gYW5kIFxjb2Rle1xsaW5re2FzLnZlY3Rvcn19IHRvIHByb2R1Y2UKICAgYXR0cmlidXRlLWZyZWUgdmVjdG9ycy4KKworICBcY29kZXtcbGlua3thcHBlbmR9fSB0byBhZGQgdmFsdWVzIHRvIGEgdmVjdG9yLiAKIH0KIFxleGFtcGxlc3sKIGMoMSwgNzo5KQpkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vY29ubmVjdGlvbnMuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9jb25uZWN0aW9ucy5SZAppbmRleCBlYWVmNGFjNDUwLi5iZTRlMWY1ZGViIDEwMDY0NAotLS0gYS9zcmMvbGlicmFyeS9iYXNlL21hbi9jb25uZWN0aW9ucy5SZAorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9jb25uZWN0aW9ucy5SZApAQCAtNjg4LDYgKzY4OCw4IEBAIHNvY2tldFRpbWVvdXQoc29ja2V0LCB0aW1lb3V0ID0gLTEpCiAKICAgVG8gZmx1c2ggb3V0cHV0IHRvIHRoZSBXaW5kb3dzIGFuZCBtYWNPUyBjb25zb2xlcywgc2VlCiAgIFxjb2Rle1xsaW5re2ZsdXNoLmNvbnNvbGV9fS4KKworICBcY29kZXtcbGlua3tzb2NrZXRTZWxlY3R9fSBmb3IgcGlja2luZyBhbiBhdmFpbGFibGUgc29ja2V0IGNvbm5lY3Rpb24uIAogfQogCiBcZXhhbXBsZXN7CmRpZmYgLS1naXQgYS9zcmMvbGlicmFyeS9iYXNlL21hbi9kZXQuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9kZXQuUmQKaW5kZXggYjA5OGNhNDc3MC4uNmY3NTIzNjNjYiAxMDA2NDQKLS0tIGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vZGV0LlJkCisrKyBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2RldC5SZApAQCAtMTMsNyArMTMsNyBAQCBkZXQoeCwgXGRvdHMpCiBkZXRlcm1pbmFudCh4LCBsb2dhcml0aG0gPSBUUlVFLCBcZG90cykKIH0KIFxkZXNjcmlwdGlvbnsKLSAgXGNvZGV7ZGV0fSBjYWxjdWxhdGVzIHRoZSBkZXRlcm1pbmFudCBvZiBhIG1hdHJpeC4gIFxjb2Rle2RldGVybWluYW50fQorICBcY29kZXtkZXR9IGNhbGN1bGF0ZXMgdGhlIGRldGVybWluYW50IG9mIGEgXGxpbmt7bWF0cml4fS4gIFxjb2Rle2RldGVybWluYW50fQogICBpcyBhIGdlbmVyaWMgZnVuY3Rpb24gdGhhdCByZXR1cm5zIHNlcGFyYXRlbHkgdGhlIG1vZHVsdXMgb2YgdGhlIGRldGVybWluYW50LAogICBvcHRpb25hbGx5IG9uIHRoZSBsb2dhcml0aG0gc2NhbGUsIGFuZCB0aGUgc2lnbiBvZiB0aGUgZGV0ZXJtaW5hbnQuCiAgIH0KZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2RvdHMuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9kb3RzLlJkCmluZGV4IDIyNjg1NDRlNjIuLmI0NTUwMTBhNDUgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2RvdHMuUmQKKysrIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vZG90cy5SZApAQCAtNTIsNyArNTIsNyBAQAogICBcUiwgc2VlIFxjb2Rle1xsaW5re1Jlc2VydmVkfX0uCiAKICAgXG1hbnVhbHtSLWludHJvfXtUaGUgLi4uIGFyZ3VtZW50fSwKLSAgYW5kIFxjb2Rlez9cbGlua1ttZXRob2RzXXtkb3RzTWV0aG9kc319IGZvciBpdHMgdXNlIGluIGZvcm1hbCAoUzQpIG1ldGhvZHMuCisgIGFuZCBcY29kZXs/XGxpbmtbbWV0aG9kc117ZG90c01ldGhvZHN9fSBmb3IgaXRzIHVzZSBpbiBmb3JtYWwgKFM0KSBtZXRob2RzIGFuZCBcY29kZXtcbGlua3tjaGtEb3RzfX0gZm9yIFMzIG1ldGhvZHMuIAogfQogXGV4YW1wbGVzewogdHN0IDwtIGZ1bmN0aW9uKG4sIC4uLikgLi4uZWx0KG4pCmRpZmYgLS1naXQgYS9zcmMvbGlicmFyeS9iYXNlL21hbi9tYXQub3IudmVjLlJkIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vbWF0Lm9yLnZlYy5SZAppbmRleCBhZDkxNzAyYTdjLi44MmYzZTIxZWFlIDEwMDY0NAotLS0gYS9zcmMvbGlicmFyeS9iYXNlL21hbi9tYXQub3IudmVjLlJkCisrKyBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21hdC5vci52ZWMuUmQKQEAgLTEzLDEwICsxMywxMSBAQCBtYXQub3IudmVjKG5yLCBuYykKICAgXGl0ZW17bnIsIG5jfXtudW1iZXJzIG9mIHJvd3MgYW5kIGNvbHVtbnMufQogfQogXGRlc2NyaXB0aW9uewotICBcY29kZXttYXQub3IudmVjfSBjcmVhdGVzIGFuIFxjb2Rle25yfSBieSBcY29kZXtuY30gemVybyBtYXRyaXggaWYKKyAgXGNvZGV7bWF0Lm9yLnZlY30gY3JlYXRlcyBhbiBcY29kZXtucn0gYnkgXGNvZGV7bmN9IHplcm8gXGxpbmt7bWF0cml4fSBpZgogICBcY29kZXtuY30gaXMgZ3JlYXRlciB0aGFuIDEsIGFuZCBhIHplcm8gdmVjdG9yIG9mIGxlbmd0aCBcY29kZXtucn0gaWYKICAgXGNvZGV7bmN9IGVxdWFscyAxLgogfQorXHZhbHVle0EgdmVjdG9yIG9yIGEgbWF0cml4IGZpbGxlZCB3aXRoIDAufQogXGV4YW1wbGVzewogbWF0Lm9yLnZlYygzLCAxKQogbWF0Lm9yLnZlYygzLCAyKQpkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vbWF0cml4LlJkIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vbWF0cml4LlJkCmluZGV4IDI2NDk4YjE4NDIuLjEwODY3ZmM4M2MgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21hdHJpeC5SZAorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9tYXRyaXguUmQKQEAgLTEwMSw4ICsxMDEsMTIgQEAgaXMubWF0cml4KHgpCiAgIFxjb2Rle1xsaW5re2RhdGEubWF0cml4fX0sIHdoaWNoIGF0dGVtcHRzIHRvIGNvbnZlcnQgdG8gYSBudW1lcmljCiAgIG1hdHJpeC4KIAorCiAgIEEgbWF0cml4IGlzIHRoZSBzcGVjaWFsIGNhc2Ugb2YgYSB0d28tZGltZW5zaW9uYWwgXGNvZGV7XGxpbmt7YXJyYXl9fS4KICAgXGNvZGV7XGxpbmt7aW5oZXJpdHN9KG0sICJhcnJheSIpfSBpcyB0cnVlIGZvciBhIFxjb2Rle21hdHJpeH0gXGNvZGV7bX0uCisKKyAgXGNvZGV7XGxpbmt7bWF0Lm9yLnZlY319IGZvciBjcmVhdGluZyBudW1lcmljIHZlY3RvcnMgb3IgbWF0cmljZXMuCisgIFxjb2Rle1xsaW5re1wlKlwlfX0sIFxjb2Rle1xsaW5re2RldH19IGZvciBvcGVyYXRpb25zIHdpdGggbnVtZXJpYyBtYXRyaWNlcy4KIH0KIFxleGFtcGxlc3sKIGlzLm1hdHJpeChhcy5tYXRyaXgoMToxMCkpCmRpZmYgLS1naXQgYS9zcmMvbGlicmFyeS9iYXNlL21hbi9yZWdleC5SZCBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL3JlZ2V4LlJkCmluZGV4IGFhNGVhYTQwZGMuLjMyZjliZmQ0OWYgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL3JlZ2V4LlJkCisrKyBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL3JlZ2V4LlJkCkBAIC0zNTksNiArMzU5LDggQEAKICAgXGNvZGV7XGxpbmt7Z2xvYjJyeH19LCBcY29kZXtcbGlua3toZWxwLnNlYXJjaH19LCBcY29kZXtcbGlua3tsaXN0LmZpbGVzfX0sCiAgIFxjb2Rle1xsaW5re2xzfX0sIFxjb2Rle1xsaW5re3N0cnNwbGl0fX0gYW5kIFxjb2Rle1xsaW5re2FncmVwfX0uCiAKKyAgRXhhbXBsZXMgb2YgcmVndWxhciBleHByZXNzaW9ucyB1c2VkIGJ5IFIgXGNvZGV7XGxpbmt7LnN0YW5kYXJkX3JlZ2V4cHN9fS4KKwogICBUaGUgXGhyZWZ7aHR0cHM6Ly9odG1sLXByZXZpZXcuZ2l0aHViLmlvLz91cmw9aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2xhdXJpa2FyaS90cmUvbWFzdGVyL2RvYy90cmUtc3ludGF4Lmh0bWx9e1xJe1RSRX0gcmVnZXhwIHN5bnRheH0uCiAKICAgVGhlIFBPU0lYIDEwMDMuMiBzdGFuZGFyZCBhdApkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmVwbGFjZS5SZCBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL3JlcGxhY2UuUmQKaW5kZXggZmYxMTg1NjM0ZC4uYjUwYjdhZDNlMSAxMDA2NDQKLS0tIGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmVwbGFjZS5SZAorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9yZXBsYWNlLlJkCkBAIC0xNiw3ICsxNiw3IEBAIElmIG5lY2Vzc2FyeSwgdGhlIHZhbHVlcyBpbiBcY29kZXt2YWx1ZXN9IGFyZSByZWN5Y2xlZC4KIH0KIFxhcmd1bWVudHN7CiAgIFxpdGVte3h9e2EgdmVjdG9yLn0KLSAgXGl0ZW17bGlzdH17YW4gaW5kZXggdmVjdG9yLn0KKyAgXGl0ZW17bGlzdH17YW4gaW5kZXggXGxpbmt7dmVjdG9yfS59CiAgIFxpdGVte3ZhbHVlc317cmVwbGFjZW1lbnQgdmFsdWVzLn0KIH0KIFx2YWx1ZXsKQEAgLTI4LDQgKzI4LDE2IEBAIElmIG5lY2Vzc2FyeSwgdGhlIHZhbHVlcyBpbiBcY29kZXt2YWx1ZXN9IGFyZSByZWN5Y2xlZC4KIFxub3RlewogICBcY29kZXt4fSBpcyB1bmNoYW5nZWQ6IHJlbWVtYmVyIHRvIGFzc2lnbiB0aGUgcmVzdWx0LgogfQorXHNlZWFsc297CisgIFxsaW5re0V4dHJhY3R9IHRvIHJlcGxhY2UgaW4gb2JqZWN0cy4gCit9CitcdmFsdWV7CisgIHggPC0gMTo1CisgICh5IDwtIHJlcGxhY2UoeCwgYygyLCA1KSwgYyg4LCA5KSkpCisgIHggIyBOb3QgbW9kaWZpZWQKKworICAgIyBXb3JrcyB3aXRoIGFueSB2ZWN0b3IKKyAgeiA8LSBsaXN0KEEgPSAiYSIsIEIgPSAyLCBDID0gZGlhZyg1KSkKKyAgcmVwbGFjZSh6LCBjKDEsIDIsIDMpLCBsaXN0KDUsIGRpYWcoMyksICJBIikpCit9CiBca2V5d29yZHttYW5pcH0KZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL3NwbGl0LlJkIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vc3BsaXQuUmQKaW5kZXggYzQzMzZmMzllMi4uMmUzNWQzZDFjMyAxMDA2NDQKLS0tIGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4vc3BsaXQuUmQKKysrIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vc3BsaXQuUmQKQEAgLTIyLDcgKzIyLDcgQEAKIHNwbGl0KHgsIGYsIGRyb3AgPSBGQUxTRSwgXGRvdHMpCiBcbWV0aG9ke3NwbGl0fXtkZWZhdWx0fSh4LCBmLCBkcm9wID0gRkFMU0UsIHNlcCA9ICIuIiwgbGV4Lm9yZGVyID0gRkFMU0UsIFxkb3RzKQogCi1zcGxpdCh4LCBmLCBkcm9wID0gRkFMU0UsIFxkb3RzKSA8LSB2YWx1ZQorc3BsaXQoeCwgZiwgZHJvcCA9IEZBTFNFLCBcZG90cykgPC0gdmFsdWVzCiB1bnNwbGl0KHZhbHVlLCBmLCBkcm9wID0gRkFMU0UpCiB9CiBcYXJndW1lbnRzewpAQCAtODQsNiArODQsOSBAQCB1bnNwbGl0KHZhbHVlLCBmLCBkcm9wID0gRkFMU0UpCiAgIFxjb2Rle1xsaW5re2N1dH19IHRvIGNhdGVnb3JpemUgbnVtZXJpYyB2YWx1ZXMuCiAKICAgXGNvZGV7XGxpbmt7c3Ryc3BsaXR9fSB0byBzcGxpdCBzdHJpbmdzLgorCisgIFxjb2Rle1xsaW5re2FzcGxpdH19IHRvIHNwbGl0IG1hdHJpY2VzIGFuZCBhcnJheXMuCisKIH0KIFxyZWZlcmVuY2VzewogICBcYmlic2hvd3tSOkJlY2tlcitDaGFtYmVycytXaWxrczoxOTg4fQpkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvYmFzZS9tYW4venV0aWxzLlJkIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4venV0aWxzLlJkCmluZGV4IGE1MWNhM2M2YzkuLmM3ZTkxOWE1NzggMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL3p1dGlscy5SZAorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi96dXRpbHMuUmQKQEAgLTE2LDQgKzE2LDcgQEAKICAgXGNvZGV7dmFsaWRfcGFja2FnZV92ZXJzaW9ufSB3aXRoIHRoZSBvYnZpb3VzIG1lYW5pbmdzLiAgVGhlIHJlZ2V4cHMKICAgYXJlIG5vdCBhbmNob3JlZC4KIH0KK1xleGFtcGxlc3sKKy5zdGFuZGFyZF9yZWdleHBzKCkKK30KIFxrZXl3b3Jke3V0aWxpdGllc30K"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-21 14:50:09"
+}

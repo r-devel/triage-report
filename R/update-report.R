@@ -4,10 +4,23 @@ args <- commandArgs(trailingOnly = TRUE)
 data_root <- if (length(args) > 0) args[[1]] else "bug-stats"
 
 bugs_dir <- find_data_dir(data_root, "bugs")
-bugs <- parse_all_bugs(bugs_dir)
-dump_date <- dump_updated(bugs)
+contribs_dir <- find_data_dir(data_root, "contribs")
 
-message("Parsed ", length(bugs), " bug XML files.")
+index <- read_contribs(contribs_dir)
+dump_date <- max(index$changeddate)
+
+current_index <- index |>
+  filter(
+    bug_status == "TRIAGED" |
+      (!bug_status %in% c("CLOSED", "RESOLVED") & resolution == "")
+  )
+
+bugs <- build_current_bugs(current_index, bugs_dir)
+
+message(
+  "Loaded ", length(bugs), " current bugs from ",
+  nrow(index), " bugs in contributor data."
+)
 
 triaged_bugs <- keep(bugs, ~ identical(.x$status, "TRIAGED"))
 

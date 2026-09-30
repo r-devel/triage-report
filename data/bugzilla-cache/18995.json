@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 18995,
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2026-01-26T17:32:18Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "is_confirmed": false,
+        "op_sys": "Linux",
+        "platform": "Other",
+        "flags": [],
+        "last_change_time": "2026-01-26T17:32:18Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "tre-parse.c has a variety of out-of-bounds reads",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18995": {
+        "comments": [
+          {
+            "attachment_id": 3601,
+            "tags": [],
+            "is_private": false,
+            "id": 102589,
+            "time": "2026-01-26T17:32:18Z",
+            "creation_time": "2026-01-26T17:32:18Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 18995,
+            "text": "Created attachment 3601\nCandidate patch.\n\nThese can usually be triggered using `grepRaw()` with invalid or incomplete patterns with R build with ASAN. For example:\n\n```\n> grepRaw(\"(\", \"abc\")\n=================================================================\n==1871632==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x7b30fd9f99b4 at pc 0x7f1102f9db0e bp 0x7fffca3dab30 sp 0x7fffca3dab28\nREAD of size 4 at 0x7b30fd9f99b4 thread T0\n    #0 0x7f1102f9db0d in tre_parse /home/kevin/r-devel/trunk/src/extra/tre/tre-parse.c:1227\n    #1 0x7f1102f738d7 in tre_compile /home/kevin/r-devel/trunk/src/extra/tre/tre-compile.c:1920\n    #2 0x7f1102f60680 in tre_regncompb /home/kevin/r-devel/trunk/src/extra/tre/regcomp.c:118\n    #3 0x7f1102b04e3f in do_grepraw /home/kevin/r-devel/trunk/src/main/grep.c:1736\n    #4 0x7f1102a1a483 in bcEval_loop /home/kevin/r-devel/trunk/src/main/eval.c:8132\n    #5 0x7f1102a6d064 in bcEval /home/kevin/r-devel/trunk/src/main/eval.c:7515\n    #6 0x7f1102a6db85 in Rf_eval /home/kevin/r-devel/trunk/src/main/eval.c:1167\n    #7 0x7f1102a7b90b in R_execClosure /home/kevin/r-devel/trunk/src/main/eval.c:2389\n    #8 0x7f1102a7bc84 in applyClosure_core /home/kevin/r-devel/trunk/src/main/eval.c:2302\n    #9 0x7f1102a7f46c in Rf_applyClosure /home/kevin/r-devel/trunk/src/main/eval.c:2324\n    #10 0x7f1102a6fafd in Rf_eval /home/kevin/r-devel/trunk/src/main/eval.c:1280\n    #11 0x7f1102b61c45 in Rf_ReplIteration /home/kevin/r-devel/trunk/src/main/main.c:264\n    #12 0x7f1102b621f3 in R_ReplConsole /home/kevin/r-devel/trunk/src/main/main.c:317\n    #13 0x7f1102b6237f in run_Rmainloop /home/kevin/r-devel/trunk/src/main/main.c:1235\n    #14 0x7f1102b623cc in Rf_mainloop /home/kevin/r-devel/trunk/src/main/main.c:1242\n    #15 0x0000004004f3 in main /home/kevin/r-devel/trunk/src/main/Rmain.c:29\n    #16 0x7f11018105b4 in __libc_start_call_main (/lib64/libc.so.6+0x35b4) (BuildId: 57f6900d44d37352280570abdffc4f01a1803226)\n    #17 0x7f1101810667 in __libc_start_main@@GLIBC_2.34 (/lib64/libc.so.6+0x3667) (BuildId: 57f6900d44d37352280570abdffc4f01a1803226)\n    #18 0x0000004003e4 in _start (/home/kevin/r/r-devel-sanitizers/lib64/R/bin/exec/R+0x4003e4) (BuildId: a96b5b8788e93e4b9d0462028242bff17a2aceb1)\n```\n\nI've attached a patch for some of the specific access issues I've found.\n\n```\n> sessionInfo()\nR Under development (unstable) (2026-01-25 r89330)\nPlatform: x86_64-pc-linux-gnu\nRunning under: Fedora Linux 43 (Workstation Edition)\n```"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18995": [
+        {
+          "summary": "Candidate patch.",
+          "creation_time": "2026-01-26T17:32:18Z",
+          "bug_id": 18995,
+          "file_name": "file_18995.txt",
+          "size": 5962,
+          "last_change_time": "2026-01-26T17:32:18Z",
+          "id": 3601,
+          "is_private": false,
+          "data": "LS0tIHNyYy9leHRyYS90cmUvdHJlLXBhcnNlLmMgICAocmV2aXNpb24gODkzMzApDQorKysgc3JjL2V4dHJhL3RyZS90cmUtcGFyc2UuYyAgICh3b3JraW5nIGNvcHkpDQpAQCAtMjc1LDcgKzI3NSw3IEBADQogICB3aGlsZSAoc3RhdHVzID09IFJFR19PSykNCiAgICAgew0KICAgICAgIHNraXAgPSAwOw0KLSAgICAgIGlmIChyZSA9PSBjdHgtPnJlX2VuZCkNCisgICAgICBpZiAocmUgPj0gY3R4LT5yZV9lbmQpDQogICAgICAgIHsNCiAgICAgICAgICBzdGF0dXMgPSBSRUdfRUJSQUNLOw0KICAgICAgICB9DQpAQCAtMzYyLDggKzM2Miw4IEBADQogICAgICAgICAgZWxzZQ0KICAgICAgICAgICAgew0KICAgICAgICAgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2VfYnJhY2tldDogICBjaGFyOiAnJS4qIiBTVFJGICInXG4iLCBSRVNUKHJlKSkpOw0KLSAgICAgICAgICAgICBpZiAoKnJlID09IENIQVJfTUlOVVMgJiYgKihyZSArIDEpICE9IENIQVJfUkJSQUNLRVQNCi0gICAgICAgICAgICAgICAgICYmIGN0eC0+cmUgIT0gcmUpDQorICAgICAgICAgICAgIGlmICgqcmUgPT0gQ0hBUl9NSU5VUyAmJiByZSArIDEgPCBjdHgtPnJlX2VuZA0KKyAgICAgICAgICAgICAgICAgJiYgKihyZSArIDEpICE9IENIQVJfUkJSQUNLRVQgJiYgY3R4LT5yZSAhPSByZSkNCiAgICAgICAgICAgICAgICAvKiBUd28gcmFuZ2VzIGFyZSBub3QgYWxsb3dlZCB0byBzaGFyZSBhbmQgZW5kcG9pbnQuICovDQogICAgICAgICAgICAgICAgc3RhdHVzID0gUkVHX0VSQU5HRTsNCiAgICAgICAgICAgICAgbWluID0gbWF4ID0gKnJlKys7DQpAQCAtNDQzLDYgKzQ0MywxMiBAQA0KICAgaWYgKGl0ZW1zID09IE5VTEwpDQogICAgIHJldHVybiBSRUdfRVNQQUNFOw0KDQorICBpZiAoY3R4LT5yZSA+PSBjdHgtPnJlX2VuZCkNCisgICAgew0KKyAgICAgIHhmcmVlKGl0ZW1zKTsNCisgICAgICByZXR1cm4gUkVHX0VCUkFDSzsNCisgICAgfQ0KKw0KICAgaWYgKCpjdHgtPnJlID09IENIQVJfQ0FSRVQpDQogICAgIHsNCiAgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2VfYnJhY2tldDogbmVnYXRlOiAnJS4qIiBTVFJGICInXG4iLCBSRVNUKGN0eC0+cmUpKSk7DQpAQCAtNzUwLDcgKzc1Niw3IEBADQogICAgICAgICAgICBjYXNlIEwnPCc6DQogICAgICAgICAgICAgIERQUklOVCgoInRyZV9wYXJzZTogICAgbWF4IGNvc3Q6ICclLioiIFNUUkYgIidcbiIsIFJFU1QocikpKTsNCiAgICAgICAgICAgICAgcisrOw0KLSAgICAgICAgICAgICB3aGlsZSAoKnIgPT0gTCcgJykNCisgICAgICAgICAgICAgd2hpbGUgKHIgPCBjdHgtPnJlX2VuZCAmJiAqciA9PSBMJyAnKQ0KICAgICAgICAgICAgICAgIHIrKzsNCiAgICAgICAgICAgICAgY29zdF9tYXggPSB0cmVfcGFyc2VfaW50KCZyLCBjdHgtPnJlX2VuZCk7DQogICAgICAgICAgICAgIGlmIChjb3N0X21heCA8IDApDQpAQCAtNzcwLDcgKzc3Niw5IEBADQogICAgICAgICAgICAgICAgICBjb25zdCB0cmVfY2hhcl90ICpzciA9IHI7DQogI2VuZGlmIC8qIFRSRV9ERUJVRyAqLw0KICAgICAgICAgICAgICAgICAgaW50IGNvc3QgPSB0cmVfcGFyc2VfaW50KCZyLCBjdHgtPnJlX2VuZCk7DQotICAgICAgICAgICAgICAgICAvKiBYWFggLSBtYWtlIHN1cmUgciBpcyBub3QgcGFzdCBlbmQuICovDQorICAgICAgICAgICAgICAgICAvKiBNYWtlIHN1cmUgciBpcyBub3QgcGFzdCBlbmQuICovDQorICAgICAgICAgICAgICAgICBpZiAociA+PSBjdHgtPnJlX2VuZCkNCisgICAgICAgICAgICAgICAgICAgcmV0dXJuIFJFR19FQlJBQ0U7DQogICAgICAgICAgICAgICAgICBzd2l0Y2ggKCpyKQ0KICAgICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgIGNhc2UgTCdpJzogIC8qIEluc2VydCBjb3N0ICovDQpAQCAtMTAyNyw2ICsxMDM1LDcgQEANCiAgICAgICAgICAgICAgICAgICAgICYmIGMgPT0gQ0hBUl9SUEFSRU4gJiYgZGVwdGggPiAwKQ0KICAgICAgICAgICAgICAgICAgICB8fCAoIShjdHgtPmNmbGFncyAmIFJFR19FWFRFTkRFRCkNCiAgICAgICAgICAgICAgICAgICAgICAgICYmIChjID09IENIQVJfQkFDS1NMQVNIDQorICAgICAgICAgICAgICAgICAgICAgICAgICAgJiYgY3R4LT5yZSArIDEgPCBjdHgtPnJlX2VuZA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICYmICooY3R4LT5yZSArIDEpID09IENIQVJfUlBBUkVOKSkpDQogICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgIGlmICghKGN0eC0+Y2ZsYWdzICYgUkVHX0VYVEVOREVEKSAmJiBkZXB0aCA9PSAwKQ0KQEAgLTEyMjQsNiArMTIzMyw3IEBADQogICAgICAgICAgICAgIC8qIEhhbmRsZSAiKD8uLi4pIiBleHRlbnNpb25zLiAgVGhleSB3b3JrIGluIGEgd2F5IHNpbWlsYXINCiAgICAgICAgICAgICAgICAgdG8gUGVybHMgY29ycmVzcG9uZGluZyBleHRlbnNpb25zLiAqLw0KICAgICAgICAgICAgICBpZiAoY3R4LT5jZmxhZ3MgJiBSRUdfRVhURU5ERUQNCisgICAgICAgICAgICAgICAgICYmIGN0eC0+cmUgKyAxIDwgY3R4LT5yZV9lbmQNCiAgICAgICAgICAgICAgICAgICYmICooY3R4LT5yZSArIDEpID09IENIQVJfUVVFU1RJT05NQVJLKQ0KICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgIGludCBuZXdfY2ZsYWdzID0gY3R4LT5jZmxhZ3M7DQpAQCAtMTIzMyw2ICsxMjQzLDggQEANCiAgICAgICAgICAgICAgICAgIGN0eC0+cmUgKz0gMjsNCiAgICAgICAgICAgICAgICAgIHdoaWxlICgvKkNPTlNUQ09ORCovKHZvaWQpMSwxKQ0KICAgICAgICAgICAgICAgICAgICB7DQorICAgICAgICAgICAgICAgICAgICAgaWYgKGN0eC0+cmUgPj0gY3R4LT5yZV9lbmQpDQorICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gUkVHX0JBRFBBVDsNCiAgICAgICAgICAgICAgICAgICAgICBpZiAoKmN0eC0+cmUgPT0gTCdpJykNCiAgICAgICAgICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgRFBSSU5UKCgidHJlX3BhcnNlOiAgICAgICBpY2FzZTogJyUuKiIgU1RSRiAiXG4iLA0KQEAgLTEyOTgsMTAgKzEzMTAsMTAgQEANCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBSRVNUKGN0eC0+cmUpKSk7DQogICAgICAgICAgICAgICAgICAgICAgICAgIC8qIEEgY29tbWVudCBjYW4gY29udGFpbiBhbnkgY2hhcmFjdGVyIGV4Y2VwdCBhDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgIHJpZ2h0IHBhcmVudGhlc2lzICovDQotICAgICAgICAgICAgICAgICAgICAgICAgIHdoaWxlICgqY3R4LT5yZSAhPSBDSEFSX1JQQVJFTg0KLSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgJiYgY3R4LT5yZSA8IGN0eC0+cmVfZW5kKQ0KKyAgICAgICAgICAgICAgICAgICAgICAgICB3aGlsZSAoY3R4LT5yZSA8IGN0eC0+cmVfZW5kDQorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAmJiAqY3R4LT5yZSAhPSBDSEFSX1JQQVJFTikNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdHgtPnJlKys7DQotICAgICAgICAgICAgICAgICAgICAgICAgIGlmICgqY3R4LT5yZSA9PSBDSEFSX1JQQVJFTiAmJiBjdHgtPnJlIDwgY3R4LT5yZV9lbmQpDQorICAgICAgICAgICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlIDwgY3R4LT5yZV9lbmQgJiYgKmN0eC0+cmUgPT0gQ0hBUl9SUEFSRU4pDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgew0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3R4LT5yZSsrOw0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYnJlYWs7DQpAQCAtMTQ2OCw3ICsxNDgwLDcgQEANCiAgICAgICAgICAgICAgICAgIGJyZWFrOw0KICAgICAgICAgICAgICAgIGNhc2UgTCd4JzoNCiAgICAgICAgICAgICAgICAgIGN0eC0+cmUrKzsNCi0gICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlWzBdICE9IENIQVJfTEJSQUNFICYmIGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkNCisgICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlIDwgY3R4LT5yZV9lbmQgJiYgY3R4LT5yZVswXSAhPSBDSEFSX0xCUkFDRSkNCiAgICAgICAgICAgICAgICAgICAgew0KICAgICAgICAgICAgICAgICAgICAgIC8qIDggYml0IGhleCBjaGFyLiAqLw0KICAgICAgICAgICAgICAgICAgICAgIGNoYXIgdG1wWzNdID0gezAsIDAsIDB9Ow0KQEAgLTE0NzYsMTIgKzE0ODgsMTIgQEANCiAgICAgICAgICAgICAgICAgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2U6ICA4IGJpdCBoZXg6ICclLioiIFNUUkYgIidcbiIsDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICBSRVNUKGN0eC0+cmUgLSAyKSkpOw0KDQotICAgICAgICAgICAgICAgICAgICAgaWYgKHRyZV9pc3hkaWdpdChjdHgtPnJlWzBdKSAmJiBjdHgtPnJlIDwgY3R4LT5yZV9lbmQpDQorICAgICAgICAgICAgICAgICAgICAgaWYgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCAmJiB0cmVfaXN4ZGlnaXQoY3R4LT5yZVswXSkpDQogICAgICAgICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgICAgICAgIHRtcFswXSA9IChjaGFyKWN0eC0+cmVbMF07DQogICAgICAgICAgICAgICAgICAgICAgICAgIGN0eC0+cmUrKzsNCiAgICAgICAgICAgICAgICAgICAgICAgIH0NCi0gICAgICAgICAgICAgICAgICAgICBpZiAodHJlX2lzeGRpZ2l0KGN0eC0+cmVbMF0pICYmIGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkNCisgICAgICAgICAgICAgICAgICAgICBpZiAoY3R4LT5yZSA8IGN0eC0+cmVfZW5kICYmIHRyZV9pc3hkaWdpdChjdHgtPnJlWzBdKSkNCiAgICAgICAgICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgdG1wWzFdID0gKGNoYXIpY3R4LT5yZVswXTsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgY3R4LT5yZSsrOw0KQEAgLTE0OTksNyArMTUxMSw3IEBADQogICAgICAgICAgICAgICAgICAgICAgbG9uZyB2YWw7DQogICAgICAgICAgICAgICAgICAgICAgaW50IGkgPSAwOw0KICAgICAgICAgICAgICAgICAgICAgIGN0eC0+cmUrKzsNCi0gICAgICAgICAgICAgICAgICAgICB3aGlsZSAoY3R4LT5yZV9lbmQgLSBjdHgtPnJlID49IDApDQorICAgICAgICAgICAgICAgICAgICAgd2hpbGUgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkNCiAgICAgICAgICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGN0eC0+cmVbMF0gPT0gQ0hBUl9SQlJBQ0UpDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgYnJlYWs7DQpAQCAtMTUyMyw2ICsxNTM1LDggQEANCiAgICAgICAgICAgICAgICAgIC8qRkFMTFRIUk9VR0gqLw0KDQogICAgICAgICAgICAgICAgZGVmYXVsdDoNCisgICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlID49IGN0eC0+cmVfZW5kKQ0KKyAgICAgICAgICAgICAgICAgICByZXR1cm4gUkVHX0VFU0NBUEU7DQogICAgICAgICAgICAgICAgICBpZiAodHJlX2lzZGlnaXQoKmN0eC0+cmUpKQ0KICAgICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgICAgLyogQmFjayByZWZlcmVuY2UuICovDQpAQCAtMTY3MSw3ICsxNjg1LDggQEANCiAgICAgICAgICAgICAgICB9DQoNCiAvKiBSIGNoYW5nZSAqLw0KLSAgICAgICAgICAgICBpZiAoKGN0eC0+Y2ZsYWdzICYgUkVHX0xJVEVSQUwpICYmICFjdHgtPnJlWzBdKSB7DQorICAgICAgICAgICAgIGlmICgoY3R4LT5jZmxhZ3MgJiBSRUdfTElURVJBTCkNCisgICAgICAgICAgICAgICAgICYmIChjdHgtPnJlID49IGN0eC0+cmVfZW5kIHx8ICFjdHgtPnJlWzBdKSkgew0KICAgICAgICAgICAgICAgICAgRFBSSU5UKCgidHJlX3BhcnNlOiAgICAgICBsaXRlcmFsIGVtcHR5OiAnJS4qIiBTVFJGICInXG4iLA0KICAgICAgICAgICAgICAgICAgICAgICAgICBSRVNUKGN0eC0+cmUpKSk7DQogICAgICAgICAgICAgICAgICByZXN1bHQgPSB0cmVfYXN0X25ld19saXRlcmFsKGN0eC0+bWVtLCBFTVBUWSwgLTEsIC0xKTsNCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-01-26 17:32:18"
+}

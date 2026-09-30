@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "Provide tool for manipulating order of objects on search path",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-03-23T21:04:42Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "status": "NEW",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-03-23T21:04:42Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19025,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Low-level"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19025": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": 3640,
+            "is_private": false,
+            "id": 102800,
+            "time": "2026-03-23T21:04:42Z",
+            "creation_time": "2026-03-23T21:04:42Z",
+            "creator": "kevinushey",
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19025,
+            "text": "Created attachment 3640\nPatch implementing .reattach tool.\n\nIt can occasionally be useful to rearrange items on the search path, without explicitly detaching and attaching those environments. I've attached a patch implementing a tool, `.reattach`, that can be used to move an existing object on the search path from one location to another.\n\nThe primary motivation here is to allow \"safe\" re-parenting of environments in this specific context, without needing to expose things like ENCLOS and SET_ENCLOS more broadly."
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19025": [
+        {
+          "file_name": "reattach.patch",
+          "bug_id": 19025,
+          "creation_time": "2026-03-23T21:04:42Z",
+          "summary": "Patch implementing .reattach tool.",
+          "is_private": false,
+          "id": 3640,
+          "last_change_time": "2026-03-23T21:04:42Z",
+          "size": 6224,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL0ludGVybmFsLmgKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2luY2x1ZGUvSW50ZXJuYWwuaAkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvaW5jbHVkZS9JbnRlcm5hbC5oCSh3b3JraW5nIGNvcHkpCkBAIC0xMzAsNiArMTMwLDcgQEAKIFNFWFAgZG9fZGVsYXllZEJpbmRpbmdFeHByKFNFWFAsIFNFWFAsIFNFWFAsIFNFWFApOwogU0VYUCBkb19kZXBhcnNlKFNFWFAsIFNFWFAsIFNFWFAsIFNFWFApOwogU0VYUCBkb19kZXRhY2goU0VYUCxTRVhQLFNFWFAsU0VYUCk7CitTRVhQIGRvX3JlYXR0YWNoKFNFWFAsU0VYUCxTRVhQLFNFWFApOwogTk9SRVQgU0VYUCBkb19kZmx0U3RvcChTRVhQLCBTRVhQLCBTRVhQLCBTRVhQKTsKIFNFWFAgZG9fZGZsdFdhcm4oU0VYUCwgU0VYUCwgU0VYUCwgU0VYUCk7CiBTRVhQIGRvX2RpYWcoU0VYUCwgU0VYUCwgU0VYUCwgU0VYUCk7CkluZGV4OiBzcmMvbGlicmFyeS9iYXNlL1IvYXR0YWNoLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvYmFzZS9SL2F0dGFjaC5SCShyZXZpc2lvbiA4OTY4NSkKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9hdHRhY2guUgkod29ya2luZyBjb3B5KQpAQCAtMTA1LDYgKzEwNSwxNiBAQAogICAgIGludmlzaWJsZSh2YWx1ZSkKIH0KIAorLnJlYXR0YWNoIDwtIGZ1bmN0aW9uKGZyb20ucG9zLCB0by5wb3MgPSAyTCkKK3sKKyAgICBpZiAoZnJvbS5wb3MgPT0gMUwgfHwgdG8ucG9zID09IDFMKQorICAgICAgICBzdG9wKCIncG9zPTEnIGlzIG5vdCBwb3NzaWJsZSBhbmQgaGFzIGJlZW4gd2FybmVkIGFib3V0IGZvciB5ZWFycyIpCisgICAgc3AgPC0gc2VhcmNoKCkKKyAgICBpZiAoc3RhcnRzV2l0aChzcFtbZnJvbS5wb3NdXSwgInBhY2thZ2U6IikpCisgICAgICAgIHN0b3AoImNhbm5vdCB1c2UgJy5yZWF0dGFjaCcgd2l0aCBwYWNrYWdlIGVudmlyb25tZW50cyIpCisgICAgaW52aXNpYmxlKC5JbnRlcm5hbChyZWF0dGFjaChmcm9tLnBvcywgdG8ucG9zKSkpCit9CisKIGRldGFjaCA8LSBmdW5jdGlvbihuYW1lLCBwb3MgPSAyTCwgdW5sb2FkID0gRkFMU0UsIGNoYXJhY3Rlci5vbmx5ID0gRkFMU0UsCiAgICAgICAgICAgICAgICAgICAgZm9yY2UgPSBGQUxTRSkKIHsKSW5kZXg6IHNyYy9tYWluL2VudmlyLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vZW52aXIuYwkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvbWFpbi9lbnZpci5jCSh3b3JraW5nIGNvcHkpCkBAIC0zMDI2LDYgKzMwMjYsNzYgQEAKIAogLyotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAKKyAgZG9fcmVhdHRhY2gKKworICBNb3ZlIGEgbmFtZWQgZW52aXJvbm1lbnQgb24gdGhlIHNlYXJjaCBwYXRoIHRvIGEgbmV3IHBvc2l0aW9uLgorICBVbmxpa2UgZG9fZGV0YWNoL2RvX2F0dGFjaCwgbm8gYmluZGluZ3MgYXJlIGNvcGllZDsgdGhlIGVudmlyb25tZW50CisgIGlzIHNpbXBseSByZS1wYXJlbnRlZCBpbiBwbGFjZS4KKworKi8KKworYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYXR0YWNoKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKK3sKKyAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsKKworICAgIGludCBmcm9tX3BvcyA9IGFzSW50ZWdlcihDQVIoYXJncykpOworICAgIGludCB0b19wb3MgICA9IGFzSW50ZWdlcihDQURSKGFyZ3MpKTsKKworICAgIGlmIChmcm9tX3BvcyA9PSBOQV9JTlRFR0VSKQorCWVycm9yKF8oIidmcm9tLnBvcycgbXVzdCBiZSBhbiBpbnRlZ2VyIikpOworICAgIGlmICh0b19wb3MgPT0gTkFfSU5URUdFUikKKwllcnJvcihfKCIndG8ucG9zJyBtdXN0IGJlIGFuIGludGVnZXIiKSk7CisgICAgaWYgKGZyb21fcG9zID09IDEgfHwgdG9fcG9zID09IDEpCisJZXJyb3IoXygiJ3Bvcz0xJyBpcyBub3QgcG9zc2libGUiKSk7CisKKyAgICAvKiBDb3VudCB0aGUgc2VhcmNoIHBhdGggbGVuZ3RoIChpbmNsdWRlcyAuR2xvYmFsRW52IGFuZCBwYWNrYWdlOmJhc2UpICovCisgICAgaW50IG4gPSAyOworICAgIGZvciAoU0VYUCB0ID0gRU5DTE9TKFJfR2xvYmFsRW52KTsgdCAhPSBSX0Jhc2VFbnY7IHQgPSBFTkNMT1ModCkpCisJbisrOworCisgICAgaWYgKGZyb21fcG9zID49IG4pCisJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJmcm9tLnBvcyIpOworICAgIGlmICh0b19wb3MgPj0gbikKKwllcnJvcihfKCJpbnZhbGlkICclcycgYXJndW1lbnQiKSwgInRvLnBvcyIpOworCisgICAgLyogRmluZCBmcm9tX2VudiAodGhlIGVudiBhdCBmcm9tX3BvcykgYW5kIGl0cyBwcmVkZWNlc3NvciAqLworICAgIFNFWFAgcHJldl9mcm9tX2VudiA9IFJfR2xvYmFsRW52OworICAgIFNFWFAgZnJvbV9lbnYgPSBFTkNMT1MoUl9HbG9iYWxFbnYpOworICAgIGZvciAoaW50IGkgPSAyOyBpIDwgZnJvbV9wb3M7IGkrKykgeworCXByZXZfZnJvbV9lbnYgPSBmcm9tX2VudjsKKwlmcm9tX2VudiA9IEVOQ0xPUyhmcm9tX2Vudik7CisgICAgfQorCisgICAgaWYgKGZyb21fcG9zID09IHRvX3BvcykKKwlyZXR1cm4gZnJvbV9lbnY7IC8qIGFscmVhZHkgaW4gcGxhY2UgKi8KKworICAgIC8qIEZpbmQgcHJldl90b19lbnYgYW5kIHRvX2VudiBpbiB0aGUgb3JpZ2luYWwgKHVubW9kaWZpZWQpIGNoYWluLgorICAgICAgIFdoZW4gdG9fcG9zID4gZnJvbV9wb3MsIGZyb21fZW52IGxpZXMgYmV0d2VlbiBSX0dsb2JhbEVudiBhbmQgdGhlCisgICAgICAgdGFyZ2V0IHNsb3QsIHNvIG9uZSBleHRyYSBzdGVwIGlzIG5lZWRlZCB0byByZWFjaCBwYXN0IGl0LiAqLworICAgIFNFWFAgcHJldl90b19lbnYgPSBSX0dsb2JhbEVudjsKKyAgICBmb3IgKGludCBpID0gMDsgaSA8IHRvX3BvcyAtIDIgKyAodG9fcG9zID4gZnJvbV9wb3MpOyBpKyspCisJcHJldl90b19lbnYgPSBFTkNMT1MocHJldl90b19lbnYpOworICAgIFNFWFAgdG9fZW52ID0gRU5DTE9TKHByZXZfdG9fZW52KTsKKworICAgIC8qIFJlbGluazogc3BsaWNlIGZyb21fZW52IG91dCwgdGhlbiBpbnNlcnQgaXQgYXQgdGhlIG5ldyBwb3NpdGlvbiAqLworICAgIFBST1RFQ1QoZnJvbV9lbnYpOworICAgIFNFVF9FTkNMT1MocHJldl9mcm9tX2VudiwgRU5DTE9TKGZyb21fZW52KSk7CisgICAgU0VUX0VOQ0xPUyhmcm9tX2VudiwgdG9fZW52KTsKKyAgICBTRVRfRU5DTE9TKHByZXZfdG9fZW52LCBmcm9tX2Vudik7CisKKyNpZmRlZiBVU0VfR0xPQkFMX0NBQ0hFCisgICAgUl9GbHVzaEdsb2JhbENhY2hlRnJvbVRhYmxlKEhBU0hUQUIoZnJvbV9lbnYpKTsKKyAgICBNQVJLX0FTX0dMT0JBTF9GUkFNRShmcm9tX2Vudik7CisjZW5kaWYKKworICAgIFVOUFJPVEVDVCgxKTsgLyogZnJvbV9lbnYgKi8KKyAgICByZXR1cm4gZnJvbV9lbnY7Cit9CisKKworCisvKi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KKwogICBkb19zZWFyY2gKIAogICBQcmludCBvdXQgdGhlIGN1cnJlbnQgc2VhcmNoIHBhdGguCkluZGV4OiBzcmMvbWFpbi9uYW1lcy5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL25hbWVzLmMJKHJldmlzaW9uIDg5Njg1KQorKysgc3JjL21haW4vbmFtZXMuYwkod29ya2luZyBjb3B5KQpAQCAtMjc1LDYgKzI3NSw3IEBACiAKIHsiYXR0YWNoIiwJZG9fYXR0YWNoLAkwLAkxMTEsCTMsCXtQUF9GVU5DQUxMLCBQUkVDX0ZOLAkwfX0sCiB7ImRldGFjaCIsCWRvX2RldGFjaCwJMCwJMTExLAkxLAl7UFBfRlVOQ0FMTCwgUFJFQ19GTiwJMH19LAoreyJyZWF0dGFjaCIsCWRvX3JlYXR0YWNoLAkwLAkxMTEsCTIsCXtQUF9GVU5DQUxMLCBQUkVDX0ZOLAkwfX0sCiB7InNlYXJjaCIsCWRvX3NlYXJjaCwJMCwJMTEsCTAsCXtQUF9GVU5DQUxMLCBQUkVDX0ZOLAkwfX0sCiB7InNldEZpbGVUaW1lIiwJZG9fc2V0RmlsZVRpbWUsCTAsCTExMSwJMiwJe1BQX0ZVTkNBTEwsIFBSRUNfRk4sCTB9fSwKIApJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDg5Njg1KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTIxNTcsNiArMjE1Nyw1MCBAQAogIyMgc2lsZW50bHkgcmV0dXJuZWQgRkFMU0UgcHJldmlvdXNseSwgbGVhZGluZyB0byBmdXJ0aGVyIGNvbmZ1c2lvbgogCiAKKyMjIC5yZWF0dGFjaDogbW92ZSBzZWFyY2gtcGF0aCBlbnRyaWVzIGJ5IHBvc2l0aW9uIC0tLS0KK2xvY2FsKHsKKyAgICAjIyBjaGVjayB0aGF0ICduYW1lJyBhcHBlYXJzIGF0ICdwb3MnIGluIHNlYXJjaCgpIC0tIGJvdGggZGlyZWN0aW9ucworICAgIGFzc2VydEF0UG9zIDwtIGZ1bmN0aW9uKG5hbWUsIHBvcykKKyAgICAgICAgc3RvcGlmbm90KHNlYXJjaCgpW1twb3NdXSA9PSBuYW1lLCBtYXRjaChuYW1lLCBzZWFyY2goKSkgPT0gcG9zKQorCisgICAgZTEgPC0gbmV3LmVudihwYXJlbnQgPSBlbXB0eWVudigpKTsgZTEkeCA8LSAxTAorICAgIGUyIDwtIG5ldy5lbnYocGFyZW50ID0gZW1wdHllbnYoKSk7IGUyJHkgPC0gMkwKKyAgICBhdHRhY2goZTEsIG5hbWUgPSAidGVzdDplMSIsIHdhcm4uY29uZmxpY3RzID0gRkFMU0UpCisgICAgYXR0YWNoKGUyLCBuYW1lID0gInRlc3Q6ZTIiLCB3YXJuLmNvbmZsaWN0cyA9IEZBTFNFKQorICAgICMjIHNlYXJjaCgpIGlzIG5vdzogLkdsb2JhbEVudiwgdGVzdDplMiAoMiksIHRlc3Q6ZTEgKDMpLCAuLi4KKyAgICBvbi5leGl0KHsgZGV0YWNoKCJ0ZXN0OmUyIik7IGRldGFjaCgidGVzdDplMSIpIH0pCisKKyAgICBhc3NlcnRBdFBvcygidGVzdDplMiIsIDJMKTsgYXNzZXJ0QXRQb3MoInRlc3Q6ZTEiLCAzTCkKKworICAgICMjIG1vdmUgZTEgZm9yd2FyZCAoMyAtPiAyKTsgdmVyaWZ5IHRoZSBzYW1lIGVudiBvYmplY3QgbGFuZHMgYXQgcG9zIDIKKyAgICBlbnYzIDwtIGFzLmVudmlyb25tZW50KDNMKQorICAgIC5yZWF0dGFjaChmcm9tLnBvcyA9IDNMLCB0by5wb3MgPSAyTCkKKyAgICBhc3NlcnRBdFBvcygidGVzdDplMSIsIDJMKTsgYXNzZXJ0QXRQb3MoInRlc3Q6ZTIiLCAzTCkKKyAgICBzdG9waWZub3QoaWRlbnRpY2FsKGFzLmVudmlyb25tZW50KDJMKSwgZW52MykpCisKKyAgICAjIyBtb3ZlIGl0IGJhY2sgKDIgLT4gMykKKyAgICAucmVhdHRhY2goZnJvbS5wb3MgPSAyTCwgdG8ucG9zID0gM0wpCisgICAgYXNzZXJ0QXRQb3MoInRlc3Q6ZTIiLCAyTCk7IGFzc2VydEF0UG9zKCJ0ZXN0OmUxIiwgM0wpCisKKyAgICAjIyBuby1vcCB3aGVuIGZyb20ucG9zID09IHRvLnBvcworICAgIC5yZWF0dGFjaChmcm9tLnBvcyA9IDJMLCB0by5wb3MgPSAyTCkKKyAgICBhc3NlcnRBdFBvcygidGVzdDplMiIsIDJMKTsgYXNzZXJ0QXRQb3MoInRlc3Q6ZTEiLCAzTCkKKworICAgICMjIGVycm9yOiBwb3MgPSAxCisgICAgYXNzZXJ0RXJyVigucmVhdHRhY2goMUwsIDJMKSkKKyAgICBhc3NlcnRFcnJWKC5yZWF0dGFjaCgyTCwgMUwpKQorCisgICAgIyMgZXJyb3I6IHBvcyA+PSBsZW5ndGgoc2VhcmNoKCkpICBbcGFja2FnZTpiYXNlIGJvdW5kYXJ5XQorICAgIG4gPC0gbGVuZ3RoKHNlYXJjaCgpKQorICAgIGFzc2VydEVyclYoLnJlYXR0YWNoKDJMLCBuKSkKKyAgICBhc3NlcnRFcnJWKC5yZWF0dGFjaChuLCAyTCkpCisKKyAgICAjIyBlcnJvcjogcGFja2FnZSBlbnZpcm9ubWVudCByZWZ1c2VkIGF0IFIgbGV2ZWwKKyAgICBwa2dfcG9zIDwtIHdoaWNoKHN0YXJ0c1dpdGgoc2VhcmNoKCksICJwYWNrYWdlOiIpKVsxTF0KKyAgICBhc3NlcnRFcnJWKC5yZWF0dGFjaChwa2dfcG9zLCAyTCkpCit9KQorCisKICMjIHJlcCgpIGVycm9yIG1lc3NhZ2VzIC0tIFBSIzE4OTI2CiByZXBYZXJyIDwtIHF1b3RlKHsKICAgICByZXAoMSwgICB0aW1lcyA9IDQ1MDM1OTk2MjczNzA0OTYsIGVhY2ggPSAyKQo=",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-03-23 21:04:42"
+}

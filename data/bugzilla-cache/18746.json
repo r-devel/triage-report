@@ -1,0 +1,162 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "last_change_time": "2025-09-15T15:18:16Z",
+        "cc_detail": [
+          {
+            "name": "luke",
+            "id": 34,
+            "real_name": "Luke Tierney"
+          },
+          {
+            "id": 2442,
+            "name": "tomas.kalibera",
+            "real_name": "Tomas Kalibera"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "?all.equal should mention it ignores the S4 bit?",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "component": "Documentation",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc": [
+          "luke",
+          "tomas.kalibera"
+        ],
+        "qa_contact": "",
+        "id": 18746,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2024-06-16T05:27:33Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18746": {
+        "comments": [
+          {
+            "time": "2024-06-16T05:27:33Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 100954,
+            "tags": [],
+            "count": 0,
+            "bug_id": 18746,
+            "text": "Noticed this today:\n\n```\nall.equal(1:10, asS4(1:10))\n# [1] TRUE\n```\n\nObviously, `identical()` fails for these two objects.\n\nI am assuming* it's intentional that `all.equal()` ignores the S4 bit, at least for the base methods documented in `?all.equal`, but it would be nice for this to be documented more explicitly.\n\nIf it's confirmed this is just a documentation issue I can work on a patch -- I think just including the above as an example would be plenty.\n\nContext: working on https://github.com/Rdatatable/data.table/issues/6185\n\n* Some evidence: this behavior is mentioned in Bug #13209",
+            "creation_time": "2024-06-16T05:27:33Z"
+          },
+          {
+            "is_private": false,
+            "time": "2024-06-16T11:22:38Z",
+            "id": 100955,
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 1,
+            "text": "I'm not sure we want to advertise that it is possible to have the S4 bit/flag set without having a class attribute. That seems like a mis-feature we should try to get rid of.",
+            "bug_id": 18746,
+            "creator": "luke",
+            "creation_time": "2024-06-16T11:22:38Z"
+          },
+          {
+            "bug_id": 18746,
+            "text": "Thanks Luke, I think that's a separate issue, I was just giving the minimal possible example to illustrate the point that `all.equal()` does not consider the S4 bit when evaluating equality. We get the same from a classed example:\n\n```\nx=structure(1:10, class='foo')\nall.equal(x, asS4(x))\n# [1] TRUE\n```",
+            "count": 2,
+            "is_markdown": true,
+            "creation_time": "2024-06-16T17:21:49Z",
+            "creator": "michaelchirico4",
+            "id": 100957,
+            "time": "2024-06-16T17:21:49Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creator": "luke",
+            "creation_time": "2024-06-16T17:58:16Z",
+            "is_markdown": true,
+            "count": 3,
+            "text": "(In reply to Michael Chirico from comment #2)\n> Thanks Luke, I think that's a separate issue, I was just giving the minimal\n> possible example to illustrate the point that `all.equal()` does not\n> consider the S4 bit when evaluating equality. We get the same from a classed\n> example:\n> \n> ```\n> x=structure(1:10, class='foo')\n> all.equal(x, asS4(x))\n> # [1] TRUE\n> ```\n\nIts a non-issue if the S4 bit is only set for an object with an S4 class, which is what we should work towards.\n\nAlso: the words 'S4 bit' should never have to appear in user-facing documentation. No one should have to think about a low level mechanism like that while trying to get real work done.",
+            "bug_id": 18746,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2024-06-16T17:58:16Z",
+            "id": 100958
+          },
+          {
+            "time": "2024-06-16T20:49:36Z",
+            "id": 100959,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "> the words 'S4 bit' should never have to appear in user-facing documentation.\n\nFrom [`?isS4`](https://github.com/r-devel/r-svn/blob/f369537ff89affe8707b6ce5108162a1cde4dc23/src/library/base/man/isS4.Rd#L50-L60)\n\n> `isS4` always returns `TRUE` or `FALSE` according to whether the internal flag marking an S4 object has been turned on for this object.\n\nShould mention of the flag just be limited to `?isS4`, then, or is it \"internal flag\" vs. \"S4 bit\" phrasing that's the point of contention?\n\nAnyway, I don't think we need to mention the implementation detail to make progress here. The following as an example in `?all.equal` would be enough:\n\n```\nx <- structure(1:10, class=\"S3class\")\nall.equal(x, asS4(x)) # comparison is not affected by isS4()\n```\n\n> Its a non-issue if the S4 bit is only set for an object with an S4 class, which is what we should work towards.\n\nThe issue is how to do this when creating an object based on an S4 object, ensuring S4-ness is preserved, all within C.\n\nConcretely, are we doing something wrong in these cases?\n\nhttps://github.com/Rdatatable/data.table/blob/bab0f1c7f08264d573d317524418b6e106169ecb/src/assign.c#L147-L156\n\nhttps://github.com/Rdatatable/data.table/blob/bab0f1c7f08264d573d317524418b6e106169ecb/src/dogroups.c#L480-L488\n\nOr is the trouble not with what we do in C, but with our goal of writing good regression tests on whether we've handled S4 objects correctly?",
+            "bug_id": 18746,
+            "count": 4,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "creation_time": "2024-06-16T20:49:36Z"
+          },
+          {
+            "id": 102256,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18746,
+            "text": "Comparing R objects/values is a very complex task and it is inevitable that the documentation cannot cover all the details. It might be best to leave this undocumented.\n\nI agree we shouldn't be advertising that one can currently have an S4 object without a class attribute, so that we can instead eventually get rid of that option.\n\nI think even asS4() should be regarded as a very low-level method that ideally wouldn't be used by users or general packages. This is not the normal way to create S4 objects.\n\nI am not able to comment on the linked data.table code, I don't know enough context, what the functions are meant to be doing. Of course it would be simpler if data.table could use the duplication code provided by base R, but I don't know the constraints. It might be best to ask such questions on R-devel list (or maybe R-pkg-devel).",
+            "count": 5,
+            "creation_time": "2025-09-15T15:18:16Z",
+            "time": "2025-09-15T15:18:16Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "tomas.kalibera"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18746": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-09-15 15:18:16"
+}

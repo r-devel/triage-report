@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Wishlist",
+        "product": "R",
+        "priority": "P5",
+        "version": "R 4.0.x",
+        "creation_time": "2020-05-01T02:45:12Z",
+        "whiteboard": "",
+        "severity": "enhancement",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 17778,
+        "cc": [],
+        "qa_contact": "",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "barplot should take user-supplied lwd",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2020-05-01T02:45:12Z"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17778": {
+        "comments": [
+          {
+            "tags": [],
+            "id": 95698,
+            "is_private": false,
+            "creation_time": "2020-05-01T02:45:12Z",
+            "text": "Created attachment 2585\nadd lwd argument to barplot.default\n\n> barplot(1:10, lwd = .5)\n\nshould \"just work\". Current workaround is fairly awkward compared to most other base plotting methods which do accept lwd:\n\n> old = par('lwd')\n> par(lwd = .5)\n> barplot(1:10)\n> par(lwd = old)\n\nFrom a glance at the code, there's two options:\n\n 1. Pass ... to internal helper xyrect(), which then passes it to rect(), which understands lwd [the potential issue is ... is currently being passed to plot.window(); I'm not sure if there's any potential side effects]\n 2. Add lwd as an argument to barplot.default(), then to xyrect(). This will surely work, the downside I guess is that barplot.default already has 31 arguments.\n\nI have attached option 2 as a patch.\n\nPS lwd could probably be added to a few other plotting functions -- at a glance I notice the same applies to hist.default()",
+            "bug_id": 17778,
+            "count": 0,
+            "attachment_id": 2585,
+            "time": "2020-05-01T02:45:12Z",
+            "creator": "michaelchirico4",
+            "is_markdown": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "17778": [
+        {
+          "creation_time": "2020-05-01T02:45:12Z",
+          "summary": "add lwd argument to barplot.default",
+          "file_name": "patch",
+          "bug_id": 17778,
+          "last_change_time": "2020-05-01T02:45:12Z",
+          "size": 2819,
+          "is_private": false,
+          "id": 2585,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2dyYXBoaWNzL1IvYmFycGxvdC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2dyYXBoaWNzL1IvYmFycGxvdC5SCShyZXZpc2lvbiA3ODMzNykKKysrIHNyYy9saWJyYXJ5L2dyYXBoaWNzL1IvYmFycGxvdC5SCSh3b3JraW5nIGNvcHkpCkBAIC0yNCwxMiArMjQsMTIgQEAKIAkgZGVuc2l0eSA9IE5VTEwsIGFuZ2xlID0gNDUsCiAJIGNvbCA9IE5VTEwsIGJvcmRlciA9IHBhcigiZmciKSwKIAkgbWFpbiA9IE5VTEwsIHN1YiA9IE5VTEwsIHhsYWIgPSBOVUxMLCB5bGFiID0gTlVMTCwKLQkgeGxpbSA9IE5VTEwsIHlsaW0gPSBOVUxMLCB4cGQgPSBUUlVFLCBsb2cgPSAiIiwKKwkgeGxpbSA9IE5VTEwsIHlsaW0gPSBOVUxMLCB4cGQgPSBUUlVFLCBsb2cgPSAiIiwgbHdkID0gcGFyKCJsd2QiKSwKIAkgYXhlcyA9IFRSVUUsIGF4aXNuYW1lcyA9IFRSVUUsCiAJIGNleC5heGlzID0gcGFyKCJjZXguYXhpcyIpLCBjZXgubmFtZXMgPSBwYXIoImNleC5heGlzIiksCi0gICAgICAgICBpbnNpZGUgPSBUUlVFLCBwbG90ID0gVFJVRSwgYXhpcy5sdHkgPSAwLCBvZmZzZXQgPSAwLCBhZGQgPSBGQUxTRSwKKwkgaW5zaWRlID0gVFJVRSwgcGxvdCA9IFRSVUUsIGF4aXMubHR5ID0gMCwgb2Zmc2V0ID0gMCwgYWRkID0gRkFMU0UsCiAJIGFubiA9ICFhZGQgJiYgcGFyKCJhbm4iKSwKLSAgICAgICAgIGFyZ3MubGVnZW5kID0gTlVMTCwgLi4uKQorCSBhcmdzLmxlZ2VuZCA9IE5VTEwsIC4uLikKICB7CiAgICAgaWYgKCFtaXNzaW5nKGluc2lkZSkpIC5Ob3RZZXRVc2VkKCJpbnNpZGUiLCBlcnJvciA9IEZBTFNFKSMgLT4gaGVscCguKQogCkBAIC0xNDksNyArMTQ5LDcgQEAKIAkgICAgeHlyZWN0KHJlY3RiYXNlICsgb2Zmc2V0LCB3LmwsIGMoaGVpZ2h0KSArIG9mZnNldCwgdy5yLAogCQkgICBob3Jpem9udGFsID0gaG9yaXosCiAJCSAgIGFuZ2xlID0gYW5nbGUsIGRlbnNpdHkgPSBkZW5zaXR5LAotICAgICAgICAgICAgICAgICAgIGNvbCA9IGNvbCwgYm9yZGVyID0gYm9yZGVyKQorCQkJIGNvbCA9IGNvbCwgYm9yZGVyID0gYm9yZGVyLCBsd2QgPSBsd2QpCiAJZWxzZSB7CiAJICAgICMjIG5vSW5zaWRlIDwtIE5DID4gMSAmJiAhaW5zaWRlICMgb3V0c2lkZSBib3JkZXIsIGJ1dCBub3QgaW5zaWRlCiAJICAgICMjIGJvcmRyIDwtIGlmKG5vSW5zaWRlKSAwIGVsc2UgYm9yZGVyCkBAIC0xNTcsNyArMTU3LDcgQEAKIAkJeHlyZWN0KGhlaWdodFsxTDpOUiwgaV0gKyBvZmZzZXRbaV0sIHcubFtpXSwKIAkJICAgICAgIGhlaWdodFsgLTEsICBpXSArIG9mZnNldFtpXSwgdy5yW2ldLAogCQkgICAgICAgaG9yaXpvbnRhbCA9IGhvcml6LCBhbmdsZSA9IGFuZ2xlLCBkZW5zaXR5ID0gZGVuc2l0eSwKLQkJICAgICAgIGNvbCA9IGNvbCwgYm9yZGVyID0gYm9yZGVyKSMgPSBib3JkcgorCQkgICAgICAgY29sID0gY29sLCBib3JkZXIgPSBib3JkZXIsIGx3ZCA9IGx3ZCkjID0gYm9yZHIKIAkJIyMgaWYobm9JbnNpZGUpCiAJCSMjICB4eXJlY3QobWluKGhlaWdodFssIGldKSwgdy5sW2ldLCBtYXgoaGVpZ2h0WywgaV0pLCB3LnJbaV0sCiAJCSMjCSAgIGhvcml6b250YWwgPSBob3JpeiwgYm9yZGVyPSBib3JkZXIpCkluZGV4OiBzcmMvbGlicmFyeS9ncmFwaGljcy9tYW4vYmFycGxvdC5SZAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9ncmFwaGljcy9tYW4vYmFycGxvdC5SZAkocmV2aXNpb24gNzgzMzcpCisrKyBzcmMvbGlicmFyeS9ncmFwaGljcy9tYW4vYmFycGxvdC5SZAkod29ya2luZyBjb3B5KQpAQCAtMTksNyArMTksNyBAQAogICAgICAgICBob3JpeiA9IEZBTFNFLCBkZW5zaXR5ID0gTlVMTCwgYW5nbGUgPSA0NSwKICAgICAgICAgY29sID0gTlVMTCwgYm9yZGVyID0gcGFyKCJmZyIpLAogICAgICAgICBtYWluID0gTlVMTCwgc3ViID0gTlVMTCwgeGxhYiA9IE5VTEwsIHlsYWIgPSBOVUxMLAotICAgICAgICB4bGltID0gTlVMTCwgeWxpbSA9IE5VTEwsIHhwZCA9IFRSVUUsIGxvZyA9ICIiLAorICAgICAgICB4bGltID0gTlVMTCwgeWxpbSA9IE5VTEwsIHhwZCA9IFRSVUUsIGxvZyA9ICIiLCBsd2QgPSBwYXIoImx3ZCIpLAogICAgICAgICBheGVzID0gVFJVRSwgYXhpc25hbWVzID0gVFJVRSwKICAgICAgICAgY2V4LmF4aXMgPSBwYXIoImNleC5heGlzIiksIGNleC5uYW1lcyA9IHBhcigiY2V4LmF4aXMiKSwKICAgICAgICAgaW5zaWRlID0gVFJVRSwgcGxvdCA9IFRSVUUsIGF4aXMubHR5ID0gMCwgb2Zmc2V0ID0gMCwKQEAgLTg5LDYgKzg5LDcgQEAKICAgXGl0ZW17eHBkfXtsb2dpY2FsLiBTaG91bGQgYmFycyBiZSBhbGxvd2VkIHRvIGdvIG91dHNpZGUgcmVnaW9uP30KICAgXGl0ZW17bG9nfXtzdHJpbmcgc3BlY2lmeWluZyBpZiBheGlzIHNjYWxlcyBzaG91bGQgYmUgbG9nYXJpdGhtaWM7IHNlZQogICAgIFxjb2Rle1xsaW5re3Bsb3QuZGVmYXVsdH19Ln0KKyAgXGl0ZW17bHdkfXtsaW5lIHdpZHRoIGZvciBib3JkZXJzIGFuZCBzaGFkaW5nLiBQYXNzZWQgb24gdG8gXGNvZGV7XGxpbmt7cmVjdH19fQogICBcaXRlbXtheGVzfXtsb2dpY2FsLiAgSWYgXGNvZGV7VFJVRX0sIGEgdmVydGljYWwgKG9yIGhvcml6b250YWwsIGlmCiAgICAgXGNvZGV7aG9yaXp9IGlzIHRydWUpIGF4aXMgaXMgZHJhd24ufQogICBcaXRlbXtheGlzbmFtZXN9e2xvZ2ljYWwuICBJZiBcY29kZXtUUlVFfSwgYW5kIGlmIHRoZXJlIGFyZQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2020-05-01 02:45:12"
+}

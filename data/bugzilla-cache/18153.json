@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2021-07-14T20:23:52Z",
+        "version": "R 4.1.0",
+        "whiteboard": "",
+        "id": 18153,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Windows GUI / Window specific",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "update.packages() reinstalls same version of package in some cases",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2021-07-14T20:24:26Z",
+        "cc_detail": [],
+        "platform": "Other",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        }
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18153": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2021-07-14T20:23:52Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "id": 97502,
+            "is_private": false,
+            "creation_time": "2021-07-14T20:23:52Z",
+            "bug_id": 18153,
+            "text": "This seems to occur if the source version and the binary version of the package on CRAN differ. Currently, this is true for isoband. Using this R script, in a new session:\n\n```\n.libPaths(tempdir())\ninstall.packages(\"isoband\", type = \"binary\")\nupdate.packages(lib.loc = tempdir(), ask = FALSE)\n```\n\nI see:\n\n```\n> .libPaths(tempdir())\n> install.packages(\"isoband\", type = \"binary\")\nInstalling package into 'C:/Users/kevinushey/AppData/Local/Temp/RtmpUFeV9y'\n(as 'lib' is unspecified)\n\n  There is a binary version available (and will be installed) but the source version is later:\n        binary source\nisoband  0.2.4  0.2.5\n\ntrying URL 'https://cran.rstudio.com/bin/windows/contrib/4.1/isoband_0.2.4.zip'\n length 3062211 bytes (2.9 MB)\ndownloaded 2.9 MB\n\npackage 'isoband' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n\tC:\\Users\\kevinushey\\AppData\\Local\\Temp\\RtmpUFeV9y\\downloaded_packages\n> update.packages(lib.loc = tempdir(), ask = FALSE)\n\n  There is a binary version available but the source version is later:\n        binary source needs_compilation\nisoband  0.2.4  0.2.5              TRUE\n\n  Binaries will be installed\ntrying URL 'https://cran.rstudio.com/bin/windows/contrib/4.1/isoband_0.2.4.zip'\n length 3062211 bytes (2.9 MB)\ndownloaded 2.9 MB\n\npackage 'isoband' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n\tC:\\Users\\kevinushey\\AppData\\Local\\Temp\\RtmpUFeV9y\\downloaded_packages\n```\n\n---\n\n```\n> sessionInfo()\nR version 4.1.0 (2021-05-18)\nPlatform: x86_64-w64-mingw32/x64 (64-bit)\nRunning under: Windows 10 x64 (build 19043)\n\nMatrix products: default\n\nlocale:\n[1] LC_COLLATE=English_United States.1252  LC_CTYPE=English_United States.1252   \n[3] LC_MONETARY=English_United States.1252 LC_NUMERIC=C                          \n[5] LC_TIME=English_United States.1252    \n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.1.0 tools_4.1.0   \n\n> getOption(\"pkgType\")\n[1] \"both\"\n```",
+            "count": 0
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18153": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2021-07-14 20:24:26"
+}

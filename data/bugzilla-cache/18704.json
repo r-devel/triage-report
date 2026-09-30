@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "blocks": [],
+        "url": "",
+        "summary": "Enhance detach() for packages to return what names were detached",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2024-04-15T16:54:52Z",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2024-04-15T16:54:52Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 18704,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "component": "Add-ons",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18704": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "count": 0,
+            "text": "Following up r-devel thread https://stat.ethz.ch/pipermail/r-devel/2024-April/083319.html.\n\nMartin's suggestion:\n\n```\n    >> ?library could also mention using detach() followed by library() or\n    >> attachNamespace() with a new include.only specification.\n\n    > This is the \"quite hard to accomplish\" I alluded to, admittedly I hadn't\n    > forced myself to write it all out -- maybe it's not as bad as all that.\n    > After some iterations, today I think we'd want to do...\n\n    > modify_attach <- function(pkg, new_names) {\n    >   if (!startsWith(pkg, \"package:\")) pkg <- paste0(\"package:\", pkg)\n    >   old <- tryCatch(ls(pkg, all.names=TRUE), error=\\(c) character())\n    >   if (length(old)) detach(pkg)\n    >   attachNamespace(.rmpkg(pkg), include.only=c(new_names, old))\n    > }\n\n    > Perhaps detach() could invisibly return the exported names to make this a\n    > tiny bit easier (today it returns NULL):\n\nI agree that such changed detach() behavior would be \"nice\" here;\nbut I wouldn't like to change its default behavior, notably as\nin 99.5% of its use, the names would not be used.\nI'd agree to add a new option for detach() to return the names\n(visibly in that case).\n```\n\nI still think returning the names by default (_invisibly_) should be considered -- those 99.5% of cases where it's ignored will continue to work and ostensibly behave \"as before\" because the different return is just ignored.\n\nOne reason I'm not convinced about using an option is that we already have different return behavior of `detach()` for detaching environments vs. packages -- the former returns \"the environment which was returned by `attach` when the object was attached\".\n\nSo any new option for `detach()` would have to either (a) override that return behavior for `detach(env)` to return `ls(env)` instead or (b) be an option that has no effect for `detach(env)` and only applies for `detach(package)`, a design which I find awkward if we can avoid it.",
+            "bug_id": 18704,
+            "creator": "michaelchirico4",
+            "creation_time": "2024-04-15T16:54:52Z",
+            "is_private": false,
+            "time": "2024-04-15T16:54:52Z",
+            "id": 100731,
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18704": []
+    }
+  },
+  "source_changed": "2024-04-15 16:54:52"
+}

@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2025-07-24T16:27:21Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Documentation of how to use setMethod in tests is lacking",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "All",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "deadline": {},
+        "id": 18922,
+        "severity": "normal",
+        "dupe_of": {},
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2025-07-24T16:27:21Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Documentation",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18922": {
+        "comments": [
+          {
+            "id": 101909,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18922,
+            "text": "Sometimes, in unit tests, it is nice to register some temporary S4 methods and thereby keep the test more hermetic (not depending on the lifecycle of S4 methods in any other package).\n\nIt seems natural to do something like: `setMethod(...); test_code(...); removeMethod(...)`.\n\nBut today, `removeMethod()` is not mentioned at all in `?setMethod`, and `?removeMethod` looks like a scary admonition that you're eating the apple in Eden.\n\nHaving a well-lit path for using `setMethod()` in tests is appropriate, IMO, but maybe I'm missing something about what that endorsed approach is. Maybe we are recommending such tests be run in a sub-process instead?\n\nAs of today I only see a handful of CRAN packages using this:\n\nhttps://github.com/search?q=org%3Acran%20path%3Atests%20%2FremoveMethod%5C(%2F&type=code",
+            "count": 0,
+            "creation_time": "2025-07-24T16:27:21Z",
+            "time": "2025-07-24T16:27:21Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18922": []
+    }
+  },
+  "source_changed": "2025-07-24 16:27:21"
+}

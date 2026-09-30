@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "id": 3462,
+          "name": "jaganmn2",
+          "real_name": "Mikael Jagan"
+        },
+        "resolution": "",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "platform": "Other",
+        "flags": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2024-12-07T02:02:29Z",
+        "blocks": [],
+        "url": "",
+        "summary": "methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "component": "S4methods",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "id": 18833,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2024-12-07T01:20:58Z",
+        "version": "R 4.4.x"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18833": {
+        "comments": [
+          {
+            "creation_time": "2024-12-07T01:20:58Z",
+            "count": 0,
+            "text": "Created attachment 3434\nmethods:::.identicalGeneric comparing default expressions also when names match without \"...\"\n\nThis bug is related to but different from bug 18831.\n\nCurrently, the installation output of **Matrix** ends with:\n\n```\n** byte-compile and prepare package for lazy loading\nCreating a generic function for 'drop' from package 'base' in package 'Matrix'\nCreating a generic function for 'chol2inv' from 'base' in package 'Matrix'\n    (from the saved implicit definition)\nCreating a generic function for 'chol2inv' from package 'base' in package 'Matrix'\n## <irrelevant noise due to missing class definitions>\nCreating a generic function for 'colSums' from package 'base' in package 'Matrix'\nCreating a generic function for 'colMeans' from package 'base' in package 'Matrix'\nCreating a generic function for 'rowSums' from package 'base' in package 'Matrix'\nCreating a generic function for 'rowMeans' from package 'base' in package 'Matrix'\nCreating a generic function for 'cov2cor' from package 'stats' in package 'Matrix'\nCreating a generic function for 'diag' from package 'base' in package 'Matrix'\nCreating a generic function for 'diag<-' from package 'base' in package 'Matrix'\nCreating a generic function for 'norm' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.Q' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.R' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.X' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.coef' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.fitted' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.resid' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.qty' from package 'base' in package 'Matrix'\nCreating a generic function for 'qr.qy' from package 'base' in package 'Matrix'\nCreating a generic function for 'rcond' from 'base' in package 'Matrix'\n    (from the saved implicit definition)\nCreating a generic function for 'rcond' from package 'base' in package 'Matrix'\nCreating a generic function for 'toeplitz' from 'stats' in package 'Matrix'\n    (from the saved implicit definition)\nCreating a generic function for 'toeplitz' from package 'stats' in package 'Matrix'\nCreating a generic function for 'which' from package 'base' in package 'Matrix'\nCreating a generic function for 'zapsmall' from package 'base' in package 'Matrix'\n```\n\nThe output is from `setMethod` calls in `Matrix/R/*.R`.  What struck me as odd is that `chol2inv`, `rcond`, and `toeplitz` get the parenthetical `(from the saved implicit definition)`, while other functions with implicit generic function definitions, such as `norm` and `qr.X`, do not.\n\nIt turns out that `setGeneric(<implicit>)`, which is called from `setMethod(<implicit>)`, uses `methods:::.identicalGeneric` to test whether the signatures of the implicit generic function and \"original\" function are similar enough.  If the answer is \"no\", then it signals the message with parenthesis.\n\nIt makes sense, then, that the message is signaled for `chol2inv`, `rcond`, and `toeplitz`:\n\n```\n> args(rcond)\nfunction (x, norm = c(\"O\", \"I\", \"1\"), triangular = FALSE, uplo = \"U\", \n    ...) \nNULL\n> args(methods:::.implicitTable[[\"rcond\"]])\nfunction (x, norm, ...) \nNULL\n> setClass(\"zzz\")\n> setMethod(\"rcond\", c(x = \"zzz\", norm = \"missing\"), function(x, norm, ...) NULL)\nCreating a generic function for 'rcond' from 'base' in the global environment\n    (from the saved implicit definition)\nCreating a generic function for 'rcond' from package 'base' in the global environment\n> \n```\n\nThe \"bug\" is that the message is not __also__ signaled for `colSums`, `colMeans`, `rowSums`, `rowMeans`, `norm`, and `qr.X`.  In each of these cases, the formal arguments other than `...` have the identical names but non-identical default expressions.  `methods:::.identicalGeneric` \"forgets\" to tests for differences in the default expressions.\n\n```\n> args(norm)\nfunction (x, type = c(\"O\", \"I\", \"F\", \"M\", \"2\")) \nNULL\n> args(methods:::.implicitTable[[\"norm\"]])\nfunction (x, type, ...) \nNULL\n> setClass(\"zzz\")\n> setMethod(\"norm\", c(x = \"zzz\", type = \"missing\"), function(x, type, ...) NULL)\nCreating a generic function for 'norm' from package 'base' in the global environment\n> \n```\n\nA small adjustment to logic in `methods:::.identicalGeneric` fixes the bug.\n\n```\nIndex: src/library/methods/R/Methods.R\n===================================================================\n--- src/library/methods/R/Methods.R\t(revision 87423)\n+++ src/library/methods/R/Methods.R\t(working copy)\n@@ -1473,7 +1473,9 @@\n     ## xtra... <- FALSE\n     if(!identical(formals(f1d), formals(f2d))) {\n \ta1 <- names(formals(f1d)); a2 <- names(formals(f2d))\n-\tif(identical(a1, a2))\n+\tif(identical(a1, a2) ||\n+\t   (identical(c(a1, \"...\"), a2) && allow.extra.dots &&\n+\t    !identical(`length<-`(formals(f1d), length(a2)), formals(f2d))))\n \t    return(gettext(\"formal arguments differ (in default values?)\"))\n \telse if(identical(c(a1, \"...\"), a2) && allow.extra.dots)\n             ## silently accept an extra \"...\"\n```\n\nNow:\n\n```\n> setClass(\"zzz\")\n> setMethod(\"norm\", c(x = \"zzz\", type = \"missing\"), function(x, type, ...) NULL)\nCreating a generic function for 'norm' from 'base' in the global environment\n    (from the saved implicit definition)\nCreating a generic function for 'norm' from package 'base' in the global environment\n> \n```",
+            "bug_id": 18833,
+            "tags": [],
+            "is_private": false,
+            "id": 101413,
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "attachment_id": 3434,
+            "time": "2024-12-07T01:20:58Z"
+          },
+          {
+            "is_markdown": true,
+            "count": 1,
+            "text": "Oops - the patch above mixed up `1` and `2` and so failed in `reg-S4.R`.  The one below passes `make check-all`.\n\n```\nIndex: src/library/methods/R/Methods.R\n===================================================================\n--- src/library/methods/R/Methods.R\t(revision 87423)\n+++ src/library/methods/R/Methods.R\t(working copy)\n@@ -1473,7 +1473,9 @@\n     ## xtra... <- FALSE\n     if(!identical(formals(f1d), formals(f2d))) {\n \ta1 <- names(formals(f1d)); a2 <- names(formals(f2d))\n-\tif(identical(a1, a2))\n+\tif(identical(a1, a2) ||\n+\t   (identical(c(a1, \"...\"), a2) && allow.extra.dots &&\n+\t    !identical(`length<-`(formals(f2d), length(a1)), formals(f1d))))\n \t    return(gettext(\"formal arguments differ (in default values?)\"))\n \telse if(identical(c(a1, \"...\"), a2) && allow.extra.dots)\n             ## silently accept an extra \"...\"\n```",
+            "bug_id": 18833,
+            "creator": "jaganmn2",
+            "creation_time": "2024-12-07T02:02:29Z",
+            "is_private": false,
+            "time": "2024-12-07T02:02:29Z",
+            "id": 101414,
+            "tags": [],
+            "attachment_id": {}
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18833": [
+        {
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9NZXRob2RzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL01ldGhvZHMuUgkocmV2aXNpb24gODc0MjMpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xNDczLDcgKzE0NzMsOSBAQAogICAgICMjIHh0cmEuLi4gPC0gRkFMU0UKICAgICBpZighaWRlbnRpY2FsKGZvcm1hbHMoZjFkKSwgZm9ybWFscyhmMmQpKSkgewogCWExIDwtIG5hbWVzKGZvcm1hbHMoZjFkKSk7IGEyIDwtIG5hbWVzKGZvcm1hbHMoZjJkKSkKLQlpZihpZGVudGljYWwoYTEsIGEyKSkKKwlpZihpZGVudGljYWwoYTEsIGEyKSB8fAorCSAgIChpZGVudGljYWwoYyhhMSwgIi4uLiIpLCBhMikgJiYgYWxsb3cuZXh0cmEuZG90cyAmJgorCSAgICAhaWRlbnRpY2FsKGBsZW5ndGg8LWAoZm9ybWFscyhmMWQpLCBsZW5ndGgoYTIpKSwgZm9ybWFscyhmMmQpKSkpCiAJICAgIHJldHVybihnZXR0ZXh0KCJmb3JtYWwgYXJndW1lbnRzIGRpZmZlciAoaW4gZGVmYXVsdCB2YWx1ZXM/KSIpKQogCWVsc2UgaWYoaWRlbnRpY2FsKGMoYTEsICIuLi4iKSwgYTIpICYmIGFsbG93LmV4dHJhLmRvdHMpCiAgICAgICAgICAgICAjIyBzaWxlbnRseSBhY2NlcHQgYW4gZXh0cmEgIi4uLiIK",
+          "creator": "jaganmn2",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "methods:::.identicalGeneric comparing default expressions also when names match without \"...\"",
+          "creation_time": "2024-12-07T01:20:58Z",
+          "bug_id": 18833,
+          "file_name": "patch.diff",
+          "size": 717,
+          "last_change_time": "2024-12-07T01:20:58Z",
+          "id": 3434,
+          "is_private": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2024-12-07 02:02:29"
+}

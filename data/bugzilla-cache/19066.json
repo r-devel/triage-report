@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-04-29T20:47:55Z",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "Provide a more explicit error message for array(dim = NA)",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19066,
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-04-29T20:47:55Z",
+        "whiteboard": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19066": {
+        "comments": [
+          {
+            "time": "2026-04-29T20:47:55Z",
+            "id": 103005,
+            "is_private": false,
+            "attachment_id": 3689,
+            "tags": [],
+            "text": "Created attachment 3689\nExplicitly check and err for invalid dimensions in do_array.\n\nFor example:\n\n```\n> array(1, dim=NA)\nError in array(1, dim = NA) : negative length vectors are not allowed\n```\n\nNormally, trying to use NA for an arrays dimensions would give a more helpful error message like:\n\n```\n> attributes(x) <- list(dim = NA)\nError in attributes(x) <- list(dim = NA) :\n  the dims contain missing values\n```\n\nI've attached a patch that updates the error reporting in this scenario to match.",
+            "bug_id": 19066,
+            "count": 0,
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "creation_time": "2026-04-29T20:47:55Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19066": [
+        {
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2FycmF5LmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vYXJyYXkuYwkocmV2aXNpb24gODk5NjEpCisrKyBzcmMvbWFpbi9hcnJheS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTY4LDcgKzIxNjgsMTQgQEAKICAgICBpbnQgbmQgPSBMRU5HVEgoZGltcyk7CiAgICAgaWYgKG5kID09IDApIGVycm9yKF8oIidkaW0nIGNhbm5vdCBiZSBvZiBsZW5ndGggMCIpKTsKICAgICBkb3VibGUgZCA9IDEuMDsKLSAgICBmb3IgKGludCBqID0gMDsgaiA8IG5kOyBqKyspIGQgKj0gSU5URUdFUihkaW1zKVtqXTsKKyAgICBmb3IgKGludCBqID0gMDsgaiA8IG5kOyBqKyspIHsKKwkvKiBuZWVkIHRoaXMgdGVzdCBmaXJzdCBhcyBOQV9JTlRFR0VSIGlzIDwgMCAqLworCWlmIChJTlRFR0VSKGRpbXMpW2pdID09IE5BX0lOVEVHRVIpCisJICAgIGVycm9yKF8oInRoZSBkaW1zIGNvbnRhaW4gbWlzc2luZyB2YWx1ZXMiKSk7CisJaWYgKElOVEVHRVIoZGltcylbal0gPCAwKQorCSAgICBlcnJvcihfKCJ0aGUgZGltcyBjb250YWluIG5lZ2F0aXZlIHZhbHVlcyIpKTsKKwlkICo9IElOVEVHRVIoZGltcylbal07CisgICAgfQogI2lmZGVmIExPTkdfVkVDVE9SX1NVUFBPUlQKICAgICBpZiAoZCA+IFJfWExFTl9UX01BWCkgZXJyb3IoXygidG9vIG1hbnkgZWxlbWVudHMgc3BlY2lmaWVkIikpOwogI2Vsc2UK",
+          "is_private": false,
+          "id": 3689,
+          "last_change_time": "2026-04-29T20:47:55Z",
+          "size": 744,
+          "file_name": "array-na-dim.patch",
+          "bug_id": 19066,
+          "creation_time": "2026-04-29T20:47:55Z",
+          "summary": "Explicitly check and err for invalid dimensions in do_array."
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-04-29 20:47:55"
+}

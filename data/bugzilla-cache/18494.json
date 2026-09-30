@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "last_change_time": "2023-03-17T01:45:44Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "solve.default(a, b) should not ignore names(dimnames(.))",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Mikael Jagan",
+          "name": "jaganmn2",
+          "id": 3462
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "jaganmn2",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "flags": [],
+        "platform": "Other",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 18494,
+        "whiteboard": "",
+        "version": "R 4.2.x",
+        "creation_time": "2023-03-17T01:45:44Z",
+        "priority": "P5",
+        "product": "R",
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18494": {
+        "comments": [
+          {
+            "text": "Copying and pasting my two posts on the R-devel mailing list, both from 2022-11-10 under the subject line\n\n> solve.default(a, b) should not ignore names(dimnames(.))\n\nI don't like to duplicate but I do think that these bugs should be \"tracked\".\n\n---\n\nHello,\n\nCurrently, `solve.default()` is defined such that\n\n```\n> identical(dimnames(solve.default(a, b)), list(dimnames(a)[[2L]], dimnames(b)[[2L]]))\n```\n\nis always TRUE, i.e., ignoring `names(dimnames(a))` and names`(dimnames(b))`.  Hence we see:\n\n```\n> a <- b <- diag(2L)\n> dimnames(a) <- list(A1 = c(\"a11\", \"a12\"), A2 = c(\"a21\", \"a22\"))\n> dimnames(b) <- list(B1 = c(\"b11\", \"b12\"), B2 = c(\"b21\", \"b22\"))\n> a\n      A2\nA1    a21 a22\n   a11   1   0\n   a12   0   1\n> b\n      B2\nB1    b21 b22\n   b11   1   0\n   b12   0   1\n> solve.default(a, b)\n     b21 b22\na21   1   0\na22   0   1\n```\n\nI claim that `solve.default()` should be changed to instead give:\n\n```\n> identical(dimnames(solve.default(a, b)), c(dimnames(a)[2L], dimnames(b)[2L]))\n```\n\nThis would make `solve.default()` consistent with `%*%`, which *does* respect `names(dimnames(.))`:\n\n```\n> a %*% b\n      B2\nA1    b21 b22\n   a11   1   0\n   a12   0   1\n```\n\nIf others agree, then I would submit a minimal patch to the R-level `solve.default()` in `src/library/base/R/solve.R` and to the C-level `La_solve()` and `La_solve_cmplx()` in `src/modules/lapack/Lapack.c` ...\n\n---\n\nWell, taking a closer look, I see more related issues, which might\nbe considered simultaneously.  (Sorry if this is too much for one thread.)\n\n`qr.solve(a, b)` and `solve.qr(qr(a), b)` also ignore `names(dimnames(.))`:\n\n```\n> qr.solve(a, b)\n    b21 b22\na21   1   0\na22   0   1\n> solve.qr(qr(a), b)\n    b21 b22\na21   1   0\na22   0   1\n```\n\n`dimnames(qr.solve(a))` and `dimnames(solve.qr(qr(a)))` do not agree with `dimnames(solve.default(a))`, i.e., when `b` is missing:\n\n```\n> solve.default(a)\n    a11 a12\na21   1   0\na22   0   1\n> qr.solve(a)\n    [,1] [,2]\na21    1    0\na22    0    1\n> solve.qr(qr(a))\n    [,1] [,2]\na21    1    0\na22    0    1\n```\n\nMore controversially: `qr.qy(qr, y)` and `qr.qty(qr, y)` are currently documented as retaining the `dimnames` of `y`, and they *do*.  But *conventionally* the `rownames` of matrix products are taken from the first factor, in this case `Q`.  It is not currently documented what the `dimnames` of the implicitly stored `Q` and `R` factors should be, leading to inconsistencies like this:\n\n```\n> a\n     A2\nA1    a21 a22\n  a11   1   0\n  a12   0   1\n> qr.Q(qr(a)) %*% qr.R(qr(a))\n      A2\n       a21 a22\n  [1,]   1   0\n  [2,]   0   1\n```\n\nHence I propose to enforce {and partly document} the following:\n\n1. that `Q=qr.Q(qr(X))` gets the `rownames` of `X` and `NULL` `colnames`\n2. that `R=qr.R(qr(X))` gets the (permuted) `colnames` of `X` and `NULL` `rownames`\n3. that `dimnames(qr.qy (qr(X), y)) <=> dimnames( (Q) %*% y)`\n4. that `dimnames(qr.qty(qr(X), y)) <=> dimnames(t(Q) %*% y)`\n\nI'm not sure what the level of disruption on CRAN would be, but internal consistency here would certainly be nice ...",
+            "bug_id": 18494,
+            "count": 0,
+            "is_markdown": true,
+            "creator": "jaganmn2",
+            "creation_time": "2023-03-17T01:45:44Z",
+            "time": "2023-03-17T01:45:44Z",
+            "id": 99544,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18494": []
+    }
+  },
+  "source_changed": "2023-03-17 01:45:44"
+}

@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "summary": "install.packages support installing dependencies as needed when installing local tarball",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2020-12-01T21:14:58Z",
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "creator": "gabembecker",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Gabriel Becker",
+          "name": "gabembecker",
+          "id": 1299
+        },
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2020-12-01T21:14:58Z",
+        "whiteboard": "",
+        "dupe_of": {},
+        "severity": "enhancement",
+        "id": 17996,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Wishlist"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17996": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "text": "Currently, the way to install  a package from local sources while in R is to do\n\n```\ninstall.packages(\"<local path>\", repos = NULL)\n```\n\nThis works if all the dependencies are already installed, but fails if they are not, while 'normal' package installation succeeds either way.\n\nI propose `install.packages` support the local-source-needs-dependencies case.\n\nOne option would be to add a `local` argument which defaults to `is.null(repos)` (thus preserving existing behavior), and which controls whether `pkgs` should be interpreted as local paths.\n\nKurt Hornik suggested this can be implemented by creating a local package repository and adding it to any that are specified with the `repos` argument. \n\nSome care may be needed in cases where the package appears in the repos and the local version is lower than the repo version. \n\nI will work on preparing a patch at some point if no one gets to it first.",
+            "bug_id": 17996,
+            "creator": "gabembecker",
+            "creation_time": "2020-12-01T21:14:58Z",
+            "is_private": false,
+            "time": "2020-12-01T21:14:58Z",
+            "id": 96847,
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "17996": []
+    }
+  },
+  "source_changed": "2020-12-01 21:14:58"
+}

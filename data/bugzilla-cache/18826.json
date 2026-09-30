@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-11-19T14:58:48Z",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 18826,
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "component": "Windows GUI / Window specific",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "blocks": [],
+        "url": "",
+        "summary": "Proposal to remove CURL_CA_BUNDLE in Windows",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2024-11-19T14:58:48Z",
+        "cc_detail": [],
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "flags": [],
+        "platform": "Other",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "jeroenooms",
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Jeroen Ooms",
+          "id": 610,
+          "name": "jeroenooms"
+        },
+        "resolution": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18826": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 101355,
+            "time": "2024-11-19T14:58:48Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": false,
+            "count": 0,
+            "bug_id": 18826,
+            "text": "For historical reasons, R on Windows includes a CA bundle and sets the CURL_CA_BUNDLE envvar by default. I think we should remove this because it is no longer needed and creates a security liability once the bundle gets outdated.\n\nDetails:\n\nLibcurl from rtools is compiled to use the Windows Schannel TLS backend by default. This relies on the Windows certificate store and does not need a CA bundle. So by default, R on Windows does not use the CA bundle file that we ship with the R installation.\n\nIt is still possible to initiate libcurl with the OpenSSL TLS backend by setting the envvar CURL_SSL_BACKEND=openssl in Rprofile before starting R. In this case libcurl does need a CA bundle by default, but recent versions of libcurl have a new option `CURLSSLOPT_NATIVE_CA` in which case OpenSSL also imports certificates from the Windows certificate store. This option is safer because the Windows certificate store gets automatically updated via Windows updates.\n\nBecause the OpenSSL TLS backend is explicitly opt-in, I think it would make sense to let the user provide their own CURL_CA_BUNDLE file, and if none is given, set CURLSSLOPT_NATIVE_CA by default in R. This way we don't have to ship a bundle file with R that will be outdated for older R versions.\n\nThis should be a small change in modules/internet/libcurl.c but I can send a patch if that would help.",
+            "creation_time": "2024-11-19T14:58:48Z",
+            "creator": "jeroenooms"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18826": []
+    }
+  },
+  "source_changed": "2024-11-19 14:58:48"
+}

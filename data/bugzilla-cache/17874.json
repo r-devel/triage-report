@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "whiteboard": "",
+        "version": "R 4.0.x",
+        "creation_time": "2020-07-31T18:00:22Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [],
+        "dupe_of": {},
+        "severity": "enhancement",
+        "deadline": {},
+        "id": 17874,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "flags": [],
+        "platform": "Other",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "summary": "use `getOption(\"INSTALL_opts\")` as default for INSTALL_opts argument to install.packages()",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2020-07-31T18:00:22Z",
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17874": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2020-07-31T18:00:22Z",
+            "creation_time": "2020-07-31T18:00:22Z",
+            "text": "Often, one needs to customize how packages are installed -- e.g. via configure flags, configure arguments, or arguments passed to `R CMD INSTALL` itself.\n\n`install.packages()` has the signature:\n\n```\ninstall.packages(pkgs, lib, repos = getOption(\"repos\"),\n                 contriburl = contrib.url(repos, type),\n                 method, available = NULL, destdir = NULL,\n                 dependencies = NA, type = getOption(\"pkgType\"),\n                 configure.args = getOption(\"configure.args\"),\n                 configure.vars = getOption(\"configure.vars\"),\n                 clean = FALSE, Ncpus = getOption(\"Ncpus\", 1L),\n                 verbose = getOption(\"verbose\"),\n                 libs_only = FALSE, INSTALL_opts, quiet = FALSE,\n                 keep_outputs = FALSE, ...)\n```\nAnd so the value of `getOption(\"configure.args\")` as a default for its `configure.args` argument, and similarly for `configure.vars`.\n\nMy wishlist item: could R also accept `getOption(\"INSTALL_opts\")` as a set of defaults to use for the `INSTALL_opts` argument? With a similar convention around allowing a named list of arguments, to allow customization based on the name of the package being installed.\n\n(One motivation: when using R with the Windows Subsystem for Linux, package installations can fail in some cases with staged installs / use of lockfiles during install. Having a mechanism for the user to control the defaults here would help.)",
+            "bug_id": 17874,
+            "count": 0,
+            "tags": [],
+            "id": 96197,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "17874": []
+    }
+  },
+  "source_changed": "2020-07-31 18:00:22"
+}

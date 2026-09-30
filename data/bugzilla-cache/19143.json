@@ -1,0 +1,289 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "blocks": [],
+        "url": "",
+        "summary": "`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-08-28T19:44:04Z",
+        "cc_detail": [
+          {
+            "real_name": "Ivan Krylov",
+            "name": "ikrylov",
+            "id": 3307
+          }
+        ],
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "Other",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-08-27T04:23:16Z",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19143,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [
+          "ikrylov"
+        ],
+        "assigned_to": "R-core",
+        "component": "Windows GUI / Window specific",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19143": {
+        "comments": [
+          {
+            "attachment_id": 3802,
+            "tags": [],
+            "time": "2026-08-27T04:23:16Z",
+            "id": 103481,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-08-27T04:23:16Z",
+            "text": "Created attachment 3802\nCandidate patch.\n\n## Summary\n\nOn recent Windows systems, R uses UCRT with UTF-8 as the native encoding.\nThe narrow `setlocale()` result is consequently encoded as UTF-8.  Windows\nlocale names are not necessarily ASCII; for example, the canonical name of\nthe Norwegian Bokmål locale can contain `Bokmål`.\n\n`Sys.getlocale()` returns such a name with UTF-8 bytes but does not declare\nthe returned R string as UTF-8.  `Encoding()` therefore reports `\"unknown\"`.\nThe return value of `Sys.setlocale()` is constructed in the same way and has\nthe same issue.\n\n## Reproduction\n\nRun this on a recent Windows system where `l10n_info()[[\"UTF-8\"]]` is true:\n\n```\nlocal({\n    old <- Sys.getlocale(\"LC_TIME\")\n    on.exit(Sys.setlocale(\"LC_TIME\", old))\n\n    set <- Sys.setlocale(\"LC_TIME\", \"Norwegian_Norway.UTF-8\")\n    current <- Sys.getlocale(\"LC_TIME\")\n\n    print(list(\n        set_value = set,\n        set_encoding = Encoding(set),\n        get_value = current,\n        get_encoding = Encoding(current),\n        get_raw = charToRaw(current),\n        l10n = l10n_info()\n    ))\n})\n```\n\nThe exact canonical spelling can vary with the Windows version.  An affected\nresult contains a non-ASCII spelling such as one of:\n\n```\nNorwegian (Bokmål)_Norway.utf8\nNorwegian Bokmål_Norway.utf8\n```\n\nThe UTF-8 representation of `å` includes the bytes `c3 a5`, but the current\nresult is:\n\n```\nEncoding(current)\n# [1] \"unknown\"\n```\n\nThe same is true of the value returned by `Sys.setlocale()`.\n\n## Expected behavior\n\nFor a non-ASCII locale name returned as UTF-8, both functions should return\na string for which:\n\n```\nEncoding(current)\n# [1] \"UTF-8\"\n```\n\nASCII locale names should remain unmarked, in accordance with R's existing\nrule that ASCII strings never carry an encoding declaration.\n\n## Cause\n\n`do_getlocale()` in `src/main/platform.c` obtains a narrow string from\n`setlocale()` and wraps it with `mkString()`:\n\n```\nif (cat != NA_INTEGER) p = setlocale(cat, NULL);\nreturn mkString(p ? p : \"\");\n```\n\n`mkString()` uses `mkChar()` and therefore records the result as\n`CE_NATIVE`, even when R knows that the native locale is UTF-8.  The return\npath in `do_setlocale()` similarly uses `mkChar(p)`.\n\nThe adjacent comment, `Locale specs are always ASCII`, is not valid for\nWindows locale names such as Norwegian Bokmål.  UCRT can construct legacy\nlocale names from the English language and country names supplied by the\nWindows locale APIs, and those names can contain non-ASCII characters.\n\nThis often remains unnoticed while the process stays in a UTF-8 locale,\nbecause an unmarked string is interpreted in the current native encoding.\nHowever, the fact that the bytes are known to be UTF-8 is lost.  This can\nmatter if the value outlives a subsequent locale change or is processed by\ncode whose encoding propagation depends on an explicit declaration.\n\n## Proposed fix\n\nConstruct locale results with `mkCharCE(..., CE_UTF8)` whenever\n`utf8locale` is true.  `mkCharCE()` already removes the declaration for\nASCII-only strings, so the change only affects non-ASCII results.\n\nFor `do_setlocale()`, copy the CRT-owned result before calling\n`R_check_locale()`, since a later `setlocale()` call may invalidate the\npointer.  After `R_check_locale()` has updated `utf8locale`, construct the\nR string using the new locale's encoding.\n\nA regression test can select `Norwegian_Norway.UTF-8` on Windows and check\nthe encoding of the `Sys.setlocale()` and `Sys.getlocale()` results when\nUCRT expands the alias to a non-ASCII canonical name.  The test should be\nconditional because that locale may not be available on every Windows\ninstallation.\n\n## Version information\n\nThe issue is present in current R-devel source as of 2026-08-26.  It is\nrelevant to UCRT-based Windows builds using UTF-8 as the native encoding,\nincluding the default configuration on recent Windows versions.",
+            "bug_id": 19143,
+            "is_markdown": true,
+            "count": 0
+          },
+          {
+            "creation_time": "2026-08-27T13:18:25Z",
+            "creator": "ikrylov",
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 19143,
+            "text": "Could you please share your `sessionInfo()`? My Windows machines seem to preserve the locale name I give them.\n\nWhat is the underlying issue here? What is broken by having a UTF-8 string being marked as `CE_NATIVE` when the native encoding is UTF-8? R is full of such strings. `charIsUTF8()` is true for them. Both `translateChar()` and `translateCharUTF8()` return the underlying buffer.\n\nMeanwhile, even latest R can still run on legacy Windows systems with an 8-bit codepage instead of UTF-8, where the non-ASCII encoding name must be marked as `CE_NATIVE`:\n\n```\n> Sys.setlocale(\"LC_TIME\", \"Norwegian Bokmål_Norway\") |> tools::showNonASCII()\n1: Norwegian Bokm<e5>l_Norway.1252\n> sessionInfo()\nR Under development (unstable) (2026-07-19 r90279 ucrt)\nPlatform: x86_64-w64-mingw32/x64\nRunning under: Windows Server 2022 x64 (build 20348)\n\nMatrix products: default\n  LAPACK version 3.12.1\n\nlocale:\n[1] LC_COLLATE=English_United States.1252 \n[2] LC_CTYPE=English_United States.1252   \n[3] LC_MONETARY=English_United States.1252\n[4] LC_NUMERIC=C                          \n[5] LC_TIME=Norwegian Bokmål_Norway.1252  \n\ntime zone: Europe/Moscow\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.7.0 tools_4.7.0   \n```\n\nWhat needs to be fixed for non-ASCII locale names to work is `CHAR(STRING_ELT(locale, 0))` (it must be `translateChar(STRING_ELT(locale, 0))`, subject to the chicken-and-egg problem of what's valid in the current encoding); otherwise non-ASCII locale names won't work unless the string contents happen to coincide with the ANSI/UTF-8 encoding expected by the CRT.",
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 103482,
+            "time": "2026-08-27T13:18:25Z"
+          },
+          {
+            "is_private": false,
+            "id": 103483,
+            "time": "2026-08-27T15:34:43Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 2,
+            "bug_id": 19143,
+            "text": "Here's an example; running RGui.exe with R 4.6.1.\n\n```\n> sessionInfo()\nR version 4.6.1 (2026-06-24 ucrt)\nPlatform: x86_64-w64-mingw32/x64\nRunning under: Windows 11 x64 (build 29634)\n\nMatrix products: default\n  LAPACK version 3.12.1\n\nlocale:\n[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8   \n[3] LC_MONETARY=English_United States.utf8 LC_NUMERIC=C                          \n[5] LC_TIME=English_United States.utf8    \n\ntime zone: America/Phoenix\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.6.1\n> Sys.setlocale(\"LC_CTYPE\", \"Norwegian Bokmål_Norway.utf8\")\n[1] \"Norwegian Bokmål_Norway.utf8\"\n> before <- Sys.getlocale(\"LC_CTYPE\")\n> Sys.setlocale(\"LC_CTYPE\", \"C\")\n[1] \"C\"\n> Sys.setlocale(\"LC_CTYPE\", before)\n[1] \"\"\nWarning message:\nIn Sys.setlocale(\"LC_CTYPE\", before) :\n  OS reports request to set locale to \"Norwegian BokmÃ¥l_Norway.utf8\" cannot be honored\n```\n\nSetting the locale in this way and resetting it is common when e.g. attempting to sort using the C locale.",
+            "creation_time": "2026-08-27T15:34:43Z",
+            "creator": "kevinushey"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2026-08-27T16:18:09Z",
+            "id": 103484,
+            "creator": "ikrylov",
+            "creation_time": "2026-08-27T16:18:09Z",
+            "count": 3,
+            "is_markdown": true,
+            "text": "Thank you for the example! Now I understand, the problem with `CE_NATIVE` is that the string stops being valid after the locale is changed. Does this work for you on Windows 11?\n\n```\n> l <- 'Norwegian Bokmål_Norway.utf8'\n> Encoding(l)\n[1] \"UTF-8\"\n> Sys.setlocale('LC_CTYPE', l)\n[1] \"Norwegian Bokmål_Norway.utf8\"\n> Sys.setlocale('LC_CTYPE', 'C')\n[1] \"C\"\n> enc2native(l)\n[1] \"Norwegian Bokm<U+00E5>l_Norway.utf8\"\n> Sys.setlocale('LC_CTYPE', l)\n[1] \"\"\nWarning message:\nIn Sys.setlocale(\"LC_CTYPE\", l) :\n  OS reports request to set locale to \"Norwegian BokmÃ¥l_Norway.utf8\" cannot be honored\n```\n\nAn experiment shows that I need `Norwegian Bokm\\xe5l_Norway.utf8` instead of `Norwegian Bokm\\xc3\\xa5l_Norway.utf8` to get back from `C`, so marking the string as UTF-8 doesn't help me:\n\n```\n#include <locale.h>\n#include <stdio.h>\n\nint main() {\n\tconst char *bokmaal = \"Norwegian_Norway.UTF-8\";\n\tconst char *bokmaal_utf8 = \"Norwegian Bokm\\xc3\\xa5l_Norway.utf8\";\n\tconst char *bokmaal_latin1 = \"Norwegian Bokm\\xe5l_Norway.utf8\";\n\t#define p(x) printf(\"%s => %s\\n\", #x, x)\n\tp(setlocale(LC_ALL, \"\"));\n\tp(setlocale(LC_CTYPE, bokmaal));\n\tp(setlocale(LC_CTYPE, bokmaal_utf8));\n\tp(setlocale(LC_CTYPE, \"C\"));\n\tp(setlocale(LC_CTYPE, bokmaal_utf8));\n\tp(setlocale(LC_CTYPE, bokmaal_latin1));\n}\n```\n```\nsetlocale(LC_ALL, \"\") => English_United States.utf8\nsetlocale(LC_CTYPE, bokmaal) => Norwegian_Norway.utf8\nsetlocale(LC_CTYPE, bokmaal_utf8) => Norwegian Bokmål_Norway.utf8\nsetlocale(LC_CTYPE, \"C\") => C\nsetlocale(LC_CTYPE, bokmaal_utf8) => (null)\nsetlocale(LC_CTYPE, bokmaal_latin1) => Norwegian Bokmål_Norway.utf8\n```\n\nDoes Windows 11 (unlike Windows Server 2022 here) actually understand UTF-8 locale names while running in the `C` locale?",
+            "bug_id": 19143
+          },
+          {
+            "text": "Hmm...\n\n```\n> l <- 'Norwegian Bokmål_Norway.utf8'\n> \n> Encoding(l)\n[1] \"UTF-8\"\n> Sys.setlocale('LC_CTYPE', l)\n[1] \"Norwegian Bokmål_Norway.utf8\"\n> Sys.setlocale('LC_CTYPE', 'C')\n[1] \"C\"\n> enc2native(l)\n[1] \"Norwegian Bokm<U+00E5>l_Norway.utf8\"\n> Sys.setlocale('LC_CTYPE', l)\nWarning in Sys.setlocale(\"LC_CTYPE\", l) :\n  OS reports request to set locale to \"Norwegian BokmÃ¥l_Norway.utf8\" cannot be honored\n[1] \"\"\n> \n> l <- 'Norwegian Bokmål_Norway.utf8'\n> \n> Encoding(l)\n[1] \"unknown\"\n> Sys.setlocale('LC_CTYPE', l)\n[1] \"Norwegian Bokmål_Norway.utf8\"\n> Sys.setlocale('LC_CTYPE', 'C')\n[1] \"C\"\n> enc2native(l)\n[1] \"Norwegian Bokm\\345l_Norway.utf8\"\n> Sys.setlocale('LC_CTYPE', l)\n[1] \"Norwegian Bokmål_Norway.utf8\"\n```\n\nBut at the heart of this, R extracts the requested locale (in do_setlocale) with:\n\n\tconst char *l = CHAR(STRING_ELT(locale, 0));\n\nand IIUC that will do the wrong thing if the locale itself isn't in the (current) native encoding. I guess there are two ways forward: translate that locale to the native encoding before use, or use the \"wide\" APIs for setting and getting the locale on Windows.",
+            "bug_id": 19143,
+            "count": 4,
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "creation_time": "2026-08-27T16:35:56Z",
+            "time": "2026-08-27T16:35:56Z",
+            "id": 103485,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "attachment_id": 3803,
+            "time": "2026-08-27T16:51:26Z",
+            "creation_time": "2026-08-27T16:51:26Z",
+            "count": 5,
+            "text": "Created attachment 3803\nCandidate patch.",
+            "bug_id": 19143,
+            "tags": [],
+            "is_private": false,
+            "id": 103486
+          },
+          {
+            "tags": [],
+            "id": 103488,
+            "is_private": false,
+            "creation_time": "2026-08-27T20:55:57Z",
+            "bug_id": 19143,
+            "text": "Unfortunately, unlike the second half of your example in comment 4, a `CE_UTF8` string comes out of `translateChar()` with `C` locale in place containing the replacement sequence `<U+00E5>`, not the desired `0xe5` byte. It might be that `_wsetlocale` is the only solution that doesn't rely on undocumented behaviour (UCRT assigning meaning to bytes outside ASCII in the `C` locale).",
+            "count": 6,
+            "attachment_id": {},
+            "time": "2026-08-27T20:55:57Z",
+            "creator": "ikrylov",
+            "is_markdown": true
+          },
+          {
+            "creation_time": "2026-08-28T03:05:13Z",
+            "creator": "kevinushey",
+            "bug_id": 19143,
+            "text": "Created attachment 3804\nCandidate patch; using wide APIs on Windows.",
+            "count": 7,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": 3804,
+            "id": 103490,
+            "time": "2026-08-28T03:05:13Z",
+            "is_private": false
+          },
+          {
+            "time": "2026-08-28T03:22:16Z",
+            "attachment_id": 3805,
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "id": 103491,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19143,
+            "text": "Created attachment 3805\nRegression test.",
+            "count": 8,
+            "creation_time": "2026-08-28T03:22:16Z"
+          },
+          {
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2026-08-28T19:43:43Z",
+            "attachment_id": 3806,
+            "text": "Created attachment 3806\nCandidate patch.\n\nNow with a fully fleshed-out fix, including sanity for the non-Windows side.",
+            "bug_id": 19143,
+            "count": 9,
+            "creation_time": "2026-08-28T19:43:43Z",
+            "id": 103495,
+            "is_private": false,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19143": [
+        {
+          "last_change_time": "2026-08-27T16:51:26Z",
+          "size": 3012,
+          "is_private": false,
+          "id": 3802,
+          "creation_time": "2026-08-27T04:23:16Z",
+          "summary": "Candidate patch.",
+          "file_name": "file_19143.txt",
+          "bug_id": 19143,
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9tYWluL3BsYXRmb3JtLmMgYi9zcmMvbWFpbi9wbGF0Zm9ybS5jDQppbmRleCA1NTkxYmE5OTY3Li4zMjRiNDE1OTU0IDEwMDY0NA0KLS0tIGEvc3JjL21haW4vcGxhdGZvcm0uYw0KKysrIGIvc3JjL21haW4vcGxhdGZvcm0uYw0KQEAgLTIyMTgsMTUgKzIyMTgsMTcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2dldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogICAgIGRlZmF1bHQ6IGNhdCA9IE5BX0lOVEVHRVI7DQogICAgIH0NCiAgICAgaWYgKGNhdCAhPSBOQV9JTlRFR0VSKSBwID0gc2V0bG9jYWxlKGNhdCwgTlVMTCk7DQotICAgIHJldHVybiBta1N0cmluZyhwID8gcCA6ICIiKTsNCisgICAgLyogc2V0bG9jYWxlKCkgcmV0dXJucyB0ZXh0IGluIHRoZSBjdXJyZW50IExDX0NUWVBFIGVuY29kaW5nLiAqLw0KKyAgICByZXR1cm4gU2NhbGFyU3RyaW5nKG1rQ2hhckNFKHAgPyBwIDogIiIsDQorCQkJCSB1dGY4bG9jYWxlID8gQ0VfVVRGOCA6IENFX05BVElWRSkpOw0KIH0NCiANCi0vKiBMb2NhbGUgc3BlY3MgYXJlIGFsd2F5cyBBU0NJSSAqLw0KIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIHsNCiAgICAgU0VYUCBsb2NhbGUgPSBDQURSKGFyZ3MpLCBhbnM7DQogICAgIGludCBjYXQ7DQogICAgIGNvbnN0IGNoYXIgKnA7DQorICAgIGNoYXIgKmxvY2FsZV9yZXN1bHQgPSBOVUxMOw0KICAgICBib29sIHdhcm5lZCA9IEZBTFNFOw0KIA0KICAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsNCkBAIC0yMzIyLDEzICsyMzI0LDEwIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIAlwID0gTlVMTDsgLyogLVdhbGwgKi8NCiAJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJjYXRlZ29yeSIpOw0KICAgICB9DQotICAgIFBST1RFQ1QoYW5zID0gYWxsb2NWZWN0b3IoU1RSU1hQLCAxKSk7DQotICAgIGlmIChwKSBTRVRfU1RSSU5HX0VMVChhbnMsIDAsIG1rQ2hhcihwKSk7DQotICAgIGVsc2UgIHsNCi0JU0VUX1NUUklOR19FTFQoYW5zLCAwLCBta0NoYXIoIiIpKTsNCi0JaWYgKCF3YXJuZWQpDQotCSAgICB3YXJuaW5nKF8oIk9TIHJlcG9ydHMgcmVxdWVzdCB0byBzZXQgbG9jYWxlIHRvIFwiJXNcIiBjYW5ub3QgYmUgaG9ub3JlZCIpLA0KLQkgICAgICAgICAgICBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKyAgICBpZiAocCkgew0KKwlzaXplX3QgbiA9IHN0cmxlbihwKSArIDE7DQorCWxvY2FsZV9yZXN1bHQgPSBSX2FsbG9jKG4sIDEpOw0KKwltZW1jcHkobG9jYWxlX3Jlc3VsdCwgcCwgbik7DQogICAgIH0NCiAjaWZkZWYgV2luMzINCiAgICAgaW50IG9sZENQID0gbG9jYWxlQ1A7DQpAQCAtMjM0Myw2ICsyMzQyLDE4IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KICAgICB9DQogI2VuZGlmDQogICAgIGludmFsaWRhdGVfY2FjaGVkX3JlY29kaW5ncygpOw0KKw0KKyAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgMSkpOw0KKyAgICBpZiAobG9jYWxlX3Jlc3VsdCkNCisJU0VUX1NUUklOR19FTFQoYW5zLCAwLA0KKwkJICAgICAgIG1rQ2hhckNFKGxvY2FsZV9yZXN1bHQsDQorCQkJCXV0Zjhsb2NhbGUgPyBDRV9VVEY4IDogQ0VfTkFUSVZFKSk7DQorICAgIGVsc2UgIHsNCisJU0VUX1NUUklOR19FTFQoYW5zLCAwLCBta0NoYXIoIiIpKTsNCisJaWYgKCF3YXJuZWQpDQorCSAgICB3YXJuaW5nKF8oIk9TIHJlcG9ydHMgcmVxdWVzdCB0byBzZXQgbG9jYWxlIHRvIFwiJXNcIiBjYW5ub3QgYmUgaG9ub3JlZCIpLA0KKwkgICAgICAgICAgICBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKyAgICB9DQogICAgIFVOUFJPVEVDVCgxKTsNCiAgICAgcmV0dXJuIGFuczsNCiB9DQpkaWZmIC0tZ2l0IGEvdGVzdHMvcmVnLWVuY29kaW5ncy5SIGIvdGVzdHMvcmVnLWVuY29kaW5ncy5SDQppbmRleCAxZWE0N2NlYmQwLi44ZTE4MjM2MjNlIDEwMDY0NA0KLS0tIGEvdGVzdHMvcmVnLWVuY29kaW5ncy5SDQorKysgYi90ZXN0cy9yZWctZW5jb2RpbmdzLlINCkBAIC00MjksNiArNDI5LDIxIEBAIGlmKCFpcy5udWxsKGxjIDwtIGxjY3QpICYmIG56Y2hhcihsYykpIFN5cy5zZXRsb2NhbGUoIkxDX0NUWVBFIiwgbGMpICMgcmV2ZXJ0DQogIyMgPGNoYXJzPihhMSlbMzo0XSB3ZXJlIGRpZmZlcmVudCBpbiBSIDw9IDQuNi4wDQogDQogDQorIyMgU3lzLltnc11ldGxvY2FsZSgpIHJldHVybiBub24tQVNDSUkgbG9jYWxlIG5hbWVzIHdpdGgga25vd24gZW5jb2RpbmcNCitpZihvbldpbmRvd3MgJiYgVVRGOCkgbG9jYWwoew0KKyAgICBvbGQgPC0gU3lzLmdldGxvY2FsZSgiTENfVElNRSIpDQorICAgIG9uLmV4aXQoU3lzLnNldGxvY2FsZSgiTENfVElNRSIsIG9sZCkpDQorDQorICAgICMjIFVDUlQgbWF5IGV4cGFuZCB0aGlzIEFTQ0lJIGFsaWFzIHRvIGEgbmFtZSBjb250YWluaW5nICJCb2ttXHUwMGU1bCIuDQorICAgIHNldGxvYyA8LSBzdXBwcmVzc1dhcm5pbmdzKFN5cy5zZXRsb2NhbGUoIkxDX1RJTUUiLCAiTm9yd2VnaWFuX05vcndheS5VVEYtOCIpKQ0KKyAgICBpZihuemNoYXIoc2V0bG9jKSAmJiBhbnkoYXMuaW50ZWdlcihjaGFyVG9SYXcoc2V0bG9jKSkgPiAxMjdMKSkgew0KKwlnZXRsb2MgPC0gU3lzLmdldGxvY2FsZSgiTENfVElNRSIpDQorCXN0b3BpZm5vdChpZGVudGljYWwoRW5jb2RpbmcoZ2V0bG9jKSwgIlVURi04IiksDQorCQkgIGlkZW50aWNhbChFbmNvZGluZyhzZXRsb2MpLCAiVVRGLTgiKSkNCisgICAgfQ0KK30pDQorDQorDQogDQogDQogIyMgUFIjMTkxMTIgLS0gd3JpdGVDaGFyKCkgb3ZlcmZsb3dzIGl0cyBvdXRwdXQgYnVmZmVyIC4uIG11bHRpYnl0ZSAuLg0K",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": true
+        },
+        {
+          "is_patch": true,
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "RnJvbSA0ZjNkNDlhNmY1MzY2MjA1YzNlMzc2MTgwZTZmMjJkMDM3YjZkMGEyIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQ0KRnJvbTogS2V2aW4gVXNoZXkgPGtldmludXNoZXlAZ21haWwuY29tPg0KRGF0ZTogVGh1LCAyNyBBdWcgMjAyNiAwOTo0OToxOSAtMDcwMA0KU3ViamVjdDogW1BBVENIXSBUcmFuc2xhdGUgbG9jYWxlIG5hbWVzIGF0IFIgYm91bmRhcnkNCg0KLS0tDQogc3JjL21haW4vcGxhdGZvcm0uYyB8IDMxICsrKysrKysrKysrKysrLS0tLS0tLS0tLS0tLS0tLS0NCiAxIGZpbGUgY2hhbmdlZCwgMTQgaW5zZXJ0aW9ucygrKSwgMTcgZGVsZXRpb25zKC0pDQoNCmRpZmYgLS1naXQgYS9zcmMvbWFpbi9wbGF0Zm9ybS5jIGIvc3JjL21haW4vcGxhdGZvcm0uYw0KaW5kZXggNTU5MWJhOTk2NzguLjQ5ODA3NDBhYjU0IDEwMDY0NA0KLS0tIGEvc3JjL21haW4vcGxhdGZvcm0uYw0KKysrIGIvc3JjL21haW4vcGxhdGZvcm0uYw0KQEAgLTIyMTgsMTUgKzIyMTgsMTUgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2dldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogICAgIGRlZmF1bHQ6IGNhdCA9IE5BX0lOVEVHRVI7DQogICAgIH0NCiAgICAgaWYgKGNhdCAhPSBOQV9JTlRFR0VSKSBwID0gc2V0bG9jYWxlKGNhdCwgTlVMTCk7DQotICAgIHJldHVybiBta1N0cmluZyhwID8gcCA6ICIiKTsNCisgICAgcmV0dXJuIFNjYWxhclN0cmluZyhta0NoYXJDRShyZUVuYyhwID8gcCA6ICIiLCBDRV9OQVRJVkUsIENFX1VURjgsIDEpLA0KKwkJCQkgQ0VfVVRGOCkpOw0KIH0NCiANCi0vKiBMb2NhbGUgc3BlY3MgYXJlIGFsd2F5cyBBU0NJSSAqLw0KIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIHsNCiAgICAgU0VYUCBsb2NhbGUgPSBDQURSKGFyZ3MpLCBhbnM7DQogICAgIGludCBjYXQ7DQotICAgIGNvbnN0IGNoYXIgKnA7DQorICAgIGNvbnN0IGNoYXIgKnAsICpsOw0KICAgICBib29sIHdhcm5lZCA9IEZBTFNFOw0KIA0KICAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsNCkBAIC0yMjM1LDEwICsyMjM1LDEwIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIAllcnJvcihfKCJpbnZhbGlkICclcycgYXJndW1lbnQiKSwgImNhdGVnb3J5Iik7DQogICAgIGlmICghaXNTdHJpbmcobG9jYWxlKSB8fCBMRU5HVEgobG9jYWxlKSAhPSAxKQ0KIAllcnJvcihfKCJpbnZhbGlkICclcycgYXJndW1lbnQiKSwgImxvY2FsZSIpOw0KKyAgICBsID0gdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpOw0KICAgICBzd2l0Y2goY2F0KSB7DQogICAgIGNhc2UgMToNCiAgICAgew0KLQljb25zdCBjaGFyICpsID0gQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpOw0KIAljYXQgPSBMQ19BTEw7DQogCS8qIGFzc3VtZSB3ZSBjYW4gc2V0IExDX0NUWVBFIGlmZiB3ZSBjYW4gc2V0IHRoZSByZXN0ICovDQogCWlmICgocCA9IHNldGxvY2FsZShMQ19DVFlQRSwgbCkpKSB7DQpAQCAtMjI1Niw3ICsyMjU2LDYgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3NldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogICAgIH0NCiAgICAgY2FzZSAyOg0KICAgICB7DQotCWNvbnN0IGNoYXIgKmwgPSBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSk7DQogCWNhdCA9IExDX0NPTExBVEU7DQogCXAgPSBzZXRsb2NhbGUoY2F0LCBsKTsNCiAJLyogZGlzYWJsZSB0aGUgY29sbGF0b3Igd2hlbiBzZXR0aW5nIHRvIEMgdG8gdGFrZQ0KQEAgLTIyNjYsMjUgKzIyNjUsMjQgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3NldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogICAgIH0NCiAgICAgY2FzZSAzOg0KIAljYXQgPSBMQ19DVFlQRTsNCi0JcCA9IHNldGxvY2FsZShjYXQsIENIQVIoU1RSSU5HX0VMVChsb2NhbGUsIDApKSk7DQorCXAgPSBzZXRsb2NhbGUoY2F0LCBsKTsNCiAJYnJlYWs7DQogICAgIGNhc2UgNDoNCiAJY2F0ID0gTENfTU9ORVRBUlk7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gc2V0bG9jYWxlKGNhdCwgbCk7DQogCWJyZWFrOw0KICAgICBjYXNlIDU6DQogCWNhdCA9IExDX05VTUVSSUM7DQogCXsNCi0JICAgIGNvbnN0IGNoYXIgKm5ld19sY19udW0gPSBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSk7DQotCSAgICBpZiAoc3RyY21wKG5ld19sY19udW0sICJDIikpIC8qIGRvIG5vdCBjb21wbGFpbiBhYm91dCBDIGxvY2FsZSAtIHRoYXQncyB0aGUgb25seQ0KLQkJCQkJICAgIHJlbGlhYmxlIHdheSB0byByZXN0b3JlIHNhbml0eSAqLw0KKwkgICAgaWYgKHN0cmNtcChsLCAiQyIpKSAvKiBkbyBub3QgY29tcGxhaW4gYWJvdXQgQyBsb2NhbGUgLSB0aGF0J3MgdGhlIG9ubHkNCisJCQkJICAgIHJlbGlhYmxlIHdheSB0byByZXN0b3JlIHNhbml0eSAqLw0KIAkJd2FybmluZyhfKCJzZXR0aW5nICdMQ19OVU1FUklDJyBtYXkgY2F1c2UgUiB0byBmdW5jdGlvbiBzdHJhbmdlbHkiKSk7DQotCSAgICBwID0gc2V0bG9jYWxlKGNhdCwgbmV3X2xjX251bSk7DQorCSAgICBwID0gc2V0bG9jYWxlKGNhdCwgbCk7DQogCX0NCiAJYnJlYWs7DQogICAgIGNhc2UgNjoNCiAJY2F0ID0gTENfVElNRTsNCi0JcCA9IHNldGxvY2FsZShjYXQsIENIQVIoU1RSSU5HX0VMVChsb2NhbGUsIDApKSk7DQorCXAgPSBzZXRsb2NhbGUoY2F0LCBsKTsNCiAJZHRfaW52YWxpZGF0ZV9sb2NhbGUoKTsNCiAJYnJlYWs7DQogI2lmZGVmIFdpbjMyDQpAQCAtMjMwMiwxOSArMjMwMCwxOSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAjIGlmZGVmIExDX01FU1NBR0VTDQogICAgIGNhc2UgNzoNCiAJY2F0ID0gTENfTUVTU0FHRVM7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gc2V0bG9jYWxlKGNhdCwgbCk7DQogCWJyZWFrOw0KICMgZW5kaWYNCiAjIGlmZGVmIExDX1BBUEVSDQogICAgIGNhc2UgODoNCiAJY2F0ID0gTENfUEFQRVI7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gc2V0bG9jYWxlKGNhdCwgbCk7DQogCWJyZWFrOw0KICMgZW5kaWYNCiAjIGlmZGVmCUxDX01FQVNVUkVNRU5UDQogICAgIGNhc2UgOToNCiAJY2F0ID0gTENfTUVBU1VSRU1FTlQ7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gc2V0bG9jYWxlKGNhdCwgbCk7DQogCWJyZWFrOw0KICMgZW5kaWYNCiAjZW5kaWYNCkBAIC0yMzI4LDcgKzIzMjYsNyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAJU0VUX1NUUklOR19FTFQoYW5zLCAwLCBta0NoYXIoIiIpKTsNCiAJaWYgKCF3YXJuZWQpDQogCSAgICB3YXJuaW5nKF8oIk9TIHJlcG9ydHMgcmVxdWVzdCB0byBzZXQgbG9jYWxlIHRvIFwiJXNcIiBjYW5ub3QgYmUgaG9ub3JlZCIpLA0KLQkgICAgICAgICAgICBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwkgICAgICAgICAgICBsKTsNCiAgICAgfQ0KICNpZmRlZiBXaW4zMg0KICAgICBpbnQgb2xkQ1AgPSBsb2NhbGVDUDsNCkBAIC0zOTMyLDQgKzM5MzAsMyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc3lzc2xlZXAoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KICAgICBSc2xlZXAodGltZSk7DQogICAgIHJldHVybiBSX05pbFZhbHVlOw0KIH0NCi0NCg==",
+          "creator": "kevinushey",
+          "id": 3803,
+          "is_private": false,
+          "size": 3979,
+          "last_change_time": "2026-08-28T03:05:13Z",
+          "bug_id": 19143,
+          "file_name": "file_19143.txt",
+          "summary": "Candidate patch.",
+          "creation_time": "2026-08-27T16:51:26Z"
+        },
+        {
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true,
+          "creator": "kevinushey",
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9tYWluL3BsYXRmb3JtLmMgYi9zcmMvbWFpbi9wbGF0Zm9ybS5jDQppbmRleCA1NTkxYmE5OTY3Li42NGI2ODMxZjc5IDEwMDY0NA0KLS0tIGEvc3JjL21haW4vcGxhdGZvcm0uYw0KKysrIGIvc3JjL21haW4vcGxhdGZvcm0uYw0KQEAgLTIxODgsMTAgKzIxODgsMjQgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3VubGluayhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpDQogfQ0KICNlbmRpZg0KIA0KKyNpZmRlZiBXaW4zMg0KKyMgZGVmaW5lIFJfTE9DQUxFX0NIQVIgd2NoYXJfdA0KKyMgZGVmaW5lIFJfU0VUTE9DQUxFIF93c2V0bG9jYWxlDQorIyBkZWZpbmUgUl9MT0NBTEVfQVJHIHd0cmFuc0NoYXINCisjIGRlZmluZSBSX0xPQ0FMRV9JU19DKHgpICghd2NzY21wKCh4KSwgTCJDIikpDQorIyBkZWZpbmUgUl9MT0NBTEVfTUtDSEFSIG1rQ2hhcldVVEY4DQorI2Vsc2UNCisjIGRlZmluZSBSX0xPQ0FMRV9DSEFSIGNoYXINCisjIGRlZmluZSBSX1NFVExPQ0FMRSBzZXRsb2NhbGUNCisjIGRlZmluZSBSX0xPQ0FMRV9BUkcgQ0hBUg0KKyMgZGVmaW5lIFJfTE9DQUxFX0lTX0MoeCkgKCFzdHJjbXAoKHgpLCAiQyIpKQ0KKyMgZGVmaW5lIFJfTE9DQUxFX01LQ0hBUiBta0NoYXINCisjZW5kaWYNCisNCiBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fZ2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiB7DQogICAgIGludCBjYXQ7DQotICAgIGNoYXIgKnAgPSBOVUxMOw0KKyAgICBjb25zdCBSX0xPQ0FMRV9DSEFSICpwID0gTlVMTDsNCiANCiAgICAgY2hlY2tBcml0eShvcCwgYXJncyk7DQogICAgIGNhdCA9IGFzSW50ZWdlcihDQVIoYXJncykpOw0KQEAgLTIyMTcsMTYgKzIyMzEsMjEgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2dldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogI2VuZGlmDQogICAgIGRlZmF1bHQ6IGNhdCA9IE5BX0lOVEVHRVI7DQogICAgIH0NCi0gICAgaWYgKGNhdCAhPSBOQV9JTlRFR0VSKSBwID0gc2V0bG9jYWxlKGNhdCwgTlVMTCk7DQotICAgIHJldHVybiBta1N0cmluZyhwID8gcCA6ICIiKTsNCisgICAgaWYgKGNhdCAhPSBOQV9JTlRFR0VSKSBwID0gUl9TRVRMT0NBTEUoY2F0LCBOVUxMKTsNCisjaWZkZWYgV2luMzINCisgICAgU0VYUCBzdHJpbmcgPSBwID8gUl9MT0NBTEVfTUtDSEFSKHApIDogbWtDaGFyKCIiKTsNCisjZWxzZQ0KKyAgICBjb25zdCBjaGFyICp1dGY4ID0gcmVFbmMocCA/IHAgOiAiIiwgQ0VfTkFUSVZFLCBDRV9VVEY4LCAxKTsNCisgICAgU0VYUCBzdHJpbmcgPSBta0NoYXJDRSh1dGY4LCBDRV9VVEY4KTsNCisjZW5kaWYNCisgICAgcmV0dXJuIFNjYWxhclN0cmluZyhzdHJpbmcpOw0KIH0NCiANCi0vKiBMb2NhbGUgc3BlY3MgYXJlIGFsd2F5cyBBU0NJSSAqLw0KIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIHsNCiAgICAgU0VYUCBsb2NhbGUgPSBDQURSKGFyZ3MpLCBhbnM7DQogICAgIGludCBjYXQ7DQotICAgIGNvbnN0IGNoYXIgKnA7DQorICAgIGNvbnN0IFJfTE9DQUxFX0NIQVIgKnAsICpsOw0KICAgICBib29sIHdhcm5lZCA9IEZBTFNFOw0KIA0KICAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsNCkBAIC0yMjM1LDU2ICsyMjU0LDU0IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIAllcnJvcihfKCJpbnZhbGlkICclcycgYXJndW1lbnQiKSwgImNhdGVnb3J5Iik7DQogICAgIGlmICghaXNTdHJpbmcobG9jYWxlKSB8fCBMRU5HVEgobG9jYWxlKSAhPSAxKQ0KIAllcnJvcihfKCJpbnZhbGlkICclcycgYXJndW1lbnQiKSwgImxvY2FsZSIpOw0KKyAgICBsID0gUl9MT0NBTEVfQVJHKFNUUklOR19FTFQobG9jYWxlLCAwKSk7DQogICAgIHN3aXRjaChjYXQpIHsNCiAgICAgY2FzZSAxOg0KICAgICB7DQotCWNvbnN0IGNoYXIgKmwgPSBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSk7DQogCWNhdCA9IExDX0FMTDsNCiAJLyogYXNzdW1lIHdlIGNhbiBzZXQgTENfQ1RZUEUgaWZmIHdlIGNhbiBzZXQgdGhlIHJlc3QgKi8NCi0JaWYgKChwID0gc2V0bG9jYWxlKExDX0NUWVBFLCBsKSkpIHsNCi0JICAgIHNldGxvY2FsZShMQ19DT0xMQVRFLCBsKTsNCisJaWYgKChwID0gUl9TRVRMT0NBTEUoTENfQ1RZUEUsIGwpKSkgew0KKwkgICAgUl9TRVRMT0NBTEUoTENfQ09MTEFURSwgbCk7DQogCSAgICAvKiBkaXNhYmxlIHRoZSBjb2xsYXRvciB3aGVuIHNldHRpbmcgdG8gQyB0byB0YWtlDQogCSAgICAgICBwcmVjZWRlbmNlIG92ZXIgUl9JQ1VfTE9DQUxFICovDQotCSAgICByZXNldElDVWNvbGxhdG9yKCFzdHJjbXAobCwgIkMiKSk7DQotCSAgICBzZXRsb2NhbGUoTENfTU9ORVRBUlksIGwpOw0KLQkgICAgc2V0bG9jYWxlKExDX1RJTUUsIGwpOw0KKwkgICAgcmVzZXRJQ1Vjb2xsYXRvcihSX0xPQ0FMRV9JU19DKGwpKTsNCisJICAgIFJfU0VUTE9DQUxFKExDX01PTkVUQVJZLCBsKTsNCisJICAgIFJfU0VUTE9DQUxFKExDX1RJTUUsIGwpOw0KIAkgICAgZHRfaW52YWxpZGF0ZV9sb2NhbGUoKTsNCiAJICAgIC8qIE5lZWQgdG8gcmV0dXJuIHZhbHVlIG9mIExDX0FMTCAqLw0KLQkgICAgcCA9IHNldGxvY2FsZShjYXQsIE5VTEwpOw0KKwkgICAgcCA9IFJfU0VUTE9DQUxFKGNhdCwgTlVMTCk7DQogCX0NCiAJYnJlYWs7DQogICAgIH0NCiAgICAgY2FzZSAyOg0KICAgICB7DQotCWNvbnN0IGNoYXIgKmwgPSBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSk7DQogCWNhdCA9IExDX0NPTExBVEU7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBsKTsNCisJcCA9IFJfU0VUTE9DQUxFKGNhdCwgbCk7DQogCS8qIGRpc2FibGUgdGhlIGNvbGxhdG9yIHdoZW4gc2V0dGluZyB0byBDIHRvIHRha2UNCiAJICAgcHJlY2VkZW5jZSBvdmVyIFJfSUNVX0xPQ0FMRSAqLw0KLQlyZXNldElDVWNvbGxhdG9yKCFzdHJjbXAobCwgIkMiKSk7DQorCXJlc2V0SUNVY29sbGF0b3IoUl9MT0NBTEVfSVNfQyhsKSk7DQogCWJyZWFrOw0KICAgICB9DQogICAgIGNhc2UgMzoNCiAJY2F0ID0gTENfQ1RZUEU7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gUl9TRVRMT0NBTEUoY2F0LCBsKTsNCiAJYnJlYWs7DQogICAgIGNhc2UgNDoNCiAJY2F0ID0gTENfTU9ORVRBUlk7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gUl9TRVRMT0NBTEUoY2F0LCBsKTsNCiAJYnJlYWs7DQogICAgIGNhc2UgNToNCiAJY2F0ID0gTENfTlVNRVJJQzsNCiAJew0KLQkgICAgY29uc3QgY2hhciAqbmV3X2xjX251bSA9IENIQVIoU1RSSU5HX0VMVChsb2NhbGUsIDApKTsNCi0JICAgIGlmIChzdHJjbXAobmV3X2xjX251bSwgIkMiKSkgLyogZG8gbm90IGNvbXBsYWluIGFib3V0IEMgbG9jYWxlIC0gdGhhdCdzIHRoZSBvbmx5DQotCQkJCQkgICAgcmVsaWFibGUgd2F5IHRvIHJlc3RvcmUgc2FuaXR5ICovDQorCSAgICBpZiAoIVJfTE9DQUxFX0lTX0MobCkpIC8qIGRvIG5vdCBjb21wbGFpbiBhYm91dCBDIGxvY2FsZSAtIHRoYXQncyB0aGUgb25seQ0KKwkJCQkgICAgcmVsaWFibGUgd2F5IHRvIHJlc3RvcmUgc2FuaXR5ICovDQogCQl3YXJuaW5nKF8oInNldHRpbmcgJ0xDX05VTUVSSUMnIG1heSBjYXVzZSBSIHRvIGZ1bmN0aW9uIHN0cmFuZ2VseSIpKTsNCi0JICAgIHAgPSBzZXRsb2NhbGUoY2F0LCBuZXdfbGNfbnVtKTsNCisJICAgIHAgPSBSX1NFVExPQ0FMRShjYXQsIGwpOw0KIAl9DQogCWJyZWFrOw0KICAgICBjYXNlIDY6DQogCWNhdCA9IExDX1RJTUU7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gUl9TRVRMT0NBTEUoY2F0LCBsKTsNCiAJZHRfaW52YWxpZGF0ZV9sb2NhbGUoKTsNCiAJYnJlYWs7DQogI2lmZGVmIFdpbjMyDQpAQCAtMjMwMiwxOSArMjMxOSwxOSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAjIGlmZGVmIExDX01FU1NBR0VTDQogICAgIGNhc2UgNzoNCiAJY2F0ID0gTENfTUVTU0FHRVM7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gUl9TRVRMT0NBTEUoY2F0LCBsKTsNCiAJYnJlYWs7DQogIyBlbmRpZg0KICMgaWZkZWYgTENfUEFQRVINCiAgICAgY2FzZSA4Og0KIAljYXQgPSBMQ19QQVBFUjsNCi0JcCA9IHNldGxvY2FsZShjYXQsIENIQVIoU1RSSU5HX0VMVChsb2NhbGUsIDApKSk7DQorCXAgPSBSX1NFVExPQ0FMRShjYXQsIGwpOw0KIAlicmVhazsNCiAjIGVuZGlmDQogIyBpZmRlZglMQ19NRUFTVVJFTUVOVA0KICAgICBjYXNlIDk6DQogCWNhdCA9IExDX01FQVNVUkVNRU5UOw0KLQlwID0gc2V0bG9jYWxlKGNhdCwgQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpKTsNCisJcCA9IFJfU0VUTE9DQUxFKGNhdCwgbCk7DQogCWJyZWFrOw0KICMgZW5kaWYNCiAjZW5kaWYNCkBAIC0yMzIzLDcgKzIzNDAsNyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJjYXRlZ29yeSIpOw0KICAgICB9DQogICAgIFBST1RFQ1QoYW5zID0gYWxsb2NWZWN0b3IoU1RSU1hQLCAxKSk7DQotICAgIGlmIChwKSBTRVRfU1RSSU5HX0VMVChhbnMsIDAsIG1rQ2hhcihwKSk7DQorICAgIGlmIChwKSBTRVRfU1RSSU5HX0VMVChhbnMsIDAsIFJfTE9DQUxFX01LQ0hBUihwKSk7DQogICAgIGVsc2UgIHsNCiAJU0VUX1NUUklOR19FTFQoYW5zLCAwLCBta0NoYXIoIiIpKTsNCiAJaWYgKCF3YXJuZWQpDQpAQCAtMjM0Nyw2ICsyMzY0LDEyIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KICAgICByZXR1cm4gYW5zOw0KIH0NCiANCisjdW5kZWYgUl9MT0NBTEVfQ0hBUg0KKyN1bmRlZiBSX1NFVExPQ0FMRQ0KKyN1bmRlZiBSX0xPQ0FMRV9BUkcNCisjdW5kZWYgUl9MT0NBTEVfSVNfQw0KKyN1bmRlZiBSX0xPQ0FMRV9NS0NIQVINCisNCiANCiANCiBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fbG9jYWxlY29udihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQo=",
+          "is_private": false,
+          "id": 3804,
+          "last_change_time": "2026-08-28T19:43:43Z",
+          "size": 5354,
+          "file_name": "file_19143.txt",
+          "bug_id": 19143,
+          "creation_time": "2026-08-28T03:05:13Z",
+          "summary": "Candidate patch; using wide APIs on Windows."
+        },
+        {
+          "data": "ZGlmZiAtLWdpdCBhL3Rlc3RzL3JlZy1lbmNvZGluZ3MuUiBiL3Rlc3RzL3JlZy1lbmNvZGluZ3MuUg0KaW5kZXggMWVhNDdjZWJkMC4uYzViZjFiMzJkZiAxMDA2NDQNCi0tLSBhL3Rlc3RzL3JlZy1lbmNvZGluZ3MuUg0KKysrIGIvdGVzdHMvcmVnLWVuY29kaW5ncy5SDQpAQCAtNDI5LDYgKzQyOSwzNCBAQCBpZighaXMubnVsbChsYyA8LSBsY2N0KSAmJiBuemNoYXIobGMpKSBTeXMuc2V0bG9jYWxlKCJMQ19DVFlQRSIsIGxjKSAjIHJldmVydA0KICMjIDxjaGFycz4oYTEpWzM6NF0gd2VyZSBkaWZmZXJlbnQgaW4gUiA8PSA0LjYuMA0KIA0KIA0KKyMjIFN5cy5bZ3NdZXRsb2NhbGUoKSBoYW5kbGUgbm9uLUFTQ0lJIGxvY2FsZSBuYW1lcyBhbmQgdGhlaXIgZW5jb2RpbmcNCitpZihvbldpbmRvd3MgJiYgVVRGOCkgbG9jYWwoew0KKyAgICBvbGQgPC0gYyhjdHlwZSA9IFN5cy5nZXRsb2NhbGUoIkxDX0NUWVBFIiksDQorCSAgICAgdGltZSA9IFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKSkNCisgICAgb24uZXhpdCh7DQorCWludmlzaWJsZShTeXMuc2V0bG9jYWxlKCJMQ19DVFlQRSIsIG9sZFtbImN0eXBlIl1dKSkNCisJaW52aXNpYmxlKFN5cy5zZXRsb2NhbGUoIkxDX1RJTUUiLCBvbGRbWyJ0aW1lIl1dKSkNCisgICAgfSkNCisNCisgICAgbG9jYWxlIDwtIGVuYzJ1dGY4KCJOb3J3ZWdpYW4gQm9rbVx1MDBlNWxfTm9yd2F5LnV0ZjgiKQ0KKyAgICBzZXRsb2MgPC0gc3VwcHJlc3NXYXJuaW5ncyhTeXMuc2V0bG9jYWxlKCJMQ19USU1FIiwgbG9jYWxlKSkNCisgICAgaWYobnpjaGFyKHNldGxvYykpIHsNCisJZ2V0bG9jIDwtIFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKQ0KKwlzdG9waWZub3QoaWRlbnRpY2FsKEVuY29kaW5nKGdldGxvYyksICJVVEYtOCIpLA0KKwkJICBpZGVudGljYWwoRW5jb2Rpbmcoc2V0bG9jKSwgIlVURi04IikpDQorDQorCSMjIEEgZGVjbGFyZWQgVVRGLTggbG9jYWxlIG5hbWUgaXMgY29udmVydGVkIHRvIFVURi0xNiBiZWZvcmUgdGhlIENSVA0KKwkjIyBzZWVzIGl0LCBldmVuIHdoZW4gdGhlIGN1cnJlbnQgbmF0aXZlIGVuY29kaW5nIGlzIG5vdCBVVEYtOC4NCisJaW52aXNpYmxlKFN5cy5zZXRsb2NhbGUoIkxDX0NUWVBFIiwgIkMiKSkNCisJc2V0bG9jMiA8LSBzdXBwcmVzc1dhcm5pbmdzKFN5cy5zZXRsb2NhbGUoIkxDX1RJTUUiLCBsb2NhbGUpKQ0KKwlnZXRsb2MyIDwtIFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKQ0KKwlpbnZpc2libGUoU3lzLnNldGxvY2FsZSgiTENfQ1RZUEUiLCBvbGRbWyJjdHlwZSJdXSkpDQorCXN0b3BpZm5vdChuemNoYXIoc2V0bG9jMiksIGlkZW50aWNhbChnZXRsb2MyLCBzZXRsb2MyKSwNCisJCSAgaWRlbnRpY2FsKFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKSwgc2V0bG9jKSkNCisgICAgfQ0KK30pDQorDQorDQogDQogDQogIyMgUFIjMTkxMTIgLS0gd3JpdGVDaGFyKCkgb3ZlcmZsb3dzIGl0cyBvdXRwdXQgYnVmZmVyIC4uIG11bHRpYnl0ZSAuLg==",
+          "creator": "kevinushey",
+          "is_obsolete": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true,
+          "summary": "Regression test.",
+          "creation_time": "2026-08-28T03:22:16Z",
+          "bug_id": 19143,
+          "file_name": "file_19143.txt",
+          "size": 1489,
+          "last_change_time": "2026-08-28T19:43:43Z",
+          "id": 3805,
+          "is_private": false
+        },
+        {
+          "file_name": "file_19143.txt",
+          "bug_id": 19143,
+          "creation_time": "2026-08-28T19:43:43Z",
+          "summary": "Candidate patch.",
+          "is_private": false,
+          "id": 3806,
+          "last_change_time": "2026-08-28T19:44:04Z",
+          "size": 9440,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "ZGlmZiAtLWdpdCBhL2RvYy9ORVdTLlJkIGIvZG9jL05FV1MuUmQNCmluZGV4IDFlYmQwYjM2ODJjLi5iZTQ3NzQzYWNhYSAxMDA2NDQNCi0tLSBhL2RvYy9ORVdTLlJkDQorKysgYi9kb2MvTkVXUy5SZA0KQEAgLTI5NCw2ICsyOTQsMTcgQEANCiANCiAgICAgICBcaXRlbSBGaXggZm9yIFxQUnsxOTAzNX0gKHBpcGluZyBcY29kZXtwb3N0c2NyaXB0KCl9IG91dHB1dCkNCiAgICAgICB0aGFua3MgdG8gXEl7SmVyb2VuIE9vbXN9IGFuZCBcSXtJdmFuIEtyeWxvdn0uDQorDQorICAgICAgXGl0ZW0gXGNvZGV7U3lzLnNldGxvY2FsZSgpfSBvbiBXaW5kb3dzIG5vdyBwYXNzZXMgdGhlIGxvY2FsZSBuYW1lDQorICAgICAgdG8gdGhlIEMgcnVudGltZSBhcyBVVEYtMTYsIHNvIHRoYXQgYSBuYW1lIGNvbnRhaW5pbmcgbm9uLUFTQ0lJDQorICAgICAgY2hhcmFjdGVycyAtLSBzdWNoIGFzIFxjb2RleyJOb3J3ZWdpYW4gQm9rbcOlbF9Ob3J3YXkudXRmOCJ9IG9yDQorICAgICAgXGNvZGV7IlR1cmtpc2hfVMO8cmtpeWUudXRmOCJ9LCB0aGUgZGVmYXVsdCBuYW1lcyBvbiByZWNlbnQgV2luZG93cw0KKyAgICAgIHZlcnNpb25zIC0tIGNhbiBiZSBzZXQgZnJvbSBhbnkgbG9jYWxlLCBpbmNsdWRpbmcgXGNvZGV7IkMifS4NCisgICAgICBQcmV2aW91c2x5IHRoZSBuYW1lIHdhcyBwYXNzZWQgYXMgYnl0ZXMgdG8gYmUgaW50ZXJwcmV0ZWQgaW4gdGhlDQorICAgICAgXGVtcGh7Y3VycmVudH0gbG9jYWxlLCBzbyB0aGF0LCBlLmcuLCByZXN0b3JpbmcgYSBsb2NhbGUgc2F2ZWQgYnkNCisgICAgICBcY29kZXtTeXMuZ2V0bG9jYWxlKCl9IGFmdGVyIHN3aXRjaGluZyB0byBcY29kZXsiQyJ9IGZhaWxlZC4gIE9uDQorICAgICAgYWxsIHBsYXRmb3JtcywgXGNvZGV7U3lzLmdldGxvY2FsZSgpfSBhbmQgXGNvZGV7U3lzLnNldGxvY2FsZSgpfQ0KKyAgICAgIG5vdyByZXR1cm4gbm9uLUFTQ0lJIGxvY2FsZSBuYW1lcyBtYXJrZWQgYXMgXGFiYnJ7VVRGLTh9Lg0KICAgICB9DQogICB9DQogfQ0KZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL2xvY2FsZXMuUmQgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9sb2NhbGVzLlJkDQppbmRleCBmZGNmZGRjMzc1MS4uNTY2YzIzMzkxY2EgMTAwNjQ0DQotLS0gYS9zcmMvbGlicmFyeS9iYXNlL21hbi9sb2NhbGVzLlJkDQorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9sb2NhbGVzLlJkDQpAQCAtODksNyArODksOCBAQCBTeXMuc2V0bG9jYWxlIChjYXRlZ29yeSA9ICJMQ19BTEwiLCBsb2NhbGUgPSAiIikNCiAgIEEgY2hhcmFjdGVyIHN0cmluZyBvZiBsZW5ndGggb25lIGRlc2NyaWJpbmcgdGhlIGxvY2FsZSBpbiB1c2UgKGFmdGVyDQogICBzZXR0aW5nIGZvciBcY29kZXtTeXMuc2V0bG9jYWxlfSksIG9yIGFuIGVtcHR5IGNoYXJhY3RlciBzdHJpbmcgaWYgdGhlDQogICBjdXJyZW50IGxvY2FsZSBzZXR0aW5ncyBhcmUgaW52YWxpZCBvciBcY29kZXtOVUxMfSBpZiBsb2NhbGUNCi0gIGluZm9ybWF0aW9uIGlzIHVuYXZhaWxhYmxlLg0KKyAgaW5mb3JtYXRpb24gaXMgdW5hdmFpbGFibGUuICBBIGxvY2FsZSBuYW1lIGNvbnRhaW5pbmcgbm9uLUFTQ0lJDQorICBjaGFyYWN0ZXJzIChhcyBzb21lIGRvIG9uIFdpbmRvd3MpIGlzIHJldHVybmVkIGVuY29kZWQgaW4gVVRGLTguDQogDQogICBGb3IgXGNvZGV7Y2F0ZWdvcnkgPSAiTENfQUxMIn0gdGhlIGRldGFpbHMgb2YgdGhlIHN0cmluZyBhcmUNCiAgIHN5c3RlbS1zcGVjaWZpYzogaXQgbWlnaHQgYmUgYSBzaW5nbGUgbG9jYWxlIG5hbWUgb3IgYSBzZXQgb2YgbG9jYWxlDQpkaWZmIC0tZ2l0IGEvc3JjL21haW4vcGxhdGZvcm0uYyBiL3NyYy9tYWluL3BsYXRmb3JtLmMNCmluZGV4IDU1OTFiYTk5Njc4Li5jMTczY2Q1NTQzNCAxMDA2NDQNCi0tLSBhL3NyYy9tYWluL3BsYXRmb3JtLmMNCisrKyBiL3NyYy9tYWluL3BsYXRmb3JtLmMNCkBAIC0yMTg4LDEwICsyMTg4LDMxIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb191bmxpbmsoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQ0KIH0NCiAjZW5kaWYNCiANCisvKiBMb2NhbGUgbmFtZXMgYXJlIHBhc3NlZCB0byB0aGUgQyBsaWJyYXJ5IGluIGl0cyBuYXRpdmUgZW5jb2RpbmcgKFVURi0xNg0KKyAgIG9uIFdpbmRvd3MpIGFuZCByZXR1cm5lZCB0byBSIGFzIFVURi04LCBzbyB0aGF0IGEgbmFtZSBvYnRhaW5lZCBmcm9tDQorICAgU3lzLmdldGxvY2FsZSgpIGNhbiBiZSBnaXZlbiBiYWNrIHRvIFN5cy5zZXRsb2NhbGUoKSB3aGF0ZXZlciB0aGUNCisgICBjdXJyZW50IGxvY2FsZSBpcy4gIFdpdGggbmFycm93IGxvY2FsZSBuYW1lcywgYSBuYW1lIGNvbnRhaW5pbmcNCisgICBub24tQVNDSUkgY2hhcmFjdGVycyAoYXMgdGhlIE5vcndlZ2lhbiBCb2ttYWwgYW5kIFR1cmtpc2ggbG9jYWxlcyBkbw0KKyAgIG9uIHJlY2VudCB2ZXJzaW9ucyBvZiBXaW5kb3dzKSBjb3VsZCBub3QgYmUgc2V0IGFnYWluIG9uY2UgdGhlIEMNCisgICBsb2NhbGUgd2FzIGluIGVmZmVjdC4gKi8NCisjaWZkZWYgV2luMzINCisjIGRlZmluZSBSX0xPQ0FMRV9DSEFSIHdjaGFyX3QNCisjIGRlZmluZSBSX1NFVExPQ0FMRSBfd3NldGxvY2FsZQ0KKyMgZGVmaW5lIFJfTE9DQUxFX0FSRyB3dHJhbnNDaGFyDQorIyBkZWZpbmUgUl9MT0NBTEVfSVNfQyh4KSAoIXdjc2NtcCgoeCksIEwiQyIpKQ0KKyMgZGVmaW5lIFJfTE9DQUxFX01LQ0hBUih4KSBta0NoYXJXVVRGOCh4KQ0KKyNlbHNlDQorIyBkZWZpbmUgUl9MT0NBTEVfQ0hBUiBjaGFyDQorIyBkZWZpbmUgUl9TRVRMT0NBTEUgc2V0bG9jYWxlDQorIyBkZWZpbmUgUl9MT0NBTEVfQVJHIHRyYW5zbGF0ZUNoYXINCisjIGRlZmluZSBSX0xPQ0FMRV9JU19DKHgpICghc3RyY21wKCh4KSwgIkMiKSkNCisjIGRlZmluZSBSX0xPQ0FMRV9NS0NIQVIoeCkgbWtDaGFyQ0UocmVFbmMoKHgpLCBDRV9OQVRJVkUsIENFX1VURjgsIDEpLCBDRV9VVEY4KQ0KKyNlbmRpZg0KKw0KIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19nZXRsb2NhbGUoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KIHsNCiAgICAgaW50IGNhdDsNCi0gICAgY2hhciAqcCA9IE5VTEw7DQorICAgIGNvbnN0IFJfTE9DQUxFX0NIQVIgKnAgPSBOVUxMOw0KIA0KICAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsNCiAgICAgY2F0ID0gYXNJbnRlZ2VyKENBUihhcmdzKSk7DQpAQCAtMjIxNywxNiArMjIzOCwxNSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fZ2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAjZW5kaWYNCiAgICAgZGVmYXVsdDogY2F0ID0gTkFfSU5URUdFUjsNCiAgICAgfQ0KLSAgICBpZiAoY2F0ICE9IE5BX0lOVEVHRVIpIHAgPSBzZXRsb2NhbGUoY2F0LCBOVUxMKTsNCi0gICAgcmV0dXJuIG1rU3RyaW5nKHAgPyBwIDogIiIpOw0KKyAgICBpZiAoY2F0ICE9IE5BX0lOVEVHRVIpIHAgPSBSX1NFVExPQ0FMRShjYXQsIE5VTEwpOw0KKyAgICByZXR1cm4gU2NhbGFyU3RyaW5nKHAgPyBSX0xPQ0FMRV9NS0NIQVIocCkgOiBta0NoYXIoIiIpKTsNCiB9DQogDQotLyogTG9jYWxlIHNwZWNzIGFyZSBhbHdheXMgQVNDSUkgKi8NCiBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiB7DQogICAgIFNFWFAgbG9jYWxlID0gQ0FEUihhcmdzKSwgYW5zOw0KICAgICBpbnQgY2F0Ow0KLSAgICBjb25zdCBjaGFyICpwOw0KKyAgICBjb25zdCBSX0xPQ0FMRV9DSEFSICpwLCAqbDsNCiAgICAgYm9vbCB3YXJuZWQgPSBGQUxTRTsNCiANCiAgICAgY2hlY2tBcml0eShvcCwgYXJncyk7DQpAQCAtMjIzNSw1NiArMjI1NSw1NCBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJjYXRlZ29yeSIpOw0KICAgICBpZiAoIWlzU3RyaW5nKGxvY2FsZSkgfHwgTEVOR1RIKGxvY2FsZSkgIT0gMSkNCiAJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJsb2NhbGUiKTsNCisgICAgbCA9IFJfTE9DQUxFX0FSRyhTVFJJTkdfRUxUKGxvY2FsZSwgMCkpOw0KICAgICBzd2l0Y2goY2F0KSB7DQogICAgIGNhc2UgMToNCiAgICAgew0KLQljb25zdCBjaGFyICpsID0gQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpOw0KIAljYXQgPSBMQ19BTEw7DQogCS8qIGFzc3VtZSB3ZSBjYW4gc2V0IExDX0NUWVBFIGlmZiB3ZSBjYW4gc2V0IHRoZSByZXN0ICovDQotCWlmICgocCA9IHNldGxvY2FsZShMQ19DVFlQRSwgbCkpKSB7DQotCSAgICBzZXRsb2NhbGUoTENfQ09MTEFURSwgbCk7DQorCWlmICgocCA9IFJfU0VUTE9DQUxFKExDX0NUWVBFLCBsKSkpIHsNCisJICAgIFJfU0VUTE9DQUxFKExDX0NPTExBVEUsIGwpOw0KIAkgICAgLyogZGlzYWJsZSB0aGUgY29sbGF0b3Igd2hlbiBzZXR0aW5nIHRvIEMgdG8gdGFrZQ0KIAkgICAgICAgcHJlY2VkZW5jZSBvdmVyIFJfSUNVX0xPQ0FMRSAqLw0KLQkgICAgcmVzZXRJQ1Vjb2xsYXRvcighc3RyY21wKGwsICJDIikpOw0KLQkgICAgc2V0bG9jYWxlKExDX01PTkVUQVJZLCBsKTsNCi0JICAgIHNldGxvY2FsZShMQ19USU1FLCBsKTsNCisJICAgIHJlc2V0SUNVY29sbGF0b3IoUl9MT0NBTEVfSVNfQyhsKSk7DQorCSAgICBSX1NFVExPQ0FMRShMQ19NT05FVEFSWSwgbCk7DQorCSAgICBSX1NFVExPQ0FMRShMQ19USU1FLCBsKTsNCiAJICAgIGR0X2ludmFsaWRhdGVfbG9jYWxlKCk7DQogCSAgICAvKiBOZWVkIHRvIHJldHVybiB2YWx1ZSBvZiBMQ19BTEwgKi8NCi0JICAgIHAgPSBzZXRsb2NhbGUoY2F0LCBOVUxMKTsNCisJICAgIHAgPSBSX1NFVExPQ0FMRShjYXQsIE5VTEwpOw0KIAl9DQogCWJyZWFrOw0KICAgICB9DQogICAgIGNhc2UgMjoNCiAgICAgew0KLQljb25zdCBjaGFyICpsID0gQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpOw0KIAljYXQgPSBMQ19DT0xMQVRFOw0KLQlwID0gc2V0bG9jYWxlKGNhdCwgbCk7DQorCXAgPSBSX1NFVExPQ0FMRShjYXQsIGwpOw0KIAkvKiBkaXNhYmxlIHRoZSBjb2xsYXRvciB3aGVuIHNldHRpbmcgdG8gQyB0byB0YWtlDQogCSAgIHByZWNlZGVuY2Ugb3ZlciBSX0lDVV9MT0NBTEUgKi8NCi0JcmVzZXRJQ1Vjb2xsYXRvcighc3RyY21wKGwsICJDIikpOw0KKwlyZXNldElDVWNvbGxhdG9yKFJfTE9DQUxFX0lTX0MobCkpOw0KIAlicmVhazsNCiAgICAgfQ0KICAgICBjYXNlIDM6DQogCWNhdCA9IExDX0NUWVBFOw0KLQlwID0gc2V0bG9jYWxlKGNhdCwgQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpKTsNCisJcCA9IFJfU0VUTE9DQUxFKGNhdCwgbCk7DQogCWJyZWFrOw0KICAgICBjYXNlIDQ6DQogCWNhdCA9IExDX01PTkVUQVJZOw0KLQlwID0gc2V0bG9jYWxlKGNhdCwgQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpKTsNCisJcCA9IFJfU0VUTE9DQUxFKGNhdCwgbCk7DQogCWJyZWFrOw0KICAgICBjYXNlIDU6DQogCWNhdCA9IExDX05VTUVSSUM7DQogCXsNCi0JICAgIGNvbnN0IGNoYXIgKm5ld19sY19udW0gPSBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSk7DQotCSAgICBpZiAoc3RyY21wKG5ld19sY19udW0sICJDIikpIC8qIGRvIG5vdCBjb21wbGFpbiBhYm91dCBDIGxvY2FsZSAtIHRoYXQncyB0aGUgb25seQ0KLQkJCQkJICAgIHJlbGlhYmxlIHdheSB0byByZXN0b3JlIHNhbml0eSAqLw0KKwkgICAgaWYgKCFSX0xPQ0FMRV9JU19DKGwpKSAvKiBkbyBub3QgY29tcGxhaW4gYWJvdXQgQyBsb2NhbGUgLSB0aGF0J3MgdGhlIG9ubHkNCisJCQkJICAgIHJlbGlhYmxlIHdheSB0byByZXN0b3JlIHNhbml0eSAqLw0KIAkJd2FybmluZyhfKCJzZXR0aW5nICdMQ19OVU1FUklDJyBtYXkgY2F1c2UgUiB0byBmdW5jdGlvbiBzdHJhbmdlbHkiKSk7DQotCSAgICBwID0gc2V0bG9jYWxlKGNhdCwgbmV3X2xjX251bSk7DQorCSAgICBwID0gUl9TRVRMT0NBTEUoY2F0LCBsKTsNCiAJfQ0KIAlicmVhazsNCiAgICAgY2FzZSA2Og0KIAljYXQgPSBMQ19USU1FOw0KLQlwID0gc2V0bG9jYWxlKGNhdCwgQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpKTsNCisJcCA9IFJfU0VUTE9DQUxFKGNhdCwgbCk7DQogCWR0X2ludmFsaWRhdGVfbG9jYWxlKCk7DQogCWJyZWFrOw0KICNpZmRlZiBXaW4zMg0KQEAgLTIzMDIsMTkgKzIzMjAsMTkgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3NldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogIyBpZmRlZiBMQ19NRVNTQUdFUw0KICAgICBjYXNlIDc6DQogCWNhdCA9IExDX01FU1NBR0VTOw0KLQlwID0gc2V0bG9jYWxlKGNhdCwgQ0hBUihTVFJJTkdfRUxUKGxvY2FsZSwgMCkpKTsNCisJcCA9IFJfU0VUTE9DQUxFKGNhdCwgbCk7DQogCWJyZWFrOw0KICMgZW5kaWYNCiAjIGlmZGVmIExDX1BBUEVSDQogICAgIGNhc2UgODoNCiAJY2F0ID0gTENfUEFQRVI7DQotCXAgPSBzZXRsb2NhbGUoY2F0LCBDSEFSKFNUUklOR19FTFQobG9jYWxlLCAwKSkpOw0KKwlwID0gUl9TRVRMT0NBTEUoY2F0LCBsKTsNCiAJYnJlYWs7DQogIyBlbmRpZg0KICMgaWZkZWYJTENfTUVBU1VSRU1FTlQNCiAgICAgY2FzZSA5Og0KIAljYXQgPSBMQ19NRUFTVVJFTUVOVDsNCi0JcCA9IHNldGxvY2FsZShjYXQsIENIQVIoU1RSSU5HX0VMVChsb2NhbGUsIDApKSk7DQorCXAgPSBSX1NFVExPQ0FMRShjYXQsIGwpOw0KIAlicmVhazsNCiAjIGVuZGlmDQogI2VuZGlmDQpAQCAtMjMyMyw3ICsyMzQxLDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3NldGxvY2FsZShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pDQogCWVycm9yKF8oImludmFsaWQgJyVzJyBhcmd1bWVudCIpLCAiY2F0ZWdvcnkiKTsNCiAgICAgfQ0KICAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgMSkpOw0KLSAgICBpZiAocCkgU0VUX1NUUklOR19FTFQoYW5zLCAwLCBta0NoYXIocCkpOw0KKyAgICBpZiAocCkgU0VUX1NUUklOR19FTFQoYW5zLCAwLCBSX0xPQ0FMRV9NS0NIQVIocCkpOw0KICAgICBlbHNlICB7DQogCVNFVF9TVFJJTkdfRUxUKGFucywgMCwgbWtDaGFyKCIiKSk7DQogCWlmICghd2FybmVkKQ0KQEAgLTIzNDcsNiArMjM2NSwxMiBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc2V0bG9jYWxlKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykNCiAgICAgcmV0dXJuIGFuczsNCiB9DQogDQorI3VuZGVmIFJfTE9DQUxFX0NIQVINCisjdW5kZWYgUl9TRVRMT0NBTEUNCisjdW5kZWYgUl9MT0NBTEVfQVJHDQorI3VuZGVmIFJfTE9DQUxFX0lTX0MNCisjdW5kZWYgUl9MT0NBTEVfTUtDSEFSDQorDQogDQogDQogYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2xvY2FsZWNvbnYoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQ0KZGlmZiAtLWdpdCBhL3Rlc3RzL3JlZy1lbmNvZGluZ3MuUiBiL3Rlc3RzL3JlZy1lbmNvZGluZ3MuUg0KaW5kZXggMWVhNDdjZWJkMDAuLjI2MDkzOGMwZmZiIDEwMDY0NA0KLS0tIGEvdGVzdHMvcmVnLWVuY29kaW5ncy5SDQorKysgYi90ZXN0cy9yZWctZW5jb2RpbmdzLlINCkBAIC00MjksNiArNDI5LDQxIEBAIGlmKCFpcy5udWxsKGxjIDwtIGxjY3QpICYmIG56Y2hhcihsYykpIFN5cy5zZXRsb2NhbGUoIkxDX0NUWVBFIiwgbGMpICMgcmV2ZXJ0DQogIyMgPGNoYXJzPihhMSlbMzo0XSB3ZXJlIGRpZmZlcmVudCBpbiBSIDw9IDQuNi4wDQogDQogDQorIyMgU3lzLltnc11ldGxvY2FsZSgpIGhhbmRsZSBub24tQVNDSUkgbG9jYWxlIG5hbWVzIGFuZCB0aGVpciBlbmNvZGluZw0KK2lmKG9uV2luZG93cykgbG9jYWwoew0KKyAgICBjYXRzIDwtIGMoIkxDX0NPTExBVEUiLCAiTENfQ1RZUEUiLCAiTENfTU9ORVRBUlkiLCAiTENfVElNRSIpDQorICAgIG9sZCA8LSB2YXBwbHkoY2F0cywgU3lzLmdldGxvY2FsZSwgIiIpDQorICAgIG9uLmV4aXQoZm9yKGNhdGVnb3J5IGluIGNhdHMpDQorCWludmlzaWJsZShTeXMuc2V0bG9jYWxlKGNhdGVnb3J5LCBvbGRbW2NhdGVnb3J5XV0pKSkNCisNCisgICAgbG9jYWxlIDwtIGVuYzJ1dGY4KCJOb3J3ZWdpYW4gQm9rbVx1MDBlNWxfTm9yd2F5LnV0ZjgiKQ0KKyAgICBzZXRsb2MgPC0gc3VwcHJlc3NXYXJuaW5ncyhTeXMuc2V0bG9jYWxlKCJMQ19USU1FIiwgbG9jYWxlKSkNCisgICAgaWYobnpjaGFyKHNldGxvYykpIHsNCisJZ2V0bG9jIDwtIFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKQ0KKwlzdG9waWZub3QoaWRlbnRpY2FsKEVuY29kaW5nKGdldGxvYyksICJVVEYtOCIpLA0KKwkJICBpZGVudGljYWwoRW5jb2Rpbmcoc2V0bG9jKSwgIlVURi04IikpDQorDQorCSMjIEEgZGVjbGFyZWQgVVRGLTggbG9jYWxlIG5hbWUgaXMgY29udmVydGVkIHRvIFVURi0xNiBiZWZvcmUgdGhlIENSVA0KKwkjIyBzZWVzIGl0LCBldmVuIHdoZW4gdGhlIGN1cnJlbnQgbmF0aXZlIGVuY29kaW5nIGlzIG5vdCBVVEYtOC4NCisJaW52aXNpYmxlKFN5cy5zZXRsb2NhbGUoIkxDX0NUWVBFIiwgIkMiKSkNCisJc2V0bG9jMiA8LSBzdXBwcmVzc1dhcm5pbmdzKFN5cy5zZXRsb2NhbGUoIkxDX1RJTUUiLCBsb2NhbGUpKQ0KKwlnZXRsb2MyIDwtIFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKQ0KKwlpbnZpc2libGUoU3lzLnNldGxvY2FsZSgiTENfQ1RZUEUiLCBvbGRbWyJMQ19DVFlQRSJdXSkpDQorCXN0b3BpZm5vdChuemNoYXIoc2V0bG9jMiksIGlkZW50aWNhbChnZXRsb2MyLCBzZXRsb2MyKSwNCisJCSAgaWRlbnRpY2FsKFN5cy5nZXRsb2NhbGUoIkxDX1RJTUUiKSwgc2V0bG9jKSkNCisNCisJIyMgIkxDX0FMTCIgc2V0cyBlYWNoIGNhdGVnb3J5IGZyb20gdGhlIG9uZSBuYW1lIGFuZCByZXBvcnRzIHRoZQ0KKwkjIyByZXN1bHRpbmcgY29tcG91bmQgbG9jYWxlLCBhZ2FpbiBmcm9tIHRoZSBDIGxvY2FsZS4NCisJaW52aXNpYmxlKFN5cy5zZXRsb2NhbGUoIkxDX0NUWVBFIiwgIkMiKSkNCisJc2V0YWxsIDwtIHN1cHByZXNzV2FybmluZ3MoU3lzLnNldGxvY2FsZSgiTENfQUxMIiwgbG9jYWxlKSkNCisJc3RvcGlmbm90KG56Y2hhcihzZXRhbGwpLCBpZGVudGljYWwoRW5jb2Rpbmcoc2V0YWxsKSwgIlVURi04IiksDQorCQkgIGlkZW50aWNhbChTeXMuZ2V0bG9jYWxlKCJMQ19DVFlQRSIpLCBzZXRsb2MpLA0KKwkJICBpZGVudGljYWwoU3lzLmdldGxvY2FsZSgiTENfQ09MTEFURSIpLCBzZXRsb2MpLA0KKwkJICBpZGVudGljYWwoU3lzLmdldGxvY2FsZSgiTENfVElNRSIpLCBzZXRsb2MpKQ0KKyAgICB9DQorfSkNCisNCisNCiANCiANCiAjIyBQUiMxOTExMiAtLSB3cml0ZUNoYXIoKSBvdmVyZmxvd3MgaXRzIG91dHB1dCBidWZmZXIgLi4gbXVsdGlieXRlIC4uDQo=",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-08-28 19:44:04"
+}

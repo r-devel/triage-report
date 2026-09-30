@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "deadline": {},
+        "id": 19103,
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-07-15T16:46:19Z",
+        "version": "R-devel (trunk)",
+        "component": "Windows GUI / Window specific",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-07-15T16:46:19Z",
+        "blocks": [],
+        "url": "",
+        "summary": "choose.dir() returns NA without showing a dialog in Rterm/Rscript",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "platform": "Other",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19103": {
+        "comments": [
+          {
+            "id": 103320,
+            "time": "2026-07-15T16:46:19Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "bug_id": 19103,
+            "text": "Since R 4.3.0, `utils::choose.dir()` returns `NA` immediately, without\nshowing the folder-selection dialog, whenever R is run via Rterm or\nRscript (and therefore also in front ends that embed or drive Rterm,\ne.g. RStudio and VS Code). Under Rgui the dialog appears as expected.\n\nTo reproduce, from Rterm (or Rscript) on Windows:\n\n```\n> utils::choose.dir()\n[1] NA\n```\n\nNo dialog is shown. There is a curious workaround, originally noticed\nby users: call `file.choose()` first (it can be cancelled), after which\n`choose.dir()` works normally for the rest of the session.\n\n## Analysis\n\nIn R 4.3.0, `askcdstring()` in `src/extra/graphapp/dialogs.c` (the helper\nbehind `choose.dir()` and Rgui's \"Change working directory\" dialog) was\nrewritten from `SHBrowseForFolder()` to the COM-based `IFileOpenDialog`.\nThe new code calls\n\n```\nres = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,\n                 &IID_IFileOpenDialog, (void **)&fileOpen);\n```\n\nbut COM is never initialized on the calling thread (there is no\n`CoInitialize`/`CoInitializeEx`/`OleInitialize` call anywhere in graphapp or\ngnuwin32). In Rterm/Rscript nothing else has initialized COM, so\n`CoCreateInstance` fails with `CO_E_NOTINITIALIZED`, and `askcdstring()`\nreturns `NULL`, which `chooseDir()` maps to `NA` -- indistinguishable from\nthe user cancelling the dialog.\n\nThis also explains the observed behavior elsewhere:\n\n- The `file.choose()` workaround works because `askfilenames()` goes\n  through `GetOpenFileNameW()`, which initializes COM on the calling\n  thread as a side effect; once that has happened, `CoCreateInstance`\n  succeeds.\n\n- Rgui is unaffected, presumably because something during GUI startup\n  initializes COM on the main thread as a side effect.\n\nThe fix is for `askcdstring()` to initialize COM itself, as documented\nfor callers of `CoCreateInstance`. Per the `CoInitializeEx` documentation,\n`S_FALSE` (already initialized in this apartment) and `RPC_E_CHANGED_MODE`\n(already initialized with a different threading model) both mean COM\nis usable on the thread; a successful call (`S_OK` or `S_FALSE`) must be\nbalanced by `CoUninitialize`, while `RPC_E_CHANGED_MODE` must not be.\n\n## Patch\n\nAgainst R-devel (r90194):\n\n```\nIndex: src/extra/graphapp/dialogs.c\n===================================================================\n--- src/extra/graphapp/dialogs.c\t(revision 90194)\n+++ src/extra/graphapp/dialogs.c\t(working copy)\n@@ -757,7 +757,7 @@\n \n char *askcdstring(const char *question, const char *default_str)\n {\n-    HRESULT res;\n+    HRESULT res, initres;\n     IFileOpenDialog *fileOpen = NULL;\n     IShellItem *dirsi = NULL;\n     DWORD flags = 0;\n@@ -768,6 +768,15 @@\n     wquestion = mbstowcs_malloc(question);\n     wdefault_str = mbstowcs_malloc(default_str);\n \n+    /* COM may not have been initialized on this thread (it is not in\n+       Rterm/Rscript), in which case CoCreateInstance below fails with\n+       CO_E_NOTINITIALIZED and no dialog is shown.  S_FALSE and\n+       RPC_E_CHANGED_MODE mean COM is already initialized on this\n+       thread, which is fine; a successful call (S_OK or S_FALSE) must\n+       be balanced by CoUninitialize. */\n+    initres = CoInitializeEx(NULL,\n+\t                     COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);\n+\n     res = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,\n                      &IID_IFileOpenDialog, (void **)&fileOpen);\n     \n@@ -805,7 +814,9 @@\n \tfree(wquestion);\n     if (wdefault_str)\n \tfree(wdefault_str);\n-    return ok ? strbuf : NULL; \n+    if (initres == S_OK || initres == S_FALSE)\n+\tCoUninitialize();\n+    return ok ? strbuf : NULL;\n }\n \n char *askpassword(const char *question, const char *default_str)\n```\n\nNotes on the patch:\n\n- `COINIT_APARTMENTTHREADED` matches what the common dialogs\n  (`GetOpenFileName`) use and is the appropriate model for a thread\n  showing UI; `COINIT_DISABLE_OLE1DDE` is the usual companion flag.\n\n- Rgui's use of `askcdstring()` (\"Change working directory\") is\n  unaffected: if COM is already initialized on the thread,\n  `CoInitializeEx` returns `S_FALSE` (or `RPC_E_CHANGED_MODE`) and the\n  balancing rule above leaves the caller's COM state untouched.\n\nDownstream reports of this issue include\nhttps://github.com/rstudio/rstudio/issues/13078 (also describing the\nsame behavior in VS Code).",
+            "count": 0,
+            "is_markdown": true,
+            "creation_time": "2026-07-15T16:46:19Z",
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19103": []
+    }
+  },
+  "source_changed": "2026-07-15 16:46:19"
+}

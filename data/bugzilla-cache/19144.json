@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "whiteboard": "",
+        "creation_time": "2026-08-28T07:37:33Z",
+        "version": "R 4.6.x",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "gabembecker"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19144,
+        "dupe_of": {},
+        "severity": "normal",
+        "assigned_to": "R-core",
+        "component": "Accuracy",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "summary": "wilcox.test(exact=TRUE) can return p-values outside [0,1] with a zero difference",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-09-03T06:30:41Z",
+        "cc_detail": [
+          {
+            "real_name": "Gabriel Becker",
+            "name": "gabembecker",
+            "id": 1299
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "tasuku.kobayashi",
+        "is_confirmed": false,
+        "op_sys": "Linux-Ubuntu",
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "flags": [],
+        "creator_detail": {
+          "name": "tasuku.kobayashi",
+          "id": 3778,
+          "real_name": "Tasuku Kobayashi"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19144": {
+        "comments": [
+          {
+            "count": 0,
+            "bug_id": 19144,
+            "text": "In R 4.6.0, R 4.6.1, and current R-devel, the one-sample exact path of\nwilcox.test() can return finite p-values outside [0, 1] when the sample\ncontains a zero difference.\n\nI reproduced this on the official R SVN trunk revision r90451, built from\nsource and run under Rscript --vanilla on x86_64-pc-linux-gnu. The method\nreported by R was \"Wilcoxon signed rank exact test\", there were no warnings,\nand repeated calls were bitwise identical.\n\nDeterministic reproducer (n = 100 integers, exactly one zero):\n\n    x <- c(52,49,65,23,-30,67,31,79,35,7,94,75,58,50,97,-1,73,37,46,\n           34,-54,78,66,70,15,76,3,82,42,5,17,51,88,12,89,22,56,64,43,\n           28,25,48,-33,8,53,36,60,32,91,24,96,18,-71,-27,45,99,77,69,\n           26,68,57,95,40,98,72,86,6,16,0,93,90,38,59,14,47,19,-41,84,\n           92,63,39,87,9,80,10,85,20,62,13,21,83,4,11,44,81,55,2,61,\n           -29,74)\n\n    for (alt in c(\"two.sided\", \"greater\", \"less\")) {\n        p <- wilcox.test(x, exact = TRUE, alternative = alt)$p.value\n        cat(alt, format(p, digits = 17), \"\\n\")\n    }\n\nObserved on R-devel r90451 (the same displayed values were observed in\nR 4.6.0 and 4.6.1):\n\n    two.sided  -7.5495165674510645e-15\n    greater    -3.7747582837255322e-15\n    less        1.0000000000000038\n\nExpected: every p-value must lie in [0, 1].\n\nThree separately implemented exact-arithmetic lineages agreed on the\nconditional zero-preserving signed-rank distribution. The exact reference\nvalues are:\n\n    greater =\n      409667043355 / 316912650057057350374175801344\n      -> correctly rounded binary64: 1.2926812586409632e-18\n\n    two.sided =\n      409667043355 / 158456325028528675187087900672\n      -> correctly rounded binary64: 2.5853625172819263e-18\n\n    less =\n      158456325028528674992491941179 /\n      158456325028528675187087900672\n      -> correctly rounded binary64: 1.0\n\nThe signed-rank statistic is 4755 in both R and the exact computations.\n\nReporter-side numerical diagnostic (not an R Core root-cause\nattribution): for this input, the floating mass function constructed by\n.dsignrank() sums to 1.0000000000000038. The CDF used by .psignrank()\nhas the same value. The following identities reproduce the reported\noutputs bit-for-bit:\n\n    greater   = 1 - CDF\n    less      = CDF\n    two.sided = 2 * (1 - CDF)\n\nThe normalization excess is about 2920 times the exact positive upper\ntail, so the complement becomes negative. Summing the floating upper\ntail directly instead gives 1.2926812586409682e-18, which stays in\n[0,1] but is 26 ULP from the correctly rounded exact value.\n\nThis also means that a final clamp alone is only a domain guard: for this\nreproducer it would turn the negative upper tail into zero, although the\nexact upper tail is strictly positive. I have not assumed a preferred\ncomplete repair. I can prepare an SVN diff after maintainer guidance on\nthe intended numerical strategy.\n\nFor comparison, the same calls in my tested R 4.4.3 environment returned\nin-range values through the older behavior, which removed the zero and\nused the asymptotic path. In the tested versions, the out-of-domain behavior\nis present from R 4.6.0 onward and is not present in R 4.4.3, which follows a\ndifferent fallback path.\n\nR-devel identity:\n\n    R Under development (unstable) (2026-08-27 r90451)\n    Platform: x86_64-pc-linux-gnu",
+            "creation_time": "2026-08-28T07:37:33Z",
+            "is_private": false,
+            "id": 103493,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "tasuku.kobayashi",
+            "time": "2026-08-28T07:37:33Z",
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "id": 103536,
+            "is_private": false,
+            "creation_time": "2026-09-02T10:27:01Z",
+            "bug_id": 19144,
+            "text": "I'm not seeing this behavior on ARM mac in either r-devel as of today(slightly later than what poster used) nor on an old R ( 4.5.1)\n\n```\n>  x <- c(52,49,65,23,-30,67,31,79,35,7,94,75,58,50,97,-1,73,37,46,\n+            34,-54,78,66,70,15,76,3,82,42,5,17,51,88,12,89,22,56,64,43,\n+            28,25,48,-33,8,53,36,60,32,91,24,96,18,-71,-27,45,99,77,69,\n+            26,68,57,95,40,98,72,86,6,16,0,93,90,38,59,14,47,19,-41,84,\n+            92,63,39,87,9,80,10,85,20,62,13,21,83,4,11,44,81,55,2,61,\n+            -29,74)\n> \n>     for (alt in c(\"two.sided\", \"greater\", \"less\")) {\n+         p <- wilcox.test(x, exact = TRUE, alternative = alt)$p.value\n+         cat(alt, format(p, digits = 17), \"\\n\")\n+     }\ntwo.sided 8.8817841970012523e-16 \ngreater 4.4408920985006262e-16 \nless 0.99999999999999956 \n> sessionInfo()\nR Under development (unstable) (2026-09-02 r90467)\nPlatform: aarch64-apple-darwin25.6.0\nRunning under: macOS Tahoe 26.6\n\nMatrix products: default\nBLAS:   /Users/gbecker/local/Rclassederrors/R.framework/Versions/4.7/Resources/lib/libRblas.dylib \nLAPACK: /Users/gbecker/local/Rclassederrors/R.framework/Versions/4.7/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\ntime zone: America/Los_Angeles\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.7.0\n```\n\nThough I did get a warning in 4.5.1 that I didn't get in that Rdevel version:\n\n```\n> sessionInfo()\nR version 4.5.1 (2025-06-13)\nPlatform: aarch64-apple-darwin20\nRunning under: macOS Tahoe 26.6\n\nMatrix products: default\nBLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib \nLAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n<snip>\n\n>  x <- c(52,49,65,23,-30,67,31,79,35,7,94,75,58,50,97,-1,73,37,46,\n           34,-54,78,66,70,15,76,3,82,42,5,17,51,88,12,89,22,56,64,43,\n           28,25,48,-33,8,53,36,60,32,91,24,96,18,-71,-27,45,99,77,69,\n           26,68,57,95,40,98,72,86,6,16,0,93,90,38,59,14,47,19,-41,84,\n           92,63,39,87,9,80,10,85,20,62,13,21,83,4,11,44,81,55,2,61,\n           -29,74)\n\n    for (alt in c(\"two.sided\", \"greater\", \"less\")) {\n        p <- wilcox.test(x, exact = TRUE, alternative = alt)$p.value\n        cat(alt, format(p, digits = 17), \"\\n\")\n    }\n\n x <- c(52,49,65,23,-30,67,31,79,35,7,94,75,58,50,97,-1,73,37,46,\n+            34,-54,78,66,70,15,76,3,82,42,5,17,51,88,12,89,22,56,64,43,\n+            28,25,48,-33,8,53,36,60,32,91,24,96,18,-71,-27,45,99,77,69,\n+            26,68,57,95,40,98,72,86,6,16,0,93,90,38,59,14,47,19,-41,84,\n+            92,63,39,87,9,80,10,85,20,62,13,21,83,4,11,44,81,55,2,61,\n+            -29,74)\n> \n>     for (alt in c(\"two.sided\", \"greater\", \"less\")) {\n+         p <- wilcox.test(x, exact = TRUE, alternative = alt)$p.value\n+         cat(alt, format(p, digits = 17), \"\\n\")\n+     }\ntwo.sided 2.1976835594752788e-14 \ngreater 1.0988417797376394e-14 \nless 0.99999999999998934 \nWarning messages:\n1: In wilcox.test.default(x, exact = TRUE, alternative = alt) :\n  cannot compute exact p-value with zeroes\n2: In wilcox.test.default(x, exact = TRUE, alternative = alt) :\n  cannot compute exact p-value with zeroes\n3: In wilcox.test.default(x, exact = TRUE, alternative = alt) :\n  cannot compute exact p-value with zeroes\n>\n```\n\nSo that *may* be a regression.",
+            "count": 1,
+            "attachment_id": {},
+            "time": "2026-09-02T10:27:01Z",
+            "creator": "gabembecker",
+            "is_markdown": true
+          },
+          {
+            "creation_time": "2026-09-03T06:30:41Z",
+            "count": 2,
+            "bug_id": 19144,
+            "text": "Thank you for checking this, especially on a different architecture.\n\nYour R-devel r90467 result does not reproduce the out-of-range symptom, but it appears to reproduce the underlying loss of accuracy in a different numerical direction.\n\nUsing the exact reference values from the report, the correctly rounded binary64 results are:\n\n```\ngreater    1.2926812586409632e-18\ntwo.sided  2.5853625172819263e-18\nless       1.0\n```\n\nThe exact `less` probability is slightly below 1, but it rounds to 1.0 in binary64.\n\nThe r90467 results were:\n\n```\ngreater    4.4408920985006262e-16\ntwo.sided  8.8817841970012523e-16\nless       0.99999999999999956\n```\n\nThus, although all three values are within [0, 1], the returned `greater` and `two.sided` values are about 343.54 times their exact values.\n\nThe three displayed r90467 results are also numerically consistent with the same complement pattern described in the original diagnostic:\n\n```\nCDF        = 0.99999999999999956\ngreater    = 1 - CDF\ntwo.sided  = 2 * (1 - CDF)\nless       = CDF\n```\n\nOn my x86_64 Linux build, the floating CDF was slightly above 1, so the complement became negative. In your ARM macOS result it is slightly below 1, so the result stays in range, but the exact positive upper tail of approximately 1.29e-18 is still overwhelmed by the floating-point error.\n\nThis therefore appears to make the out-of-range manifestation build-dependent, while the tail-accuracy problem remains observable on both builds. I do not mean this as a root-cause attribution to ARM, the compiler, or any particular library without further evidence.\n\nThe R 4.5.1 result exercises a different path: the warning indicates that exact computation with zeroes was declined and the older approximate path was used. It therefore does not test the zero-preserving exact path added in R 4.6.0.\n\nIf useful, I can provide a short diagnostic for the internal floating mass total and directly summed upper tail on r90467, or prepare a patch after guidance on the intended numerical strategy.",
+            "tags": [],
+            "is_private": false,
+            "id": 103554,
+            "creator": "tasuku.kobayashi",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-09-03T06:30:41Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19144": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-03 06:30:41"
+}

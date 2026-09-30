@@ -1,0 +1,134 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "blocks": [],
+        "url": "",
+        "summary": "gram.y: skip non-breakable spaces",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2023-11-10T06:41:00Z",
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "name": "maechler",
+            "id": 18
+          }
+        ],
+        "is_confirmed": false,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "ikrylov",
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Ivan Krylov",
+          "name": "ikrylov",
+          "id": 3307
+        },
+        "resolution": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2023-11-06T19:50:33Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 18622,
+        "severity": "enhancement",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "maechler"
+        ],
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18622": {
+        "comments": [
+          {
+            "creation_time": "2023-11-06T19:50:33Z",
+            "creator": "ikrylov",
+            "bug_id": 18622,
+            "text": "Created attachment 3270\nSuggested patch\n\nEvery now and then there is an R-help post with non-breakable spaces in their otherwise reproducible example ([e.g.](https://stat.ethz.ch/pipermail/r-help/2023-November/478518.html)). Currently, trying to parse R code containing NBSPs results in cryptic-looking errors:\n\n```\nparse(text = 'x <- \\ua0 42')\n# Error in parse(text = \"x <-  42\") : <text>:1:6: unexpected input\n# 1: x <-  \n#          ^\n```\n\nThe parser tries to do the right thing by skipping anything that tests positive for `iswblank()`. Unfortunately, [NBSPs are `iswpunct()`, not `iswblank()`](https://stackoverflow.com/a/50955136), by design.\n\nSince there is already a special case for skipping NBSPs on Windows when running with an 8-bit locale, let's implement a few more for when we know that `wchar_t` corresponds to Unicode code points.\n\nI've tried to add a regression test, but there's no easy way to test for `defined(__STDC_ISO_10646__) || (defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun)` from the R code. If `l10n_info()[['UTF-8']]` does not actually correlate to `wchar_t` being Unicode, it may be better to drop this test.",
+            "count": 0,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": 3270,
+            "id": 100346,
+            "time": "2023-11-06T19:50:33Z",
+            "is_private": false
+          },
+          {
+            "attachment_id": {},
+            "time": "2023-11-09T13:51:50Z",
+            "creator": "maechler",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 100354,
+            "creation_time": "2023-11-09T13:51:50Z",
+            "count": 1,
+            "bug_id": 18622,
+            "text": "Thank you, Ivan.   Your patch works fine, I applied and tried it just for yet-another example I got in an e-mail.\n\nYou have well classified this as  `[Wishlist]` as indeed, I am not sure if we should do / provide this.\n\nOften (also in the case mentioned above), the non-breakable space characters are the only non-ASCII characters  in R code, and we still *do* emphasize that for portability ASCII R code may be quite desirable.\nFor that reason, I think such NBSP character should be replaced by regular `' '` (space),  and at least for Emacs users as me that's easy and fast (*and* emacs shows the NBSP characters to me as kind of underscores, so I can easily notice).\n\nAn alternative solution to the problem maybe a small utils pkg function which replaces all NBSP by SP in a file / textConnection, so users can do this quickly, and R GUIs could do it semi-automatically for an R script or \"pasted R code\"\n{user opt-in I'd prefer}.\n\nSuch a function maybe very short, basically calling  `chartr('\\ua0', ' ', <line>)`\ni.e., something like\n```\nfixNBSP <- function(con) writeLines(vapply(readLines(con), \\(ln) chartr('\\ua0', ' ', ln), \"..\"), con)\n```"
+          },
+          {
+            "creation_time": "2023-11-10T06:41:00Z",
+            "text": "On second thought, I agree that the need for this is not dire enough to patch the parser. I had assumed that Unicode-native languages like Python3 and Perl5 skip NBSPs like other spaces, but that turns out to be not the case:\n\n```\n% printf '1  +\\ua0 1' | lua5.3 # not Unicode-native\nlua5.3: stdin:1: unexpected symbol near '1'\n% printf '1  +\\ua0 1' | perl -Mutf8\nUnrecognized character \\x{a0}; marked by <-- HERE after 1  +<-- HERE near column 5 at - line 1.\n% printf '1  +\\ua0 1' | python3\n  File \"<stdin>\", line 1\n    1  +  1\n        ^\nSyntaxError: invalid character in identifier\n```\n\nSo the only positive precedent we have is skipping NBSPs on Windows with 8-bit encodings, and that's becoming increasingly obscure.\n\nI'll see if there is a way to make the R error message less cryptic, closer to what Perl5 says, without breaking other cases.",
+            "bug_id": 18622,
+            "count": 2,
+            "tags": [],
+            "id": 100356,
+            "is_private": false,
+            "creator": "ikrylov",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2023-11-10T06:41:00Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18622": [
+        {
+          "file_name": "file_18622.txt",
+          "bug_id": 18622,
+          "creation_time": "2023-11-06T19:50:33Z",
+          "summary": "Suggested patch",
+          "is_private": false,
+          "id": 3270,
+          "last_change_time": "2023-11-06T19:50:58Z",
+          "size": 2611,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "ikrylov",
+          "data": "SW5kZXg6IHNyYy9tYWluL2dyYW0uYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL2dyYW0uYwkocmV2aXNpb24gODUzNTUpDQorKysgc3JjL21haW4vZ3JhbS5jCSh3b3JraW5nIGNvcHkpDQpAQCAtNDY5NSw3ICs0Njk1LDggQEANCiAJICAgIGlmIChjID09ICdcbicgfHwgYyA9PSBSX0VPRikgYnJlYWs7DQogCSAgICBpZiAoKHVuc2lnbmVkIGludCkgYyA8IDB4ODApIGJyZWFrOw0KIAkgICAgY2xlbiA9IG1iY3NfZ2V0X25leHQoYywgJndjKTsgIC8qIGFsd2F5cyAyICovDQotCSAgICBpZighIFJpMThuX2lzd2N0eXBlKHdjLCBibGFua3djdCkgKSBicmVhazsNCisJICAgIC8qIElTTy9JRUMgMzAxMTIgc2F5cyBOQlNQIG11c3Qgbm90IGJlIGlzd2JsYW5rKCkgKi8NCisJICAgIGlmKCAhUmkxOG5faXN3Y3R5cGUod2MsIGJsYW5rd2N0KSAmJiB3YyAhPSAweGEwICkgYnJlYWs7DQogCSAgICBmb3IoaSA9IDE7IGkgPCBjbGVuOyBpKyspIGMgPSB4eGdldGMoKTsNCiAJfQ0KIAlyZXR1cm4gYzsNCkBAIC00NzEyLDkgKzQ3MTMsOSBAQA0KIAkgICAgaWYgKCh1bnNpZ25lZCBpbnQpIGMgPCAweDgwKSBicmVhazsNCiAJICAgIGNsZW4gPSBtYmNzX2dldF9uZXh0KGMsICZ3Yyk7DQogI2lmIGRlZmluZWQoVVNFX1JJMThOX0ZOUykNCi0JICAgIGlmKCEgUmkxOG5faXN3Y3R5cGUod2MsIGJsYW5rd2N0KSApIGJyZWFrOw0KKwkgICAgaWYoICFSaTE4bl9pc3djdHlwZSh3YywgYmxhbmt3Y3QpICYmIHdjICE9IDB4YTAgKSBicmVhazsNCiAjZWxzZQ0KLQkgICAgaWYoISBpc3dibGFuayh3YykgKSBicmVhazsNCisJICAgIGlmKCAhaXN3Ymxhbmsod2MpICYmIHdjICE9IDB4YTAgKSBicmVhazsNCiAjZW5kaWYNCiAJICAgIGZvcihpID0gMTsgaSA8IGNsZW47IGkrKykgYyA9IHh4Z2V0YygpOw0KIAl9DQpJbmRleDogc3JjL21haW4vZ3JhbS55DQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL21haW4vZ3JhbS55CShyZXZpc2lvbiA4NTM1NSkNCisrKyBzcmMvbWFpbi9ncmFtLnkJKHdvcmtpbmcgY29weSkNCkBAIC0yNDY0LDcgKzI0NjQsOCBAQA0KIAkgICAgaWYgKGMgPT0gJ1xuJyB8fCBjID09IFJfRU9GKSBicmVhazsNCiAJICAgIGlmICgodW5zaWduZWQgaW50KSBjIDwgMHg4MCkgYnJlYWs7DQogCSAgICBjbGVuID0gbWJjc19nZXRfbmV4dChjLCAmd2MpOyAgLyogYWx3YXlzIDIgKi8NCi0JICAgIGlmKCEgUmkxOG5faXN3Y3R5cGUod2MsIGJsYW5rd2N0KSApIGJyZWFrOw0KKwkgICAgLyogSVNPL0lFQyAzMDExMiBzYXlzIE5CU1AgbXVzdCBub3QgYmUgaXN3YmxhbmsoKSAqLw0KKwkgICAgaWYoICFSaTE4bl9pc3djdHlwZSh3YywgYmxhbmt3Y3QpICYmIHdjICE9IDB4YTAgKSBicmVhazsNCiAJICAgIGZvcihpID0gMTsgaSA8IGNsZW47IGkrKykgYyA9IHh4Z2V0YygpOw0KIAl9DQogCXJldHVybiBjOw0KQEAgLTI0ODEsOSArMjQ4Miw5IEBADQogCSAgICBpZiAoKHVuc2lnbmVkIGludCkgYyA8IDB4ODApIGJyZWFrOw0KIAkgICAgY2xlbiA9IG1iY3NfZ2V0X25leHQoYywgJndjKTsNCiAjaWYgZGVmaW5lZChVU0VfUkkxOE5fRk5TKQ0KLQkgICAgaWYoISBSaTE4bl9pc3djdHlwZSh3YywgYmxhbmt3Y3QpICkgYnJlYWs7DQorCSAgICBpZiggIVJpMThuX2lzd2N0eXBlKHdjLCBibGFua3djdCkgJiYgd2MgIT0gMHhhMCApIGJyZWFrOw0KICNlbHNlDQotCSAgICBpZighIGlzd2JsYW5rKHdjKSApIGJyZWFrOw0KKwkgICAgaWYoICFpc3dibGFuayh3YykgJiYgd2MgIT0gMHhhMCApIGJyZWFrOw0KICNlbmRpZg0KIAkgICAgZm9yKGkgPSAxOyBpIDwgY2xlbjsgaSsrKSBjID0geHhnZXRjKCk7DQogCX0NCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA4NTM1NSkNCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQ0KQEAgLTkzMCw2ICs5MzAsMTEgQEANCiAgICAgICAgICAgPT0gIlx1MDBlY1x1MDBlZFx1MDBlZVx1MDBlZiIpDQogIyMgY29kZXMgd2l0aCBpIGluc3RlYWQgb2YgXGkgd2VyZSB1bmtub3duIHRodXMgbm90IGNvbnZlcnRlZCBpbiBSIDw9IDQuMy4xDQogDQorIyMgUFIxODYyMiAtLSBza2lwcGluZyBub24tYnJlYWthYmxlIHNwYWNlcyBpbiBwYXJzZXIgdmlhIFVuaWNvZGUgd2NoYXJfdA0KKyMgVXNpbmcgVVRGLTggbG9jYWxlIGFzIGEgcHJveHkgZm9yIHdjaGFyX3QgYmVpbmcgVW5pY29kZSwgZXZlbiB0aG91Z2gNCisjIG9uZSBkb2Vzbid0IGltcGx5IHRoZSBvdGhlciwganVzdCBjb3JyZWxhdGVzIHdpdGggaXQuDQoraWYgKC5QbGF0Zm9ybSRPUy50eXBlID09ICJ3aW5kb3dzIiB8fCBsMTBuX2luZm8oKSRgVVRGLThgKQ0KKyAgICBwYXJzZSh0ZXh0ID0gInggPC0gXHUwYSA0MiIpICMgcHJldmlvdXNseSBnYXZlIGFuIGVycm9yDQogDQogDQogIyMga2VlcCBhdCBlbmQNCg==",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2023-11-10 06:41:00"
+}

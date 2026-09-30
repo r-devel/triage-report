@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "flags": [],
+        "platform": "All",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2024-04-16T05:28:37Z",
+        "blocks": [],
+        "url": "",
+        "summary": "Document (lack of) include.only= behavior under \"reattachment\", and suggested workaround",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "component": "Documentation",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 18705,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-04-15T16:56:25Z"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18705": {
+        "comments": [
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2024-04-15T16:56:25Z",
+            "is_markdown": true,
+            "count": 0,
+            "text": "Following up r-devel thread https://stat.ethz.ch/pipermail/r-devel/2024-April/083319.html.\n\n\nThis is Martin's suggestion:\n\n```\n    > Regardless, I think your suggestion to just point to\n    > detach()+attachNamespace() is reasonable enough, the rare users that care\n    > about this are likely to be able to figure out the rest from there.\n\nSo I think we agree here;  mentioning such a modify_attach()\n... I'd use an example *without* tryCatch() as I think the user\n    should choose their own line of action in such cases\n...\non the help page would then be appropriate.\n```",
+            "bug_id": 18705,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2024-04-15T16:56:25Z",
+            "id": 100732
+          },
+          {
+            "attachment_id": 3331,
+            "time": "2024-04-16T05:28:37Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "id": 100733,
+            "is_private": false,
+            "creation_time": "2024-04-16T05:28:37Z",
+            "text": "Created attachment 3331\nDescribe re-attach behavior and workarounds in ?library\n\nTo get things started, here is a suggested improvement to the wording in `?library`.\n\nI include an example around a modified version of the `modify_attach()` function used in the r-devel thread which avoids `tryCatch()`, corrects an omission of `character.only=` in `detach()`, and switches to `library()` over `attachNamespace()` given we're in `?library`.\n\nI also tried to refine wording around \"attach\" and \"load\".\n\nI note that the old phrasing \"[library does] not reload a namespace which is already loaded\" is not _precisely_ true, in the following sense:\n\n```\nloadNamespace(\"Matrix\")\ntrace(loadNamespace, at=1, quote(message(\"Loading \", package)))\nlibrary(Matrix)\n# Tracing loadNamespace(package, lib.loc) step 1 \n# Loading Matrix\n```\n\nI.e., it's really `loadNamespace()` that has the behavior of skipping reloading a namespace which is already loaded.",
+            "bug_id": 18705,
+            "count": 1
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18705": [
+        {
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvbWFuL2xpYnJhcnkuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vbGlicmFyeS5SZAkocmV2aXNpb24gODY0MjYpCisrKyBzcmMvbGlicmFyeS9iYXNlL21hbi9saWJyYXJ5LlJkCSh3b3JraW5nIGNvcHkpCkBAIC03OSwxMSArNzksMTYgQEAKICAgc2VhcmNoIGxpc3QuICBcY29kZXtyZXF1aXJlfSBpcyBkZXNpZ25lZCBmb3IgdXNlIGluc2lkZSBvdGhlcgogICBmdW5jdGlvbnM7IGl0IHJldHVybnMgXGNvZGV7RkFMU0V9IGFuZCBnaXZlcyBhIHdhcm5pbmcgKHJhdGhlciB0aGFuIGFuCiAgIGVycm9yIGFzIFxjb2Rle2xpYnJhcnkoKX0gZG9lcyBieSBkZWZhdWx0KSBpZiB0aGUgcGFja2FnZSBkb2VzIG5vdAotICBleGlzdC4gIEJvdGggZnVuY3Rpb25zIGNoZWNrIGFuZCB1cGRhdGUgdGhlIGxpc3Qgb2YgY3VycmVudGx5IGF0dGFjaGVkCi0gIHBhY2thZ2VzIGFuZCBkbyBub3QgcmVsb2FkIGEgbmFtZXNwYWNlIHdoaWNoIGlzIGFscmVhZHkgbG9hZGVkLiAgKElmCi0gIHlvdSB3YW50IHRvIHJlbG9hZCBzdWNoIGEgcGFja2FnZSwgY2FsbCBcY29kZXtcbGlua3tkZXRhY2h9KHVubG9hZCA9Ci0gIFRSVUUpfSBvciBcY29kZXtcbGlua3t1bmxvYWROYW1lc3BhY2V9fSBmaXJzdC4pICBJZiB5b3Ugd2FudCB0byBsb2FkIGEKLSAgcGFja2FnZSB3aXRob3V0IGF0dGFjaGluZyBpdCBvbiB0aGUgc2VhcmNoIGxpc3QsIHNlZQorICBleGlzdC4KKworICBCb3RoIGZ1bmN0aW9ucyBjaGVjayBhbmQgdXBkYXRlIHRoZSBsaXN0IG9mIGN1cnJlbnRseSBhdHRhY2hlZAorICBwYWNrYWdlcyBhbmQgZG8gbm90IHJlLWF0dGFjaCBwYWNrYWdlcyB3aGljaCBhcmUgYWxyZWFkeSBhdHRhY2hlZC4KKyAgVGhhdCBpbmNsdWRlcyBjYXNlcyB3aGVyZSB0aGUgcGFja2FnZSB3YXMgb3JpZ2luYWxseSBhdHRhY2hlZCB3aXRoCisgIFxjb2Rle2luY2x1ZGUub25seX0gc3VwcGx5aW5nIGEgZGlmZmVyZW50IHN1YnNldCBvZiBleHBvcnRlZCBzeW1ib2xzCisgIHRoYW4gdGhlICJjdXJyZW50IiBleGVjdXRpb24uIElmIHlvdSB3YW50IHRvIHJlLWF0dGFjaCBzdWNoIGEgcGFja2FnZSwKKyAgY2FsbCBcY29kZXtcbGlua3tkZXRhY2h9fTsgc3VwcGx5aW5nIFxjb2Rle3VubG9hZCA9IFRSVUV9IHdpbGwgZnVydGhlcgorICB1bmxvYWQgdGhlIHBhY2thZ2UgKFxjb2Rle1xsaW5re3VubG9hZE5hbWVzcGFjZX19KSBmaXJzdC4gU2VlIEV4YW1wbGVzLgorICBJZiB5b3Ugd2FudCB0byBsb2FkIGEgcGFja2FnZSB3aXRob3V0IGF0dGFjaGluZyBpdCBvbiB0aGUgc2VhcmNoIGxpc3QsIHNlZQogICBcY29kZXtcbGlua3tyZXF1aXJlTmFtZXNwYWNlfX0uCiAKICAgVG8gc3VwcHJlc3MgbWVzc2FnZXMgZHVyaW5nIHRoZSBsb2FkaW5nIG9mIHBhY2thZ2VzIHVzZQpAQCAtMjQwLDYgKzI0NSwxOSBAQAogcmVxdWlyZShwa2csIGNoYXJhY3Rlci5vbmx5ID0gVFJVRSkKIGRldGFjaChwb3MgPSBtYXRjaChwYXN0ZSgicGFja2FnZSIsIHBrZywgc2VwID0gIjoiKSwgc2VhcmNoKCkpKQogCisjIHVwZGF0aW5nIGV4cG9ydHMgZm9yIGEgcGFja2FnZSBwb3NzaWJseSBhbHJlYWR5IGF0dGFjaGVkLCB3aXRob3V0IHJlbG9hZGluZworbW9kaWZ5X2F0dGFjaCA9IGZ1bmN0aW9uKHBrZywgbmV3X25hbWVzKSB7CisgIGlmICghc3RhcnRzV2l0aChwa2csICJwYWNrYWdlOiIpKSBwa2cgPC0gcGFzdGUwKCJwYWNrYWdlOiIsIHBrZykKKyAgb2xkIDwtIGlmIChwa2cgXCVpblwlIHNlYXJjaCgpKSBscyhwa2csIGFsbC5uYW1lcyA9IFRSVUUpCisgIGlmIChsZW5ndGgob2xkKSkgZGV0YWNoKHBrZywgY2hhcmFjdGVyLm9ubHkgPSBUUlVFKQorICBsaWJyYXJ5KC5ybXBrZyhwa2cpLCBpbmNsdWRlLm9ubHk9YyhuZXdfbmFtZXMsIG9sZCksIGNoYXJhY3Rlci5vbmx5ID0gVFJVRSkKK30KK21vZGlmeV9hdHRhY2goInNwbGluZXMiLCAic3BsaW5lS25vdHMiKQorbHMoInBhY2thZ2U6c3BsaW5lcyIpCittb2RpZnlfYXR0YWNoKCJzcGxpbmVzIiwgImJhY2tTcGxpbmUiKQorbHMoInBhY2thZ2U6c3BsaW5lcyIpCitkZXRhY2goInBhY2thZ2U6c3BsaW5lcyIsIHVubG9hZD1UUlVFKQorCiByZXF1aXJlKG5vbmV4aXN0ZW50KSAgICAgICAgIyBGQUxTRQogXGRvbnRydW57CiAjIyBpZiB5b3Ugd2FudCB0byBtYXNrIGFzIGxpdHRsZSBhcyBwb3NzaWJsZSwgdXNlCg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2024-04-16T05:28:37Z",
+          "summary": "Describe re-attach behavior and workarounds in ?library",
+          "file_name": "library-reattach.patch",
+          "bug_id": 18705,
+          "last_change_time": "2024-04-16T05:28:37Z",
+          "size": 2257,
+          "is_private": false,
+          "id": 3331
+        }
+      ]
+    }
+  },
+  "source_changed": "2024-04-16 05:28:37"
+}

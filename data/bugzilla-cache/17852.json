@@ -1,0 +1,357 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "whiteboard": "",
+        "creation_time": "2020-07-06T08:51:45Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [
+          "AHL27",
+          "lawremi"
+        ],
+        "qa_contact": "",
+        "id": 17852,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "summary": "Wishlist: [ method for rle",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-09-03T09:29:29Z",
+        "cc_detail": [
+          {
+            "id": 3536,
+            "name": "AHL27",
+            "real_name": "Aidan H Lakshman"
+          },
+          {
+            "real_name": "Michael Lawrence",
+            "name": "lawremi",
+            "id": 1249
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17852": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 96013,
+            "time": "2020-07-06T08:51:45Z",
+            "creation_time": "2020-07-06T08:51:45Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 17852,
+            "text": "I think the following pattern would be useful:\n\n\n> x <- rev(rep(6:10, 1:5))\n> RLE <- rle(x)\n> inverse.rle(RLE[2:4])\n\nthe idea being I've identified RLE components 2:4 of x as being useful and want to un-RLE them as a way to implicitly subset x.\n\nCurrently [ treats RLE like a list; my proposed method is simply\n\n> `[.rle` = function(x, i) { structure(lapply(x, `[`, i), class='rle') }\n\n(with some bells & whistles for consistency checks, and it should probably use oldClass, etc)\n\nThis is mildly backwards-incompatible (an `[[` method would be more troublesome), inasmuch as people rely on list indexing for rle objects, so I'm suggesting it here before putting in the work to file a patch."
+          },
+          {
+            "text": "A case could also be made that the RLE behave as its expanded vector equivalent. The Bioconductor package S4Vectors has an Rle object with rich functionality. It only supports subscripting into the expanded form; not the runs as you desire. \n\nPlease give us more details on your use case, because this is the first time we've encountered this need.\n \nNote that you could create a data frame with `as.data.frame.list()`, subset it by row, and then just inverse the encoding with `rep()`. That is roughly equivalent to the ranges-based workflow in S4Vectors/IRanges.",
+            "bug_id": 17852,
+            "count": 1,
+            "is_markdown": true,
+            "creator": "lawremi",
+            "creation_time": "2020-07-06T20:22:37Z",
+            "time": "2020-07-06T20:22:37Z",
+            "id": 96023,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "id": 96025,
+            "is_private": false,
+            "tags": [],
+            "text": "My use case is here:\n\nhttps://gist.github.com/MichaelChirico/4568f11c8062b9bc7207f24aaffb6ce2#file-posix_java_switch-r-L71-L75\n\nx is a (strsplit-by-character) POSIX-ish string like \"%Y-%m-%d %H:%M:%S Asia/Yangon\".\n\nThe goal is to convert it to a Java SimpleDateFormat string like 'yyyy-MM-dd HH:mm:ss 'Asia'/'Yangon'\".\n\nThe \"RLE subset\" is helpful for escaping the 'Asia' and 'Yangon' substrings: once we get to the 'A' without a preceding '%', we go forward to the next non-numeric character ('/') and inverse-RLE that part to escape:\n\n> if (grepl('[a-zA-Z]', ptn$values[jj])) { # needs to be escaped\n>     JJ = jj\n>     while (grepl('[a-zA-Z]', RLE$values[jj+1L])) JJ = JJ+1L\n>     out[jj] = paste0(\"'\", paste(inverse.rle(lapply(RLE, `[`, jj:JJ)), collapse = ''), \"'\")\n>     jj = JJ+1L\n> }\n\n\nhere lapply(RLE, `[`, jj:JJ) would be replaced by RLE[jj:JJ]",
+            "bug_id": 17852,
+            "count": 2,
+            "creation_time": "2020-07-07T03:14:13Z",
+            "time": "2020-07-07T03:14:13Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2020-07-07T11:27:03Z",
+            "id": 96032,
+            "creator": "lawremi",
+            "creation_time": "2020-07-07T11:27:03Z",
+            "count": 3,
+            "is_markdown": true,
+            "text": "Have you already tried using the existing date/time functions for this, like strptime() and the format() methods on POSIX*t?",
+            "bug_id": 17852
+          },
+          {
+            "time": "2020-07-07T11:57:36Z",
+            "id": 96034,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "Neither of the format strings are being used in R, actually, in my case -- the input comes from PrestoSQL, the output goes to SparkQL.",
+            "bug_id": 17852,
+            "is_markdown": true,
+            "count": 4,
+            "creator": "michaelchirico4",
+            "creation_time": "2020-07-07T11:57:36Z"
+          },
+          {
+            "creator": "lawremi",
+            "creation_time": "2020-07-07T12:57:42Z",
+            "is_markdown": true,
+            "count": 5,
+            "text": "By combining strptime() and format(), you can convert between date/time formats, without actually using the objects for anything in R.",
+            "bug_id": 17852,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2020-07-07T12:57:42Z",
+            "id": 96035
+          },
+          {
+            "is_private": false,
+            "time": "2020-07-07T16:27:13Z",
+            "id": 96040,
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 6,
+            "text": "Sorry, I still don't follow -- the output is a Java SimpleDateFormat string, AFAIK, that's not supported by format.POSIXlt nor strptime (nor do I see anything on CRAN for this).\n\n(besides that, I said POSIX-ish because there are some differences vs. strptime, e.g. %i instead of %M for minutes)\n\nMaybe worth describing this as a metaprogramming task -- I'm not actually parsing any dates/times (except perhaps incidentally), but looking at code used to parse dates/times, and editing it.",
+            "bug_id": 17852,
+            "creator": "michaelchirico4",
+            "creation_time": "2020-07-07T16:27:13Z"
+          },
+          {
+            "creator": "lawremi",
+            "creation_time": "2020-07-08T00:34:39Z",
+            "is_markdown": true,
+            "count": 7,
+            "text": "I see, makes sense now. Have you considered using regular expressions and iterative replacement? Would need to do some escaping up front to avoid conflicts with '%'. Anyway, we'll keep this on the wishlist and see whether any other use cases emerge.",
+            "bug_id": 17852,
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2020-07-08T00:34:39Z",
+            "id": 96044
+          },
+          {
+            "creation_time": "2020-07-08T00:44:08Z",
+            "count": 8,
+            "text": "In fact my first pass at a solution used grep(), but the regexp approach is much harder for the reverse case (SimpleDateFormat -> POSIX).\n\nOnce I had the loop written for that case (which doesn't need the inverse.rle bit), it was straightforward to adapt it for POSIX -> SimpleDateFormat and also skirt the edge cases which would lead to ugly regex.",
+            "bug_id": 17852,
+            "tags": [],
+            "is_private": false,
+            "id": 96045,
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2020-07-08T00:44:08Z"
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2024-04-28T06:22:31Z",
+            "creation_time": "2024-04-28T06:22:31Z",
+            "text": "Looking again here, I'm reminded of Bug 17409 -- `POSIXlt` is another class where the default `[` / `[[` extractors just access the underlying list implementation, but something more abstract can be useful.\n\nWith that in mind, maybe the way to go here is to enable matrix notation in `[`, so that `RLE[, 2:4]` achieves the desired result, and is also fully back-compatible. It also maps well to how `print.rle` displays the object (it looks like selecting columns):\n\n```\nRLE\n# Run Length Encoding\n#   lengths: int [1:5]  5 4 3 2 1\n#   values : int [1:5] 10 9 8 7 6\nRLE[, 2:4]\n# i.e., structure(lapply(RLE, `[`, 2:4), class='rle')\n# Run Length Encoding\n#   lengths: int [1:3] 4 3 2\n#   values : int [1:3] 9 8 7\n```",
+            "bug_id": 17852,
+            "count": 9,
+            "tags": [],
+            "id": 100800,
+            "is_private": false
+          },
+          {
+            "id": 103508,
+            "time": "2026-09-01T13:15:25Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3809,
+            "bug_id": 17852,
+            "text": "Created attachment 3809\n`[.rle` path\n\nPut together a quick patch to implement this functionality, along with updated documentation and tests.\n\nNew behavior:\n\n```\n\nx <- rev(rep(6:10, 1:5))\nrle(x)\nrx <- rle(x)\nrx\n## lengths [1:5]  5 4 3 2 1\n## values  [1:5] 10 9 8 7 6\n\n# Subsets lengths and values together\nrx[2:4]\n## lengths [1:3] 4 3 2\n## values  [1:3] 9 8 7\n\n# same as above\nrx[, 2:4]\n\n# subsets just \"lengths\"\nrx[\"lengths\", 2:4]\n## [1] 4 3 2\n\n# subsets just \"values\"\nrx[\"values\", 2:4]\n## [1] 9 8 7\n```",
+            "is_markdown": true,
+            "count": 10,
+            "creation_time": "2026-09-01T13:15:25Z",
+            "creator": "AHL27"
+          },
+          {
+            "is_markdown": true,
+            "creator": "AHL27",
+            "time": "2026-09-01T13:22:56Z",
+            "attachment_id": 3810,
+            "count": 11,
+            "bug_id": 17852,
+            "text": "Created attachment 3810\n`[.rle` patch_2\n\nRealizing the previous patch changed the *current* functionality, which we should avoid for backward compatibility reasons. Adding a new patch that actually does what was requested (adding matrix-like subsetting but leaving current functionality unchanged):\n\n```\nx <- rev(rep(6:10, 1:5))\nrle(x)\nrx <- rle(x)\nrx\n## lengths [1:5]  5 4 3 2 1\n## values  [1:5] 10 9 8 7 6\n\n# does the same thing as currently\nrx[1]\n## $lengths\n## [1:5]  5 4 3 2 1\n\n# Subsets lengths and values together\nrx[, 2:4]\n## lengths [1:3] 4 3 2\n## values  [1:3] 9 8 7\n\n# subsets just \"lengths\"\nrx[\"lengths\", 2:4]\n## [1] 4 3 2\n\n# subsets just \"values\"\nrx[\"values\", 2:4]\n## [1] 9 8 7\n```",
+            "creation_time": "2026-09-01T13:22:56Z",
+            "is_private": false,
+            "id": 103509,
+            "tags": []
+          },
+          {
+            "creation_time": "2026-09-01T15:42:48Z",
+            "creator": "lawremi",
+            "is_markdown": true,
+            "count": 12,
+            "bug_id": 17852,
+            "text": "Thanks for the patch.\n\nThe matrix-style interface makes sense. I'd strongly recommend simplifying the contract to having the `i` always refer to either `lengths` or `values`. In other words, do not treat `i` as `j` when it is not lengths, values or 1. That should just error out.\n\nThe implementation could also be simplified by just calling `NextMethod(x=x, i=i)` after the guard against `i` being missing. Then just subset the result if `j` is present.",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 103520,
+            "time": "2026-09-01T15:42:48Z"
+          },
+          {
+            "is_private": false,
+            "id": 103521,
+            "time": "2026-09-01T15:50:43Z",
+            "attachment_id": {},
+            "tags": [],
+            "count": 13,
+            "is_markdown": true,
+            "bug_id": 17852,
+            "text": "Actually, it is probably best to just do `unclass(x)[i]` instead of messing with `NextMethod()`.",
+            "creation_time": "2026-09-01T15:50:43Z",
+            "creator": "lawremi"
+          },
+          {
+            "attachment_id": 3814,
+            "time": "2026-09-01T16:03:48Z",
+            "creator": "AHL27",
+            "is_markdown": true,
+            "tags": [],
+            "id": 103522,
+            "is_private": false,
+            "creation_time": "2026-09-01T16:03:48Z",
+            "text": "Created attachment 3814\n`[.rle` patch_3\n\nGreat points, thanks! Got to the same conclusion about `unclass(x)`, but we can still fallback to `NextMethod()` for the backwards compatibility codepath.\n\nAttached a new patch that should be a lot simpler code-wise.",
+            "bug_id": 17852,
+            "count": 14
+          },
+          {
+            "creation_time": "2026-09-03T09:29:29Z",
+            "creator": "AHL27",
+            "bug_id": 17852,
+            "text": "Created attachment 3822\n`[.rle` with decompress arg\n\nChatted offline with lawremi@, summarizing discussion\n\nWhile we're here making changes, it might be nice to add support for indexing into the *decompressed* vector. This is a pretty natural thing to do want to do, and it's not a ton of additional work to add in support for.\n\nAttaching a new patch that implements this functionality. This gives us the following methods to subset an `rle`:\n\n```\n> r <- rle(rep(seq_len(4L)-1L, times=seq_len(4L)))\nRun Length Encoding\n  lengths: int [1:4] 1 2 3 4\n  values : int [1:4] 0 1 2 3\n\n> r[1]\n$lengths\n[1] 1 2 3 4\n\n> r[\"lengths\"]\n$lengths\n[1] 1 2 3 4\n\n> r[,2:3]\nRun Length Encoding\n  lengths: int [1:2] 2 3\n  values : int [1:2] 1 2\n\n> r[\"lengths\",2:3]\n$lengths\n[1] 2 3\n\n> r[\"lengths\",2:3,drop=TRUE]\n[1] 2 3\n\n> r[1:4,decompress=TRUE]\n[1] 0 1 1 2\n\n> inverse.rle(r, subset=1:4)\n[1] 0 1 1 2\n```\n\nThis patch also includes more comments, better documentation, and more testing. I think this can supersede the previous version.",
+            "count": 15,
+            "is_markdown": true,
+            "attachment_id": 3822,
+            "tags": [],
+            "id": 103557,
+            "time": "2026-09-03T09:29:29Z",
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "17852": [
+        {
+          "is_patch": true,
+          "creator": "AHL27",
+          "data": "ZGlmZiAtLWdpdCBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIgc3JjL2xpYnJhcnkvYmFzZS9SL3JsZS5SCmluZGV4IGI5OTZiZTAwMGIuLmQzMWZkNjBkZGEgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9ybGUuUgpAQCAtNDgsMyArNDgsMjYgQEAgaW52ZXJzZS5ybGUgPC0gZnVuY3Rpb24oeCwgLi4uKQogICAgICAgICBzdG9wKCJpbnZhbGlkICdybGUnIHN0cnVjdHVyZSIpCiAgICAgcmVwLmludCh2LCBsZSkKIH0KKworYFsucmxlYCA8LSBmdW5jdGlvbih4LCBpLCBqLCBkcm9wID0gVFJVRSkKK3sKKyAgICBtYWtlX3JsZSA8LSBcKGwsIHYpIHN0cnVjdHVyZShsaXN0KGxlbmd0aHMgPSBsLCB2YWx1ZXMgPSB2KSwgY2xhc3MgPSBvbGRDbGFzcyh4KSkKKworICAgIG1pc3NpbmdfaSA8LSBtaXNzaW5nKGkpCisgICAgbWlzc2luZ19qIDwtIG1pc3NpbmcoaikKKworICAgIGlmIChtaXNzaW5nX2kgJiYgbWlzc2luZ19qKSByZXR1cm4oeCkKKyAgICBpZiAobWlzc2luZ19pKSByZXR1cm4obWFrZV9ybGUoeCRsZW5ndGhzW2pdLCB4JHZhbHVlc1tqLCBkcm9wID0gZHJvcF0pKQorICAgIGlmIChtaXNzaW5nX2opIHsKKyAgICAgICAgaWYgKGlzLmNoYXJhY3RlcihpKSAmJiBsZW5ndGgoaSkgPT0gMUwgJiYgaSAlaW4lIG5hbWVzKHgpKQorICAgICAgICAgICAgcmV0dXJuKHhbW2ldXSkKKyAgICAgICAgcmV0dXJuKG1ha2VfcmxlKHgkbGVuZ3Roc1tpXSwgeCR2YWx1ZXNbaSwgZHJvcCA9IGRyb3BdKSkKKyAgICB9CisKKyAgICBpZiAoaWRlbnRpY2FsKGksICJsZW5ndGhzIikgfHwgaWRlbnRpY2FsKGksIDFMKSB8fCBpZGVudGljYWwoaSwgMSkpCisgICAgICAgIHJldHVybih4JGxlbmd0aHNbal0pCisgICAgaWYgKGlkZW50aWNhbChpLCAidmFsdWVzIikgfHwgaWRlbnRpY2FsKGksIDJMKSB8fCBpZGVudGljYWwoaSwgMikpCisgICAgICAgIHJldHVybih4JHZhbHVlc1tqLCBkcm9wID0gZHJvcF0pCisKKyAgICBzdG9wKCJpbnZhbGlkIHN1YnNjcmlwdCIpCit9CmRpZmYgLS1naXQgc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmxlLlJkIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3JsZS5SZAppbmRleCA0OWZiNjk5ZDQ4Li4yODE3YjBlN2Q5IDEwMDY0NAotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmxlLlJkCisrKyBzcmMvbGlicmFyeS9iYXNlL21hbi9ybGUuUmQKQEAgLTgsNiArOCw3IEBACiBcYWxpYXN7cmxlfQogXGFsaWFze2ludmVyc2UucmxlfQogXGFsaWFze3ByaW50LnJsZX0KK1xhbGlhc3tbLnJsZX0KIFxjb25jZXB0e3J1bnN9CiBcZGVzY3JpcHRpb257CiAgIENvbXB1dGUgdGhlIGxlbmd0aHMgYW5kIHZhbHVlcyBvZiBydW5zIG9mIGVxdWFsIHZhbHVlcyBpbiBhIHZlY3RvcgpAQCAtMTgsMTAgKzE5LDEzIEBAIHJsZSh4KQogaW52ZXJzZS5ybGUoeCwgXGRvdHMpCiAKIFxtZXRob2R7cHJpbnR9e3JsZX0oeCwgZGlnaXRzID0gZ2V0T3B0aW9uKCJkaWdpdHMiKSwgcHJlZml4ID0gIiIsIFxkb3RzKQorXG1ldGhvZHtbfXtybGV9KHgsIGksIGosIGRyb3AgPSBUUlVFKQogfQogXGFyZ3VtZW50c3sKICAgXGl0ZW17eH17YSB2ZWN0b3IgKGF0b21pYywgbm90IGEgbGlzdCkgZm9yIFxjb2Rle3JsZSgpfTsKLSAgICBhbiBvYmplY3Qgb2YgY2xhc3MgXGNvZGV7InJsZSJ9IGZvciBcY29kZXtpbnZlcnNlLnJsZSgpfS59CisgICAgYW4gb2JqZWN0IG9mIGNsYXNzIFxjb2RleyJybGUifSBmb3IgXGNvZGV7aW52ZXJzZS5ybGUoKX0gYW5kIFxjb2Rle1t9Ln0KKyAgXGl0ZW17aSwgan17aW5kaWNlcyBzcGVjaWZ5aW5nIHJ1bnMgdG8gZXh0cmFjdCwgb3IgY29tcG9uZW50IG5hbWVzIChcY29kZXsibGVuZ3RocyJ9IG9yIFxjb2RleyJ2YWx1ZXMifSkufQorICBcaXRlbXtkcm9wfXtsb2dpY2FsOyBpbmNsdWRlZCBmb3IgbWV0aG9kIGNvbnNpc3RlbmN5Ln0KICAgXGl0ZW17XGRvdHN9e2Z1cnRoZXIgYXJndW1lbnRzOyBmb3IgdGhlIFxjb2Rle3ByaW50KCl9IG1ldGhvZCwgcGFzc2VkIHRvCiAgICAgXGNvZGV7XGxpbmt7c3RyfSgpfTsgZS5nLiwgXGNvZGV7dmVjLmxlbiA9IDIyfS59CiAgIFxpdGVte2RpZ2l0c317bnVtYmVyIG9mIHNpZ25pZmljYW50IGRpZ2l0cyBmb3IgcHJpbnRpbmcsIHNlZQpAQCAtMzYsNiArNDAsMTIgQEAgaW52ZXJzZS5ybGUoeCwgXGRvdHMpCiAKICAgXGNvZGV7aW52ZXJzZS5ybGUoKX0gaXMgdGhlIGludmVyc2UgZnVuY3Rpb24gb2YgXGNvZGV7cmxlKCl9LAogICByZWNvbnN0cnVjdGluZyBcY29kZXt4fSBmcm9tIHRoZSBydW5zLgorCisgIFN1YnNldHRpbmcgYW4gXGNvZGV7InJsZSJ9IG9iamVjdCB3aXRoIFxjb2Rle3hbaV19IG9yIG1hdHJpeC1saWtlIG5vdGF0aW9uCisgIFxjb2Rle3hbLCBqXX0gZXh0cmFjdHMgdGhlIHNwZWNpZmllZCBydW5zLCByZXR1cm5pbmcgYSBuZXcgXGNvZGV7InJsZSJ9CisgIG9iamVjdCB3aXRoIHRoZSBjb3JyZXNwb25kaW5nIHN1YnNldCBvZiBcY29kZXtsZW5ndGhzfSBhbmQgXGNvZGV7dmFsdWVzfS4KKyAgSW5kaXZpZHVhbCBjb21wb25lbnRzIGZvciB0aGUgc2VsZWN0ZWQgcnVucyBjYW4gYmUgZXh0cmFjdGVkIHZpYQorICBcY29kZXt4WyJsZW5ndGhzIiwgal19IG9yIFxjb2Rle3hbInZhbHVlcyIsIGpdfS4KIH0KIFx2YWx1ZXsKICAgXGNvZGV7cmxlKCl9IHJldHVybnMgYW4gb2JqZWN0IG9mIGNsYXNzIFxjb2RleyJybGUifSB3aGljaCBpcyBhIGxpc3QKQEAgLTQ1LDEzICs1NSwzMCBAQCBpbnZlcnNlLnJsZSh4LCBcZG90cykKICAgICBjb3JyZXNwb25kaW5nIHZhbHVlcy59CiAKICAgXGNvZGV7aW52ZXJzZS5ybGUoKX0gcmV0dXJucyBhbiBhdG9taWMgdmVjdG9yLgorCisgIFxjb2Rle1t9IHJldHVybnMgYW4gXGNvZGV7InJsZSJ9IG9iamVjdCB3aGVuIHN1YnNldHRpbmcgcnVucywgb3IgYW4gYXRvbWljIHZlY3RvciB3aGVuIGV4dHJhY3RpbmcgYSBzcGVjaWZpYyBjb21wb25lbnQuCiB9CiBcZXhhbXBsZXN7CiB4IDwtIHJldihyZXAoNjoxMCwgMTo1KSkKLXJsZSh4KQorcnggPC0gcmxlKHgpCityeAogIyMgbGVuZ3RocyBbMTo1XSAgNSA0IDMgMiAxCiAjIyB2YWx1ZXMgIFsxOjVdIDEwIDkgOCA3IDYKIAorIyMgU3Vic2V0dGluZyBydW5zOgorcnhbMjo0XQorIyMgbGVuZ3RocyBbMTozXSA0IDMgMgorIyMgdmFsdWVzICBbMTozXSA5IDggNworCityeFssIDI6NF0KKyMjIHNhbWUgYXMgYWJvdmUKKworcnhbImxlbmd0aHMiLCAyOjRdCisjIyBbMV0gNCAzIDIKKworcnhbInZhbHVlcyIsIDI6NF0KKyMjIFsxXSA5IDggNworCiB6IDwtIGMoVFJVRSwgVFJVRSwgRkFMU0UsIEZBTFNFLCBUUlVFLCBGQUxTRSwgVFJVRSwgVFJVRSwgVFJVRSkKIHJsZSh6KQogcmxlKGFzLmNoYXJhY3Rlcih6KSkKZGlmZiAtLWdpdCB0ZXN0cy9yZWctdGVzdHMtMWQuUiB0ZXN0cy9yZWctdGVzdHMtMWQuUgppbmRleCBjNDVlMjAwZDNmLi5mNmFiNDNhMTYwIDEwMDY0NAotLS0gdGVzdHMvcmVnLXRlc3RzLTFkLlIKKysrIHRlc3RzL3JlZy10ZXN0cy0xZC5SCkBAIC01NTE5LDYgKzU1MTksMzcgQEAgcGxvdChsbSh5fiAgICBjLCBkZCksIHdoaWNoID0gNSkgICMgZ2F2ZSBlbXB0eSBwbG90LCBub3RpbmcgbWlzc2luZyBmYWN0b3JzCiBzdG9waWZub3QoInBsb3QoPGxtPiwgd2hpY2g9NSkgZ2F2ZSBtZXNzYWdlIGFuZCBubyBwbG90IiA9IGlzLm51bGwocikpCiAjIyBmYWlsZWQgZm9yIGNoYXJhY3RlciBwcmVkaWN0b3JzIGluIFIgPD0gNC4xLngKIAorIyMgWy5ybGUgaW5kZXhpbmcgbWV0aG9kCitsb2NhbCh7CisgICAgciA8LSBybGUoYygxLCAxLCAxLCAyLCAyLCAzLCAzLCAzLCAzLCA0KSkKKyAgICAjIyBsZW5ndGhzOiBpbnQgWzE6NF0gMyAyIDQgMQorICAgICMjIHZhbHVlcyA6IG51bSBbMTo0XSAxIDIgMyA0CisgICAgcl9zdWIgPC0gclsyOjNdCisgICAgIyMgbGVuZ3RoczogaW50IFsxOjJdIDIgNAorICAgICMjIHZhbHVlcyA6IG51bSBbMToyXSAyIDMKKyAgICBzdG9waWZub3QoCisgICAgICAgIGluaGVyaXRzKHJfc3ViLCAicmxlIiksCisgICAgICAgIGlkZW50aWNhbChyX3N1YiRsZW5ndGhzLCBjKDJMLCA0TCkpLAorICAgICAgICBpZGVudGljYWwocl9zdWIkdmFsdWVzLCBjKDIsIDMpKSwKKyAgICAgICAgIyAxRCBhbmQgMkQgcnVuIHN1YnNldHRpbmcKKyAgICAgICAgaWRlbnRpY2FsKHJbLCAyOjNdLCByX3N1YiksCisgICAgICAgIGlkZW50aWNhbChyWzI6MywgXSwgcl9zdWIpLAorICAgICAgICBpZGVudGljYWwocltpID0gMjozXSwgcl9zdWIpLAorICAgICAgICBpZGVudGljYWwocltqID0gMjozXSwgcl9zdWIpLAorICAgICAgICBpZGVudGljYWwoclsyOjMsIGRyb3AgPSBGQUxTRV0sIHJfc3ViKSwKKyAgICAgICAgIyBtaXNzaW5nIGFyZ3VtZW50cworICAgICAgICBpZGVudGljYWwocltdLCByKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbLF0sIHIpLAorICAgICAgICAjIGNvbXBvbmVudCBleHRyYWN0aW9uCisgICAgICAgIGlkZW50aWNhbChyWyJsZW5ndGhzIl0sIHIkbGVuZ3RocyksCisgICAgICAgIGlkZW50aWNhbChyWyJ2YWx1ZXMiXSwgciR2YWx1ZXMpLAorICAgICAgICBpZGVudGljYWwoclsibGVuZ3RocyIsIF0sIHIkbGVuZ3RocyksCisgICAgICAgIGlkZW50aWNhbChyWyJ2YWx1ZXMiLCBdLCByJHZhbHVlcyksCisgICAgICAgIGlkZW50aWNhbChyWyJsZW5ndGhzIiwgMjozXSwgYygyTCwgNEwpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbInZhbHVlcyIsIDI6M10sIGMoMiwgMykpCisgICAgKQorfSkKKwogIyMjIGNvbnRpbnVlZCBpbiByZWctdGVzdHMtMWUuUiBmb3IgUiA+LSA0LjMuMAogCiAjIyBrZWVwIGF0IGVuZAo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true,
+          "last_change_time": "2026-09-01T13:22:56Z",
+          "size": 4811,
+          "is_private": false,
+          "id": 3809,
+          "creation_time": "2026-09-01T13:15:25Z",
+          "summary": "`[.rle` path",
+          "file_name": "rle_subset.patch",
+          "bug_id": 17852
+        },
+        {
+          "data": "ZGlmZiAtLWdpdCBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIgc3JjL2xpYnJhcnkvYmFzZS9SL3JsZS5SCmluZGV4IGI5OTZiZTAwMGIuLjhlYjFhYjA4NjMgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9ybGUuUgpAQCAtNDgsMyArNDgsMzggQEAgaW52ZXJzZS5ybGUgPC0gZnVuY3Rpb24oeCwgLi4uKQogICAgICAgICBzdG9wKCJpbnZhbGlkICdybGUnIHN0cnVjdHVyZSIpCiAgICAgcmVwLmludCh2LCBsZSkKIH0KKworYFsucmxlYCA8LSBmdW5jdGlvbih4LCBpLCBqLCBkcm9wID0gVFJVRSkKK3sKKyAgICBtZHJvcCA8LSBtaXNzaW5nKGRyb3ApCisgICAgbl9hcmcgPC0gbmFyZ3MoKSAtICFtZHJvcAorCisgICAgIyAxRCBsaXN0LWxpa2UgaW5kZXhpbmcgZm9yIGJhY2t3YXJkIGNvbXBhdGliaWxpdHkKKyAgICBpZiAobl9hcmcgPCAzTCkgeworICAgICAgICBpZiAobWlzc2luZyhpKSkgcmV0dXJuKHgpCisgICAgICAgIHJldHVybih1bmNsYXNzKHgpW2ldKQorICAgIH0KKworICAgICMgMkQgbWF0cml4LWxpa2UgaW5kZXhpbmcKKyAgICBtYWtlX3JsZSA8LSBcKGwsIHYpIHN0cnVjdHVyZShsaXN0KGxlbmd0aHMgPSBsLCB2YWx1ZXMgPSB2KSwgY2xhc3MgPSBvbGRDbGFzcyh4KSkKKworICAgIG1pc3NpbmdfaSA8LSBtaXNzaW5nKGkpCisgICAgbWlzc2luZ19qIDwtIG1pc3NpbmcoaikKKworICAgIGlmIChtaXNzaW5nX2kgJiYgbWlzc2luZ19qKSByZXR1cm4oeCkKKyAgICBpZiAobWlzc2luZ19pKSByZXR1cm4obWFrZV9ybGUoeCRsZW5ndGhzW2pdLCB4JHZhbHVlc1tqLCBkcm9wID0gZHJvcF0pKQorICAgIGlmIChtaXNzaW5nX2opIHsKKyAgICAgICAgaWYgKGlkZW50aWNhbChpLCAibGVuZ3RocyIpIHx8IGlkZW50aWNhbChpLCAxTCkgfHwgaWRlbnRpY2FsKGksIDEpKQorICAgICAgICAgICAgcmV0dXJuKHgkbGVuZ3RocykKKyAgICAgICAgaWYgKGlkZW50aWNhbChpLCAidmFsdWVzIikgfHwgaWRlbnRpY2FsKGksIDJMKSB8fCBpZGVudGljYWwoaSwgMikpCisgICAgICAgICAgICByZXR1cm4oeCR2YWx1ZXMpCisgICAgICAgIHJldHVybihtYWtlX3JsZSh4JGxlbmd0aHNbaV0sIHgkdmFsdWVzW2ksIGRyb3AgPSBkcm9wXSkpCisgICAgfQorCisgICAgaWYgKGlkZW50aWNhbChpLCAibGVuZ3RocyIpIHx8IGlkZW50aWNhbChpLCAxTCkgfHwgaWRlbnRpY2FsKGksIDEpKQorICAgICAgICByZXR1cm4oeCRsZW5ndGhzW2pdKQorICAgIGlmIChpZGVudGljYWwoaSwgInZhbHVlcyIpIHx8IGlkZW50aWNhbChpLCAyTCkgfHwgaWRlbnRpY2FsKGksIDIpKQorICAgICAgICByZXR1cm4oeCR2YWx1ZXNbaiwgZHJvcCA9IGRyb3BdKQorCisgICAgc3RvcCgiaW52YWxpZCBzdWJzY3JpcHQiKQorfQpkaWZmIC0tZ2l0IHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3JsZS5SZCBzcmMvbGlicmFyeS9iYXNlL21hbi9ybGUuUmQKaW5kZXggNDlmYjY5OWQ0OC4uNTYzZDE5NmZmNCAxMDA2NDQKLS0tIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3JsZS5SZAorKysgc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmxlLlJkCkBAIC04LDYgKzgsNyBAQAogXGFsaWFze3JsZX0KIFxhbGlhc3tpbnZlcnNlLnJsZX0KIFxhbGlhc3twcmludC5ybGV9CitcYWxpYXN7Wy5ybGV9CiBcY29uY2VwdHtydW5zfQogXGRlc2NyaXB0aW9uewogICBDb21wdXRlIHRoZSBsZW5ndGhzIGFuZCB2YWx1ZXMgb2YgcnVucyBvZiBlcXVhbCB2YWx1ZXMgaW4gYSB2ZWN0b3IKQEAgLTE4LDEwICsxOSwxMyBAQCBybGUoeCkKIGludmVyc2UucmxlKHgsIFxkb3RzKQogCiBcbWV0aG9ke3ByaW50fXtybGV9KHgsIGRpZ2l0cyA9IGdldE9wdGlvbigiZGlnaXRzIiksIHByZWZpeCA9ICIiLCBcZG90cykKK1xtZXRob2R7W317cmxlfSh4LCBpLCBqLCBkcm9wID0gVFJVRSkKIH0KIFxhcmd1bWVudHN7CiAgIFxpdGVte3h9e2EgdmVjdG9yIChhdG9taWMsIG5vdCBhIGxpc3QpIGZvciBcY29kZXtybGUoKX07Ci0gICAgYW4gb2JqZWN0IG9mIGNsYXNzIFxjb2RleyJybGUifSBmb3IgXGNvZGV7aW52ZXJzZS5ybGUoKX0ufQorICAgIGFuIG9iamVjdCBvZiBjbGFzcyBcY29kZXsicmxlIn0gZm9yIFxjb2Rle2ludmVyc2UucmxlKCl9IGFuZCBcY29kZXtbfS59CisgIFxpdGVte2ksIGp9e2luZGljZXMgc3BlY2lmeWluZyBydW5zIHRvIGV4dHJhY3QsIG9yIGNvbXBvbmVudCBuYW1lcyAoXGNvZGV7Imxlbmd0aHMifSBvciBcY29kZXsidmFsdWVzIn0pLn0KKyAgXGl0ZW17ZHJvcH17bG9naWNhbDsgaW5jbHVkZWQgZm9yIG1ldGhvZCBjb25zaXN0ZW5jeS59CiAgIFxpdGVte1xkb3RzfXtmdXJ0aGVyIGFyZ3VtZW50czsgZm9yIHRoZSBcY29kZXtwcmludCgpfSBtZXRob2QsIHBhc3NlZCB0bwogICAgIFxjb2Rle1xsaW5re3N0cn0oKX07IGUuZy4sIFxjb2Rle3ZlYy5sZW4gPSAyMn0ufQogICBcaXRlbXtkaWdpdHN9e251bWJlciBvZiBzaWduaWZpY2FudCBkaWdpdHMgZm9yIHByaW50aW5nLCBzZWUKQEAgLTM2LDYgKzQwLDE0IEBAIGludmVyc2UucmxlKHgsIFxkb3RzKQogCiAgIFxjb2Rle2ludmVyc2UucmxlKCl9IGlzIHRoZSBpbnZlcnNlIGZ1bmN0aW9uIG9mIFxjb2Rle3JsZSgpfSwKICAgcmVjb25zdHJ1Y3RpbmcgXGNvZGV7eH0gZnJvbSB0aGUgcnVucy4KKworICBGb3IgYmFja3dhcmQgY29tcGF0aWJpbGl0eSwgMUQgaW5kZXhpbmcgXGNvZGV7eFtpXX0gYWNjZXNzZXMgdGhlIHVuZGVybHlpbmcKKyAgbGlzdCBlbGVtZW50cyAoXGNvZGV7bGVuZ3Roc30gYW5kIFxjb2Rle3ZhbHVlc30pLgorICBNYXRyaXgtbGlrZSAyRCBub3RhdGlvbiBcY29kZXt4Wywgal19IGV4dHJhY3RzIHRoZSBzcGVjaWZpZWQgcnVucywKKyAgcmV0dXJuaW5nIGEgbmV3IFxjb2RleyJybGUifSBvYmplY3Qgd2l0aCB0aGUgY29ycmVzcG9uZGluZyBzdWJzZXQgb2YKKyAgXGNvZGV7bGVuZ3Roc30gYW5kIFxjb2Rle3ZhbHVlc30uCisgIEluZGl2aWR1YWwgY29tcG9uZW50cyBmb3IgdGhlIHNlbGVjdGVkIHJ1bnMgY2FuIGJlIGV4dHJhY3RlZCB2aWEKKyAgXGNvZGV7eFsibGVuZ3RocyIsIGpdfSBvciBcY29kZXt4WyJ2YWx1ZXMiLCBqXX0gKG9yIFxjb2Rle3hbMSwgal19IC8gXGNvZGV7eFsyLCBqXX0pLgogfQogXHZhbHVlewogICBcY29kZXtybGUoKX0gcmV0dXJucyBhbiBvYmplY3Qgb2YgY2xhc3MgXGNvZGV7InJsZSJ9IHdoaWNoIGlzIGEgbGlzdApAQCAtNDUsMTMgKzU3LDMyIEBAIGludmVyc2UucmxlKHgsIFxkb3RzKQogICAgIGNvcnJlc3BvbmRpbmcgdmFsdWVzLn0KIAogICBcY29kZXtpbnZlcnNlLnJsZSgpfSByZXR1cm5zIGFuIGF0b21pYyB2ZWN0b3IuCisKKyAgXGNvZGV7W30gcmV0dXJucyBhbiBcY29kZXsicmxlIn0gb2JqZWN0IHdoZW4gc3Vic2V0dGluZyBydW5zIHZpYSBcY29kZXt4Wywgal19LCBhIGxpc3Qgd2hlbiB1c2luZyAxRCBpbmRleGluZyBcY29kZXt4W2ldfSwgb3IgYSB2ZWN0b3Igd2hlbiBleHRyYWN0aW5nIGEgc3BlY2lmaWMgY29tcG9uZW50IHZpYSBcY29kZXt4W2ksIGpdfS4KIH0KIFxleGFtcGxlc3sKIHggPC0gcmV2KHJlcCg2OjEwLCAxOjUpKQotcmxlKHgpCityeCA8LSBybGUoeCkKK3J4CiAjIyBsZW5ndGhzIFsxOjVdICA1IDQgMyAyIDEKICMjIHZhbHVlcyAgWzE6NV0gMTAgOSA4IDcgNgogCisjIyBTdWJzZXR0aW5nIHJ1bnMgd2l0aCAyRCBtYXRyaXggbm90YXRpb246CityeFssIDI6NF0KKyMjIGxlbmd0aHMgWzE6M10gNCAzIDIKKyMjIHZhbHVlcyAgWzE6M10gOSA4IDcKKworcnhbImxlbmd0aHMiLCAyOjRdCisjIyBbMV0gNCAzIDIKKworcnhbInZhbHVlcyIsIDI6NF0KKyMjIFsxXSA5IDggNworCisjIyAxRCBpbmRleGluZyBhY2Nlc3NlcyB1bmRlcmx5aW5nIGxpc3QgY29tcG9uZW50cyBmb3IgYmFja3dhcmQgY29tcGF0aWJpbGl0eQorcnhbMV0KKyMjICRsZW5ndGhzCisjIyBbMV0gNSA0IDMgMiAxCisKIHogPC0gYyhUUlVFLCBUUlVFLCBGQUxTRSwgRkFMU0UsIFRSVUUsIEZBTFNFLCBUUlVFLCBUUlVFLCBUUlVFKQogcmxlKHopCiBybGUoYXMuY2hhcmFjdGVyKHopKQpkaWZmIC0tZ2l0IHRlc3RzL3JlZy10ZXN0cy0xZC5SIHRlc3RzL3JlZy10ZXN0cy0xZC5SCmluZGV4IGM0NWUyMDBkM2YuLjZlMTM2ZTllNjcgMTAwNjQ0Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWQuUgorKysgdGVzdHMvcmVnLXRlc3RzLTFkLlIKQEAgLTU1MTksNiArNTUxOSw0MiBAQCBwbG90KGxtKHl+ICAgIGMsIGRkKSwgd2hpY2ggPSA1KSAgIyBnYXZlIGVtcHR5IHBsb3QsIG5vdGluZyBtaXNzaW5nIGZhY3RvcnMKIHN0b3BpZm5vdCgicGxvdCg8bG0+LCB3aGljaD01KSBnYXZlIG1lc3NhZ2UgYW5kIG5vIHBsb3QiID0gaXMubnVsbChyKSkKICMjIGZhaWxlZCBmb3IgY2hhcmFjdGVyIHByZWRpY3RvcnMgaW4gUiA8PSA0LjEueAogCisjIyBbLnJsZSBpbmRleGluZyBtZXRob2QKK2xvY2FsKHsKKyAgICByIDwtIHJsZShjKDEsIDEsIDEsIDIsIDIsIDMsIDMsIDMsIDMsIDQpKQorICAgICMjIGxlbmd0aHM6IGludCBbMTo0XSAzIDIgNCAxCisgICAgIyMgdmFsdWVzIDogbnVtIFsxOjRdIDEgMiAzIDQKKyAgICByX3N1YiA8LSByWywgMjozXQorICAgICMjIGxlbmd0aHM6IGludCBbMToyXSAyIDQKKyAgICAjIyB2YWx1ZXMgOiBudW0gWzE6Ml0gMiAzCisgICAgc3RvcGlmbm90KAorICAgICAgICBpbmhlcml0cyhyX3N1YiwgInJsZSIpLAorICAgICAgICBpZGVudGljYWwocl9zdWIkbGVuZ3RocywgYygyTCwgNEwpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJfc3ViJHZhbHVlcywgYygyLCAzKSksCisgICAgICAgICMgMkQgcnVuIHN1YnNldHRpbmcKKyAgICAgICAgaWRlbnRpY2FsKHJbLCAyOjNdLCByX3N1YiksCisgICAgICAgIGlkZW50aWNhbChyWzI6MywgXSwgcl9zdWIpLAorICAgICAgICBpZGVudGljYWwoclssIDI6MywgZHJvcCA9IEZBTFNFXSwgcl9zdWIpLAorICAgICAgICAjIDFEIGxpc3QgaW5kZXhpbmcgKGJhY2t3YXJkIGNvbXBhdGlibGUpCisgICAgICAgIGlkZW50aWNhbChyWzFdLCBsaXN0KGxlbmd0aHMgPSByJGxlbmd0aHMpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMl0sIGxpc3QodmFsdWVzID0gciR2YWx1ZXMpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbImxlbmd0aHMiXSwgbGlzdChsZW5ndGhzID0gciRsZW5ndGhzKSksCisgICAgICAgIGlkZW50aWNhbChyWyJ2YWx1ZXMiXSwgbGlzdCh2YWx1ZXMgPSByJHZhbHVlcykpLAorICAgICAgICBpZGVudGljYWwoclsxOjJdLCBsaXN0KGxlbmd0aHMgPSByJGxlbmd0aHMsIHZhbHVlcyA9IHIkdmFsdWVzKSksCisgICAgICAgIGlkZW50aWNhbChyW10sIHIpLAorICAgICAgICBpZGVudGljYWwoclssXSwgciksCisgICAgICAgICMgMkQgY29tcG9uZW50IGV4dHJhY3Rpb24KKyAgICAgICAgaWRlbnRpY2FsKHJbImxlbmd0aHMiLCBdLCByJGxlbmd0aHMpLAorICAgICAgICBpZGVudGljYWwoclsidmFsdWVzIiwgXSwgciR2YWx1ZXMpLAorICAgICAgICBpZGVudGljYWwoclsxLCBdLCByJGxlbmd0aHMpLAorICAgICAgICBpZGVudGljYWwoclsyLCBdLCByJHZhbHVlcyksCisgICAgICAgIGlkZW50aWNhbChyWyJsZW5ndGhzIiwgMjozXSwgYygyTCwgNEwpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbInZhbHVlcyIsIDI6M10sIGMoMiwgMykpLAorICAgICAgICBpZGVudGljYWwoclsxLCAyOjNdLCBjKDJMLCA0TCkpLAorICAgICAgICBpZGVudGljYWwoclsyLCAyOjNdLCBjKDIsIDMpKQorICAgICkKK30pCisKICMjIyBjb250aW51ZWQgaW4gcmVnLXRlc3RzLTFlLlIgZm9yIFIgPi0gNC4zLjAKIAogIyMga2VlcCBhdCBlbmQK",
+          "creator": "AHL27",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "`[.rle` patch_2",
+          "creation_time": "2026-09-01T13:22:56Z",
+          "bug_id": 17852,
+          "file_name": "rle_subset.patch",
+          "size": 5790,
+          "last_change_time": "2026-09-01T16:03:48Z",
+          "id": 3810,
+          "is_private": false
+        },
+        {
+          "is_patch": true,
+          "data": "ZGlmZiAtLWdpdCBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIgc3JjL2xpYnJhcnkvYmFzZS9SL3JsZS5SCmluZGV4IGI5OTZiZTAwMGIuLjdhNTE0MzkyN2EgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIKKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9ybGUuUgpAQCAtNDgsMyArNDgsMjMgQEAgaW52ZXJzZS5ybGUgPC0gZnVuY3Rpb24oeCwgLi4uKQogICAgICAgICBzdG9wKCJpbnZhbGlkICdybGUnIHN0cnVjdHVyZSIpCiAgICAgcmVwLmludCh2LCBsZSkKIH0KKworYFsucmxlYCA8LSBmdW5jdGlvbih4LCBpLCBqLCBkcm9wID0gVFJVRSkKK3sKKyAgICBuZGltcyA8LSBuYXJncygpIC0gKCFtaXNzaW5nKGRyb3ApKQorICAgIGlmIChuZGltcyA8IDNMKSB7CisgICAgICAgIGlmIChtaXNzaW5nKGkpKSByZXR1cm4oeCkKKyAgICAgICAgcmV0dXJuKE5leHRNZXRob2QoKSkKKyAgICB9CisKKyAgICByZXMgPC0gdW5jbGFzcyh4KQorICAgIGlmICghbWlzc2luZyhpKSkKKyAgICAgICAgcmVzIDwtIHJlc1tpXQorICAgIGlmICghbWlzc2luZyhqKSkKKyAgICAgICAgcmVzIDwtIGxhcHBseShyZXMsICJbIiwgaikKKworICAgIGlmIChkcm9wICYmIGxlbmd0aChyZXMpID09IDFMKQorICAgICAgICByZXNbWzFMXV0KKyAgICBlbHNlCisgICAgICAgIHN0cnVjdHVyZShyZXMsIGNsYXNzID0gb2xkQ2xhc3MoeCkpCit9CmRpZmYgLS1naXQgc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmxlLlJkIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3JsZS5SZAppbmRleCA0OWZiNjk5ZDQ4Li41NjNkMTk2ZmY0IDEwMDY0NAotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmxlLlJkCisrKyBzcmMvbGlicmFyeS9iYXNlL21hbi9ybGUuUmQKQEAgLTgsNiArOCw3IEBACiBcYWxpYXN7cmxlfQogXGFsaWFze2ludmVyc2UucmxlfQogXGFsaWFze3ByaW50LnJsZX0KK1xhbGlhc3tbLnJsZX0KIFxjb25jZXB0e3J1bnN9CiBcZGVzY3JpcHRpb257CiAgIENvbXB1dGUgdGhlIGxlbmd0aHMgYW5kIHZhbHVlcyBvZiBydW5zIG9mIGVxdWFsIHZhbHVlcyBpbiBhIHZlY3RvcgpAQCAtMTgsMTAgKzE5LDEzIEBAIHJsZSh4KQogaW52ZXJzZS5ybGUoeCwgXGRvdHMpCiAKIFxtZXRob2R7cHJpbnR9e3JsZX0oeCwgZGlnaXRzID0gZ2V0T3B0aW9uKCJkaWdpdHMiKSwgcHJlZml4ID0gIiIsIFxkb3RzKQorXG1ldGhvZHtbfXtybGV9KHgsIGksIGosIGRyb3AgPSBUUlVFKQogfQogXGFyZ3VtZW50c3sKICAgXGl0ZW17eH17YSB2ZWN0b3IgKGF0b21pYywgbm90IGEgbGlzdCkgZm9yIFxjb2Rle3JsZSgpfTsKLSAgICBhbiBvYmplY3Qgb2YgY2xhc3MgXGNvZGV7InJsZSJ9IGZvciBcY29kZXtpbnZlcnNlLnJsZSgpfS59CisgICAgYW4gb2JqZWN0IG9mIGNsYXNzIFxjb2RleyJybGUifSBmb3IgXGNvZGV7aW52ZXJzZS5ybGUoKX0gYW5kIFxjb2Rle1t9Ln0KKyAgXGl0ZW17aSwgan17aW5kaWNlcyBzcGVjaWZ5aW5nIHJ1bnMgdG8gZXh0cmFjdCwgb3IgY29tcG9uZW50IG5hbWVzIChcY29kZXsibGVuZ3RocyJ9IG9yIFxjb2RleyJ2YWx1ZXMifSkufQorICBcaXRlbXtkcm9wfXtsb2dpY2FsOyBpbmNsdWRlZCBmb3IgbWV0aG9kIGNvbnNpc3RlbmN5Ln0KICAgXGl0ZW17XGRvdHN9e2Z1cnRoZXIgYXJndW1lbnRzOyBmb3IgdGhlIFxjb2Rle3ByaW50KCl9IG1ldGhvZCwgcGFzc2VkIHRvCiAgICAgXGNvZGV7XGxpbmt7c3RyfSgpfTsgZS5nLiwgXGNvZGV7dmVjLmxlbiA9IDIyfS59CiAgIFxpdGVte2RpZ2l0c317bnVtYmVyIG9mIHNpZ25pZmljYW50IGRpZ2l0cyBmb3IgcHJpbnRpbmcsIHNlZQpAQCAtMzYsNiArNDAsMTQgQEAgaW52ZXJzZS5ybGUoeCwgXGRvdHMpCiAKICAgXGNvZGV7aW52ZXJzZS5ybGUoKX0gaXMgdGhlIGludmVyc2UgZnVuY3Rpb24gb2YgXGNvZGV7cmxlKCl9LAogICByZWNvbnN0cnVjdGluZyBcY29kZXt4fSBmcm9tIHRoZSBydW5zLgorCisgIEZvciBiYWNrd2FyZCBjb21wYXRpYmlsaXR5LCAxRCBpbmRleGluZyBcY29kZXt4W2ldfSBhY2Nlc3NlcyB0aGUgdW5kZXJseWluZworICBsaXN0IGVsZW1lbnRzIChcY29kZXtsZW5ndGhzfSBhbmQgXGNvZGV7dmFsdWVzfSkuCisgIE1hdHJpeC1saWtlIDJEIG5vdGF0aW9uIFxjb2Rle3hbLCBqXX0gZXh0cmFjdHMgdGhlIHNwZWNpZmllZCBydW5zLAorICByZXR1cm5pbmcgYSBuZXcgXGNvZGV7InJsZSJ9IG9iamVjdCB3aXRoIHRoZSBjb3JyZXNwb25kaW5nIHN1YnNldCBvZgorICBcY29kZXtsZW5ndGhzfSBhbmQgXGNvZGV7dmFsdWVzfS4KKyAgSW5kaXZpZHVhbCBjb21wb25lbnRzIGZvciB0aGUgc2VsZWN0ZWQgcnVucyBjYW4gYmUgZXh0cmFjdGVkIHZpYQorICBcY29kZXt4WyJsZW5ndGhzIiwgal19IG9yIFxjb2Rle3hbInZhbHVlcyIsIGpdfSAob3IgXGNvZGV7eFsxLCBqXX0gLyBcY29kZXt4WzIsIGpdfSkuCiB9CiBcdmFsdWV7CiAgIFxjb2Rle3JsZSgpfSByZXR1cm5zIGFuIG9iamVjdCBvZiBjbGFzcyBcY29kZXsicmxlIn0gd2hpY2ggaXMgYSBsaXN0CkBAIC00NSwxMyArNTcsMzIgQEAgaW52ZXJzZS5ybGUoeCwgXGRvdHMpCiAgICAgY29ycmVzcG9uZGluZyB2YWx1ZXMufQogCiAgIFxjb2Rle2ludmVyc2UucmxlKCl9IHJldHVybnMgYW4gYXRvbWljIHZlY3Rvci4KKworICBcY29kZXtbfSByZXR1cm5zIGFuIFxjb2RleyJybGUifSBvYmplY3Qgd2hlbiBzdWJzZXR0aW5nIHJ1bnMgdmlhIFxjb2Rle3hbLCBqXX0sIGEgbGlzdCB3aGVuIHVzaW5nIDFEIGluZGV4aW5nIFxjb2Rle3hbaV19LCBvciBhIHZlY3RvciB3aGVuIGV4dHJhY3RpbmcgYSBzcGVjaWZpYyBjb21wb25lbnQgdmlhIFxjb2Rle3hbaSwgal19LgogfQogXGV4YW1wbGVzewogeCA8LSByZXYocmVwKDY6MTAsIDE6NSkpCi1ybGUoeCkKK3J4IDwtIHJsZSh4KQorcngKICMjIGxlbmd0aHMgWzE6NV0gIDUgNCAzIDIgMQogIyMgdmFsdWVzICBbMTo1XSAxMCA5IDggNyA2CiAKKyMjIFN1YnNldHRpbmcgcnVucyB3aXRoIDJEIG1hdHJpeCBub3RhdGlvbjoKK3J4WywgMjo0XQorIyMgbGVuZ3RocyBbMTozXSA0IDMgMgorIyMgdmFsdWVzICBbMTozXSA5IDggNworCityeFsibGVuZ3RocyIsIDI6NF0KKyMjIFsxXSA0IDMgMgorCityeFsidmFsdWVzIiwgMjo0XQorIyMgWzFdIDkgOCA3CisKKyMjIDFEIGluZGV4aW5nIGFjY2Vzc2VzIHVuZGVybHlpbmcgbGlzdCBjb21wb25lbnRzIGZvciBiYWNrd2FyZCBjb21wYXRpYmlsaXR5CityeFsxXQorIyMgJGxlbmd0aHMKKyMjIFsxXSA1IDQgMyAyIDEKKwogeiA8LSBjKFRSVUUsIFRSVUUsIEZBTFNFLCBGQUxTRSwgVFJVRSwgRkFMU0UsIFRSVUUsIFRSVUUsIFRSVUUpCiBybGUoeikKIHJsZShhcy5jaGFyYWN0ZXIoeikpCmRpZmYgLS1naXQgdGVzdHMvcmVnLXRlc3RzLTFkLlIgdGVzdHMvcmVnLXRlc3RzLTFkLlIKaW5kZXggYzQ1ZTIwMGQzZi4uOGRkZDQ5ZmYwNiAxMDA2NDQKLS0tIHRlc3RzL3JlZy10ZXN0cy0xZC5SCisrKyB0ZXN0cy9yZWctdGVzdHMtMWQuUgpAQCAtNTUxOSw2ICs1NTE5LDQxIEBAIHBsb3QobG0oeX4gICAgYywgZGQpLCB3aGljaCA9IDUpICAjIGdhdmUgZW1wdHkgcGxvdCwgbm90aW5nIG1pc3NpbmcgZmFjdG9ycwogc3RvcGlmbm90KCJwbG90KDxsbT4sIHdoaWNoPTUpIGdhdmUgbWVzc2FnZSBhbmQgbm8gcGxvdCIgPSBpcy5udWxsKHIpKQogIyMgZmFpbGVkIGZvciBjaGFyYWN0ZXIgcHJlZGljdG9ycyBpbiBSIDw9IDQuMS54CiAKKyMjIFsucmxlIGluZGV4aW5nIG1ldGhvZAorbG9jYWwoeworICAgIHIgPC0gcmxlKGMoMSwgMSwgMSwgMiwgMiwgMywgMywgMywgMywgNCkpCisgICAgIyMgbGVuZ3RoczogaW50IFsxOjRdIDMgMiA0IDEKKyAgICAjIyB2YWx1ZXMgOiBudW0gWzE6NF0gMSAyIDMgNAorICAgIHJfc3ViIDwtIHJbLCAyOjNdCisgICAgIyMgbGVuZ3RoczogaW50IFsxOjJdIDIgNAorICAgICMjIHZhbHVlcyA6IG51bSBbMToyXSAyIDMKKyAgICBzdG9waWZub3QoCisgICAgICAgIGluaGVyaXRzKHJfc3ViLCAicmxlIiksCisgICAgICAgIGlkZW50aWNhbChyX3N1YiRsZW5ndGhzLCBjKDJMLCA0TCkpLAorICAgICAgICBpZGVudGljYWwocl9zdWIkdmFsdWVzLCBjKDIsIDMpKSwKKyAgICAgICAgIyAyRCBydW4gc3Vic2V0dGluZworICAgICAgICBpZGVudGljYWwoclssIDI6M10sIHJfc3ViKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbLCAyOjMsIGRyb3AgPSBGQUxTRV0sIHJfc3ViKSwKKyAgICAgICAgIyAxRCBsaXN0IGluZGV4aW5nIChiYWNrd2FyZCBjb21wYXRpYmxlKQorICAgICAgICBpZGVudGljYWwoclsxXSwgbGlzdChsZW5ndGhzID0gciRsZW5ndGhzKSksCisgICAgICAgIGlkZW50aWNhbChyWzJdLCBsaXN0KHZhbHVlcyA9IHIkdmFsdWVzKSksCisgICAgICAgIGlkZW50aWNhbChyWyJsZW5ndGhzIl0sIGxpc3QobGVuZ3RocyA9IHIkbGVuZ3RocykpLAorICAgICAgICBpZGVudGljYWwoclsidmFsdWVzIl0sIGxpc3QodmFsdWVzID0gciR2YWx1ZXMpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMToyXSwgbGlzdChsZW5ndGhzID0gciRsZW5ndGhzLCB2YWx1ZXMgPSByJHZhbHVlcykpLAorICAgICAgICBpZGVudGljYWwocltdLCByKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbLF0sIHIpLAorICAgICAgICAjIDJEIGNvbXBvbmVudCBleHRyYWN0aW9uCisgICAgICAgIGlkZW50aWNhbChyWyJsZW5ndGhzIiwgXSwgciRsZW5ndGhzKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbInZhbHVlcyIsIF0sIHIkdmFsdWVzKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMSwgXSwgciRsZW5ndGhzKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMiwgXSwgciR2YWx1ZXMpLAorICAgICAgICBpZGVudGljYWwoclsibGVuZ3RocyIsIDI6M10sIGMoMkwsIDRMKSksCisgICAgICAgIGlkZW50aWNhbChyWyJ2YWx1ZXMiLCAyOjNdLCBjKDIsIDMpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMSwgMjozXSwgYygyTCwgNEwpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMiwgMjozXSwgYygyLCAzKSkKKyAgICApCit9KQorCiAjIyMgY29udGludWVkIGluIHJlZy10ZXN0cy0xZS5SIGZvciBSID4tIDQuMy4wCiAKICMjIGtlZXAgYXQgZW5kCg==",
+          "creator": "AHL27",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "size": 5053,
+          "last_change_time": "2026-09-03T09:29:29Z",
+          "id": 3814,
+          "is_private": false,
+          "summary": "`[.rle` patch_3",
+          "creation_time": "2026-09-01T16:03:48Z",
+          "bug_id": 17852,
+          "file_name": "rle_subset.patch"
+        },
+        {
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "AHL27",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvUi9ybGUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9iYXNlL1IvcmxlLlIJKHJldmlzaW9uIDkwNDU3KQorKysgc3JjL2xpYnJhcnkvYmFzZS9SL3JsZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00MSwxMCArNDEsNTcgQEAgcHJpbnQucmxlIDwtIGZ1bmN0aW9uKHgsIGRpZ2l0cyA9IGdldE9wdGlvbigiZGlnaXRzIiksIHByZWZpeCA9ICIiLCAuLi4pCiB9CiAKICMjICpub3QqIGEgbWV0aG9kOyBubyBuZWVkIGZvciBgLi4uYAotaW52ZXJzZS5ybGUgPC0gZnVuY3Rpb24oeCwgLi4uKQoraW52ZXJzZS5ybGUgPC0gZnVuY3Rpb24oeCwgc3Vic2V0ID0gTlVMTCwgLi4uKQogewogICAgIGlmKGlzLm51bGwobGUgPC0geCRsZW5ndGhzKSB8fAogICAgICAgIGlzLm51bGwodiAgPC0geCR2YWx1ZXMpICB8fCBsZW5ndGgobGUpICE9IGxlbmd0aCh2KSkKICAgICAgICAgc3RvcCgiaW52YWxpZCAncmxlJyBzdHJ1Y3R1cmUiKQorICAgIGlmICghaXMubnVsbChzdWJzZXQpKQorICAgICAgICByZXR1cm4oeFtzdWJzZXQsIGRlY29tcHJlc3MgPSBUUlVFXSkKICAgICByZXAuaW50KHYsIGxlKQogfQorCitgWy5ybGVgIDwtIGZ1bmN0aW9uKHgsIGksIGosIGRyb3AgPSBUUlVFLCBkZWNvbXByZXNzID0gRkFMU0UpCit7CisgICAgIyBpZiBkZWNvbXByZXNzPVRSVUUsIHN1YnNldHMgYmFzZWQgb24gdGhlICpkZWNvbXByZXNzZWQqIHZlY3RvcjoKKyAgICAjICA+IHIgPC0gcmxlKGMoMSwgMiwgMiwgMywgMywgMykpCisgICAgIyAgPiByWzE6MywgZGVjb21wcmVzcz1UUlVFXQorICAgICMgICBbMV0gMSAyIDIKKyAgICBpZiAoZGVjb21wcmVzcykgeworICAgICAgICBpZiAoIW1pc3NpbmcoaikpCisgICAgICAgICAgICBzdG9wKCJjYW5ub3Qgc3BlY2lmeSAnaicgd2hlbiAnZGVjb21wcmVzcyA9IFRSVUUnIikKKyAgICAgICAgaWYgKG1pc3NpbmcoaSkpCisgICAgICAgICAgICByZXR1cm4oaW52ZXJzZS5ybGUoeCkpCisKKyAgICAgICAgY3VtX3N1bSA8LSBjdW1zdW0oeCRsZW5ndGhzKQorICAgICAgICB0b3RhbF9sZW5ndGggPC0gc3VtKHgkbGVuZ3RocykKKworICAgICAgICAjIGhhbmRsaW5nIG5lZ2F0aXZlIGluZGljZXMsIGxvZ2ljYWwgaW5kaWNlcywgYW5kIG90aGVyIGVkZ2UgY2FzZXMKKyAgICAgICAgaWR4IDwtIChzZXFfbGVuKHRvdGFsX2xlbmd0aCkpW2ldCisKKyAgICAgICAgIyBNYXAgdW5jb21wcmVzc2VkIGVsZW1lbnQgaW5kaWNlcyB0byBjb3JyZXNwb25kaW5nIHZhbHVlIGluZGljZXMKKyAgICAgICAgcnVuX2lkeCA8LSBmaW5kSW50ZXJ2YWwoaWR4LCBjdW1fc3VtLCBsZWZ0Lm9wZW4gPSBUUlVFKSArIDFMCisgICAgICAgIHJldHVybih4JHZhbHVlc1tydW5faWR4XSkKKyAgICB9CisKKyAgICBuZGltcyA8LSBuYXJncygpIC0gKCFtaXNzaW5nKGRyb3ApKSAtICghbWlzc2luZyhkZWNvbXByZXNzKSkKKyAgICBpZiAobmRpbXMgPCAzTCkgeworICAgICAgICAjIFRoaXMgaXMgb25seSBleGVjdXRlZCBpZiBgaixkcm9wLGRlY29tcHJlc3NgIGFyZSBhbGwgbWlzc2luZywgc28gd2UKKyAgICAgICAgIyBjYW4gZm9yd2FyZCB0byBgTmV4dE1ldGhvZGAgZm9yIG5vcm1hbCBsaXN0LWJhc2VkIGluZGV4aW5nIHdpdGggYGlgCisgICAgICAgIGlmIChtaXNzaW5nKGkpKSByZXR1cm4oeCkKKyAgICAgICAgcmV0dXJuKE5leHRNZXRob2QoKSkKKyAgICB9CisKKyAgICAjIE1hdHJpeC1iYXNlZCBpbmRleGluZywgdHJlYXRpbmcgeCBhcyBhIHR3by1yb3cgbWF0cml4CisgICAgIyAoeFsxLF0gaXMgeCRsZW5ndGhzLCB4WzIsXSBpcyB4JHZhbHVlcykKKyAgICByZXMgPC0gdW5jbGFzcyh4KQorICAgIGlmICghbWlzc2luZyhpKSkKKyAgICAgICAgcmVzIDwtIHJlc1tpXQorICAgIGlmICghbWlzc2luZyhqKSkKKyAgICAgICAgcmVzIDwtIGxhcHBseShyZXMsICJbIiwgaikKKworICAgIGlmIChkcm9wICYmIGxlbmd0aChyZXMpID09IDFMKQorICAgICAgICByZXNbWzFMXV0KKyAgICBlbHNlCisgICAgICAgIHN0cnVjdHVyZShyZXMsIGNsYXNzID0gb2xkQ2xhc3MoeCkpCit9CkluZGV4OiBzcmMvbGlicmFyeS9iYXNlL21hbi9ybGUuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vcmxlLlJkCShyZXZpc2lvbiA5MDQ1NykKKysrIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL3JsZS5SZAkod29ya2luZyBjb3B5KQpAQCAtOCw2ICs4LDcgQEAKIFxhbGlhc3tybGV9CiBcYWxpYXN7aW52ZXJzZS5ybGV9CiBcYWxpYXN7cHJpbnQucmxlfQorXGFsaWFze1sucmxlfQogXGNvbmNlcHR7cnVuc30KIFxkZXNjcmlwdGlvbnsKICAgQ29tcHV0ZSB0aGUgbGVuZ3RocyBhbmQgdmFsdWVzIG9mIHJ1bnMgb2YgZXF1YWwgdmFsdWVzIGluIGEgdmVjdG9yCkBAIC0xNSwxMyArMTYsMTggQEAKIH0KIFx1c2FnZXsKIHJsZSh4KQotaW52ZXJzZS5ybGUoeCwgXGRvdHMpCitpbnZlcnNlLnJsZSh4LCBzdWJzZXQgPSBOVUxMLCBcZG90cykKIAogXG1ldGhvZHtwcmludH17cmxlfSh4LCBkaWdpdHMgPSBnZXRPcHRpb24oImRpZ2l0cyIpLCBwcmVmaXggPSAiIiwgXGRvdHMpCitcbWV0aG9ke1t9e3JsZX0oeCwgaSwgaiwgZHJvcCA9IFRSVUUsIGRlY29tcHJlc3MgPSBGQUxTRSkKIH0KIFxhcmd1bWVudHN7CiAgIFxpdGVte3h9e2EgdmVjdG9yIChhdG9taWMsIG5vdCBhIGxpc3QpIGZvciBcY29kZXtybGUoKX07Ci0gICAgYW4gb2JqZWN0IG9mIGNsYXNzIFxjb2RleyJybGUifSBmb3IgXGNvZGV7aW52ZXJzZS5ybGUoKX0ufQorICAgIGFuIG9iamVjdCBvZiBjbGFzcyBcY29kZXsicmxlIn0gZm9yIFxjb2Rle2ludmVyc2UucmxlKCl9IGFuZCBcY29kZXtbfS59CisgIFxpdGVte3N1YnNldH17b3B0aW9uYWwgdmVjdG9yIG9mIGluZGljZXMgc3BlY2lmeWluZyBlbGVtZW50cyBvZiB0aGUgcmVjb25zdHJ1Y3RlZCB2ZWN0b3IgdG8gZXh0cmFjdC59CisgIFxpdGVte2ksan17aW5kaWNlcyBzcGVjaWZ5aW5nIGVpdGhlciBlbGVtZW50cyB0byBleHRyYWN0IG9yIGNvbXBvbmVudCBuYW1lcyAoXGNvZGV7Imxlbmd0aHMifSBvciBcY29kZXsidmFsdWVzIn0pLiBTZWUgRGV0YWlscyBmb3IgbW9yZSBpbmZvcm1hdGlvbi59CisgIFxpdGVte2Ryb3B9e2xvZ2ljYWw7IGlmIFxjb2Rle1RSVUV9LCBhdHRlbXB0cyB0byBjb2VyY2UgdGhlIHJlc3VsdCB0byBhIHZlY3Rvci59CisgIFxpdGVte2RlY29tcHJlc3N9e2xvZ2ljYWw7IGlmIFxjb2Rle1RSVUV9LCBzdWJzZXRzIFxjb2Rle3h9IGFzIGlmIGl0IHdlcmUgYW4gdW5jb21wcmVzc2VkIHZlY3RvciAoYXMgd291bGQgYmUgb2J0YWluZWQgZnJvbSBcY29kZXtpbnZlcnNlLnJsZSgpfSkufQogICBcaXRlbXtcZG90c317ZnVydGhlciBhcmd1bWVudHM7IGZvciB0aGUgXGNvZGV7cHJpbnQoKX0gbWV0aG9kLCBwYXNzZWQgdG8KICAgICBcY29kZXtcbGlua3tzdHJ9KCl9OyBlLmcuLCBcY29kZXt2ZWMubGVuID0gMjJ9Ln0KICAgXGl0ZW17ZGlnaXRzfXtudW1iZXIgb2Ygc2lnbmlmaWNhbnQgZGlnaXRzIGZvciBwcmludGluZywgc2VlCkBAIC0zNiw2ICs0MiwyMCBAQCBpbnZlcnNlLnJsZSh4LCBcZG90cykKIAogICBcY29kZXtpbnZlcnNlLnJsZSgpfSBpcyB0aGUgaW52ZXJzZSBmdW5jdGlvbiBvZiBcY29kZXtybGUoKX0sCiAgIHJlY29uc3RydWN0aW5nIFxjb2Rle3h9IGZyb20gdGhlIHJ1bnMuCisKKyAgMUQgaW5kZXhpbmcgXGNvZGV7eFtpXX0gYWNjZXNzZXMgdGhlIHVuZGVybHlpbmcgbGlzdCBlbGVtZW50cyAoXGNvZGV7bGVuZ3Roc30KKyAgYW5kIFxjb2Rle3ZhbHVlc30pIGZvciBiYWNrd2FyZHMtY29tcGF0aWJpbGl0eSByZWFzb25zLgorICBNYXRyaXgtbGlrZSAyRCBub3RhdGlvbiBcY29kZXt4Wywgal19IGluZGV4ZXMgdGhlIG9iamVjdCBhcyBpZiBpdCB3ZXJlIGEgMkQKKyAgbWF0cml4IHdpdGggcm93cyBcY29kZXt4JGxlbmd0aHN9IGFuZCBcY29kZXt4JHZhbHVlc30uIFRoaXMgY2FuIGJlIHVzZWQgdG8KKyAgc3Vic2V0IGJvdGggbGVuZ3RocyBhbmQgcm93cyB0b2dldGhlciwgcmV0dXJuaW5nIGEgbmV3IFxjb2Rle3JsZX0gb2JqZWN0LgorICBJbmRpdmlkdWFsIGNvbXBvbmVudHMgZm9yIHRoZSBzZWxlY3RlZCBydW5zIGNhbiBiZSBleHRyYWN0ZWQgdmlhCisgIFxjb2Rle3hbImxlbmd0aHMiLCBqXX0gb3IgXGNvZGV7eFsidmFsdWVzIiwgal19IChvciBcY29kZXt4WzEsIGpdfSAvCisgIFxjb2Rle3hbMiwgal19KS4KKworICBXaGVuIFxjb2Rle2RlY29tcHJlc3MgPSBUUlVFfSwgXGNvZGV7eFtpLCBkZWNvbXByZXNzID0gVFJVRV19IGluZGV4ZXMgaW50bworICB0aGUgdW5jb21wcmVzc2VkIHZlY3RvciBkaXJlY3RseSBhbmQgcmV0dXJucyB0aGUgdmVjdG9yIG9mIHZhbHVlcy4gVGhpcyBpcworICBmdW5jdGlvbmFsbHkgZXF1aXZhbGVudCB0byBcY29kZXtpbnZlcnNlLnJsZSh4KVtpXX0sIGJ1dCBpcyBpbXBsZW1lbnRlZCBtb3JlCisgIGVmZmljaWVudGx5LgogfQogXHZhbHVlewogICBcY29kZXtybGUoKX0gcmV0dXJucyBhbiBvYmplY3Qgb2YgY2xhc3MgXGNvZGV7InJsZSJ9IHdoaWNoIGlzIGEgbGlzdApAQCAtNDUsMTMgKzY1LDU1IEBAIGludmVyc2UucmxlKHgsIFxkb3RzKQogICAgIGNvcnJlc3BvbmRpbmcgdmFsdWVzLn0KIAogICBcY29kZXtpbnZlcnNlLnJsZSgpfSByZXR1cm5zIGFuIGF0b21pYyB2ZWN0b3IuCisKKyAgRm9yIFxjb2Rle1sucmxlfSwgdGhlIHJldHVybiB2YWx1ZSBkZXBlbmRzIG9uIHRoZSBpbmRleGluZyBtb2RlOgorICBcaXRlbWl6ZXsKKyAgICBcaXRlbSBcY29kZXt4Wywgal19OiBBbiBvYmplY3Qgb2YgY2xhc3MgXGNvZGV7InJsZSJ9LgorICAgIFxpdGVtIFxjb2Rle3hbaV19OiBBIFxjb2Rle2xpc3R9LCBvciBwb3RlbnRpYWxseSBhIHZlY3RvciBvZiB2YWx1ZXMgaWYKKyAgICAgIFxjb2Rle2Ryb3A9VFJVRX0uCisgICAgXGl0ZW0gXGNvZGV7eFtpLCBqXX06IEFuIGF0b21pYyB2ZWN0b3IuCisgICAgXGl0ZW0gXGNvZGV7eFtpLCBkZWNvbXByZXNzID0gVFJVRV19OiBBIHZlY3RvciBvZiB2YWx1ZXMuCisgIH0KIH0KIFxleGFtcGxlc3sKIHggPC0gcmV2KHJlcCg2OjEwLCAxOjUpKQotcmxlKHgpCityeCA8LSBybGUoeCkKK3J4CiAjIyBsZW5ndGhzIFsxOjVdICA1IDQgMyAyIDEKICMjIHZhbHVlcyAgWzE6NV0gMTAgOSA4IDcgNgogCisjIyAxRCBpbmRleGluZyBhY2Nlc3NlcyB1bmRlcmx5aW5nIGxpc3QgY29tcG9uZW50czoKK3J4WzFdCisjIyAkbGVuZ3RocworIyMgWzFdIDUgNCAzIDIgMQorCisjIyBUaGVzZSBjYW4gYWxzbyBiZSBhY2Nlc3NlZCBieSBuYW1lOgorcnhbImxlbmd0aHMiLCAyOjRdCisjIyBbMV0gNCAzIDIKKworcnhbInZhbHVlcyIsIDI6NF0KKyMjIFsxXSA5IDggNworCisjIyAyRCBpbmRleGluZyBjYW4gYmUgdXNlZCB0byBzdWJzZXQgcnVuczoKK3J4WywgMjo0XQorIyMgbGVuZ3RocyBbMTozXSA0IDMgMgorIyMgdmFsdWVzICBbMTozXSA5IDggNworCisjIyBJdCdzIHBvc3NpYmxlIHRvIHN1YnNldCB0aGUgZGVjb21wcmVzc2VkIHZlY3RvciwgYnV0IHRoaXMgbWV0aG9kIGhhcyBoaWdoCisjIyBvdmVyaGVhZCBiZWNhdXNlIGl0IG11c3QgYnVpbGQgdGhlIGVudGlyZSBkZWNvbXByZXNzZWQgdmVjdG9yCitpbnZlcnNlLnJsZShyeClbMzo3XQorIyMgWzFdIDEwIDEwIDEwICA5ICA5CisKKyMjIFBhc3NpbmcgYGRlY29tcHJlc3M9VFJVRWAgZG9lcyB0aGUgYWJvdmUgd2l0aG91dCBidWlsZGluZyB0aGUgaW50ZXJtZWRpYXRlCisjIyBkZWNvbXByZXNzZWQgdmVjdG9yLCByZW1vdmluZyB0aGUgYWRkaXRpb25hbCBvdmVyaGVhZC4KK3J4WzM6NywgZGVjb21wcmVzcyA9IFRSVUVdCisjIyBbMV0gMTAgMTAgMTAgIDkgIDkKKworIyMgVGhpcyBjYW4gYWxzbyBiZSBkb25lIHZpYSBgaW52ZXJzZS5ybGVgIHdpdGggdGhlIGBzdWJzZXRgIGFyZ3VtZW50OgoraW52ZXJzZS5ybGUocngsIHN1YnNldD0zOjcpCisjIyBbMV0gMTAgMTAgMTAgIDkgIDkKKworCiB6IDwtIGMoVFJVRSwgVFJVRSwgRkFMU0UsIEZBTFNFLCBUUlVFLCBGQUxTRSwgVFJVRSwgVFJVRSwgVFJVRSkKIHJsZSh6KQogcmxlKGFzLmNoYXJhY3Rlcih6KSkKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZC5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZC5SCShyZXZpc2lvbiA5MDQ1NykKKysrIHRlc3RzL3JlZy10ZXN0cy0xZC5SCSh3b3JraW5nIGNvcHkpCkBAIC01NTE5LDYgKzU1MTksNzcgQEAgcGxvdChsbSh5fiAgICBjLCBkZCksIHdoaWNoID0gNSkgICMgZ2F2ZSBlbXB0eSBwbG90LCBub3RpbmcgbWlzc2luZyBmYWN0b3JzCiBzdG9waWZub3QoInBsb3QoPGxtPiwgd2hpY2g9NSkgZ2F2ZSBtZXNzYWdlIGFuZCBubyBwbG90IiA9IGlzLm51bGwocikpCiAjIyBmYWlsZWQgZm9yIGNoYXJhY3RlciBwcmVkaWN0b3JzIGluIFIgPD0gNC4xLngKIAorIyMgWy5ybGUgaW5kZXhpbmcgbWV0aG9kCitsb2NhbCh7CisgICAgciA8LSBybGUoYygxLCAxLCAxLCAyLCAyLCAzLCAzLCAzLCAzLCA0KSkKKyAgICAjIyBsZW5ndGhzOiBpbnQgWzE6NF0gMyAyIDQgMQorICAgICMjIHZhbHVlcyA6IG51bSBbMTo0XSAxIDIgMyA0CisgICAgcl9zdWIgPC0gclssIDI6M10KKyAgICAjIyBsZW5ndGhzOiBpbnQgWzE6Ml0gMiA0CisgICAgIyMgdmFsdWVzIDogbnVtIFsxOjJdIDIgMworICAgIHN0b3BpZm5vdCgKKyAgICAgICAgaW5oZXJpdHMocl9zdWIsICJybGUiKSwKKyAgICAgICAgaWRlbnRpY2FsKHJfc3ViJGxlbmd0aHMsIGMoMkwsIDRMKSksCisgICAgICAgIGlkZW50aWNhbChyX3N1YiR2YWx1ZXMsIGMoMiwgMykpLAorICAgICAgICAjIDJEIHJ1biBzdWJzZXR0aW5nCisgICAgICAgIGlkZW50aWNhbChyWywgMjozXSwgcl9zdWIpLAorICAgICAgICBpZGVudGljYWwoclssIDI6MywgZHJvcCA9IEZBTFNFXSwgcl9zdWIpLAorICAgICAgICAjIDFEIGxpc3QgaW5kZXhpbmcgKGJhY2t3YXJkIGNvbXBhdGlibGUpCisgICAgICAgIGlkZW50aWNhbChyWzFdLCBsaXN0KGxlbmd0aHMgPSByJGxlbmd0aHMpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbMl0sIGxpc3QodmFsdWVzID0gciR2YWx1ZXMpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbImxlbmd0aHMiXSwgbGlzdChsZW5ndGhzID0gciRsZW5ndGhzKSksCisgICAgICAgIGlkZW50aWNhbChyWyJ2YWx1ZXMiXSwgbGlzdCh2YWx1ZXMgPSByJHZhbHVlcykpLAorICAgICAgICBpZGVudGljYWwoclsxOjJdLCBsaXN0KGxlbmd0aHMgPSByJGxlbmd0aHMsIHZhbHVlcyA9IHIkdmFsdWVzKSksCisgICAgICAgIGlkZW50aWNhbChyW10sIHIpLAorICAgICAgICBpZGVudGljYWwoclssXSwgciksCisgICAgICAgICMgMkQgY29tcG9uZW50IGV4dHJhY3Rpb24KKyAgICAgICAgaWRlbnRpY2FsKHJbImxlbmd0aHMiLCBdLCByJGxlbmd0aHMpLAorICAgICAgICBpZGVudGljYWwoclsidmFsdWVzIiwgXSwgciR2YWx1ZXMpLAorICAgICAgICBpZGVudGljYWwoclsxLCBdLCByJGxlbmd0aHMpLAorICAgICAgICBpZGVudGljYWwoclsyLCBdLCByJHZhbHVlcyksCisgICAgICAgIGlkZW50aWNhbChyWyJsZW5ndGhzIiwgMjozXSwgYygyTCwgNEwpKSwKKyAgICAgICAgaWRlbnRpY2FsKHJbInZhbHVlcyIsIDI6M10sIGMoMiwgMykpLAorICAgICAgICBpZGVudGljYWwoclsxLCAyOjNdLCBjKDJMLCA0TCkpLAorICAgICAgICBpZGVudGljYWwoclsyLCAyOjNdLCBjKDIsIDMpKSwKKyAgICAgICAgIyBNaXNzaW5nIGluZGV4IGVxdWl2YWxlbmNlCisgICAgICAgIGlkZW50aWNhbChyW2RlY29tcHJlc3MgPSBUUlVFXSwgaW52ZXJzZS5ybGUocilbXSksCisgICAgICAgIGlkZW50aWNhbChpbnZlcnNlLnJsZShyKSwgaW52ZXJzZS5ybGUocilbXSkKKyAgICApCisKKyAgICAjIFZlcmlmeSBkZWNvbXByZXNzID0gVFJVRSBhbmQgaW52ZXJzZS5ybGUoc3Vic2V0ID0gLi4uKSBtYXRjaCBpbnZlcnNlLnJsZShyKVtpXQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3kgPC0gZnVuY3Rpb24oaSkgeworICAgICAgICBzdG9waWZub3QoCisgICAgICAgICAgICBpZGVudGljYWwocltpLCBkZWNvbXByZXNzID0gVFJVRV0sIGludmVyc2UucmxlKHIpW2ldKSwKKyAgICAgICAgICAgIGlkZW50aWNhbChpbnZlcnNlLnJsZShyLCBzdWJzZXQgPSBpKSwgaW52ZXJzZS5ybGUocilbaV0pLAorICAgICAgICAgICAgaWRlbnRpY2FsKGludmVyc2UucmxlKHIsIGkpLCBpbnZlcnNlLnJsZShyKVtpXSkKKyAgICAgICAgKQorICAgIH0KKworICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koMzo3KQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koMUwpCisgICAgY2hlY2tfZGVjb21wcmVzc19jb25zaXN0ZW5jeSgxMEwpCisgICAgY2hlY2tfZGVjb21wcmVzc19jb25zaXN0ZW5jeSgtYygxOjMpKQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koLTFMKQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koYygwTCwgLTJMLCAtNUwpKQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koYygwTCwgMkwsIDBMLCA1TCkpCisgICAgY2hlY2tfZGVjb21wcmVzc19jb25zaXN0ZW5jeShjKDFMLCAxMEwsIDExTCwgMjVMKSkKKyAgICBjaGVja19kZWNvbXByZXNzX2NvbnNpc3RlbmN5KE5BX2ludGVnZXJfKQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koYygyTCwgTkEsIDZMLCBOQSwgMTBMKSkKKyAgICBjaGVja19kZWNvbXByZXNzX2NvbnNpc3RlbmN5KGMoVFJVRSwgRkFMU0UpKQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koYyhUUlVFLCBOQSwgRkFMU0UsIFRSVUUpKQorICAgIGNoZWNrX2RlY29tcHJlc3NfY29uc2lzdGVuY3koaW50ZWdlcigwTCkpCisgICAgY2hlY2tfZGVjb21wcmVzc19jb25zaXN0ZW5jeShjKDVMLCA1TCwgMkwsIDJMLCA4TCkpCisgICAgY2hlY2tfZGVjb21wcmVzc19jb25zaXN0ZW5jeSgxMDoxKQorCisgICAgIyBFcnJvciBoYW5kbGluZyB3aGVuIGogaXMgc3BlY2lmaWVkIHdpdGggZGVjb21wcmVzcyA9IFRSVUUKKyAgICBlcnJfaiA8LSB0cnlDYXRjaChyWzEsIDIsIGRlY29tcHJlc3MgPSBUUlVFXSwgZXJyb3IgPSBmdW5jdGlvbihlKSBlKQorICAgIHN0b3BpZm5vdChpbmhlcml0cyhlcnJfaiwgImVycm9yIikpCisKKyAgICAjIEVycm9yIGhhbmRsaW5nIGZvciBtaXhlZCBwb3NpdGl2ZSBhbmQgbmVnYXRpdmUgc3Vic2NyaXB0cworICAgIGVycl9taXhlZCA8LSB0cnlDYXRjaChyW2MoMSwgLTEpLCBkZWNvbXByZXNzID0gVFJVRV0sIGVycm9yID0gZnVuY3Rpb24oZSkgZSkKKyAgICBzdG9waWZub3QoaW5oZXJpdHMoZXJyX21peGVkLCAiZXJyb3IiKSkKK30pCisKICMjIyBjb250aW51ZWQgaW4gcmVnLXRlc3RzLTFlLlIgZm9yIFIgPi0gNC4zLjAKIAogIyMga2VlcCBhdCBlbmQK",
+          "is_patch": true,
+          "file_name": "rle_subset_decompress.patch",
+          "bug_id": 17852,
+          "creation_time": "2026-09-03T09:29:29Z",
+          "summary": "`[.rle` with decompress arg",
+          "is_private": false,
+          "id": 3822,
+          "last_change_time": "2026-09-03T09:29:29Z",
+          "size": 9561
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-03 09:29:29"
+}

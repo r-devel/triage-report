@@ -1,0 +1,134 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2024-08-13T16:30:59Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "id": 18779,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "AHL27"
+        ],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Low-level",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "NextMethod() fails in S3 methods dispatched by internal generic cbind, rbind",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-09-03T10:09:38Z",
+        "cc_detail": [
+          {
+            "real_name": "Aidan H Lakshman",
+            "name": "AHL27",
+            "id": 3536
+          }
+        ],
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "creator": "jaganmn2",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3462,
+          "name": "jaganmn2",
+          "real_name": "Mikael Jagan"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18779": {
+        "comments": [
+          {
+            "creation_time": "2024-08-13T16:30:59Z",
+            "creator": "jaganmn2",
+            "bug_id": 18779,
+            "text": "```\n> m <- function(...) { cat(\"a\\n\"); NextMethod() }\n> for (generic in c(\"c\", \"cbind\", \"rbind\")) .S3method(generic, \"a\", m)\n> x <- structure(0, class = \"a\")\n> c(x)\na\n[1] 0\n> cbind(x)\na\nError in NextMethod() : generic function not specified\n> rbind(x)\na\nError in NextMethod() : generic function not specified\n```\n\nThe error message suggests that the method call is not evaluated in an environment containing the variables `.Generic`, `.Method`, `.Class`, etc. essential for correct `NextMethod()` dispatch.  Indeed:\n\n```\n> debug(m)\n> c(x)\ndebugging in: c.a(x)\ndebug at #1: {\n    cat(\"a\\n\")\n    NextMethod()\n}\nBrowse[1]> ls(all.names = TRUE)\n[1] \"...\"             \".Class\"          \".Generic\"        \".GenericCallEnv\"\n[5] \".GenericDefEnv\"  \".Group\"          \".Method\"        \nBrowse[1]> Q\n> cbind(x)\ndebugging in: cbind(deparse.level, ...)\ndebug at #1: {\n    cat(\"a\\n\")\n    NextMethod()\n}\nBrowse[1]> ls(all.names = TRUE)\n[1] \"...\"\nBrowse[1]> Q\n> rbind(x)\ndebugging in: rbind(deparse.level, ...)\ndebug at #1: {\n    cat(\"a\\n\")\n    NextMethod()\n}\nBrowse[1]> ls(all.names = TRUE)\n[1] \"...\"\nBrowse[1]> Q\n```\n\nComparing `do_c` and `do_bind`, both defined in `bind.c`, it seems clear that the difference is that `do_c` calls `DispatchAnyOrEval` whereas `do_bind` performs method look-up and evaluation \"manually\", notably _not_ constructing a special environment for evaluation of the method call.\n\nIt is well documented (e.g., in `help(\"cbind\")` and by comments in the body of of `do_bind`) that internal generic functions dispatching on `...` are likely to behave specially.  Still, I wonder if we should aim to have `do_c` and `do_bind` share more code and ultimately use the same mechanism for dispatch.\n\nLuke made a similar comment in bug 18579, comment 4:\n\n> All that said, the differences in implementation between `do_c()` and `do_bind()` seem a little odd and it might be worth looking into sharing more code.",
+            "count": 0,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "id": 101126,
+            "time": "2024-08-13T16:30:59Z",
+            "is_private": false
+          },
+          {
+            "creation_time": "2026-09-01T14:14:49Z",
+            "creator": "AHL27",
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 18779,
+            "text": "Created attachment 3811\nPotential do_bind.c dispatch fix\n\nRoot cause seems to be `do_bind.c:1127`:\n\n```\nSEXP ans = applyClosure(call, method, args, env, R_NilValue, TRUE);\n```\n\n`R_NilValue` is passed as the fifth argument (`suppliedvars`), meaning that we lose `.Generic`, `.Method`, `.Class`, etc.\n\nI put together a quick patch that does resolve the issue by just injecting the correct variables into `applyClosure` here.\n\nI'm not sure that this is overall the right way to go, because (as previously mentioned) it's probably better to unify this interface rather than continuing to implement hand-rolled parsing. That's a much larger change though, and I thought this would at least be a good starting point to continue the discussion.",
+            "attachment_id": 3811,
+            "tags": [],
+            "is_private": false,
+            "id": 103511,
+            "time": "2026-09-01T14:14:49Z"
+          },
+          {
+            "text": "Wanted to add a little more context on what's going on in this patch.\n\nThe tl;dr here is that we're populating a new `env` with the right args to be able to call method dispatch (`.Generic`, `.Method`, `.Class`, etc.). This is done via `createS3Vars`, and it allows `NextMethod` to correctly locate the next method.\n\nMost of the code added is actually just detecting when we're trying to execute the default `cbind.default` / `rbind.default` generic. \n\n`c/rbind.default` is implemented as `.Internal(c/rbind(...))`, which just calls into `do_bind`. This means that if we have no checks and the base class dispatches to `cbind.default`, we'll re-enter do_bind and loop forever:\n\n```\ncbind.my_class -> NextMethod -> cbind.default -> do_bind -> detects my_class\n     ^                                                             |\n      \\____________________________________________________________/\n\n```\n\nThe added checks ensure that if we're already at the \"end\" of the dispatch chain (i.e., at the default method), we just fall through to the default C-level `bind` logic later on in the function rather than continuing to try to dispatch further:\n\n```\ncbind.my_class -> NextMethod -> cbind.default -> detected default -> C-level bind\n```",
+            "bug_id": 18779,
+            "count": 2,
+            "is_markdown": true,
+            "creator": "AHL27",
+            "creation_time": "2026-09-03T10:09:38Z",
+            "time": "2026-09-03T10:09:38Z",
+            "id": 103561,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18779": [
+        {
+          "summary": "Potential do_bind.c dispatch fix",
+          "creation_time": "2026-09-01T14:14:49Z",
+          "bug_id": 18779,
+          "file_name": "cbind_rbind_nextmethod.patch",
+          "size": 5419,
+          "last_change_time": "2026-09-01T14:14:49Z",
+          "id": 3811,
+          "is_private": false,
+          "data": "ZGlmZiAtLWdpdCBzcmMvbWFpbi9iaW5kLmMgc3JjL21haW4vYmluZC5jCmluZGV4IDdkOTg3YjEyZGIuLmIwNDAwNWY0ODIgMTAwNjQ0Ci0tLSBzcmMvbWFpbi9iaW5kLmMKKysrIHNyYy9tYWluL2JpbmQuYwpAQCAtMTA0NiwxNCArMTA0NiwyOCBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fdW5saXN0KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIC8qIFRoaXMgaXMgYSBzcGVjaWFsIC5JbnRlcm5hbCAqLwogYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2JpbmQoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogewotICAgIC8vIG1pc3NpbmcoZGVwYXJzZS5sZXZlbCkgOgotICAgIGJvb2wgbWlzc2luZ0RMID0gKGlzU3ltYm9sKENBUihhcmdzKSkgJiYgUl9taXNzaW5nKENBUihhcmdzKSwgZW52KSk7Ci0gICAgLyogc2luY2UgUiAyLjIuMDogZmlyc3QgYXJndW1lbnQgImRlcGFyc2UubGV2ZWwiICovCi0gICAgaW50IGRlcGFyc2VfbGV2ZWwgPSBhc0ludGVnZXIoZXZhbChDQVIoYXJncyksIGVudikpOwotICAgIGJvb2wgdHJ5UzQgPSBkZXBhcnNlX2xldmVsID49IDA7Ci0gICAgLyogTkI6IG5lZ2F0aXZlIGRlcGFyc2VfbGV2ZWwgc2hvdWxkIG90aGVyd2lzZSBiZSBlcXVpdmFsZW50IHRvIGRlcGFyc2VfbGV2ZWwgPT0gMCwKLSAgICAgKiAtLSAgYXMgY2JpbmQoKSwgcmJpbmQoKSBiZWxvdyBvbmx5IGNoZWNrIGZvciAnPT0gMScgYW5kICc9PSAyJwotICAgICAqIHtGSVhNRTogbWV0aG9kcyBzaG91bGQgZG8gc2FtZX0gKi8KKyAgICBzdGF0aWMgU0VYUCBzX2NiaW5kX2RlZmF1bHQgPSBOVUxMOworICAgIHN0YXRpYyBTRVhQIHNfcmJpbmRfZGVmYXVsdCA9IE5VTEw7CisgICAgaWYgKCFzX2NiaW5kX2RlZmF1bHQpIHsKKwlzX2NiaW5kX2RlZmF1bHQgPSBpbnN0YWxsKCJjYmluZC5kZWZhdWx0Iik7CisJc19yYmluZF9kZWZhdWx0ID0gaW5zdGFsbCgicmJpbmQuZGVmYXVsdCIpOworICAgIH0KKyAgICBib29sIGlzX2RlZmF1bHQgPSAoQ0FSKGNhbGwpID09IHNfY2JpbmRfZGVmYXVsdCB8fCBDQVIoY2FsbCkgPT0gc19yYmluZF9kZWZhdWx0KTsKKworICAgIGJvb2wgbWlzc2luZ0RMID0gZmFsc2U7CisgICAgaW50IGRlcGFyc2VfbGV2ZWwgPSAxOworICAgIGJvb2wgdHJ5UzQgPSB0cnVlOworCisgICAgaWYgKCFpc19kZWZhdWx0KSB7CisJLy8gbWlzc2luZyhkZXBhcnNlLmxldmVsKSA6CisJbWlzc2luZ0RMID0gKGlzU3ltYm9sKENBUihhcmdzKSkgJiYgUl9taXNzaW5nKENBUihhcmdzKSwgZW52KSk7CisJLyogc2luY2UgUiAyLjIuMDogZmlyc3QgYXJndW1lbnQgImRlcGFyc2UubGV2ZWwiICovCisJZGVwYXJzZV9sZXZlbCA9IGFzSW50ZWdlcihldmFsKENBUihhcmdzKSwgZW52KSk7CisJdHJ5UzQgPSBkZXBhcnNlX2xldmVsID49IDA7CisJLyogTkI6IG5lZ2F0aXZlIGRlcGFyc2VfbGV2ZWwgc2hvdWxkIG90aGVyd2lzZSBiZSBlcXVpdmFsZW50IHRvIGRlcGFyc2VfbGV2ZWwgPT0gMCwKKwkgKiAtLSAgYXMgY2JpbmQoKSwgcmJpbmQoKSBiZWxvdyBvbmx5IGNoZWNrIGZvciAnPT0gMScgYW5kICc9PSAyJworCSAqIHtGSVhNRTogbWV0aG9kcyBzaG91bGQgZG8gc2FtZX0gKi8KKyAgICB9CiAKICAgICAvKiBMYXp5IGV2YWx1YXRpb24gYW5kIG1ldGhvZCBkaXNwYXRjaCBiYXNlZCBvbiBhcmd1bWVudCB0eXBlcyBhcmUKICAgICAgKiBmdW5kYW1lbnRhbGx5IGluY29tcGF0aWJsZSBub3Rpb25zLiAgVGhlIHJlc3VsdHMgaGVyZSBhcmUKQEAgLTEwODgsMjcgKzExMDIsMzcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2JpbmQoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCiAgICAgY29uc3QgY2hhciAqZ2VuZXJpYyA9ICgoUFJJTVZBTChvcCkgPT0gMSkgPyAiY2JpbmQiIDogInJiaW5kIik7CiAgICAgU0VYUCBtZXRob2QgPSBSX05pbFZhbHVlLCBhOworICAgIFNFWFAgZG90Q2xhc3MgPSBSX05pbFZhbHVlLCBkb3RNZXRob2QgPSBSX05pbFZhbHVlOwogICAgIGJvb2wgYW55UzQgPSBmYWxzZTsKICAgICBjaGFyIGJ1Zls1MTJdOwogCi0gICAgZm9yIChhID0gQ0RSKGFyZ3MpOyBhICE9IFJfTmlsVmFsdWUgJiYgbWV0aG9kID09IFJfTmlsVmFsdWU7IGEgPSBDRFIoYSkpIHsKKyAgICBmb3IgKGEgPSAoaXNfZGVmYXVsdCA/IGFyZ3MgOiBDRFIoYXJncykpOyBhICE9IFJfTmlsVmFsdWU7IGEgPSBDRFIoYSkpIHsKIAlTRVhQIG9iaiA9IFBST1RFQ1QoZXZhbChDQVIoYSksIGVudikpOwotCWlmICh0cnlTNCAmJiAhYW55UzQgJiYgaXNTNChvYmopKSBhbnlTNCA9IHRydWU7Ci0JaWYgKGlzT2JqZWN0KG9iaikpIHsKLQkgICAgU0VYUCBjbGFzc2xpc3QgPSBQUk9URUNUKFJfZGF0YV9jbGFzczIob2JqKSk7Ci0JICAgIGZvciAoaW50IGkgPSAwOyBpIDwgbGVuZ3RoKGNsYXNzbGlzdCk7IGkrKykgewotCQljb25zdCBjaGFyICpzID0gdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKGNsYXNzbGlzdCwgaSkpOwotCQlpZihzdHJsZW4oZ2VuZXJpYykgKyBzdHJsZW4ocykgKyAyID4gNTEyKQotCQkgICAgZXJyb3IoXygiY2xhc3MgbmFtZSB0b28gbG9uZyBpbiAnJXMnIiksIGdlbmVyaWMpOwotCQlzbnByaW50ZihidWYsIDUxMiwgIiVzLiVzIiwgZ2VuZXJpYywgcyk7Ci0JCVNFWFAgY2xhc3NtZXRob2QgPSBSX0xvb2t1cE1ldGhvZChpbnN0YWxsKGJ1ZiksIGVudiwgZW52LAotCQkJCQkJICBSX0Jhc2VOYW1lc3BhY2UpOwotCQlpZiAoY2xhc3NtZXRob2QgIT0gUl9VbmJvdW5kVmFsdWUpIHsKLQkJICAgIG1ldGhvZCA9IGNsYXNzbWV0aG9kOwotCQkgICAgYnJlYWs7CisJaWYgKCFpc19kZWZhdWx0ICYmIG1ldGhvZCA9PSBSX05pbFZhbHVlKSB7CisJICAgIGlmICh0cnlTNCAmJiAhYW55UzQgJiYgaXNTNChvYmopKSBhbnlTNCA9IHRydWU7CisJICAgIGlmIChpc09iamVjdChvYmopKSB7CisJCVNFWFAgY2xhc3NsaXN0ID0gUFJPVEVDVChSX2RhdGFfY2xhc3MyKG9iaikpOworCQlmb3IgKGludCBpID0gMDsgaSA8IGxlbmd0aChjbGFzc2xpc3QpOyBpKyspIHsKKwkJICAgIGNvbnN0IGNoYXIgKnMgPSB0cmFuc2xhdGVDaGFyKFNUUklOR19FTFQoY2xhc3NsaXN0LCBpKSk7CisJCSAgICBpZihzdHJsZW4oZ2VuZXJpYykgKyBzdHJsZW4ocykgKyAyID4gNTEyKQorCQkJZXJyb3IoXygiY2xhc3MgbmFtZSB0b28gbG9uZyBpbiAnJXMnIiksIGdlbmVyaWMpOworCQkgICAgc25wcmludGYoYnVmLCA1MTIsICIlcy4lcyIsIGdlbmVyaWMsIHMpOworCQkgICAgU0VYUCBjbGFzc21ldGhvZCA9IFJfTG9va3VwTWV0aG9kKGluc3RhbGwoYnVmKSwgZW52LCBlbnYsCisJCQkJCQkgICAgICBSX0Jhc2VOYW1lc3BhY2UpOworCQkgICAgaWYgKGNsYXNzbWV0aG9kICE9IFJfVW5ib3VuZFZhbHVlKSB7CisJCQltZXRob2QgPSBjbGFzc21ldGhvZDsKKwkJCWlmIChpID4gMCkgeworCQkJICAgIGRvdENsYXNzID0gc3RyaW5nU3VmZml4KGNsYXNzbGlzdCwgaSk7CisJCQkgICAgc2V0QXR0cmliKGRvdENsYXNzLCBSX1ByZXZpb3VzU3ltYm9sLCBjbGFzc2xpc3QpOworCQkJfSBlbHNlIHsKKwkJCSAgICBkb3RDbGFzcyA9IGNsYXNzbGlzdDsKKwkJCX0KKwkJCWRvdE1ldGhvZCA9IG1rU3RyaW5nKGJ1Zik7CisJCQlicmVhazsKKwkJICAgIH0KIAkJfQorCQlVTlBST1RFQ1QoMSk7CiAJICAgIH0KLQkgICAgVU5QUk9URUNUKDEpOwogCX0KIAlVTlBST1RFQ1QoMSk7CiAgICAgfQpAQCAtMTEyNCwxMCArMTE0OCwyNiBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fYmluZChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJICAgIGFyZ3MgPSBDRFIoYXJncyk7IC8qIGRpc2NhcmQgJ2RlcGFyc2UubGV2ZWwnICovCiAJZWxzZQogCSAgICBTRVRfVEFHKGFyZ3MsIGluc3RhbGwoImRlcGFyc2UubGV2ZWwiKSk7IC8qIHRhZyAnZGVwYXJzZS5sZXZlbCcgKi8KLQlTRVhQIGFucyA9IGFwcGx5Q2xvc3VyZShjYWxsLCBtZXRob2QsIGFyZ3MsIGVudiwgUl9OaWxWYWx1ZSwgVFJVRSk7Ci0JVU5QUk9URUNUKDIpOworCVNFWFAgbmV3dmFycyA9IFJfTmlsVmFsdWU7CisJaW50IG51bV9wcm90ZWN0ID0gMjsgLyogYXJncywgbWV0aG9kICovCisJaWYgKGRvdENsYXNzICE9IFJfTmlsVmFsdWUpIHsKKwkgICAgUFJPVEVDVChkb3RDbGFzcyk7CisJICAgIFBST1RFQ1QoZG90TWV0aG9kKTsKKwkgICAgU0VYUCBkb3RHZW5lcmljID0gUFJPVEVDVChta1N0cmluZyhnZW5lcmljKSk7CisJICAgIG5ld3ZhcnMgPSBQUk9URUNUKGNyZWF0ZVMzVmFycygKKwkJZG90R2VuZXJpYywKKwkJUl9CbGFua1NjYWxhclN0cmluZywKKwkJZG90Q2xhc3MsCisJCWRvdE1ldGhvZCwKKwkJZW52LAorCQlSX0Jhc2VOYW1lc3BhY2UKKwkgICAgKSk7CisJICAgIG51bV9wcm90ZWN0ICs9IDQ7IC8qIGRvdENsYXNzLCBkb3RNZXRob2QsIGRvdEdlbmVyaWMsIG5ld3ZhcnMgKi8KKwl9CisJU0VYUCBhbnMgPSBhcHBseUNsb3N1cmUoY2FsbCwgbWV0aG9kLCBhcmdzLCBlbnYsIG5ld3ZhcnMsIFRSVUUpOworCVVOUFJPVEVDVChudW1fcHJvdGVjdCk7CiAJcmV0dXJuIGFuczsKLSAgICB9IGVsc2UKKyAgICB9IGVsc2UgaWYgKCFpc19kZWZhdWx0KQogCWFyZ3MgPSBDRFIoYXJncyk7IC8qIGRpc2NhcmQgJ2RlcGFyc2UubGV2ZWwnICovCiAKICAgICAvKiBEaXNwYXRjaCBiYXNlZCBvbiBjbGFzcyBtZW1iZXJzaGlwIGhhcyBmYWlsZWQuICovCmRpZmYgLS1naXQgdGVzdHMvcmVnLXRlc3RzLTFlLlIgdGVzdHMvcmVnLXRlc3RzLTFlLlIKaW5kZXggYTMyMzJjZmZmMS4uMmQ3ZjI2NGNlYSAxMDA2NDQKLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgpAQCAtMzY5OSw2ICszNjk5LDE4IEBAIHN0b3BpZm5vdCgKICAgICBpZGVudGljYWwoZHJvcChhcGVybShhLCBjKDEsIDIsIDMpLCByZXNpemUgPSBGQUxTRSkpLCBhcGVybShtLCBjKDEsIDIpLCByZXNpemUgPSBGQUxTRSkpCiApCiAKKyMjIE5leHRNZXRob2QoKSBpbiBjYmluZCgpIC8gcmJpbmQoKQorbG9jYWwoeworICAgIG0gPC0gZnVuY3Rpb24oLi4uKSB7IE5leHRNZXRob2QoKSB9CisgICAgZm9yIChnZW5lcmljIGluIGMoImMiLCAiY2JpbmQiLCAicmJpbmQiKSkgLlMzbWV0aG9kKGdlbmVyaWMsICJhIiwgbSkKKyAgICB4IDwtIHN0cnVjdHVyZSgwLCBjbGFzcyA9ICJhIikKKyAgICBzdG9waWZub3QoCisgICAgICAgIGlkZW50aWNhbChjKHgpLCBjKDApKSwKKyAgICAgICAgaWRlbnRpY2FsKGNiaW5kKHgpLCBjYmluZCh4ID0gMCkpLAorICAgICAgICBpZGVudGljYWwocmJpbmQoeCksIHJiaW5kKHggPSAwKSkKKyAgICApCit9KQorCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwKICAgICAgIHRvdGFsID0gcHJvYy50aW1lKCkpCg==",
+          "creator": "AHL27",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-03 10:09:38"
+}

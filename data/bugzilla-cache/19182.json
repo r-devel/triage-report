@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "whiteboard": "",
+        "creation_time": "2026-09-26T01:44:20Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [],
+        "id": 19182,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "make.names() leaks its name buffer when a name is invalid in a multibyte locale",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-09-26T01:44:29Z",
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19182": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": false,
+            "bug_id": 19182,
+            "text": "In a multibyte (e.g. UTF-8) locale, make.names() signals \"invalid\nmultibyte string\" for a name whose first character is valid but a later\none is not, and on every such call it leaks the buffer it had copied the\nname into.\n\nReproducible example, in a UTF-8 locale:\n\n    make.names(\"a\\xff\")\n    ## Error in make.names(\"a\\xff\") : invalid multibyte string 1\n    for (i in 1:2000) {\n        try(make.names(\"a\\xff\"), silent = TRUE)\n        try(make.names(\"1\\xff\"), silent = TRUE)\n    }\n\nObserved: each failing call leaks strlen(name) + 1 bytes (one more when\nthe name gets an \"X\" prefix). Expected: the error is signalled and\nnothing is retained.\n\nAnalysis: do_makenames() in src/main/character.c (trunk r90590) copies\neach name into an R_Calloc()ed buffer 'tmp' and frees it at the end of\nthe loop iteration. Only the first character is checked (by Mbrtowc)\nbefore that copy; the mbstowcs() check that follows then signals the\nerror,\n\n    if (need_prefix) {\n        tmp = R_Calloc(l+2, char);\n    ...\n    if (mbcslocale) {\n        int nc = (int) mbstowcs(NULL, tmp, 0);\n        if (nc >= 0) {\n            ...\n        } else error(_(\"invalid multibyte string %lld\"), (long long)i+1);\n\nand the long jump skips the R_Free(tmp) at the end of the iteration.\n\nMeasurements: aarch64-apple-darwin25.6.0, macOS leaks after the loop\nabove (4000 failing calls):\n\n    unpatched trunk r90590:  4000 leaks for 64000 total leaked bytes.\n    patched:                 0 leaks for 0 total leaked bytes.\n\nThis was found with LeakSanitizer by a new fuzz target for character\nfunctions in https://github.com/r-devel/r-oss-fuzz (a three-byte\ninput); the defect itself is independent of fuzzing.\n\nProposed patch: attached as makenames-invalid-mbcs-leak.diff. It\nallocates 'tmp', and the buffer used to append \".\" to a reserved word,\nwith R_alloc() instead. The loop already resets the R_alloc stack with\nvmaxset() at the end of each iteration, so on the normal path the\nmemory is released at the same point as before, and on the error path\nthe error handler releases it. The FIXME about reallocating the second\nbuffer goes away. Results for valid input (unique = TRUE, allow_ =\nFALSE, reserved words, non-ASCII names) and the error message are\nunchanged, and make test-Reg passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/342,\nwhere CI results can be seen.",
+            "creation_time": "2026-09-26T01:44:20Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 103707,
+            "time": "2026-09-26T01:44:20Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "count": 1,
+            "text": "Created attachment 3870\npatch: allocate make.names() buffers with R_alloc()",
+            "bug_id": 19182,
+            "creation_time": "2026-09-26T01:44:29Z",
+            "is_private": false,
+            "id": 103708,
+            "tags": [],
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-09-26T01:44:29Z",
+            "attachment_id": 3870
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19182": [
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2NoYXJhY3Rlci5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2NoYXJhY3Rlci5jCShyZXZpc2lvbiA5MDU5MCkKKysrIHNyYy9tYWluL2NoYXJhY3Rlci5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMDM0LDEyICsxMDM0LDE1IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19tYWtlbmFtZXMoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCQlpZiAobCA+PSAxICYmIGlzZGlnaXQoMHhmZiAmIChpbnQpIFRoaXNbMV0pKSBuZWVkX3ByZWZpeCA9IFRSVUU7CiAJICAgIH0gZWxzZSBpZiAoIWlzYWxwaGEoMHhmZiAmIChpbnQpIFRoaXNbMF0pKSBuZWVkX3ByZWZpeCA9IFRSVUU7CiAJfQorCS8qIFJfYWxsb2MoKSByYXRoZXIgdGhhbiBSX0NhbGxvYygpOiB0aGUgaW52YWxpZCBtdWx0aWJ5dGUgc3RyaW5nCisJICAgZXJyb3IgYmVsb3cgd291bGQgb3RoZXJ3aXNlIGxlYWsgdGhlIGJ1ZmZlci4gIHZtYXhzZXQoKSBhdCB0aGUKKwkgICBlbmQgb2YgZWFjaCBpdGVyYXRpb24gcmVsZWFzZXMgaXQuICovCiAJaWYgKG5lZWRfcHJlZml4KSB7Ci0JICAgIHRtcCA9IFJfQ2FsbG9jKGwrMiwgY2hhcik7CisJICAgIHRtcCA9IFJfYWxsb2MobCsyLCBzaXplb2YoY2hhcikpOwogCSAgICBzdHJjcHkodG1wLCAiWCIpOwogCSAgICBzdHJjYXQodG1wLCB0cmFuc2xhdGVDaGFyKFNUUklOR19FTFQoYXJnLCBpKSkpOwogCX0gZWxzZSB7Ci0JICAgIHRtcCA9IFJfQ2FsbG9jKGwrMSwgY2hhcik7CisJICAgIHRtcCA9IFJfYWxsb2MobCsxLCBzaXplb2YoY2hhcikpOwogCSAgICBzdHJjcHkodG1wLCB0cmFuc2xhdGVDaGFyKFNUUklOR19FTFQoYXJnLCBpKSkpOwogCX0KIAlpZiAobWJjc2xvY2FsZSkgewpAQCAtMTA2NiwxNCArMTA2OSwxMSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fbWFrZW5hbWVzKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAlTRVRfU1RSSU5HX0VMVChhbnMsIGksIG1rQ2hhcih0bXApKTsKIAkvKiBkbyB3ZSBoYXZlIGEgcmVzZXJ2ZWQgd29yZD8gIElmIHNvIHRoZSBuYW1lIGlzIGludmFsaWQgKi8KIAlpZiAoIWlzVmFsaWROYW1lKHRtcCkpIHsKLQkgICAgLyogRklYTUU6IGNvdWxkIHVzZSBSX1JlYWxsb2MgaW5zdGVhZCAqLwotCSAgICBjYnVmID0gQ2FsbG9jQ2hhckJ1ZihzdHJsZW4odG1wKSArIDEpOworCSAgICBjYnVmID0gUl9hbGxvYyhzdHJsZW4odG1wKSArIDIsIHNpemVvZihjaGFyKSk7CiAJICAgIHN0cmNweShjYnVmLCB0bXApOwogCSAgICBzdHJjYXQoY2J1ZiwgIi4iKTsKIAkgICAgU0VUX1NUUklOR19FTFQoYW5zLCBpLCBta0NoYXIoY2J1ZikpOwotCSAgICBSX0ZyZWUoY2J1Zik7CiAJfQotCVJfRnJlZSh0bXApOwogCXZtYXhzZXQodm1heCk7CiAgICAgfQogICAgIFVOUFJPVEVDVCgxKTsK",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-09-26T01:44:29Z",
+          "size": 1482,
+          "is_private": false,
+          "id": 3870,
+          "creation_time": "2026-09-26T01:44:29Z",
+          "summary": "patch: allocate make.names() buffers with R_alloc()",
+          "file_name": "makenames-invalid-mbcs-leak.diff",
+          "bug_id": 19182
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-26 01:44:29"
+}

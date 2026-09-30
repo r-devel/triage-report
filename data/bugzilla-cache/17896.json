@@ -1,0 +1,96 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "cc": [],
+        "qa_contact": "",
+        "id": 17896,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2020-08-24T04:17:50Z",
+        "version": "R 4.0.x",
+        "priority": "P5",
+        "product": "R",
+        "component": "Documentation",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "last_change_time": "2020-08-25T02:21:28Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "Cleaning up Internationalization section in R-exts",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "17896": {
+        "comments": [
+          {
+            "creation_time": "2020-08-24T04:17:50Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 17896,
+            "text": "I think the R-exts section 1.8 (Internationalization) could go for a fresh look.\n\nSome things I found confusing or that look incorrect:\n\n - Defining dngettext as a macro that ignores domain. Is there a reason not to use the \"normal\" dngettext as described in the GNU gettext manual (https://www.gnu.org/software/gettext/manual/html_node/Plural-forms.html)? In particular the advice in R-exts to define dngettext as a macro that splits on N > 1 seems to contradict the advice in the GNU manual about pluralization depending on the different uses of plurals in different languages, and the nplurals/plural parameters for gettext.\n\n - We are advised in 1.8.1 to run xgettext to get the pkg.pot file for the src/ translations, then in 1.8.3, we are advised to `touch` src/pkg.pot before running tools::update_pkg_po(). Only one of these is necessary (personally I find using tools::update_pkg_po() easier to remember as it allows me to stay within R for more of the development workflow). \n\n - So far in my translation workflow, tools::update_pkg_po() has been my workhorse. I think centering this function in the discussion first, and then mentioning its component helpers (tools::xgettext2pot(), tools::xgettext(), tools::checkPoFile(), etc.) as ways to dive deeper, would be more instructive/actionable for developers.\n\n - A typo: tools::checkPofile should be tools::checkPoFile\n\nI'm happy to have a go at working on a patch; raising here first to get R-core feedback first before moving forward with that.",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 96372,
+            "time": "2020-08-24T04:17:50Z"
+          },
+          {
+            "bug_id": 17896,
+            "text": "Also noticed today:\n\ntools::udpate_pkg_po uses a call to command-line xgettext with --keyword=N_ as well as --keyword=_:\n\nhttps://github.com/wch/r-source/blob/36219223cff4fedfc7c4e096d7afd187aaa53e14/src/library/tools/R/translations.R#L180\n\nThis N_ isn't mentioned anywhere in R-exts but it appears to be defined in the R source as being a xgettext_noop wrapper (which is also hinted in the GNU manual).\n\nIs this intended to be exposed to package developers, or is this part only in tools::update_pkg_po to handle the case when it is run for `base` translations?",
+            "count": 1,
+            "creation_time": "2020-08-25T02:21:28Z",
+            "id": 96374,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2020-08-25T02:21:28Z",
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "17896": []
+    }
+  },
+  "source_changed": "2020-08-25 02:21:28"
+}

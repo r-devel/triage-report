@@ -1,0 +1,129 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "Other",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-03-27T07:15:23Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "SETVAR does not prime the smallcache binding cache",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19032,
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-03-27T07:14:13Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19032": {
+        "comments": [
+          {
+            "id": 102810,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19032,
+            "text": "Created attachment 3646\nPatch.\n\nGETVAR has a fallback to GET_BINDING_CELL_CACHE when the smallcache slot is R_NilValue (eval.c line 5896), but SETVAR lacks the equivalent. This means SETVAR relies on a prior GETVAR to prime the cache. When no GETVAR has done so, every SETVAR falls through to defineVar.\n\nThe patch adds the same R_NilValue fallback to SETVAR's smallcache path, and a SET_CACHED_BINDING call after the defineVar fallback to prime the cache on first binding creation.\n\nThis gives a small but meaningful optimization for loop bodies of the form:\n\n```\nfor (i in 1:n) {\n\n  # assign variables (SETVAR before GETVAR)\n  x <- 1\n  y <- 2\n\n  # use variables (GETVAR)\n  z <- x + y\n\n}\n```",
+            "count": 0,
+            "creation_time": "2026-03-27T07:14:13Z",
+            "time": "2026-03-27T07:14:13Z",
+            "attachment_id": 3646,
+            "is_markdown": true,
+            "creator": "kevinushey"
+          },
+          {
+            "tags": [],
+            "attachment_id": 3647,
+            "is_private": false,
+            "id": 102811,
+            "time": "2026-03-27T07:15:23Z",
+            "creation_time": "2026-03-27T07:15:23Z",
+            "creator": "kevinushey",
+            "count": 1,
+            "is_markdown": true,
+            "bug_id": 19032,
+            "text": "Created attachment 3647\nPatch. (Attached as file so a diff can be shown.)"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19032": [
+        {
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL2V2YWwuYwkocmV2aXNpb24gODk3MjgpDQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpDQpAQCAtNzg2NSw5ICs3ODY1LDEzIEBADQogICAgICAgew0KIAlpbnQgc2lkeCA9IEdFVE9QKCk7DQogCVNFWFAgbG9jOw0KLQlpZiAoc21hbGxjYWNoZSkNCisJaWYgKHNtYWxsY2FjaGUpIHsNCiAJICAgIGxvYyA9IEdFVF9TTUFMTENBQ0hFX0JJTkRJTkdfQ0VMTCh2Y2FjaGUsIHNpZHgpOw0KLQllbHNlIHsNCisJICAgIGlmIChsb2MgPT0gUl9OaWxWYWx1ZSkgew0KKwkJU0VYUCBzeW1ib2wgPSBHRVRDT05TVChjb25zdGFudHMsIHNpZHgpOw0KKwkJbG9jID0gR0VUX0JJTkRJTkdfQ0VMTF9DQUNIRShzeW1ib2wsIHJobywgdmNhY2hlLCBzaWR4KTsNCisJICAgIH0NCisJfSBlbHNlIHsNCiAJICAgIFNFWFAgc3ltYm9sID0gR0VUQ09OU1QoY29uc3RhbnRzLCBzaWR4KTsNCiAJICAgIGxvYyA9IEdFVF9CSU5ESU5HX0NFTExfQ0FDSEUoc3ltYm9sLCByaG8sIHZjYWNoZSwgc2lkeCk7DQogCX0NCkBAIC03ODk1LDYgKzc4OTksOSBAQA0KIAkgICAgUFJPVEVDVCh2YWx1ZSk7DQogCSAgICBkZWZpbmVWYXIoc3ltYm9sLCB2YWx1ZSwgcmhvKTsNCiAJICAgIFVOUFJPVEVDVCgxKTsNCisJICAgIC8qIGZpbGwgdGhlIGNhY2hlIHNvIHN1YnNlcXVlbnQgaXRlcmF0aW9ucyB1c2UgdGhlIGZhc3QgcGF0aCAqLw0KKwkgICAgU0VUX0NBQ0hFRF9CSU5ESU5HKHZjYWNoZSwgc2lkeCwNCisJCQkgICAgICAgR0VUX0JJTkRJTkdfQ0VMTChzeW1ib2wsIHJobykpOw0KIAl9DQogCU5FWFQoKTsNCiAgICAgICB9DQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": true,
+          "last_change_time": "2026-03-27T07:15:23Z",
+          "size": 905,
+          "is_private": false,
+          "id": 3646,
+          "creation_time": "2026-03-27T07:14:13Z",
+          "summary": "Patch.",
+          "file_name": "file_19032.txt",
+          "bug_id": 19032
+        },
+        {
+          "is_private": false,
+          "id": 3647,
+          "last_change_time": "2026-03-27T07:15:23Z",
+          "size": 875,
+          "file_name": "setvar-binding-cache.patch",
+          "bug_id": 19032,
+          "creation_time": "2026-03-27T07:15:23Z",
+          "summary": "Patch. (Attached as file so a diff can be shown.)",
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDg5NzI4KQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC03ODY1LDkgKzc4NjUsMTMgQEAKICAgICAgIHsKIAlpbnQgc2lkeCA9IEdFVE9QKCk7CiAJU0VYUCBsb2M7Ci0JaWYgKHNtYWxsY2FjaGUpCisJaWYgKHNtYWxsY2FjaGUpIHsKIAkgICAgbG9jID0gR0VUX1NNQUxMQ0FDSEVfQklORElOR19DRUxMKHZjYWNoZSwgc2lkeCk7Ci0JZWxzZSB7CisJICAgIGlmIChsb2MgPT0gUl9OaWxWYWx1ZSkgeworCQlTRVhQIHN5bWJvbCA9IEdFVENPTlNUKGNvbnN0YW50cywgc2lkeCk7CisJCWxvYyA9IEdFVF9CSU5ESU5HX0NFTExfQ0FDSEUoc3ltYm9sLCByaG8sIHZjYWNoZSwgc2lkeCk7CisJICAgIH0KKwl9IGVsc2UgewogCSAgICBTRVhQIHN5bWJvbCA9IEdFVENPTlNUKGNvbnN0YW50cywgc2lkeCk7CiAJICAgIGxvYyA9IEdFVF9CSU5ESU5HX0NFTExfQ0FDSEUoc3ltYm9sLCByaG8sIHZjYWNoZSwgc2lkeCk7CiAJfQpAQCAtNzg5NSw2ICs3ODk5LDkgQEAKIAkgICAgUFJPVEVDVCh2YWx1ZSk7CiAJICAgIGRlZmluZVZhcihzeW1ib2wsIHZhbHVlLCByaG8pOwogCSAgICBVTlBST1RFQ1QoMSk7CisJICAgIC8qIGZpbGwgdGhlIGNhY2hlIHNvIHN1YnNlcXVlbnQgaXRlcmF0aW9ucyB1c2UgdGhlIGZhc3QgcGF0aCAqLworCSAgICBTRVRfQ0FDSEVEX0JJTkRJTkcodmNhY2hlLCBzaWR4LAorCQkJICAgICAgIEdFVF9CSU5ESU5HX0NFTEwoc3ltYm9sLCByaG8pKTsKIAl9CiAJTkVYVCgpOwogICAgICAgfQo="
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-03-27 07:15:23"
+}

@@ -1,0 +1,153 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "cc": [
+          "maechler",
+          "michaelchirico4"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19117,
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2026-08-02T10:16:59Z",
+        "version": "R 4.6.x",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "name": "ikrylov",
+          "id": 3307,
+          "real_name": "Ivan Krylov"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "creator": "ikrylov",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "Other",
+        "flags": [],
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "id": 18,
+            "name": "maechler"
+          },
+          {
+            "real_name": "Michael Chirico",
+            "name": "michaelchirico4",
+            "id": 3256
+          }
+        ],
+        "last_change_time": "2026-08-15T22:03:57Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "strptime() parses shortest prefix of localised month name",
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19117": {
+        "comments": [
+          {
+            "bug_id": 19117,
+            "text": "In some locales, `strptime()` will misunderstand month names if some of them are prefixes of others:\n\n```\n# sudo apt install locales-all,\n#  or add \"vi_VN UTF-8\" to /etc/locale.gen and run locale-gen\nSys.setlocale(\"LC_TIME\", \"vi_VN\")\nd <- as.Date('2000-11-01')\nf <- '%Y %d %b'\nd |> strftime(f) |> strptime(f)\n# [1] \"2000-01-01 UTC\"\n```\n\nThis happens because in the vi_VN locale, month names are formatted as \"Tháng 1\" ... \"Tháng 12\" (`%B`) or \"Thg 1\" ... \"Thg 12\" (`%b`) and R's own internal `strptime()` [parses them as](https://svn.r-project.org/browse/R/trunk/src/main/Rstrptime.h?op=blame&rev=83234#l297):\n\n```\nif (w_match_string (w_weekday_name[cnt], rp)) break;\n// ...\nif (w_match_string (w_ab_weekday_name[cnt], rp)) break;\n```\n\n...i.e., as soon as R sees \"Thg 1\", the match is successful. This leads to problems with the `%b` format in the following locales:\n\n* bo_CN\n* bo_IN\n* dz_BT\n* km_KH\n* tok\n* shn_MM (where July (\"လၼသပး\") is a prefix of November (\"လၼသပးသင\"))\n* vi_VN",
+            "count": 0,
+            "creation_time": "2026-08-02T10:16:59Z",
+            "id": 103353,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "ikrylov",
+            "time": "2026-08-02T10:16:59Z",
+            "attachment_id": {}
+          },
+          {
+            "is_markdown": true,
+            "count": 1,
+            "bug_id": 19117,
+            "text": "Tangentially related: when playing around with this behavior a bit, I also noticed the following confusing error:\n\n\n```\nSys.setlocale(\"LC_TIME\", \"zh_CN\")\nSys.getlocale()\n# [1] \"LC_CTYPE=en_US.UTF-8;LC_NUMERIC=C;LC_TIME=zh_CN;LC_COLLATE=en_US.UTF-8;LC_MONETARY=en_US.UTF-8;LC_MESSAGES=en_US.UTF-8;LC_PAPER=en_US.UTF-8;LC_NAME=C;LC_ADDRESS=C;LC_TELEPHONE=C;LC_MEASUREMENT=en_US.UTF-8;LC_IDENTIFICATION=C\"\n\nroundtrip = \\() strptime(strftime(as.Date('2000-11-01'), '%Y %d %b'), '%Y %d %b')\n\nroundtrip()\n# Error in strptime(strftime(as.Date(\"2000-11-01\"), \"%Y %d %b\"), \"%Y %d %b\") : \n#   input string is too long\n\n# c.f.\nstrftime(as.Date(\"2000-11-01\"), \"%Y %d %b\")\n# [1] \"2000 01 11\\xd4\\xc2\"\n```\n\nIt's unusual to have this particular locale setting; more typical would be:\n\n```\nSys.setlocale(\"LC_CTYPE\", \"zh_CN\")\nroundtrip()\n# [1] \"2000-11-01 UTC\"\n```\n\nAnd this works too:\n\n```\nSys.setlocale(\"LC_TIME\", \"zh_CN.utf8\")\nroundtrip()\n# [1] \"2000-11-01 UTC\"\n```\n\nSo it's because of a mismatch in the inferred encoding under `zh_CN` (GB2312).",
+            "creation_time": "2026-08-03T23:17:18Z",
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 103364,
+            "time": "2026-08-03T23:17:18Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "is_private": false,
+            "id": 103366,
+            "time": "2026-08-03T23:45:51Z",
+            "attachment_id": 3771,
+            "tags": [],
+            "is_markdown": true,
+            "count": 2,
+            "bug_id": 19117,
+            "text": "Created attachment 3771\nSwitch order of checking mbcstowcs failure\n\nFor my previous comment, the attached patch gives a friendlier error by checking for conversion failure first:\n\n```\nSys.setlocale(\"LC_TIME\", \"zh_CN\")\nSys.setlocale(\"LC_CTYPE\", \"zh_CN.utf8\")\nstrptime(strftime(as.Date('2000-11-01'), '%Y %d %b'), '%Y %d %b')\n# Error in strptime(strftime(as.Date(\"2000-11-01\"), \"%Y %d %b\"), \"%Y %d %b\") : \n#   invalid multibyte input string\n```\n\nThis is a more conservative patch, I think we can also consolidate to just one call to `mbcstowcs()` because `wbuf` has fixed size, i.e., the `mbcstowcs(NULL, buf, 0)` call is not needed, but I'm not 100% confident here.",
+            "creation_time": "2026-08-03T23:45:51Z",
+            "creator": "michaelchirico4"
+          },
+          {
+            "creator": "maechler",
+            "creation_time": "2026-08-15T22:03:57Z",
+            "text": "(In reply to Michael Chirico from comment #2)\n\nThis (not the \"real\" bug, but the one Michael noted in comment #1 and #2) should be fixed now, with svn r90409",
+            "bug_id": 19117,
+            "count": 3,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-08-15T22:03:57Z",
+            "id": 103438,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19117": [
+        {
+          "is_patch": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9tYWluL1JzdHJwdGltZS5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL1JzdHJwdGltZS5oCShyZXZpc2lvbiA5MDM0NykKKysrIHNyYy9tYWluL1JzdHJwdGltZS5oCSh3b3JraW5nIGNvcHkpCkBAIC0xMjk5LDE0ICsxMjk5LDE0IEBACiAJLy8gYnV0IHNlZW1zIGNvbnRlbnQgd2l0aCAwIHJhdGhlciB0aGFuIDEwMDAuCiAJLy8gKE5vdCBtZW50aW9uZWQgYnkgQzk5L0MxMSkuCiAJbiA9IG1ic3Rvd2NzKE5VTEwsIGJ1ZiwgMCk7IAorCWlmKG4gPT0gLTEpIGVycm9yKF8oImludmFsaWQgbXVsdGlieXRlIGlucHV0IHN0cmluZyIpKTsKIAlpZihuID4gMTAwMCkgZXJyb3IoXygiaW5wdXQgc3RyaW5nIGlzIHRvbyBsb25nIikpOwogCW4gPSBtYnN0b3djcyh3YnVmLCBidWYsIDEwMDApOwotCWlmKG4gPT0gLTEpIGVycm9yKF8oImludmFsaWQgbXVsdGlieXRlIGlucHV0IHN0cmluZyIpKTsKIAogCW4gPSBtYnN0b3djcyhOVUxMLCBmb3JtYXQsIDApOyAvLyBkaXR0bworCWlmKG4gPT0gLTEpIGVycm9yKF8oImludmFsaWQgbXVsdGlieXRlIGZvcm1hdCBzdHJpbmciKSk7CiAJaWYobiA+IDEwMDApIGVycm9yKF8oImZvcm1hdCBzdHJpbmcgaXMgdG9vIGxvbmciKSk7CiAJbiA9IG1ic3Rvd2NzKHdmbXQsIGZvcm1hdCwgMTAwMCk7Ci0JaWYobiA9PSAtMSkgZXJyb3IoXygiaW52YWxpZCBtdWx0aWJ5dGUgZm9ybWF0IHN0cmluZyIpKTsKIAlyZXR1cm4gKHZvaWQgKikgd19zdHJwdGltZV9pbnRlcm5hbCAod2J1Ziwgd2ZtdCwgdG0sIHBzZWNzLCBwb2Zmc2V0KTsKICAgICB9IGVsc2UKICNlbmRpZgo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-08-03T23:45:51Z",
+          "size": 860,
+          "is_private": false,
+          "id": 3771,
+          "creation_time": "2026-08-03T23:45:51Z",
+          "summary": "Switch order of checking mbcstowcs failure",
+          "file_name": "strptime-error.patch",
+          "bug_id": 19117
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-08-15 22:03:57"
+}

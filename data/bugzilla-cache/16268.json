@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "summary": "[WISHLIST] Upon package installation, annotate DESCRIPTION with versions of packages linked to",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2015-03-19T00:42:16Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "status": "NEW",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2015-03-19T00:42:16Z",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 16268,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "16268": {
+        "comments": [
+          {
+            "creation_time": "2015-03-19T00:42:16Z",
+            "creator": "kevinushey",
+            "bug_id": 16268,
+            "text": "Suppose `pkgA` links to `Rcpp`, with e.g.\n\n    LinkingTo: Rcpp\n\nIt would be useful (from a reproducibility + debugging standpoint) if, upon installation of `pkgA`, the version of `Rcpp` that was actually discovered and linked to was recorded in the (installed) `pkgA`'s DESCRIPTION.\n\nFor example, after installation, `pkgA`'s DESCRIPTION could gain the field:\n\n    LinkedTo:\n        Rcpp (0.11.5)\n\nIt may even be useful to include the repository (if it exists) in that field as well, e.g.\n\n     LinkedTo:\n        Rcpp (0.11.5, CRAN)\n\nAs far as I can tell, there is currently no (simple, portable) way to determine this post-installation, so it would be very useful if R appended these annotations on install.",
+            "is_markdown": false,
+            "count": 0,
+            "attachment_id": {},
+            "tags": [],
+            "id": 90116,
+            "time": "2015-03-19T00:42:16Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "16268": []
+    }
+  },
+  "source_changed": "2015-03-19 00:42:16"
+}

@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "summary": "Memory leak in `scan()` when a field fails type conversion",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [],
+        "last_change_time": "2026-08-04T14:45:53Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Linux",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "status": "NEW",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-08-04T14:45:42Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "qa_contact": "",
+        "cc": [],
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19123,
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Low-level"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19123": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": 3773,
+            "is_private": false,
+            "time": "2026-08-04T14:45:42Z",
+            "id": 103369,
+            "creator": "kevinushey",
+            "creation_time": "2026-08-04T14:45:42Z",
+            "is_markdown": true,
+            "count": 0,
+            "text": "Created attachment 3773\nCandidate patch.\n\n## Summary\n\n`scan()` leaks its internal line buffer (an 8 KB `R_StringBuffer`) every\ntime it aborts on a malformed field. `scanVector()` and `scanFrame()`\nallocate the buffer with `R_AllocStringBuffer()` and free it with\n`R_FreeStringBuffer()` only on their normal return paths. When a value\ncannot be converted to the requested type, `extractItem()` calls\n`error()`, which `longjmp`s out of the function and skips the free, so\nthe buffer is leaked.\n\nBecause `read.table()` / `read.csv()` are built on `scan()`, this is\nreachable from ordinary data-reading code: every failed parse of an\nuntrusted or malformed input leaks ~8 KB. A long-running process that\nrepeatedly reads malformed input accumulates these leaks.\n\nSeverity: low. It is a memory leak, not a memory-safety error — no crash\nor corruption. The practical impact is unbounded memory growth in a\npersistent process that keeps parsing malformed input.\n\n## Affected code\n\n`src/main/scan.c`, `scanVector()` (as of r89873). The buffer is\nallocated once, up front:\n\n```\nstatic SEXP scanVector(SEXPTYPE type, R_xlen_t maxitems, R_xlen_t maxlines,\n                       int flush, SEXP stripwhite, int blskip, LocalData *d)\n{\n    ...\n    R_StringBuffer strBuf = {NULL, 0, MAXELTSIZE};\n    ...\n    R_AllocStringBuffer(0, &strBuf);              /* line 571: malloc */\n    PROTECT(ans = allocVector(type, blocksize));\n    ...\n    for (;;) {\n        ...\n        buffer = fillBuffer(type, strip, &bch, d, &strBuf);\n        ...\n        extractItem(buffer, ans, n, d);           /* line 617: may error() */\n        ...\n    }\n    ...\n    R_FreeStringBuffer(&strBuf);                   /* lines 638/643/674 */\n    return bns;\n}\n```\n\n`extractItem()` throws on a type mismatch via `expected()`:\n\n```\nNORET static R_INLINE void expected(char *what, char *got, LocalData *d)\n{\n    ...\n    error(_(\"scan() expected '%s', got '%s'\"), what, got);   /* line 494 */\n}\n```\n\nThe `error()` at line 494 `longjmp`s straight past the\n`R_FreeStringBuffer(&strBuf)` calls at lines 638, 643 and 674, so the\n`malloc`ed buffer from line 571 is never released. `PROTECT(ans)` is\nunwound by the error machinery, but the raw `malloc` in the\n`R_StringBuffer` is not.\n\n`scanFrame()` (used for `what = list(...)`, i.e. `read.table()`) has the\nsame structure: `R_AllocStringBuffer(0, &buf)` at line 699,\n`extractItem()` at lines 743/784/806, `R_FreeStringBuffer(&buf)` at line\n847 — and leaks identically on error.\n\n## Reproducer\n\nUnder an R build configured with `--enable-strict-barrier` and compiled\nwith `-fsanitize=address` (or run under `valgrind --leak-check=full`):\n\n```\n# scanVector path (atomic 'what'):\nscan(text = \"x\", what = 0, quiet = TRUE)\n## Error in scan(...) : scan() expected 'a real', got 'x'\n##  -> leaks one 8192-byte R_StringBuffer\n\n# scanFrame path (list 'what'; also what read.table uses):\nscan(text = \"x\", what = list(0), quiet = TRUE)\n\n# reachable from read.table()/read.csv() when a column is typed numeric.\n# (With the default colClasses the fields are read as character, so there\n# is no conversion error and no leak; forcing a numeric column triggers it.)\nread.csv(text = \"value\\nx\", colClasses = \"numeric\")\n```\n\nEach failed call leaks 8192 bytes. Repeating it grows RSS without bound.\n\n## Sanitizer output\n\n```\n==ERROR: LeakSanitizer: detected memory leaks\n\nDirect leak of 8192 byte(s) in 1 object(s) allocated from:\n    #0 ... in malloc\n    #1 ... in R_AllocStringBuffer src/main/memory.c:4969\n    #2 ... in scanVector       src/main/scan.c:571\n    #3 ... in do_scan          src/main/scan.c:1001\n    #4 ... in bcEval_loop      src/main/eval.c:8150\n    #5 ... in bcEval           src/main/eval.c:7533\n    #6 ... in Rf_eval          src/main/eval.c:1167\n    #7 ... in R_execClosure    src/main/eval.c:2398\n    ...\n\nSUMMARY: AddressSanitizer: 8192 byte(s) leaked in 1 allocation(s).\n```\n\n## Suggested fix\n\n`do_scan()` already installs an on-error cleanup for the same call: it\nsets up a context whose `cend` handler, `scan_cleanup()`, releases the\nconnection and the `quoteset` buffer on a non-local exit:\n\n```\nbegincontext(&cntxt, CTXT_CCODE, R_GlobalContext->call, R_BaseEnv,\n             R_BaseEnv, R_NilValue, R_NilValue);\ncntxt.cend = &scan_cleanup;\ncntxt.cenddata = &data;\n```\n\nThe cleanest fix is to bring the string buffer under that same cleanup.\nFor example, add an `R_StringBuffer *buf` field to `LocalData`, point it\nat the local buffer at the top of `scanVector()`/`scanFrame()`\n(`d->buf = &strBuf;`), and free it in `scan_cleanup()`:\n\n```\nstatic void scan_cleanup(void *data)\n{\n    LocalData *ld = data;\n    if (ld->buf) { R_FreeStringBuffer(ld->buf); ld->buf = NULL; }\n    if (ld->con && !ld->ttyflag && !ld->wasopen) { ... }\n    if (ld->quoteset && ld->quoteset[0]) { ... }\n}\n```\n\n`R_FreeStringBuffer()` clears `buf->data`, so the existing normal-path\n`R_FreeStringBuffer()` calls in `scanVector()`/`scanFrame()` become no-ops\nafter cleanup and there is no double free.\n\n## How it was found\n\nlibFuzzer + AddressSanitizer harness driving `scan(text = <fuzz>, ...)`\nwith `what` set to `\"\"`, `0`, and separators `,`/`\\t`, embedding R via\n`Rf_initEmbeddedR()`. The leak fires on essentially every input that\nisn't a clean parse, so it surfaces immediately.",
+            "bug_id": 19123
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19123": [
+        {
+          "id": 3773,
+          "is_private": false,
+          "size": 2355,
+          "last_change_time": "2026-08-04T14:45:53Z",
+          "bug_id": 19123,
+          "file_name": "file_19123.txt",
+          "summary": "Candidate patch.",
+          "creation_time": "2026-08-04T14:45:42Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL3NjYW4uYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL3NjYW4uYwkocmV2aXNpb24gODk4NzMpDQorKysgc3JjL21haW4vc2Nhbi5jCSh3b3JraW5nIGNvcHkpDQpAQCAtNDAsNiArNDAsNyBAQA0KICNpbmNsdWRlIDxSY29ubmVjdGlvbnMuaD4NCiAjaW5jbHVkZSA8ZXJybm8uaD4NCiAjaW5jbHVkZSA8UHJpbnQuaD4NCisjaW5jbHVkZSAiUkJ1ZmZlclV0aWxzLmgiDQogDQogI2luY2x1ZGUgPHJsb2NhbGUuaD4gLyogZm9yIGJ0b3djICovDQogDQpAQCAtODIsNiArODMsNyBAQA0KICAgICBib29sIGVtYmVkV2FybjsNCiAgICAgYm9vbCBza2lwTnVsOw0KICAgICBjaGFyIGNvbnZidWZbMTAwXTsNCisgICAgUl9TdHJpbmdCdWZmZXIgKnN0ckJ1ZjsgLyogYnVmZmVyIGluIHVzZSBieSBzY2FuVmVjdG9yL3NjYW5GcmFtZSwgb3IgTlVMTCAqLw0KIH0gTG9jYWxEYXRhOw0KIA0KIHN0YXRpYyBTRVhQIGluc2VydFN0cmluZyhjaGFyICpzdHIsIExvY2FsRGF0YSAqbCkNCkBAIC0zMTEsNiArMzEzLDEwIEBADQogc3RhdGljIHZvaWQgc2Nhbl9jbGVhbnVwKHZvaWQgKmRhdGEpDQogew0KICAgICBMb2NhbERhdGEgKmxkID0gZGF0YTsNCisgICAgaWYobGQtPnN0ckJ1Zikgew0KKwlSX0ZyZWVTdHJpbmdCdWZmZXIobGQtPnN0ckJ1Zik7DQorCWxkLT5zdHJCdWYgPSBOVUxMOw0KKyAgICB9DQogICAgIGlmKGxkLT5jb24gJiYgIWxkLT50dHlmbGFnICYmICFsZC0+d2Fzb3Blbikgew0KIAlsZC0+Y29uLT5jbG9zZShsZC0+Y29uKTsNCiAJbGQtPmNvbiA9IE5VTEw7DQpAQCAtMzIxLDggKzMyNyw2IEBADQogICAgIH0NCiB9DQogDQotI2luY2x1ZGUgIlJCdWZmZXJVdGlscy5oIg0KLQ0KIC8qWFggIENhbiB3ZSBwYXNzIHRoaXMgcm91dGluZSBhbiBSX1N0cmluZ0J1ZmZlcj8gYXBwZWFycyBzby4NCiAgICBCdXQgZG8gd2UgaGF2ZSB0byB3b3JyeSBhYm91dCBjb250aW51YXRpb24gbGluZXMgYW5kIHdoYXRldmVyDQogICAgaXMgY3VycmVudGx5IGluIHRoZSBidWZmZXIgYmVmb3JlIHdlIGNhbGwgdGhpcz8gSW4gb3RoZXIgd29yZHMsDQpAQCAtNTY5LDYgKzU3Myw3IEBADQogICAgIGVsc2UgYmxvY2tzaXplID0gU0NBTl9CTE9DS1NJWkU7DQogDQogICAgIFJfQWxsb2NTdHJpbmdCdWZmZXIoMCwgJnN0ckJ1Zik7DQorICAgIGQtPnN0ckJ1ZiA9ICZzdHJCdWY7IC8qIHNvIHNjYW5fY2xlYW51cCgpIGZyZWVzIGl0IG9uIGFuIGVycm9yIGV4aXQgKi8NCiAgICAgUFJPVEVDVChhbnMgPSBhbGxvY1ZlY3Rvcih0eXBlLCBibG9ja3NpemUpKTsNCiANCiAgICAgbnByZXYgPSAwOyBuID0gMDsgbGluZXNyZWFkID0gMDsgYmNoID0gMTsNCkBAIC02OTcsNiArNzAyLDcgQEANCiAgICAgZWxzZSBibGtzaXplID0gU0NBTl9CTE9DS1NJWkU7DQogDQogICAgIFJfQWxsb2NTdHJpbmdCdWZmZXIoMCwgJmJ1Zik7DQorICAgIGQtPnN0ckJ1ZiA9ICZidWY7IC8qIHNvIHNjYW5fY2xlYW51cCgpIGZyZWVzIGl0IG9uIGFuIGVycm9yIGV4aXQgKi8NCiAgICAgUFJPVEVDVChhbnMgPSBhbGxvY1ZlY3RvcihWRUNTWFAsIG5jKSk7DQogICAgIGZvciAoaSA9IDA7IGkgPCBuYzsgaSsrKSB7DQogCXcgPSBWRUNUT1JfRUxUKHdoYXQsIGkpOw0KQEAgLTg1Niw3ICs4NjIsOCBAQA0KICAgICBjb25zdCBjaGFyICpwLCAqZW5jb2Rpbmc7DQogICAgIFJDTlRYVCBjbnR4dDsNCiAgICAgTG9jYWxEYXRhIGRhdGEgPSB7TlVMTCwgMCwgMCwgJy4nLCBOVUxMLCBOT19DT01DSEFSLCAwLCBOVUxMLCBmYWxzZSwNCi0JCSAgICAgIGZhbHNlLCAwLCBmYWxzZSwgZmFsc2UsIGZhbHNlLCBmYWxzZSwgZmFsc2UsIHtmYWxzZX19Ow0KKwkJICAgICAgZmFsc2UsIDAsIGZhbHNlLCBmYWxzZSwgZmFsc2UsIGZhbHNlLCBmYWxzZSwge2ZhbHNlfSwNCisJCSAgICAgIE5VTEx9Ow0KICAgICBkYXRhLk5Bc3RyaW5ncyA9IFJfTmlsVmFsdWU7DQogDQogICAgIGNoZWNrQXJpdHkob3AsIGFyZ3MpOw0KQEAgLTEwMDksNiArMTAxNiw5IEBADQogICAgIGRlZmF1bHQ6DQogCWVycm9yKF8oImludmFsaWQgJyVzJyBhcmd1bWVudCIpLCAid2hhdCIpOw0KICAgICB9DQorICAgIC8qIE9uIHRoZSBub3JtYWwgcGF0aCBzY2FuVmVjdG9yKCkvc2NhbkZyYW1lKCkgaGF2ZSBhbHJlYWR5IGZyZWVkIHRoZQ0KKyAgICAgICBzdHJpbmcgYnVmZmVyOyBkaXNhcm0gdGhlIGNsZWFudXAgc28gaXQgaG9sZHMgbm8gc3RhbGUgcmVmZXJlbmNlLiAqLw0KKyAgICBkYXRhLnN0ckJ1ZiA9IE5VTEw7DQogICAgIFBST1RFQ1QoYW5zKTsNCiAgICAgZW5kY29udGV4dCgmY250eHQpOw0KIA0K",
+          "creator": "kevinushey"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-08-04 14:45:53"
+}

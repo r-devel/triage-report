@@ -1,0 +1,121 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "cc": [
+          "lionel.hry"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19026,
+        "dupe_of": {},
+        "severity": "normal",
+        "creation_time": "2026-03-23T21:34:12Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "platform": "Other",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "last_change_time": "2026-03-30T08:47:45Z",
+        "cc_detail": [
+          {
+            "real_name": "Lionel Henry",
+            "name": "lionel.hry",
+            "id": 2307
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Proposal for embedding API managing debugger state",
+        "url": "",
+        "blocks": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19026": {
+        "comments": [
+          {
+            "attachment_id": 3641,
+            "tags": [],
+            "time": "2026-03-23T21:34:12Z",
+            "id": 102801,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-03-23T21:34:12Z",
+            "text": "Created attachment 3641\nInitial pass at an API.\n\nThe intention here is to have a mechanism to allow for applications embedding R to evaluate R code without tripping the debugger.",
+            "bug_id": 19026,
+            "is_markdown": true,
+            "count": 0
+          },
+          {
+            "creation_time": "2026-03-30T08:47:45Z",
+            "creator": "lionel.hry",
+            "bug_id": 19026,
+            "text": "This would be extremely useful for Ark/Positron, and even ESS (would need at least a `.Internal()` entry point for the latter as it's R only). Thanks for putting forward this proposal!",
+            "is_markdown": true,
+            "count": 1,
+            "attachment_id": {},
+            "tags": [],
+            "id": 102833,
+            "time": "2026-03-30T08:47:45Z",
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19026": [
+        {
+          "is_private": false,
+          "id": 3641,
+          "last_change_time": "2026-03-23T21:34:12Z",
+          "size": 8052,
+          "file_name": "debugger-api.patch",
+          "bug_id": 19026,
+          "creation_time": "2026-03-23T21:34:12Z",
+          "summary": "Initial pass at an API.",
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IGRvYy9tYW51YWwvUi1leHRzLnRleGkKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gZG9jL21hbnVhbC9SLWV4dHMudGV4aQkocmV2aXNpb24gODk2ODUpCisrKyBkb2MvbWFudWFsL1ItZXh0cy50ZXhpCSh3b3JraW5nIGNvcHkpCkBAIC0xODc4Nyw2ICsxODc4Nyw0NSBAQAogc2hvdWxkIGJlIHByZXNlbnQgaW4gdGhlIGVtYmVkZGluZyBhcHBsaWNhdGlvbi4gIFNlZSBAcmVme1JlZ2lzdGVyaW5nCiBuYXRpdmUgcm91dGluZXN9IGZvciBkZXRhaWxzIG9uIHJlZ2lzdGVyaW5nIHN5bWJvbHMgaW4gZ2VuZXJhbC4KIAorQG5vZGUgQ29udHJvbGxpbmcgdGhlIGRlYnVnZ2VyCitAc3Vic2VjdGlvbiBDb250cm9sbGluZyB0aGUgZGVidWdnZXIKKworRW1iZWRkaW5nIGFwcGxpY2F0aW9ucyB0aGF0IGNhbGwgQGNvZGV7UmZfZXZhbH0gbWF5IHdpc2ggdG8gc3VwcHJlc3MgdGhlCitAUnt9IGRlYnVnZ2VyIGdsb2JhbGx5LS0tZm9yIGV4YW1wbGUsIHdoZW4gZXZhbHVhdGluZyBleHByZXNzaW9ucyBvbgorYmVoYWxmIG9mIGEgYmFja2dyb3VuZCB0YXNrIHdoZXJlIGludGVyYWN0aXZlIGRlYnVnZ2luZyBpcyBub3QKK21lYW5pbmdmdWwuICBUaGUgZm9sbG93aW5nIGZ1bmN0aW9ucyBwcm92aWRlIGEgZ2xvYmFsIGVuYWJsZS9kaXNhYmxlCitzd2l0Y2ggdGhhdCBvdmVycmlkZXMgYWxsIHBlci1mdW5jdGlvbiBhbmQgcGVyLWVudmlyb25tZW50IGRlYnVnIGZsYWdzCitzZXQgYnkgQGNvZGV7ZGVidWcoKX0sIEBjb2Rle2RlYnVnb25jZSgpfSwgYW5kIEBjb2Rle3RyYWNlKCl9LgorCitAZW1iZnVuIFJfR2V0RGVidWdnaW5nRW5hYmxlZAorQGVtYmZ1biBSX1NldERlYnVnZ2luZ0VuYWJsZWQKK0BkZWZ0eXBlZnVuIFJib29sZWFuIFJfR2V0RGVidWdnaW5nRW5hYmxlZCAodm9pZCkKK0BkZWZ0eXBlZnVueCBSYm9vbGVhbiBSX1NldERlYnVnZ2luZ0VuYWJsZWQgKFJib29sZWFuIEB2YXJ7ZW5hYmxlZH0pCisKK0Bjb2Rle1JfR2V0RGVidWdnaW5nRW5hYmxlZH0gcmV0dXJucyB0aGUgY3VycmVudCBnbG9iYWwgZGVidWdnaW5nIHN0YXRlCisoQGNvZGV7VFJVRX0gaWYgdGhlIGRlYnVnZ2VyIGlzIGVuYWJsZWQsIEBjb2Rle0ZBTFNFfSBpZiBzdXBwcmVzc2VkKS4KKworQGNvZGV7Ul9TZXREZWJ1Z2dpbmdFbmFibGVkfSBzZXRzIHRoZSBnbG9iYWwgZGVidWdnaW5nIHN0YXRlIGFuZCByZXR1cm5zCit0aGUgcHJldmlvdXMgdmFsdWUuICBUaGUgcHJldmlvdXMgdmFsdWUgY2FuIGJlIHVzZWQgdG8gcmVzdG9yZSB0aGUKK29yaWdpbmFsIHN0YXRlIGFmdGVyIGEgc2NvcGVkIHN1cHByZXNzaW9uOgorCitAZXhhbXBsZQorUmJvb2xlYW4gcHJldiA9IFJfU2V0RGVidWdnaW5nRW5hYmxlZChGQUxTRSk7CityZXN1bHQgPSBSZl9ldmFsKGV4cHIsIGVudik7CitSX1NldERlYnVnZ2luZ0VuYWJsZWQocHJldik7CitAZW5kIGV4YW1wbGUKKworVGhlc2UgZnVuY3Rpb25zIGFmZmVjdCBvbmx5IHRoZSBnbG9iYWwgc3dpdGNoLiAgVGhleSBkbyBub3QgYWx0ZXIgdGhlCitwZXItZnVuY3Rpb24gb3IgcGVyLWVudmlyb25tZW50IGRlYnVnIGZsYWdzIG9uIGluZGl2aWR1YWwgb2JqZWN0cywgc28KK3JlLWVuYWJsaW5nIHRoZSBnbG9iYWwgc3dpdGNoIHdpbGwgcmVzdG9yZSBmdWxsIGRlYnVnZ2luZyBiZWhhdmlvdXIgZm9yCithbnkgb2JqZWN0cyB0aGF0IHdlcmUgZmxhZ2dlZCB3aXRoIEBjb2Rle2RlYnVnKCl9IG9yIEBjb2Rle3RyYWNlKCl9LgorTm90ZSB0aGF0IGV4cGxpY2l0IEBjb2Rle2Jyb3dzZXIoKX0gY2FsbHMgaW4gdXNlciBjb2RlIGFyZSBAZW1waHtub3R9CithZmZlY3RlZCBieSB0aGlzIHN3aXRjaCBhbmQgd2lsbCBzdGlsbCBpbnZva2UgdGhlIGJyb3dzZXIgcmVnYXJkbGVzcyBvZgordGhlIGdsb2JhbCBkZWJ1Z2dpbmcgc3RhdGUuCisKK1RoZXNlIGZ1bmN0aW9ucyBhcmUgZGVjbGFyZWQgaW4gQGZpbGV7Ul9leHQvVXRpbHMuaH0uCitAZW5kIGRlZnR5cGVmdW4KKwogQG5vZGUgTWVzaGluZyBldmVudCBsb29wcwogQHN1YnNlY3Rpb24gTWVzaGluZyBldmVudCBsb29wcwogCkluZGV4OiBzcmMvaW5jbHVkZS9EZWZuLmgKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2luY2x1ZGUvRGVmbi5oCShyZXZpc2lvbiA4OTY4NSkKKysrIHNyYy9pbmNsdWRlL0RlZm4uaAkod29ya2luZyBjb3B5KQpAQCAtNTE5LDYgKzUxOSwxMCBAQAogI2RlZmluZSBSU1RFUCh4KQkoKHgpLT5zeHBpbmZvLnNwYXJlKQogI2RlZmluZSBTRVRfUlNURVAoeCx2KQkoKCh4KS0+c3hwaW5mby5zcGFyZSk9KHYpKQogCisvKiBHYXRlZCB2ZXJzaW9uczogb25seSBhY3RpdmUgd2hlbiB0aGUgZ2xvYmFsIGRlYnVnZ2luZyBzdGF0ZSBpcyBlbmFibGVkICovCisjZGVmaW5lIFJERUJVR19BQ1RJVkUoeCkgKFJERUJVRyh4KSAmJiBSX2N1cnJlbnRfZGVidWdfc3RhdGUoKSkKKyNkZWZpbmUgUlNURVBfQUNUSVZFKHgpICAoUlNURVAoeCkgICYmIFJfY3VycmVudF9kZWJ1Z19zdGF0ZSgpKQorCiAvKiBTeW1ib2wgQWNjZXNzIE1hY3JvcyAqLwogI2RlZmluZSBQUklOVE5BTUUoeCkJKCh4KS0+dS5zeW1zeHAucG5hbWUpCiAjZGVmaW5lIFNZTVZBTFVFKHgpCSgoeCktPnUuc3ltc3hwLnZhbHVlKQpAQCAtMjE3MCw2ICsyMTc0LDggQEAKIHZvaWQgSW5pdEdsb2JhbEVudih2b2lkKTsKIFJib29sZWFuIFJfY3VycmVudF90cmFjZV9zdGF0ZSh2b2lkKTsKIFJib29sZWFuIFJfY3VycmVudF9kZWJ1Z19zdGF0ZSh2b2lkKTsKK1Jib29sZWFuIFJfR2V0RGVidWdnaW5nRW5hYmxlZCh2b2lkKTsKK1Jib29sZWFuIFJfU2V0RGVidWdnaW5nRW5hYmxlZChSYm9vbGVhbiBlbmFibGVkKTsKIFJib29sZWFuIFJfaGFzX21ldGhvZHMoU0VYUCk7CiB2b2lkIFJfSW5pdGlhbERhdGEodm9pZCk7CiBTRVhQIFJmX2luc3RhbGxOb1RyQ2hhcihTRVhQKTsKSW5kZXg6IHNyYy9pbmNsdWRlL1JfZXh0L1V0aWxzLmgKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2luY2x1ZGUvUl9leHQvVXRpbHMuaAkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvaW5jbHVkZS9SX2V4dC9VdGlscy5oCSh3b3JraW5nIGNvcHkpCkBAIC0xMzMsNiArMTMzLDE2IEBACiAvKiAuLi8uLi9hcHBsL21heGNvbC5jICovCiB2b2lkIFJfbWF4X2NvbChkb3VibGUgKm1hdHJpeCwgaW50ICpuciwgaW50ICpuYywgaW50ICptYXhlcywgaW50ICp0aWVzX21ldGgpOwogCisvKiBHbG9iYWwgZGVidWdnZXIgZW5hYmxlL2Rpc2FibGUuICBSX1NldERlYnVnZ2luZ0VuYWJsZWQoKSByZXR1cm5zIHRoZQorICAgcHJldmlvdXMgc3RhdGUsIGFsbG93aW5nIGNhbGxlcnMgdG8gc2F2ZSBhbmQgcmVzdG9yZSBpdDoKKworICAgICBSYm9vbGVhbiBwcmV2ID0gUl9TZXREZWJ1Z2dpbmdFbmFibGVkKEZBTFNFKTsKKyAgICAgcmVzdWx0ID0gUmZfZXZhbChleHByLCBlbnYpOworICAgICBSX1NldERlYnVnZ2luZ0VuYWJsZWQocHJldik7CisqLworUmJvb2xlYW4gUl9HZXREZWJ1Z2dpbmdFbmFibGVkKHZvaWQpOworUmJvb2xlYW4gUl9TZXREZWJ1Z2dpbmdFbmFibGVkKFJib29sZWFuIGVuYWJsZWQpOworCiAjaWZkZWYgIF9fY3BsdXNwbHVzCiB9CiAjZW5kaWYKSW5kZXg6IHNyYy9tYWluL2RlYnVnLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vZGVidWcuYwkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvbWFpbi9kZWJ1Zy5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMTQsMTMgKzExNCwyNCBAQAogICAgIHJldHVybiBTY2FsYXJMb2dpY2FsKHByZXYpOwogfQogCi0vLyBHVUlzLCBwYWNrYWdlcywgZXRjIGNhbiBxdWVyeToKLWF0dHJpYnV0ZV9oaWRkZW4gLyogd291bGQgbmVlZCB0byBiZSBpbiBhbiBpbnN0YWxsZWQgaGVhZGVyIGlmIG5vdCBoaWRkZW4gKi8KLVJib29sZWFuIFJfY3VycmVudF9kZWJ1Z19zdGF0ZSh2b2lkKSB7IHJldHVybiBHRVRfREVCVUdfU1RBVEU7IH0KLWF0dHJpYnV0ZV9oaWRkZW4gLyogd291bGQgbmVlZCB0byBiZSBpbiBhbiBpbnN0YWxsZWQgaGVhZGVyIGlmIG5vdCBoaWRkZW4gKi8KLVJib29sZWFuIFJfY3VycmVudF90cmFjZV9zdGF0ZSh2b2lkKSB7IHJldHVybiBHRVRfVFJBQ0VfU1RBVEU7IH0KK2F0dHJpYnV0ZV9oaWRkZW4gUmJvb2xlYW4gUl9jdXJyZW50X2RlYnVnX3N0YXRlKHZvaWQpIHsgcmV0dXJuIEdFVF9ERUJVR19TVEFURTsgfQorYXR0cmlidXRlX2hpZGRlbiBSYm9vbGVhbiBSX2N1cnJlbnRfdHJhY2Vfc3RhdGUodm9pZCkgeyByZXR1cm4gR0VUX1RSQUNFX1NUQVRFOyB9CiAKKy8qIFB1YmxpYyBDIEFQSSBmb3IgZW5hYmxpbmcvZGlzYWJsaW5nIHRoZSBkZWJ1Z2dlciBnbG9iYWxseS4KKyAgIFJldHVybnMgdGhlIHByZXZpb3VzIHN0YXRlIHNvIGNhbGxlcnMgY2FuIHNhdmUgYW5kIHJlc3RvcmUgaXQuICovCitSYm9vbGVhbiBSX0dldERlYnVnZ2luZ0VuYWJsZWQodm9pZCkKK3sKKyAgICByZXR1cm4gR0VUX0RFQlVHX1NUQVRFOworfQogCitSYm9vbGVhbiBSX1NldERlYnVnZ2luZ0VuYWJsZWQoUmJvb2xlYW4gZW5hYmxlZCkKK3sKKyAgICBSYm9vbGVhbiBwcmV2ID0gR0VUX0RFQlVHX1NUQVRFOworICAgIFNFVF9ERUJVR19TVEFURShlbmFibGVkKTsKKyAgICByZXR1cm4gcHJldjsKK30KKworCiAvKiBtZW1vcnkgdHJhY2luZyAqLwogLyogcmVwb3J0IHdoZW4gYSB0cmFjZWQgb2JqZWN0IGlzIGR1cGxpY2F0ZWQgKi8KIApJbmRleDogc3JjL21haW4vZXZhbC5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2V2YWwuYwkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvbWFpbi9ldmFsLmMJKHdvcmtpbmcgY29weSkKQEAgLTIzNTYsOCArMjM1Niw4IEBACiAKICAgICAvKiBEZWJ1Z2dpbmcgKi8KIAotICAgIGlmICgoUkRFQlVHKG9wKSAmJiBSX2N1cnJlbnRfZGVidWdfc3RhdGUoKSkgfHwgUlNURVAob3ApCi0gICAgICAgICB8fCAoUkRFQlVHKHJobykgJiYgUl9Ccm93c2VyTGFzdENvbW1hbmQgPT0gJ3MnKSkgeworICAgIGlmICgoUkRFQlVHKG9wKSB8fCBSU1RFUChvcCkgfHwgKFJERUJVRyhyaG8pICYmIFJfQnJvd3Nlckxhc3RDb21tYW5kID09ICdzJykpCisgICAgICAgICAmJiBSX2N1cnJlbnRfZGVidWdfc3RhdGUoKSkgewogCiAJZGJnID0gVFJVRTsKIAlTRVRfUlNURVAob3AsIDApOwpAQCAtMjcwNiw3ICsyNzA2LDcgQEAKIAllbHNlCiAJICAgIHZpcyA9IDE7CiAgICAgfQotICAgIGlmKCAhdmlzICYmIFJERUJVRyhyaG8pICYmICFCb2R5SGFzQnJhY2VzKFN0bXQpICYmICFSX0dsb2JhbENvbnRleHQtPmJyb3dzZXJmaW5pc2gpIHsKKyAgICBpZiggIXZpcyAmJiBSREVCVUdfQUNUSVZFKHJobykgJiYgIUJvZHlIYXNCcmFjZXMoU3RtdCkgJiYgIVJfR2xvYmFsQ29udGV4dC0+YnJvd3NlcmZpbmlzaCkgewogCVNyY3JlZlByb21wdCgiZGVidWciLCBSX1NyY3JlZik7CiAJUHJpbnRWYWx1ZShTdG10KTsKIAlkb19icm93c2VyKGNhbGwsIG9wLCBSX05pbFZhbHVlLCByaG8pOwpAQCAtMjg2Niw3ICsyODY2LDcgQEAKIAkgICAgaWYgKENBUihjZWxsKSA9PSBSX1VuYm91bmRWYWx1ZSB8fCAhIFNFVF9CSU5ESU5HX1ZBTFVFKGNlbGwsIHYpKQogCQlkZWZpbmVWYXIoc3ltLCB2LCByaG8pOwogCX0KLQlpZiAoIWJnbiAmJiBSREVCVUcocmhvKSAmJiAhUl9HbG9iYWxDb250ZXh0LT5icm93c2VyZmluaXNoKSB7CisJaWYgKCFiZ24gJiYgUkRFQlVHX0FDVElWRShyaG8pICYmICFSX0dsb2JhbENvbnRleHQtPmJyb3dzZXJmaW5pc2gpIHsKIAkgICAgU3JjcmVmUHJvbXB0KCJkZWJ1ZyIsIFJfU3JjcmVmKTsKIAkgICAgUHJpbnRWYWx1ZShib2R5KTsKIAkgICAgZG9fYnJvd3NlcihjYWxsLCBvcCwgUl9OaWxWYWx1ZSwgcmhvKTsKQEAgLTI5MTIsMTMgKzI5MTIsMTMgQEAKIAkgICAgaW50IGNvbmRsID0gYXNMb2dpY2FsTm9OQShjb25kLCBjYWxsKTsKIAkgICAgVU5QUk9URUNUKDEpOwogCSAgICBpZiAoIWNvbmRsKSBicmVhazsKLQkgICAgaWYgKFJERUJVRyhyaG8pICYmICFiZ24gJiYgIVJfR2xvYmFsQ29udGV4dC0+YnJvd3NlcmZpbmlzaCkgeworCSAgICBpZiAoUkRFQlVHX0FDVElWRShyaG8pICYmICFiZ24gJiYgIVJfR2xvYmFsQ29udGV4dC0+YnJvd3NlcmZpbmlzaCkgewogCQlTcmNyZWZQcm9tcHQoImRlYnVnIiwgUl9TcmNyZWYpOwogCQlQcmludFZhbHVlKGJvZHkpOwogCQlkb19icm93c2VyKGNhbGwsIG9wLCBSX05pbFZhbHVlLCByaG8pOwogCSAgICB9CiAJICAgIGV2YWwoYm9keSwgcmhvKTsKLQkgICAgaWYgKFJERUJVRyhyaG8pICYmICFSX0dsb2JhbENvbnRleHQtPmJyb3dzZXJmaW5pc2gpIHsKKwkgICAgaWYgKFJERUJVR19BQ1RJVkUocmhvKSAmJiAhUl9HbG9iYWxDb250ZXh0LT5icm93c2VyZmluaXNoKSB7CiAJCVNyY3JlZlByb21wdCgiZGVidWciLCBSX1NyY3JlZik7CiAJCVJwcmludGYoIih3aGlsZSkgIik7CiAJCVByaW50VmFsdWUoQ0FSKGFyZ3MpKTsKQEAgLTI5ODQsNyArMjk4NCw3IEBACiAJaW50IGkgPSAxOwogCXdoaWxlIChhcmdzICE9IFJfTmlsVmFsdWUpIHsKIAkgICAgUFJPVEVDVChSX1NyY3JlZiA9IGdldFNyY3JlZihzcmNyZWZzLCBpKyspKTsKLQkgICAgaWYgKFJERUJVRyhyaG8pICYmICFSX0dsb2JhbENvbnRleHQtPmJyb3dzZXJmaW5pc2gpIHsKKwkgICAgaWYgKFJERUJVR19BQ1RJVkUocmhvKSAmJiAhUl9HbG9iYWxDb250ZXh0LT5icm93c2VyZmluaXNoKSB7CiAJCVNyY3JlZlByb21wdCgiZGVidWciLCBSX1NyY3JlZik7CiAJCVByaW50VmFsdWUoQ0FSKGFyZ3MpKTsKIAkJZG9fYnJvd3NlcihjYWxsLCBvcCwgUl9OaWxWYWx1ZSwgcmhvKTsKQEAgLTc0OTEsOCArNzQ5MSw4IEBACiAKICNkZWZpbmUgSU5MSU5FX0NMT1NVUkVfQ0FMTF9PSyhmdW4pCQkJCVwKICAgICAoISBSX2Rpc2FibGVfYnl0ZWNvZGUgJiYgVFlQRU9GKEJPRFkoZnVuKSkgPT0gQkNPREVTWFAgJiYJXAotICAgICBSX0JDVmVyc2lvbk9LKEJPRFkoZnVuKSkgJiYgISBSREVCVUcoZnVuKSAmJgkJXAotICAgICAhIFJTVEVQKGZ1bikgJiYgISBSREVCVUcocmhvKSAmJgkJCQlcCisgICAgIFJfQkNWZXJzaW9uT0soQk9EWShmdW4pKSAmJiAhIFJERUJVR19BQ1RJVkUoZnVuKSAmJglcCisgICAgICEgUlNURVBfQUNUSVZFKGZ1bikgJiYgISBSREVCVUdfQUNUSVZFKHJobykgJiYJCVwKICAgICAgUl9HbG9iYWxDb250ZXh0LT5jYWxsZmxhZyAhPSBDVFhUX0dFTkVSSUMpCiAKIHN0YXRpYyBTRVhQIGJjRXZhbF9sb29wKHN0cnVjdCBiY0V2YWxfbG9jYWxzICopOwpJbmRleDogc3JjL21haW4vb2JqZWN0cy5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL29iamVjdHMuYwkocmV2aXNpb24gODk2ODUpCisrKyBzcmMvbWFpbi9vYmplY3RzLmMJKHdvcmtpbmcgY29weSkKQEAgLTQ2Myw3ICs0NjMsNyBAQAogICAgICAgIE5leHRNZXRob2QsIFJTVEVQKG9wKSB3aWxsIGFsd2F5cyBiZSB6ZXJvIGJlY2F1c2UgdGhlIGJpdCBpcyBjbGVhcmVkIGJ5CiAgICAgICAgYXBwbHlDbG9zdXJlLiBXZSB0aHVzIGFwcHJveGltYXRlIGFuZCBlbnRlciB0aGUgZGVidWdnZXIgYWxzbyB3aGVuCiAgICAgICAgUkRFQlVHKHJobykgaXMgc2V0LiAqLwotICAgIGlmICgoUkRFQlVHKG9wKSAmJiBSX2N1cnJlbnRfZGVidWdfc3RhdGUoKSkgfHwgUlNURVAob3ApIHx8IFJERUJVRyhyaG8pKQorICAgIGlmIChSREVCVUdfQUNUSVZFKG9wKSB8fCBSU1RFUF9BQ1RJVkUob3ApIHx8IFJERUJVR19BQ1RJVkUocmhvKSkKIAlTRVRfUlNURVAoc3hwLCAxKTsKIAogICAgIFNFWFAgbmV3Y2FsbCA9ICBQUk9URUNUKHNoYWxsb3dfZHVwbGljYXRlKGNwdHItPmNhbGwpKTsK"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-03-30 08:47:45"
+}

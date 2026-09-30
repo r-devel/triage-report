@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "Export tools:::.split_dependencies",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2023-12-19T01:17:56Z",
+        "cc_detail": [],
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2023-12-19T01:17:56Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 18639,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18639": {
+        "comments": [
+          {
+            "time": "2023-12-19T01:17:56Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 100455,
+            "tags": [],
+            "count": 0,
+            "bug_id": 18639,
+            "text": "Please export `tools:::.split_dependencies()`. It's important for any author trying to parse DESCRIPTION files correctly, which has any number of use cases for writing tooling. I've hand-written similar logic dozens of times in subtly incorrect ways, as have other authors. I very quickly find 100 examples in CRAN packages:\n\nhttps://github.com/search?q=org%3Acran+%2Fread%5B.%5Ddcf%5B%28%5D%2F+%2F%5B%27%22%5DDESCRIPTION%2F+%2Fstrsplit%5B%28%5D%2F&type=code\n\nThe function is very stable (I don't see any substantive change in 15 years). Is there any reason to keep it private? It seems like having a canonical mapping from plaintext-in-DESCRIPTION to a corresponding parsed data structure is a good tool to share.",
+            "creation_time": "2023-12-19T01:17:56Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18639": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2023-12-19 01:17:56"
+}

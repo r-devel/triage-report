@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Misc",
+        "assigned_to": "R-core",
+        "id": 16397,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "minor",
+        "qa_contact": "",
+        "cc": [
+          "elin.waring"
+        ],
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2015-05-25T22:10:21Z",
+        "version": "R 3.2.0",
+        "whiteboard": "",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "platform": "ix86 (32-bit)",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "Windows 32-bit",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [
+          {
+            "real_name": "Elin Waring",
+            "id": 3299,
+            "name": "elin.waring"
+          }
+        ],
+        "last_change_time": "2026-08-30T01:22:16Z",
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "R CMD check warns about links to separate package's index"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "16397": {
+        "comments": [
+          {
+            "creation_time": "2015-05-25T22:10:21Z",
+            "count": 0,
+            "bug_id": 16397,
+            "text": "My goal here is to allow for a link to a separate package's help index -- for example, the `stats` package's help index. This works:\n\n    \\link[stats:00Index]{Link to 'stats' package help index}\n\nbut R CMD check gives the warning:\n\n    * checking Rd cross-references ... WARNING\nMissing link or links in documentation object 'hello.Rd':\n  '[stats:00Index]{This index}'",
+            "tags": [],
+            "is_private": false,
+            "id": 90498,
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2015-05-25T22:10:21Z"
+          },
+          {
+            "is_private": false,
+            "id": 90499,
+            "tags": [],
+            "count": 1,
+            "bug_id": 16397,
+            "text": "Sorry, additional comments got lost; in addition the text doesn't match in the original comment. Forgive the redundancy but I believe it's more 'polite' to submit a more full-fledged bug report as a second comment.\n\nGiven the line in a .Rd page:\n\n    \\link[stats:00Index]{stats help}\n\nA link to the stats help index is properly generated, but R CMD check warns:\n\n    * checking Rd cross-references ... WARNING\n    Missing link or links in documentation object 'hello.Rd':\n      '[stats:00Index]{stats help}'\n\n\nI did not see any relevant text in R-exts (http://cran.r-project.org/doc/manuals/r-release/R-exts.html#Cross_002dreferences); in case there is a different, proper method of linking to another package's help index.\n\nIs this a bug in R CMD check, or is there an alternative method for linking to a package's help index?\n\nI'm using R version 3.2.0 Patched (2015-04-26 r68264) -- \"Full of Ingredients\"\n\nThanks,\nKevin",
+            "creation_time": "2015-05-25T22:12:58Z",
+            "time": "2015-05-25T22:12:58Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "kevinushey"
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-08-30T01:22:16Z",
+            "creator": "elin.waring",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 103496,
+            "creation_time": "2026-08-30T01:22:16Z",
+            "count": 2,
+            "text": "I found a discussion of this question on StackOverflow circa 2022.\n\nhttps://stackoverflow.com/questions/70654391/r-package-documentation-link-to-a-whole-package-not-function\n\nBasically, whether and how to do this will depend on whether the package maintainer has created an index page and also whether you want hyperlinks.",
+            "bug_id": 16397
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "16397": []
+    }
+  },
+  "source_changed": "2026-08-30 01:22:16"
+}

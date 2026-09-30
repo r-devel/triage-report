@@ -1,0 +1,109 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "component": "Misc",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "deadline": {},
+        "id": 18030,
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2021-01-08T20:11:58Z",
+        "version": "R 4.0.x",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "is_confirmed": false,
+        "op_sys": "macOS",
+        "platform": "All",
+        "flags": [],
+        "cc_detail": [],
+        "last_change_time": "2021-01-13T19:40:59Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "Package installation fails if source repository version requires newer version of R, even if compatible binary present",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18030": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 18030,
+            "text": "The title is a mouthful, but to demonstrate a current incarnation of this issue:\n\n(1) The current source version of the 'foreign' package on CRAN requires R (>= 4.0.0),\n(2) If someone is using R 3.6 on Windows or macOS, compatible binaries are currently available, but are not selected and downloaded if `options(pkgType = \"both\")` is set.\n\nTo demonstrate:\n\n```\n$ R\n\nR version 3.6.3 (2020-02-29) -- \"Holding the Windsock\"\nCopyright (C) 2020 The R Foundation for Statistical Computing\nPlatform: x86_64-apple-darwin15.6.0 (64-bit)\n\nR is free software and comes with ABSOLUTELY NO WARRANTY.\nYou are welcome to redistribute it under certain conditions.\nType 'license()' or 'licence()' for distribution details.\n\n  Natural language support but running in an English locale\n\nR is a collaborative project with many contributors.\nType 'contributors()' for more information and\n'citation()' on how to cite R or R packages in publications.\n\nType 'demo()' for some demos, 'help()' for on-line help, or\n'help.start()' for an HTML browser interface to help.\nType 'q()' to quit R.\n\n> getOption(\"pkgType\")\n[1] \"both\"\n> install.packages(\"foreign\")\nInstalling package into '/Users/kevinushey/Library/R/3.6/library'\n(as 'lib' is unspecified)\nWarning: package 'foreign' is not available (for R version 3.6.3)\n> install.packages(\"foreign\", type = \"binary\")\nInstalling package into '/Users/kevinushey/Library/R/3.6/library'\n(as 'lib' is unspecified)\ntrying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/foreign_0.8-76.tgz'\nContent type 'application/x-gzip' length 329258 bytes (321 KB)\n==================================================\ndownloaded 321 KB\n\n\nThe downloaded binary packages are in\n        /tmp/Rtmp1IJmon/downloaded_packages\n```\n\nNote that `install.packages(\"foreign\")` fails because the current source version requires R (>= 4.0.0), but `install.packages(\"foreign\", type = \"binary\")` succeeds because the CRAN repositories still have a compatible binary for 'foreign' available.\n\nIn this case, I would expect R to either automatically choose to download the latest compatible binary, or prompt the user in some way to indicate that they need to specifically request a binary package install.\n\nSince this issue requires binary repositories to be available, I expect it is only reproducible on Windows + macOS.",
+            "creation_time": "2021-01-08T20:11:58Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 96979,
+            "time": "2021-01-08T20:11:58Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2021-01-13T19:40:24Z",
+            "attachment_id": {},
+            "count": 1,
+            "bug_id": 18030,
+            "text": "The issue ultimately arises from here:\n\nhttps://github.com/wch/r-source/blob/trunk/src/library/utils/R/packages2.R#L438\n\nThe set of dependent packages is built using the 'source' repository, but because 'foreign' was excluded from the list of packages in the source repository via the 'R_version' available.packages() filter, the dependency set cannot be constructed.\n\nFixing this seems pretty challenging, but it would be helpful for users if R suggested using `install.packages(..., type = \"binary\")` in this situation.",
+            "creation_time": "2021-01-13T19:40:24Z",
+            "is_private": false,
+            "id": 96998,
+            "tags": []
+          },
+          {
+            "time": "2021-01-13T19:40:59Z",
+            "id": 96999,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "text": "(stable link: https://github.com/wch/r-source/blob/29e74e0dd90df2d191fad3dadcd1a579a01c1d91/src/library/utils/R/packages2.R#L438)",
+            "bug_id": 18030,
+            "is_markdown": true,
+            "count": 2,
+            "creator": "kevinushey",
+            "creation_time": "2021-01-13T19:40:59Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18030": []
+    }
+  },
+  "source_changed": "2021-01-13 19:40:59"
+}

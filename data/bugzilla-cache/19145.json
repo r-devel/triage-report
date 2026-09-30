@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Low-level",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19145,
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-08-31T23:56:24Z",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-09-01T05:37:00Z",
+        "blocks": [],
+        "url": "",
+        "summary": "MSan issue in context.c reading uninitialized state",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19145": {
+        "comments": [
+          {
+            "count": 0,
+            "bug_id": 19145,
+            "text": "`clang`'s MSan unearthed a true positive issue with uninitialized reads in context.c: `cenddata` should be initialized to `NULL`.\n\nExample with problematic read of uninitialized state:\n\n```\noptions(warn = 2)\ntry(warning(\"trigger context unwind\"))\n```\n\nHere, the context created in `vwarningcall_dflt` sets the `cend` member but _not_ the `cenddata` member:\n\nhttps://github.com/r-devel/r-svn/blob/e500b3c46f60cafd0135e0cedb6d11fb7a01b40e/src/main/errors.c#L479-L482\n\nFrom what I can tell, there are number of these cases in the codebase, e.g.\n\nhttps://github.com/r-devel/r-svn/blob/e500b3c46f60cafd0135e0cedb6d11fb7a01b40e/src/main/errors.c#L608-L610\n\n```\nwithCallingHandlers(\n  warning(\"delayed warning\"),\n  warning = \\(w) stop(\"abort during warning handling\")\n)\n```\n\nSo the simplest solution is to just initialize `cenddata`.\n\n---\n\nNB: this was run on R 4.6.0, where MSan also found the issue in subset.c fixed by r90346 (Bug #19116).",
+            "creation_time": "2026-08-31T23:56:24Z",
+            "is_private": false,
+            "id": 103502,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-08-31T23:56:24Z",
+            "attachment_id": {}
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": 3807,
+            "time": "2026-09-01T05:28:47Z",
+            "creation_time": "2026-09-01T05:28:47Z",
+            "count": 1,
+            "text": "Created attachment 3807\ninitialize cenddata in begincontext\n\nEnsure `cenddata` gets an explicit initial value to void `cend()` reading an uninitialized state.",
+            "bug_id": 19145,
+            "tags": [],
+            "is_private": false,
+            "id": 103503
+          },
+          {
+            "attachment_id": 3808,
+            "time": "2026-09-01T05:37:00Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "id": 103504,
+            "is_private": false,
+            "creation_time": "2026-09-01T05:37:00Z",
+            "bug_id": 19145,
+            "text": "Created attachment 3808\ninitialize cenddata in begincontext\n\nI also found these redundant cases of setting `cenddata=NULL` downstream.\n\nNote that this in main.c is still required (and reiterates that the patch is correct as it matches the logic to initialize `cend=NULL` here too):\n\nhttps://github.com/r-devel/r-svn/blob/e500b3c46f60cafd0135e0cedb6d11fb7a01b40e/src/main/main.c#L1027",
+            "count": 2
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19145": [
+        {
+          "summary": "initialize cenddata in begincontext",
+          "creation_time": "2026-09-01T05:28:47Z",
+          "bug_id": 19145,
+          "file_name": "file_19145.txt",
+          "size": 411,
+          "last_change_time": "2026-09-01T05:37:00Z",
+          "id": 3807,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL2NvbnRleHQuYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL2NvbnRleHQuYyAgKHJldmlzaW9uIDkwNDU3KQ0KKysrIHNyYy9tYWluL2NvbnRleHQuYyAgKHdvcmtpbmcgY29weSkNCkBAIC0yNjYsNiArMjY2LDcgQEANCiAgICAgY3B0ci0+c3lzcGFyZW50ID0gc3lzcDsNCiAgICAgY3B0ci0+Y29uZXhpdCA9IFJfTmlsVmFsdWU7DQogICAgIGNwdHItPmNlbmQgPSBOVUxMOw0KKyAgICBjcHRyLT5jZW5kZGF0YSA9IE5VTEw7DQogICAgIGNwdHItPnByb21hcmdzID0gcHJvbWFyZ3M7DQogICAgIGNwdHItPmNhbGxmdW4gPSBjYWxsZnVuOw0KICAgICBjcHRyLT52bWF4ID0gdm1heGdldCgpOw0K",
+          "creator": "michaelchirico4",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        },
+        {
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL2NvbnRleHQuYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL2NvbnRleHQuYyAgKHJldmlzaW9uIDkwNDU3KQ0KKysrIHNyYy9tYWluL2NvbnRleHQuYyAgKHdvcmtpbmcgY29weSkNCkBAIC0yNjYsNiArMjY2LDcgQEANCiAgICAgY3B0ci0+c3lzcGFyZW50ID0gc3lzcDsNCiAgICAgY3B0ci0+Y29uZXhpdCA9IFJfTmlsVmFsdWU7DQogICAgIGNwdHItPmNlbmQgPSBOVUxMOw0KKyAgICBjcHRyLT5jZW5kZGF0YSA9IE5VTEw7DQogICAgIGNwdHItPnByb21hcmdzID0gcHJvbWFyZ3M7DQogICAgIGNwdHItPmNhbGxmdW4gPSBjYWxsZnVuOw0KICAgICBjcHRyLT52bWF4ID0gdm1heGdldCgpOw0KSW5kZXg6IHNyYy9tYWluL2dyYW0uYw0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9tYWluL2dyYW0uYyAgICAgKHJldmlzaW9uIDkwNDU3KQ0KKysrIHNyYy9tYWluL2dyYW0uYyAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0zOTE0LDcgKzM5MTQsNiBAQA0KICAgICBiZWdpbmNvbnRleHQoY3B0ciwgQ1RYVF9DQ09ERSwgUl9OaWxWYWx1ZSwgUl9CYXNlRW52LCBSX0Jhc2VFbnYsDQogICAgICAgICAgICAgICAgICBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsNCiAgICAgY3B0ci0+Y2VuZCA9ICZGaW5hbGl6ZVNyY1JlZlN0YXRlT25FcnJvcjsNCi0gICAgY3B0ci0+Y2VuZGRhdGEgPSBOVUxMOw0KICAgICBQYXJzZVN0YXRlLmtlZXBTcmNSZWZzID0gZmFsc2U7DQogICAgIFBhcnNlU3RhdGUua2VlcFBhcnNlRGF0YSA9IHRydWU7DQogICAgIFBhcnNlU3RhdGUuZGlkQXR0YWNoID0gZmFsc2U7DQpJbmRleDogc3JjL21haW4vZ3JhbS55DQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL21haW4vZ3JhbS55ICAgICAocmV2aXNpb24gOTA0NTcpDQorKysgc3JjL21haW4vZ3JhbS55ICAgICAod29ya2luZyBjb3B5KQ0KQEAgLTE2MDUsNyArMTYwNSw2IEBADQogICAgIGJlZ2luY29udGV4dChjcHRyLCBDVFhUX0NDT0RFLCBSX05pbFZhbHVlLCBSX0Jhc2VFbnYsIFJfQmFzZUVudiwNCiAgICAgICAgICAgICAgICAgIFJfTmlsVmFsdWUsIFJfTmlsVmFsdWUpOw0KICAgICBjcHRyLT5jZW5kID0gJkZpbmFsaXplU3JjUmVmU3RhdGVPbkVycm9yOw0KLSAgICBjcHRyLT5jZW5kZGF0YSA9IE5VTEw7DQogICAgIFBhcnNlU3RhdGUua2VlcFNyY1JlZnMgPSBmYWxzZTsNCiAgICAgUGFyc2VTdGF0ZS5rZWVwUGFyc2VEYXRhID0gdHJ1ZTsNCiAgICAgUGFyc2VTdGF0ZS5kaWRBdHRhY2ggPSBmYWxzZTs=",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "size": 1415,
+          "last_change_time": "2026-09-01T05:37:00Z",
+          "id": 3808,
+          "is_private": false,
+          "summary": "initialize cenddata in begincontext",
+          "creation_time": "2026-09-01T05:37:00Z",
+          "bug_id": 19145,
+          "file_name": "file_19145.txt"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-01 05:37:00"
+}

@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19105,
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 4.6.x",
+        "creation_time": "2026-07-19T20:25:09Z",
+        "component": "Wishlist",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-07-19T20:25:09Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "Provide a traceback when crashing on Windows",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Ivan Krylov",
+          "id": 3307,
+          "name": "ikrylov"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "flags": [],
+        "platform": "All",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "ikrylov"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19105": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103328,
+            "tags": [],
+            "count": 0,
+            "text": "Created attachment 3760\nUse VEH to print a traceback when crashing on Windows\n\nCurrently, when a package crashes on Win-Builder during tests or examples, the output just stops. It takes effort to determine that there was, in fact, a crash (and not timeout / storage becoming full / hardware issues / gremlins), and there's not always enough information to determine where the crash occurred. Sometimes we're lucky and the crash [is easily reproducible](https://stat.ethz.ch/pipermail/r-package-devel/2026q2/012376.html). [Other times](https://stat.ethz.ch/pipermail/r-package-devel/2023q4/010170.html) the crash [remains elusive](https://stat.ethz.ch/pipermail/r-package-devel/2026q3/012434.html) and we're stumped until we can obtain more information (with luck, the same crash shows up with sanitizers on Linux).\n\nConversely, on most Unix-like systems (with working `sigaction()` and `sigaltstack()`), the signal handler makes the crash evident and (if the heap is sufficiently intact) provides an R-level traceback. On Windows, R could use [vectored exception handling](https://learn.microsoft.com/en-us/windows/win32/debug/vectored-exception-handling) to catch a fatal exception in a similar manner. \n\nThe attached patch takes the common, R-specific parts of `sigactionSegv` and `win32_segv` ([unused](https://stat.ethz.ch/pipermail/r-devel/2024-June/083524.html)) and makes R call them from the respective system-specific handlers. Currently it's wired up to minimise changes in `src/main/main.c` and to leave Windows-specific code under `src/gnuwin32`, although the result feels awkward. Perhaps it's better to make `fatal_traceback()` declared in `Defn.h`, `attribute_hidden`, to be called from handlers registered in `src/main/main.c` or `src/gnuwin32/system.c`?\n\n```\n$ ../../bin/x64/Rscript.exe -e '.Fortran(stats:::C_lowesw, numeric(), 100L, numeric(), integer())'\n\n *** caught access violation at address 0x00007ffb33252192 ***\naccessing address 0xffffffffffffffff, action: read\n\nTraceback:\n 1: .Fortran(stats:::C_lowesw, numeric(), 100L, numeric(), integer())\nAn irrecoverable exception occurred. R is aborting now ...\n```",
+            "bug_id": 19105,
+            "creation_time": "2026-07-19T20:25:09Z",
+            "time": "2026-07-19T20:25:09Z",
+            "attachment_id": 3760,
+            "is_markdown": true,
+            "creator": "ikrylov"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19105": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL0RlZm4uaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9EZWZuLmgJKHJldmlzaW9uIDkwMjc4KQorKysgc3JjL2luY2x1ZGUvRGVmbi5oCSh3b3JraW5nIGNvcHkpCkBAIC0yNDkwLDYgKzI0OTAsNyBAQAogdm9pZCBSX3dmaXhiYWNrc2xhc2god2NoYXJfdCAqcyk7CiB2b2lkIFJfd2ZpeHNsYXNoKHdjaGFyX3QgKnMpOwogd2NoYXJfdCAqZmlsZW5hbWVUb1djaGFyKGNvbnN0IFNFWFAgZm4sIGNvbnN0IFJib29sZWFuIGV4cGFuZCk7Cit2b2lkIFJfc2V0dXBfdmVoX3NlZ3Yodm9pZCAoKikodm9pZCkpOwogI2VuZGlmCiAKIEZJTEUgKlJDX2ZvcGVuKGNvbnN0IFNFWFAgZm4sIGNvbnN0IGNoYXIgKm1vZGUsIGNvbnN0IFJib29sZWFuIGV4cGFuZCk7CkluZGV4OiBzcmMvbWFpbi9tYWluLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vbWFpbi5jCShyZXZpc2lvbiA5MDI3OCkKKysrIHNyYy9tYWluL21haW4uYwkod29ya2luZyBjb3B5KQpAQCAtNDU2LDEzICs0NTYsMTUgQEAKIH0KICNlbmRpZgogCisjaWYgKGRlZmluZWQoSEFWRV9TSUdBTFRTVEFDSykgJiYgZGVmaW5lZChIQVZFX1NJR0FDVElPTikgJiYgZGVmaW5lZChIQVZFX1dPUktJTkdfU0lHQUNUSU9OKSAmJiBkZWZpbmVkKEhBVkVfU0lHRU1QVFlTRVQpKSB8fCBkZWZpbmVkKFdpbjMyKQogCi0jaWZkZWYgV2luMzIKLXN0YXRpYyBpbnQgbnVtX2NhdWdodCA9IDA7CisvKiBOQjogdGhpcyByZWFsbHkgaXNuJ3Qgc2FmZSwgYnV0IHN1ZmZpY2VzIGZvciBleHBlcmltZW50YXRpb24gZm9yIG5vdy4KKyAgIEluIGR1ZSBjb3Vyc2UganVzdCBzZXQgYSBmbGFnIGFuZCBkbyB0aGlzIGFmdGVyIHRoZSByZXR1cm4uICBPVE9ILAorICAgaWYgd2UgZG8gd2FudCB0byBiYWlsIG91dCB3aXRoIGEgY29yZSBkdW1wLCBuZWVkIHRvIGRvIHRoYXQgaGVyZS4KIAotc3RhdGljIHZvaWQgd2luMzJfc2VndihpbnQgc2lnbnVtKQotewotICAgIC8qIE5COiBzdGFjayBvdmVyZmxvdyBpcyBub3QgYW4gYWNjZXNzIHZpb2xhdGlvbiBvbiBXaW4zMiAqLworICAgMjAwNS0xMi0xNyBCRFIgKi8KKworc3RhdGljIHZvaWQgZmF0YWxfdHJhY2ViYWNrKHZvaWQpIHsKICAgICB7ICAgLyogQSBzaW1wbGUgY3VzdG9taXplZCBwcmludCBvZiB0aGUgdHJhY2ViYWNrICovCiAJU0VYUCB0cmFjZSwgcCwgcTsKIAlpbnQgbGluZSA9IDEsIGk7CkBAIC00NzksMjUgKzQ4MSwzMSBAQAogCSAgICBVTlBST1RFQ1QoMSk7CiAJfQogICAgIH0KLSAgICBudW1fY2F1Z2h0Kys7Ci0gICAgaWYobnVtX2NhdWdodCA8IDEwKSBzaWduYWwoc2lnbnVtLCB3aW4zMl9zZWd2KTsKLSAgICBpZihzaWdudW0gPT0gU0lHSUxMKQotCWVycm9yKCJjYXVnaHQgYWNjZXNzIHZpb2xhdGlvbiAtIGNvbnRpbnVlIHdpdGggY2FyZSIpOwotICAgIGVsc2UKLQllcnJvcigiY2F1Z2h0IGFjY2VzcyB2aW9sYXRpb24gLSBjb250aW51ZSB3aXRoIGNhcmUiKTsKKyAgICBpZihSX0ludGVyYWN0aXZlKSB7CisJUkVwcmludGYoIlxuUG9zc2libGUgYWN0aW9uczpcbjE6ICVzXG4yOiAlc1xuMzogJXNcbjQ6ICVzXG4iLAorCQkgImFib3J0ICh3aXRoIGNvcmUgZHVtcCwgaWYgZW5hYmxlZCkiLAorCQkgIm5vcm1hbCBSIGV4aXQiLAorCQkgImV4aXQgUiB3aXRob3V0IHNhdmluZyB3b3Jrc3BhY2UiLAorCQkgImV4aXQgUiBzYXZpbmcgd29ya3NwYWNlIik7CisJd2hpbGUoMSkgeworCSAgICBzdGF0aWMgdW5zaWduZWQgY2hhciBDb25zb2xlQnVmW0NPTlNPTEVfQlVGRkVSX1NJWkVdOworCSAgICBpZihSX1JlYWRDb25zb2xlKCJTZWxlY3Rpb246ICIsIENvbnNvbGVCdWYsIENPTlNPTEVfQlVGRkVSX1NJWkUsCisJCQkgICAgIDApID4gMCkgeworCQlpZihDb25zb2xlQnVmWzBdID09ICcxJykgYnJlYWs7CisJCWlmKENvbnNvbGVCdWZbMF0gPT0gJzInKSBSX0NsZWFuVXAoU0FfREVGQVVMVCwgMCwgMSk7CisJCWlmKENvbnNvbGVCdWZbMF0gPT0gJzMnKSBSX0NsZWFuVXAoU0FfTk9TQVZFLCA3MCwgMCk7CisJCWlmKENvbnNvbGVCdWZbMF0gPT0gJzQnKSBSX0NsZWFuVXAoU0FfU0FWRSwgNzEsIDApOworCSAgICB9CisJfQorCVJFcHJpbnRmKCJSIGlzIGFib3J0aW5nIG5vdyAuLi5cbiIpOworICAgIH0KKyAgICBlbHNlIC8vIG5vbi1pbnRlcmFjdGl2ZWx5IDoKKwlSRXByaW50ZigiQW4gaXJyZWNvdmVyYWJsZSBleGNlcHRpb24gb2NjdXJyZWQuIFIgaXMgYWJvcnRpbmcgbm93IC4uLlxuIik7CisgICAgUl9DbGVhblRlbXBEaXIoKTsKIH0KICNlbmRpZgogCiAjaWYgZGVmaW5lZChIQVZFX1NJR0FMVFNUQUNLKSAmJiBkZWZpbmVkKEhBVkVfU0lHQUNUSU9OKSAmJiBkZWZpbmVkKEhBVkVfV09SS0lOR19TSUdBQ1RJT04pICYmIGRlZmluZWQoSEFWRV9TSUdFTVBUWVNFVCkKLQotLyogTkI6IHRoaXMgcmVhbGx5IGlzbid0IHNhZmUsIGJ1dCBzdWZmaWNlcyBmb3IgZXhwZXJpbWVudGF0aW9uIGZvciBub3cuCi0gICBJbiBkdWUgY291cnNlIGp1c3Qgc2V0IGEgZmxhZyBhbmQgZG8gdGhpcyBhZnRlciB0aGUgcmV0dXJuLiAgT1RPSCwKLSAgIGlmIHdlIGRvIHdhbnQgdG8gYmFpbCBvdXQgd2l0aCBhIGNvcmUgZHVtcCwgbmVlZCB0byBkbyB0aGF0IGhlcmUuCi0KLSAgIDIwMDUtMTItMTcgQkRSICovCi0KLXN0YXRpYyB1bnNpZ25lZCBjaGFyIENvbnNvbGVCdWZbQ09OU09MRV9CVUZGRVJfU0laRV07Ci0KIHN0YXRpYyB2b2lkIHNpZ2FjdGlvblNlZ3YoaW50IHNpZ251bSwgc2lnaW5mb190ICppcCwgdm9pZCAqY29udGV4dCkKIHsKICAgICAvKiBlbnN1cmUgUiB0ZXJtaW5hdGVzIGlmIHRoZSBoYW5kbGVyIHNlZ2ZhdWx0cyAoUFIjMTg1NTEpICovCkBAIC02MDQsNDIgKzYxMiw3IEBACiAJICAgIH0KIAlSRXByaW50ZigiYWRkcmVzcyAlcCwgY2F1c2UgJyVzJ1xuIiwgaXAtPnNpX2FkZHIsIHMpOwogICAgIH0KLSAgICB7ICAgLyogQSBzaW1wbGUgY3VzdG9taXplZCBwcmludCBvZiB0aGUgdHJhY2ViYWNrICovCi0JU0VYUCB0cmFjZSwgcCwgcTsKLQlpbnQgbGluZSA9IDEsIGk7Ci0JUFJPVEVDVCh0cmFjZSA9IFJfR2V0VHJhY2ViYWNrKDApKTsKLQlpZih0cmFjZSAhPSBSX05pbFZhbHVlKSB7Ci0JICAgIFJFcHJpbnRmKCJcblRyYWNlYmFjazpcbiIpOwotCSAgICBmb3IocCA9IHRyYWNlOyBwICE9IFJfTmlsVmFsdWU7IHAgPSBDRFIocCksIGxpbmUrKykgewotCQlxID0gQ0FSKHApOyAvKiBhIGNoYXJhY3RlciB2ZWN0b3IgKi8KLQkJUkVwcmludGYoIiUyZDogIiwgbGluZSk7Ci0JCWZvcihpID0gMDsgaSA8IExFTkdUSChxKTsgaSsrKQotCQkgICAgUkVwcmludGYoIiVzIiwgQ0hBUihTVFJJTkdfRUxUKHEsIGkpKSk7Ci0JCVJFcHJpbnRmKCJcbiIpOwotCSAgICB9Ci0JICAgIFVOUFJPVEVDVCgxKTsKLQl9Ci0gICAgfQotICAgIGlmKFJfSW50ZXJhY3RpdmUpIHsKLQlSRXByaW50ZigiXG5Qb3NzaWJsZSBhY3Rpb25zOlxuMTogJXNcbjI6ICVzXG4zOiAlc1xuNDogJXNcbiIsCi0JCSAiYWJvcnQgKHdpdGggY29yZSBkdW1wLCBpZiBlbmFibGVkKSIsCi0JCSAibm9ybWFsIFIgZXhpdCIsCi0JCSAiZXhpdCBSIHdpdGhvdXQgc2F2aW5nIHdvcmtzcGFjZSIsCi0JCSAiZXhpdCBSIHNhdmluZyB3b3Jrc3BhY2UiKTsKLQl3aGlsZSgxKSB7Ci0JICAgIGlmKFJfUmVhZENvbnNvbGUoIlNlbGVjdGlvbjogIiwgQ29uc29sZUJ1ZiwgQ09OU09MRV9CVUZGRVJfU0laRSwKLQkJCSAgICAgMCkgPiAwKSB7Ci0JCWlmKENvbnNvbGVCdWZbMF0gPT0gJzEnKSBicmVhazsKLQkJaWYoQ29uc29sZUJ1ZlswXSA9PSAnMicpIFJfQ2xlYW5VcChTQV9ERUZBVUxULCAwLCAxKTsKLQkJaWYoQ29uc29sZUJ1ZlswXSA9PSAnMycpIFJfQ2xlYW5VcChTQV9OT1NBVkUsIDcwLCAwKTsKLQkJaWYoQ29uc29sZUJ1ZlswXSA9PSAnNCcpIFJfQ2xlYW5VcChTQV9TQVZFLCA3MSwgMCk7Ci0JICAgIH0KLQl9Ci0JUkVwcmludGYoIlIgaXMgYWJvcnRpbmcgbm93IC4uLlxuIik7Ci0gICAgfQotICAgIGVsc2UgLy8gbm9uLWludGVyYWN0aXZlbHkgOgotCVJFcHJpbnRmKCJBbiBpcnJlY292ZXJhYmxlIGV4Y2VwdGlvbiBvY2N1cnJlZC4gUiBpcyBhYm9ydGluZyBub3cgLi4uXG4iKTsKLSAgICBSX0NsZWFuVGVtcERpcigpOworICAgIGZhdGFsX3RyYWNlYmFjaygpOwogICAgIC8qIG5vdyBkbyBub3JtYWwgYmVoYXZpb3VyLCBlLmcuIGNvcmUgZHVtcCAqLwogICAgIHJhaXNlKHNpZ251bSk7CiB9CkBAIC03MDgsOCArNjgxLDkgQEAKICNpZm5kZWYgV2luMzIKICAgICBzaWduYWwoU0lHUElQRSwgaGFuZGxlUGlwZSk7CiAjZWxzZQotICAgIHNpZ25hbChTSUdTRUdWLCB3aW4zMl9zZWd2KTsKLSAgICBzaWduYWwoU0lHSUxMLCB3aW4zMl9zZWd2KTsKKyAgICBjb25zdCBjaGFyICp2YWwgPSBnZXRlbnYoIlJfTk9fU0VHVl9IQU5ETEVSIik7CisgICAgaWYgKCF2YWwgfHwgISp2YWwpCisJUl9zZXR1cF92ZWhfc2VndihmYXRhbF90cmFjZWJhY2spOwogI2VuZGlmCiB9CiAjZW5kaWYKSW5kZXg6IHNyYy9nbnV3aW4zMi9zeXMtd2luMzIuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvZ251d2luMzIvc3lzLXdpbjMyLmMJKHJldmlzaW9uIDkwMjc4KQorKysgc3JjL2dudXdpbjMyL3N5cy13aW4zMi5jCSh3b3JraW5nIGNvcHkpCkBAIC0zODQsMyArMzg0LDYyIEBACiAJcmV0dXJuIHJ2YWw7CiAgICAgfQogfQorCitzdGF0aWMgdm9pZCAoKmZhdGFsX3RyYWNlYmFjaykodm9pZCk7CitzdGF0aWMgUFZPSUQgc2Vndl9oYW5kbGVyOworc3RhdGljIFdJTkFQSSBMT05HIHZlaF9yZXBvcnRfYW5kX3JhaXNlKFBFWENFUFRJT05fUE9JTlRFUlMgZWkpCit7CisgICAgUmVtb3ZlVmVjdG9yZWRFeGNlcHRpb25IYW5kbGVyKHNlZ3ZfaGFuZGxlcik7CisgICAgY29uc3QgY2hhciAqZXhjZXB0aW9uID0gTlVMTDsKKyAgICBzd2l0Y2ggKGVpLT5FeGNlcHRpb25SZWNvcmQtPkV4Y2VwdGlvbkNvZGUpIHsKKyAgICBjYXNlIEVYQ0VQVElPTl9JTExFR0FMX0lOU1RSVUNUSU9OOgorCWV4Y2VwdGlvbiA9ICJpbGxlZ2FsIGluc3RydWN0aW9uIjsKKwlicmVhazsKKyAgICBjYXNlIEVYQ0VQVElPTl9BQ0NFU1NfVklPTEFUSU9OOgorCWV4Y2VwdGlvbiA9ICJhY2Nlc3MgdmlvbGF0aW9uIjsKKwlicmVhazsKKyAgICBjYXNlIEVYQ0VQVElPTl9BUlJBWV9CT1VORFNfRVhDRUVERUQ6CisJZXhjZXB0aW9uID0gImFycmF5IGJvdW5kcyBvdmVyZmxvdyI7CisJYnJlYWs7CisgICAgY2FzZSBFWENFUFRJT05fREFUQVRZUEVfTUlTQUxJR05NRU5UOgorCWV4Y2VwdGlvbiA9ICJkYXRhdHlwZSBtaXNhbGlnbm1lbnQiOworCWJyZWFrOworICAgIGNhc2UgRVhDRVBUSU9OX0lOX1BBR0VfRVJST1I6CisJZXhjZXB0aW9uID0gInBhZ2UgbG9hZCBmYWlsdXJlIjsKKwlicmVhazsKKyAgICBjYXNlIEVYQ0VQVElPTl9QUklWX0lOU1RSVUNUSU9OOgorCWV4Y2VwdGlvbiA9ICJwcml2aWxlZ2VkIGluc3RydWN0aW9uIjsKKwlicmVhazsKKyAgICBjYXNlIEVYQ0VQVElPTl9TVEFDS19PVkVSRkxPVzoKKwlleGNlcHRpb24gPSAic3RhY2sgb3ZlcmZsb3ciOworCWJyZWFrOworICAgIH0KKyAgICBpZiAoZXhjZXB0aW9uKSB7CisJUkVwcmludGYoIlxuICoqKiBjYXVnaHQgJXMgYXQgYWRkcmVzcyAlcCAqKipcbiIsCisJICAgICAgICAgZXhjZXB0aW9uLCBlaS0+RXhjZXB0aW9uUmVjb3JkLT5FeGNlcHRpb25BZGRyZXNzKTsKKwlzd2l0Y2ggKGVpLT5FeGNlcHRpb25SZWNvcmQtPkV4Y2VwdGlvbkNvZGUpIHsKKwljYXNlIEVYQ0VQVElPTl9BQ0NFU1NfVklPTEFUSU9OOgorCWNhc2UgRVhDRVBUSU9OX0lOX1BBR0VfRVJST1I6CisJICAgIHsKKwkJY29uc3QgY2hhciAqIGFjdGlvbiA9ICI8dW5rbm93biBhY3Rpb24+IjsKKwkJc3dpdGNoIChlaS0+RXhjZXB0aW9uUmVjb3JkLT5FeGNlcHRpb25JbmZvcm1hdGlvblswXSkgeworCQkgICAgY2FzZSAwOiBhY3Rpb24gPSAicmVhZCI7IGJyZWFrOworCQkgICAgY2FzZSAxOiBhY3Rpb24gPSAid3JpdGUiOyBicmVhazsKKwkJICAgIGNhc2UgODogYWN0aW9uID0gImV4ZWN1dGUiOyBicmVhazsKKwkJfQorCQlSRXByaW50ZigiYWNjZXNzaW5nIGFkZHJlc3MgJXAsIGFjdGlvbjogJXNcbiIsCisJCSAgICAgICAgICh2b2lkKillaS0+RXhjZXB0aW9uUmVjb3JkLT5FeGNlcHRpb25JbmZvcm1hdGlvblsxXSwKKwkJICAgICAgICAgYWN0aW9uKTsKKwkJYnJlYWs7CisJICAgIH0KKwl9CisJZmF0YWxfdHJhY2ViYWNrKCk7CisgICAgfQorICAgIHJldHVybiBFWENFUFRJT05fQ09OVElOVUVfU0VBUkNIOworfQorCit2b2lkIFJfc2V0dXBfdmVoX3NlZ3Yodm9pZCAoKmZhdGFsX3RyYWNlYmFja18pKHZvaWQpKQoreworICAgIGZhdGFsX3RyYWNlYmFjayA9IGZhdGFsX3RyYWNlYmFja187CisgICAgc2Vndl9oYW5kbGVyID0gQWRkVmVjdG9yZWRFeGNlcHRpb25IYW5kbGVyKDAsIHZlaF9yZXBvcnRfYW5kX3JhaXNlKTsKK30K",
+          "creator": "ikrylov",
+          "is_patch": true,
+          "bug_id": 19105,
+          "file_name": "Win32_VEH.patch",
+          "summary": "Use VEH to print a traceback when crashing on Windows",
+          "creation_time": "2026-07-19T20:25:09Z",
+          "id": 3760,
+          "is_private": false,
+          "size": 6594,
+          "last_change_time": "2026-07-19T20:25:09Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-07-19 20:25:09"
+}

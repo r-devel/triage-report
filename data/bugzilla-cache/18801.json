@@ -1,0 +1,162 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Misc",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-09-23T21:59:16Z",
+        "dupe_of": {},
+        "severity": "minor",
+        "id": 18801,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [
+          "elin.waring",
+          "maechler"
+        ],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "Confusing behavior of quote= in print.table",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "id": 3299,
+            "name": "elin.waring",
+            "real_name": "Elin Waring"
+          },
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2024-12-06T08:11:40Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18801": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 18801,
+            "text": "I came to `quote=` trying to get distinction in the output between different \"blank\" inputs:\n\n```\ns = rep(c(\"\", \" \", \"  \"), each=1e5)\nprint(table(s))\n\n# s\n#                      \n# 100000 100000 100000 \n```\n\nNot very useful!\n\n`?print.table` shows us `quote=` as maybe helpful here, but here's the surprising output:\n\n```\n# s\n#                            \n# \"100000\" \"100000\" \"100000\" \n```\n\nNot only does this not help us, it doesn't match the stated purpose of `quote=` in `?print.table`:\n\nhttps://github.com/r-devel/r-svn/blob/31340c871c7df54e45bfc7c4f49d09bb5806ec70/src/library/base/man/print.Rd#L36-L37\n\n> `quote` - logical, indicating whether or not strings should be printed with surrounding quotes.\n\nBut here, the _strings_ have been left alone, while the _integer_ counts of values have been surrounded with quotes.",
+            "creation_time": "2024-09-23T21:59:16Z",
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 101218,
+            "time": "2024-09-23T21:59:16Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "count": 1,
+            "is_markdown": true,
+            "bug_id": 18801,
+            "text": "Amazing ... \nI do agree that the  `quote` argument as implemented is almost always useless.\nI'm almost sure, I will not have used it ever.\nStill, not all `\"table\"` objects need to be have produced by `table()` {or similar}, i.e., one *may* have tables with string entries.\n\nIn addition, what I *have* used quite frequently is  `print.table(<matrix>, zero.print = \".\")`\n\nwhich is *very* nice to make the console output much more readable for sparse matrices  {{and R's `Matrix` package uses a sophisticated version of this, as part of its `print()/show()` methods for (formally classed) sparse matrices}}.\n\nNote that the documentation is not wrong strictly, as indeed, \n- by the time, `quote` is applied, all the numeric entries have become strings  and \n- it does not at all talk about `dimnames` (also in your example, we have a 1D array with dimnames, see `str(.)`):\n```\n> str(table(rep(c(\"\", \" \", \"  \"), 9:11)))\n 'table' int [1:3(1d)] 9 10 11\n - attr(*, \"dimnames\")=List of 1\n  ..$ : chr [1:3] \"\" \" \" \"  \"\n> \n``` \nbut of course, it is *not* what you'd like to get here _and_\nthe documentation is not precise enough to become even misleading.\n\nFor back compatibility reasons, it'd be best to consider allowing  `quote = \"dimnames\"` (or equivalently `quote = \"names\"` )\nor introduce a new optional argument, say `namesQuote = <logical>`  or  `namesQuote = <q-alike>)`  where in the latter case,\n`dQuote(<names>, q = namesQuote)` would be called inside `print.table()`.",
+            "creation_time": "2024-09-24T09:51:19Z",
+            "creator": "maechler",
+            "is_private": false,
+            "id": 101219,
+            "time": "2024-09-24T09:51:19Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2024-09-25T00:50:48Z",
+            "is_markdown": true,
+            "count": 2,
+            "text": "> For back compatibility reasons, it'd be best to consider allowing quote = \"dimnames\" (or equivalently quote = \"names\" )\nor introduce a new optional argument, say namesQuote = <logical> or namesQuote = <q-alike>) where in the latter case,\ndQuote(<names>, q = namesQuote) would be called inside print.table().\n\nThat makes sense to me, thanks.\n\nNote to future self: I was confusing myself a bit about how I expected `quote=TRUE` to work based on how it works for data.table's `print()` method:\n\n```\nDT=data.table(a=1, ` `=2, c='', d = ' ')\nprint(DT, quote=TRUE)\n#        \"a\"     \" \"      \"c\"      \"d\"\n#    \"<num>\" \"<num>\" \"<char>\" \"<char>\"\n# 1:     \"1\"     \"2\"       \"\"      \" \"\nprint(as.data.frame(DT), quote=TRUE)\n#     a      c   d\n# 1 \"1\" \"2\" \"\" \" \"\n```\n\nMore generally, data.frame has the same issue cited for `table` objects here:\n\n```\nprint(data.frame(` ` = 1, `  ` = 2, `   ` = 3, check.names=FALSE), quote=TRUE)\n#              \n# 1 \"1\" \"2\" \"3\"\n```\n\nSo presumably whatever we do here for the table method could apply to the data.frame method, too.",
+            "bug_id": 18801,
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2024-09-25T00:50:48Z",
+            "id": 101220
+          },
+          {
+            "is_private": false,
+            "id": 101223,
+            "time": "2024-09-29T23:07:58Z",
+            "tags": [],
+            "attachment_id": {},
+            "count": 3,
+            "is_markdown": true,
+            "bug_id": 18801,
+            "text": "About `print.data.frame()` specifically, the help says\n\n>quote\t\nlogical, indicating whether or not entries should be printed with surrounding quotes.\n\nand does not put the column names in quotes whether empty or not.\n\nHowever the `names()` does return an empty string. So I think that is the method to get names with the quoted empty strings.",
+            "creation_time": "2024-09-29T23:07:58Z",
+            "creator": "elin.waring"
+          },
+          {
+            "is_markdown": true,
+            "count": 4,
+            "bug_id": 18801,
+            "text": "Thanks Erin! I actually like the description in `?print.data.frame` much better.\n\nLooking now, I think part of why `?print.table` struggles here is that it's in 'print.Rd' alongside the description of `print()` generically and the factor method for `print()`.\n\nOne idea for improvement here (of the documentation alone) is to move the description of the table method into 'print.dataframe.Rd', so that the two print methods of \"tabular\" data are together.\n\nI can prepare a patch, but want to gauge interest first since it will require careful splicing.",
+            "creation_time": "2024-12-06T08:10:43Z",
+            "creator": "michaelchirico4",
+            "is_private": false,
+            "id": 101405,
+            "time": "2024-12-06T08:10:43Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creation_time": "2024-12-06T08:11:40Z",
+            "count": 5,
+            "text": "(Elin -- apologies for the typo!!)",
+            "bug_id": 18801,
+            "tags": [],
+            "is_private": false,
+            "id": 101406,
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2024-12-06T08:11:40Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18801": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2024-12-06 08:11:40"
+}

@@ -1,0 +1,339 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "qa_contact": "",
+        "cc": [
+          "btyner",
+          "elin.waring",
+          "hamedhaseli",
+          "jaganmn2",
+          "maechler",
+          "mvargassepulveda",
+          "seb.meyer"
+        ],
+        "id": 17475,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "major",
+        "whiteboard": "",
+        "creation_time": "2018-09-20T14:28:18Z",
+        "version": "R 3.5.0",
+        "priority": "P5",
+        "product": "R",
+        "component": "Accuracy",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "last_change_time": "2026-09-02T16:21:33Z",
+        "cc_detail": [
+          {
+            "name": "btyner",
+            "id": 430,
+            "real_name": "Benjamin Tyner"
+          },
+          {
+            "id": 3299,
+            "name": "elin.waring",
+            "real_name": "Elin Waring"
+          },
+          {
+            "real_name": "Hamed Haseli",
+            "id": 3229,
+            "name": "hamedhaseli"
+          },
+          {
+            "real_name": "Mikael Jagan",
+            "id": 3462,
+            "name": "jaganmn2"
+          },
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          },
+          {
+            "id": 3295,
+            "name": "mvargassepulveda",
+            "real_name": "Mauricio Vargas"
+          },
+          {
+            "id": 274,
+            "name": "seb.meyer",
+            "real_name": "Sebastian Meyer"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "lm.wfit issue with small weights",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "name": "hamedhaseli",
+          "id": 3229,
+          "real_name": "Hamed Haseli"
+        },
+        "resolution": "",
+        "status": "CONFIRMED",
+        "is_creator_accessible": true,
+        "creator": "hamedhaseli",
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "flags": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "17475": {
+        "comments": [
+          {
+            "bug_id": 17475,
+            "text": "I have recently realised that there is major instability in lm.wf for values of weights that are smaller than the machine epsilon. I clarify this issue with an example.\n\nThe input data is as below. I should stress that the weights are intentionally designed to reflect some structures in the data\n\n\n> df\ny\t\tx\tweight\n 1.51156139  0.55209240 2.117337e-34\n-0.63653132 -0.12599316 2.117337e-34\n 0.37782776  0.42095384 4.934135e-31\n 3.03792318  1.40315446 2.679495e-24\n 1.53646523  0.46076858 2.679495e-24\n-2.37727874 -0.73963576 6.244160e-21\n 0.37183065  0.20407468 1.455107e-17\n-1.53917553 -0.95519361 1.455107e-17\n 1.10926675  0.03897129 3.390908e-14\n-0.37786333 -0.17523593 3.390908e-14\n 2.43973603  0.97970095 7.902000e-11\n-0.35432394 -0.03742559 7.902000e-11\n 2.19296613  1.00355263 4.289362e-04\n 0.49845532  0.34816207 4.289362e-04\n 1.25005260  0.76306225 5.000000e-01\n 0.84360691  0.45152356 5.000000e-01\n 0.29565993  0.53880068 5.000000e-01\n-0.54081334 -0.28104525 5.000000e-01\n 0.83612836 -0.12885659 9.995711e-01\n-1.42526769 -0.87107631 9.999998e-01\n 0.10204789 -0.11649899 1.000000e+00\n 1.14292898  0.37249631 1.000000e+00\n-3.02942081 -1.28966997 1.000000e+00\n-1.37549764 -0.74676145 1.000000e+00\n-2.00118016 -0.55182759 1.000000e+00\n-4.24441674 -1.94603608 1.000000e+00\n 1.17168144  1.00868008 1.000000e+00\n 2.64007761  1.26333069 1.000000e+00\n 1.98550114  1.18509599 1.000000e+00\n-0.58941683 -0.61972416 9.999998e-01\n-4.57559611 -2.30914920 9.995711e-01\n-0.82610544 -0.39347576 9.995711e-01\n-0.02768220  0.20076910 9.995711e-01\n 0.78186399  0.25690215 9.995711e-01\n-0.88314153 -0.20200148 5.000000e-01\n-4.17076452 -2.03547588 5.000000e-01\n 0.93373070  0.54190626 4.289362e-04\n-0.08517734  0.17692491 4.289362e-04\n-4.47546619 -2.14876688 4.289362e-04\n-1.65509103 -0.76898087 4.289362e-04\n-0.39403030 -0.12689705 4.289362e-04\n 0.01203300 -0.18689898 1.841442e-07\n-4.82762639 -2.31391121 1.841442e-07\n-0.72658380 -0.39751171 3.397282e-14\n-2.35886866 -1.01082109 0.000000e+00\n-2.03762707 -0.96439902 0.000000e+00\n 0.90115123  0.60172286 0.000000e+00\n 1.55999194  0.83433953 0.000000e+00\n 3.07994058  1.30942776 0.000000e+00\n 1.78871462  1.10605530 0.000000e+00\n\n\n\nRunning simple linear model returns:\n\n> lm(y~x,data=df)\n\nCall:\nlm(formula = y ~ x, data = df)\n\nCoefficients:\n(Intercept)            x  \n   -0.04173      2.03790  \n\nand \n> max(resid(lm(y~x,data=df)))\n[1] 1.14046\n\nHOWEVER if I use the weighted model then:\n\nlm(formula = y ~ x, data = df, weights = df$weights)\n\nCoefficients:\n(Intercept)            x  \n   -0.05786      1.96087  \n\nand \n> max(resid(lm(y~x,data=df,weights=df$weights)))\n[1] 60.91888\n\n\nas you see, the estimation of the coefficients are nearly the same but the resid() function returns a giant residual.\n\nI am aware that the source of instability is small weights and I understand that the issue can be resolved by zeroing the small weights. However, the cuttof must be controlled by the algorithm in lm.wfit(), either by introducing a user-controlled parameter (such as tol) or setting the cutoff internally proportional to the machine epsilon.",
+            "is_markdown": false,
+            "count": 0,
+            "creation_time": "2018-09-20T14:28:18Z",
+            "creator": "hamedhaseli",
+            "id": 94059,
+            "time": "2018-09-20T14:28:18Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creation_time": "2018-09-21T11:33:07Z",
+            "text": "So this is about lm.wft, not lme.wfit? In any case please run: \n\n   dput(df) \n\nand paste in the result, to make it easier for folks to reproduce. Bonus points if you do it under a more recent version of R.",
+            "bug_id": 17475,
+            "count": 1,
+            "tags": [],
+            "id": 94063,
+            "is_private": false,
+            "creator": "btyner",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2018-09-21T11:33:07Z"
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2018-09-21T12:00:42Z",
+            "id": 94064,
+            "creator": "hamedhaseli",
+            "creation_time": "2018-09-21T12:00:42Z",
+            "count": 2,
+            "is_markdown": false,
+            "text": "For the df pleae use the structure below:\n\ndput(df)\nstructure(list(y = c(1.51156139, -0.63653132, 0.37782776, 3.03792318, \n1.53646523, -2.37727874, 0.37183065, -1.53917553, 1.10926675, \n-0.37786333, 2.43973603, -0.35432394, 2.19296613, 0.49845532, \n1.2500526, 0.84360691, 0.29565993, -0.54081334, 0.83612836, -1.42526769, \n0.10204789, 1.14292898, -3.02942081, -1.37549764, -2.00118016, \n-4.24441674, 1.17168144, 2.64007761, 1.98550114, -0.58941683, \n-4.57559611, -0.82610544, -0.0276822, 0.78186399, -0.88314153, \n-4.17076452, 0.9337307, -0.08517734, -4.47546619, -1.65509103, \n-0.3940303, 0.012033, -4.82762639, -0.7265838, -2.35886866, -2.03762707, \n0.90115123, 1.55999194, 3.07994058, 1.78871462), x = c(0.5520924, \n-0.12599316, 0.42095384, 1.40315446, 0.46076858, -0.73963576, \n0.20407468, -0.95519361, 0.03897129, -0.17523593, 0.97970095, \n-0.03742559, 1.00355263, 0.34816207, 0.76306225, 0.45152356, \n0.53880068, -0.28104525, -0.12885659, -0.87107631, -0.11649899, \n0.37249631, -1.28966997, -0.74676145, -0.55182759, -1.94603608, \n1.00868008, 1.26333069, 1.18509599, -0.61972416, -2.3091492, \n-0.39347576, 0.2007691, 0.25690215, -0.20200148, -2.03547588, \n0.54190626, 0.17692491, -2.14876688, -0.76898087, -0.12689705, \n-0.18689898, -2.31391121, -0.39751171, -1.01082109, -0.96439902, \n0.60172286, 0.83433953, 1.30942776, 1.1060553), weight = c(2.117337e-34, \n2.117337e-34, 4.934135e-31, 2.679495e-24, 2.679495e-24, 6.24416e-21, \n1.455107e-17, 1.455107e-17, 3.390908e-14, 3.390908e-14, 7.902e-11, \n7.902e-11, 0.0004289362, 0.0004289362, 0.5, 0.5, 0.5, 0.5, 0.9995711, \n0.9999998, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9999998, 0.9995711, 0.9995711, \n0.9995711, 0.9995711, 0.5, 0.5, 0.0004289362, 0.0004289362, 0.0004289362, \n0.0004289362, 0.0004289362, 1.841442e-07, 1.841442e-07, 3.397282e-14, \n0, 0, 0, 0, 0, 0)), class = \"data.frame\", row.names = c(NA, -50L\n))",
+            "bug_id": 17475
+          },
+          {
+            "creator": "hamedhaseli",
+            "creation_time": "2018-09-21T12:01:32Z",
+            "text": "(In reply to Benjamin Tyner from comment #1)\n> So this is about lm.wft, not lme.wfit? In any case please run: \n> \n>    dput(df) \n> \n> and paste in the result, to make it easier for folks to reproduce. Bonus\n> points if you do it under a more recent version of R.\n\nI fixed the title thanks.",
+            "bug_id": 17475,
+            "count": 3,
+            "is_markdown": false,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2018-09-21T12:01:32Z",
+            "id": 94065,
+            "is_private": false
+          },
+          {
+            "time": "2018-09-22T12:01:32Z",
+            "id": 94067,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "Thank you. Arguably, a more serious concern is that the predict() and fitted() methods return divergent results:\n\n   > fit <- lm(y~x,data=df,weights=df$weight)\n   > min(predict(fit) - fitted(fit))\n   [1] -10.02918\n\nIn any case, if you care about the accuracy of the residual for an observation with such a small weight, you'll need to compute it yourself e.g. via:\n\n\n   > df$resid.bad <- resid(fit)\n   > df$resid <- df$y - predict(fit)\n   > head(df)\n              y          x       weight   resid.bad      resid\n   1  1.5115614  0.5520924 2.117337e-34  -7.2436891  0.4868415\n   2 -0.6365313 -0.1259932 2.117337e-34 -10.3607889 -0.3316117\n   3  0.3778278  0.4209538 4.934135e-31  -0.3897461 -0.3897461\n   4  3.0379232  1.4031545 2.679495e-24   0.3443788  0.3443788\n   5  1.5364652  0.4607686 2.679495e-24   0.6908197  0.6908197\n   6 -2.3772787 -0.7396358 6.244160e-21  -0.8690840 -0.8690840",
+            "bug_id": 17475,
+            "count": 4,
+            "is_markdown": false,
+            "creator": "btyner",
+            "creation_time": "2018-09-22T12:01:32Z"
+          },
+          {
+            "time": "2018-09-22T17:30:48Z",
+            "id": 94068,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "(In reply to Benjamin Tyner from comment #4)\n> Thank you. Arguably, a more serious concern is that the predict() and\n> fitted() methods return divergent results:\n> \n>    > fit <- lm(y~x,data=df,weights=df$weight)\n>    > min(predict(fit) - fitted(fit))\n>    [1] -10.02918\n> \n> In any case, if you care about the accuracy of the residual for an\n> observation with such a small weight, you'll need to compute it yourself\n> e.g. via:\n> \n> \n>    > df$resid.bad <- resid(fit)\n>    > df$resid <- df$y - predict(fit)\n>    > head(df)\n>               y          x       weight   resid.bad      resid\n>    1  1.5115614  0.5520924 2.117337e-34  -7.2436891  0.4868415\n>    2 -0.6365313 -0.1259932 2.117337e-34 -10.3607889 -0.3316117\n>    3  0.3778278  0.4209538 4.934135e-31  -0.3897461 -0.3897461\n>    4  3.0379232  1.4031545 2.679495e-24   0.3443788  0.3443788\n>    5  1.5364652  0.4607686 2.679495e-24   0.6908197  0.6908197\n>    6 -2.3772787 -0.7396358 6.244160e-21  -0.8690840 -0.8690840\n\nYes, your point is even more serious.\n\nThere are some ways of rounding this issue but all need the knowledge of the issue. Other words, we know this bug exists and then we can solve it by alternative methods as you pointed out, however, the other R users may not even know that this issue exists. Then I think that the R core team should fix that on the next release.",
+            "bug_id": 17475,
+            "count": 5,
+            "is_markdown": false,
+            "creator": "hamedhaseli",
+            "creation_time": "2018-09-22T17:30:48Z"
+          },
+          {
+            "creator": "elin.waring",
+            "creation_time": "2026-08-31T01:14:22Z",
+            "text": "I  just tried the code from the original post and the comments. \n\n```\n> max(resid(lm(y~x,data=df)))\n[1] 1.14046\n> max(resid(lm(y~x,data=df,weights=df$weights)))\n[1] 1.14046\n\n```\n\nSo something must have been fixed.\n\nHowever, the issue in comment 4 is still present although with different values.\n\n```\n> head(df)\n           y          x       weight   resid.bad      resid\n1  1.5115614  0.5520924 2.117337e-34  -2.0253637  0.4868415\n2 -0.6365313 -0.1259932 2.117337e-34 -17.5250809 -0.3316117\n3  0.3778278  0.4209538 4.934135e-31  -0.3897461 -0.3897461\n4  3.0379232  1.4031545 2.679495e-24   0.3443788  0.3443788\n5  1.5364652  0.4607686 2.679495e-24   0.6908197  0.6908197\n6 -2.3772787 -0.7396358 6.244160e-21  -0.8690840 -0.8690840\n\n```",
+            "bug_id": 17475,
+            "is_markdown": true,
+            "count": 6,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-08-31T01:14:22Z",
+            "id": 103497,
+            "is_private": false
+          },
+          {
+            "creation_time": "2026-09-01T13:57:57Z",
+            "creator": "maechler",
+            "count": 7,
+            "is_markdown": true,
+            "bug_id": 17475,
+            "text": "(In reply to Elin Waring from comment #6)\n> I  just tried the code from the original post and the comments. \n> \n> ```\n> > max(resid(lm(y~x,data=df)))\n> [1] 1.14046\n> > max(resid(lm(y~x,data=df,weights=df$weights)))\n> [1] 1.14046\n> \n> ```\n> \n> So something must have been fixed.\n\nActually, no -- Sebastian just told me (we are in person at the R Sprint in Birmingham):  You have a typo above:  `df$weights` is `NULL`, whereas you'd really wanted `df$weight`.\n\nAnyways, we've agreed this bug should finally be confirmed at least\n... and be addressed, too. Maybe even now, during the Sprint.",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 103510,
+            "time": "2026-09-01T13:57:57Z"
+          },
+          {
+            "time": "2026-09-01T21:13:06Z",
+            "id": 103526,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "text": "It's just copied from the original post so I'd still say something changed. \n\n```\n\n> max(resid(lm(y~x,data=df,weights=df$weight)))\n[1] 1.146663\n> max(resid(lm(y~x,data=df,weights=df$weights)))\n[1] 1.14046\n```\n\nIt's odd that it doesn't seem to matter whether you put df$weight or df$weights since it is clear that they are different (NULL versus a vector).\n\nThis is on 4.6.1.",
+            "bug_id": 17475,
+            "is_markdown": true,
+            "count": 8,
+            "creator": "elin.waring",
+            "creation_time": "2026-09-01T21:13:06Z"
+          },
+          {
+            "bug_id": 17475,
+            "text": "Actually, I think that what is happening is that in that particular formulation, the weights are not included. \n\n```\n> max(resid(lm(y~x,data=df)))\n[1] 1.14046\n\n\n```\n\nI am looking at this but I am posting this short comment since you are live.",
+            "is_markdown": true,
+            "count": 9,
+            "creation_time": "2026-09-01T21:29:59Z",
+            "creator": "elin.waring",
+            "id": 103527,
+            "time": "2026-09-01T21:29:59Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-09-01T21:55:54Z",
+            "id": 103528,
+            "is_private": false,
+            "creator": "seb.meyer",
+            "creation_time": "2026-09-01T21:55:54Z",
+            "text": "(In reply to Elin Waring from comment #8)\n> It's just copied from the original post\n\nRight, the original report also had the typo.\n\n> It's odd that it doesn't seem to matter whether you put df$weight or df$weights\n\nIt does matter, but the result for the two smallest weights (the first two observations) is also highly system-dependent.\n\n    head(resid(lm(y~x, data=df, weights=df$weight)))\n\ngives me with the internal BLAS/LAPACK on x86_64\n\n              1           2           3           4           5           6 \n    -34.6598025  36.8493894  -0.3897461   0.3443788   0.6908197  -0.8690840 \n\nand with OpenBLAS on x86_64\n\n              1           2           3           4           5           6 \n    -29.4191817  16.8204167  -0.3897461   0.3443788   0.6908197  -0.8690840 \n\nand with OpenBLAS on my aarch64 Pi\n\n              1           2           3           4           5           6 \n     38.1491829 211.8976026  -0.3897461   0.3443788   0.6908197  -0.8690840 \n\nYou seem to get yet a different result with the first two entries negative (seen in your comment 6), as did Ben in comment 4.",
+            "bug_id": 17475,
+            "is_markdown": true,
+            "count": 10
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-09-01T22:04:40Z",
+            "creator": "maechler",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 103529,
+            "creation_time": "2026-09-01T22:04:40Z",
+            "count": 11,
+            "text": "\nIn the mean time, I've spent time playing around reducing the example to a smaller one with \"easier\" data:\n\n```\nmkD <- function(nlog2.w = 111) {\n    stopifnot(length(nlog2.w) == 1, nlog2.w >= 13)\n    data.frame(\n        y = c(29, 24, -10, 35, 8, 13, -23, 2, 18, -48, -22, -32, -68, 19, 42, 32, -9, -73, -13, 0, 12),\n        x = c(71, 35, -8, 64, 22, -8, -56, -7, 24, -83, -48, -35, -125, 65, 81, 76, -40, -148, -25, 13, 16),\n        wts = c(0, 2^-c(rep(nlog2.w, 2), 13:8), rep(1, 12))) # wts is increasing [0 ... 1]\n}\n\ndf <- mkD()\n```\nbut one can play around, using  e.g.,    `df <- mkD(100)`  instead.\n\nCurrently, I'm pretty convinced we should change things in  `lm.wfit()` :\nBasically,from\n```\n  zero.weights <- any(w == 0)\n```\nto (something like, as we rely on our own double prec `qr()`)\n```\n  zero.weights <- any(nok <- w <= 1e-30 * max(w))\n```\nand then, inside the  `if(zero.weights) { .... }`  clause, replace\n```\n    ok <- w != 0\n    nok <- !ok\n```\nwith\n\n```\n   ok <- !nok\n```\n\nThe cutoff 1e-30 is only somewhat arbitrary:  as in the code, really\n`wts <- sqrt(w)`  is used, 1e-30 corresponds to  1e-15 on the `wts` scale which is about 4--5 times `.Machine$double.eps`.\nAs Sebastian also \"shows\" in comment 9, for such small weights, things are really unstable (as actually also, the OP Hamed Haseli said almost 8 years ago..).",
+            "bug_id": 17475
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 103530,
+            "time": "2026-09-02T01:02:19Z",
+            "is_private": false,
+            "creation_time": "2026-09-02T01:02:19Z",
+            "creator": "elin.waring",
+            "bug_id": 17475,
+            "text": "There's another issue where there is some discussion of 0 weights, bug 16008. That report is focused on `logLik()` rather than the functions here.",
+            "is_markdown": true,
+            "count": 12
+          },
+          {
+            "time": "2026-09-02T08:44:02Z",
+            "attachment_id": 3815,
+            "is_markdown": true,
+            "creator": "jaganmn2",
+            "is_private": false,
+            "id": 103532,
+            "tags": [],
+            "count": 13,
+            "text": "Created attachment 3815\nuntested patch from 2025\n\nI have a tentative patch (against r88719) from an R Dev Day in 2025, related to this bug, that needs testing and perhaps then some adjustment.  Embarrassingly this file never made it to Bugzilla.  Uploading for anyone working now (at the Sprint) ...",
+            "bug_id": 17475,
+            "creation_time": "2026-09-02T08:44:02Z"
+          },
+          {
+            "bug_id": 17475,
+            "text": "hi!\n\nI can work on 16008 after checking the patch proposed here. IMO it looks correct but I'll look in detail.",
+            "count": 14,
+            "is_markdown": true,
+            "creation_time": "2026-09-02T10:12:22Z",
+            "creator": "mvargassepulveda",
+            "id": 103535,
+            "time": "2026-09-02T10:12:22Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 103547,
+            "time": "2026-09-02T16:21:33Z",
+            "creation_time": "2026-09-02T16:21:33Z",
+            "creator": "maechler",
+            "count": 15,
+            "is_markdown": true,
+            "bug_id": 17475,
+            "text": "(In reply to Mauricio Vargas from comment #14)\n> I can work on 16008 after checking the patch proposed here. IMO it looks\n> correct but I'll look in detail.\n\nThank you, Mikael and Mauricio.\nI have now added some regression tests, and a NEWS entry and committed\nto svn rev 90471 (R-devel).\n\nNote that I've indeed kept the default  `wtol = 0`  back compatibly.\nThis is to allow more people (and myself) to collect experience by setting\n`wtol = 1e-30` or similar.\n\nIt *is* probably too optimistic to assume that there is such a simple global default appropropriate for all cases.\nRather I'd expect an \"optimal\" `wtol` to be positive, but quite dependent on the\nrank of the QR decomposition, and probably also on the condition number of the \nmodel matrix `X`.\n\nI'm still convinced that the default `wtol = 0` should be changed in a way to be positive almost always.\n\n(One intermediary \"solution\" might be the default to depend on a user-settable option, say `options(lm.wtol = 1e-30)`   but that has drawbacks and I think should *not* be permanent but only intermediary ..."
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "17475": [
+        {
+          "file_name": "lm.wfit.patch",
+          "bug_id": 17475,
+          "creation_time": "2026-09-02T08:44:02Z",
+          "summary": "untested patch from 2025",
+          "is_private": false,
+          "id": 3815,
+          "last_change_time": "2026-09-02T08:44:02Z",
+          "size": 3180,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "jaganmn2",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL1IvbG0uUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy9SL2xtLlIJKHJldmlzaW9uIDg4NzE5KQorKysgc3JjL2xpYnJhcnkvc3RhdHMvUi9sbS5SCSh3b3JraW5nIGNvcHkpCkBAIC0xNDksNyArMTQ5LDcgQEAKIC5sbS5maXQgPC0gZnVuY3Rpb24oeCwgeSwgdG9sID0gMWUtMDcpIC5DYWxsKENfQ2RxcmxzLCB4LCB5LCB0b2wsIGNoZWNrPVRSVUUpCiAKIGxtLndmaXQgPC0gZnVuY3Rpb24gKHgsIHksIHcsIG9mZnNldCA9IE5VTEwsIG1ldGhvZCA9ICJxciIsIHRvbCA9IDFlLTcsCi0gICAgICAgICAgICAgICAgICAgICBzaW5ndWxhci5vayA9IFRSVUUsIC4uLikKKyAgICAgICAgICAgICAgICAgICAgIHd0b2wgPSAwLCBzaW5ndWxhci5vayA9IFRSVUUsIC4uLikKIHsKICAgICBpZihpcy5udWxsKG4gPC0gbnJvdyh4KSkpIHN0b3AoIid4JyBtdXN0IGJlIGEgbWF0cml4IikKICAgICBpZihuID09IDApIHN0b3AoIjAgKG5vbi1OQSkgY2FzZXMiKQpAQCAtMTY4LDE5ICsxNjgsMjQgQEAKICAgICAgICAgICAgICAgICBkb21haW4gPSBOQSkKICAgICBjaGtEb3RzKC4uLikKICAgICB4LmFzZ24gPC0gYXR0cih4LCAiYXNzaWduIikjIHNhdmUKLSAgICB6ZXJvLndlaWdodHMgPC0gYW55KHcgPT0gMCkKKyAgICB3dG9sLiA8LSB3dG9sICogc3VtKHcpCisgICAgdzAgPC0gdyA8PSB3dG9sLgorICAgIHplcm8ud2VpZ2h0cyA8LSBhbnkodzApCisgICAgaWYgKHplcm8ud2VpZ2h0cyAmJiB3dG9sLiAqIG1heCh3W3cwXSkgPiAwKQorCXdhcm5pbmcoZ2V0dGV4dGYoInBvc2l0aXZlIHdlaWdodHMgbGVzcyB0aGFuIG9yIGVxdWFsIHRvIHd0b2wqc3VtKHcpPSVnIHRyZWF0ZWQgYXMgemVybyIsCisJICAgICAgICAgICAgICAgICB3dG9sLiksCisJICAgICAgICBkb21haW4gPSBOQSkKICAgICBpZiAoemVyby53ZWlnaHRzKSB7CiAJc2F2ZS5yIDwtIHkKIAlzYXZlLmYgPC0geQogCXNhdmUudyA8LSB3Ci0Jb2sgPC0gdyAhPSAwCi0Jbm9rIDwtICFvawotCXcgPC0gd1tva10KLQl4MCA8LSB4WyFvaywgLCBkcm9wID0gRkFMU0VdCi0JeCA8LSB4W29rLCAgLCBkcm9wID0gRkFMU0VdCisJbncwIDwtICF3MAorCXcgPC0gd1tudzBdCisJeDAgPC0geFsgdzAsICwgZHJvcCA9IEZBTFNFXQorCXggIDwtIHhbbncwLCAsIGRyb3AgPSBGQUxTRV0KIAluIDwtIG5yb3coeCkKLQl5MCA8LSBpZiAobnkgPiAxTCkgeVshb2ssICwgZHJvcCA9IEZBTFNFXSBlbHNlIHlbIW9rXQotCXkgIDwtIGlmIChueSA+IDFMKSB5WyBvaywgLCBkcm9wID0gRkFMU0VdIGVsc2UgeVtva10KKwl5MCA8LSBpZiAobnkgPiAxTCkgeVsgdzAsICwgZHJvcCA9IEZBTFNFXSBlbHNlIHlbIHcwXQorCXkgIDwtIGlmIChueSA+IDFMKSB5W253MCwgLCBkcm9wID0gRkFMU0VdIGVsc2UgeVtudzBdCiAgICAgfQogICAgIHAgPC0gbmNvbCh4KQogICAgIGlmIChwID09IDApIHsKQEAgLTIyMiwxNiArMjI3LDE2IEBACiAJY29lZltpcy5uYShjb2VmKV0gPC0gMAogCWYwIDwtIHgwICUqJSBjb2VmCiAJaWYgKG55ID4gMSkgewotCSAgICBzYXZlLnJbb2ssIF0gPC0geiRyZXNpZHVhbHMKLQkgICAgc2F2ZS5yW25vaywgXSA8LSB5MCAtIGYwCi0JICAgIHNhdmUuZltvaywgXSA8LSB6JGZpdHRlZC52YWx1ZXMKLQkgICAgc2F2ZS5mW25vaywgXSA8LSBmMAorCSAgICBzYXZlLnJbbncwLCBdIDwtIHokcmVzaWR1YWxzCisJICAgIHNhdmUuclsgdzAsIF0gPC0geTAgLSBmMAorCSAgICBzYXZlLmZbbncwLCBdIDwtIHokZml0dGVkLnZhbHVlcworCSAgICBzYXZlLmZbIHcwLCBdIDwtIGYwCiAJfQogCWVsc2UgewotCSAgICBzYXZlLnJbb2tdIDwtIHokcmVzaWR1YWxzCi0JICAgIHNhdmUucltub2tdIDwtIHkwIC0gZjAKLQkgICAgc2F2ZS5mW29rXSA8LSB6JGZpdHRlZC52YWx1ZXMKLQkgICAgc2F2ZS5mW25va10gPC0gZjAKKwkgICAgc2F2ZS5yW253MF0gPC0geiRyZXNpZHVhbHMKKwkgICAgc2F2ZS5yWyB3MF0gPC0geTAgLSBmMAorCSAgICBzYXZlLmZbbncwXSA8LSB6JGZpdHRlZC52YWx1ZXMKKwkgICAgc2F2ZS5mWyB3MF0gPC0gZjAKIAl9CiAJeiRyZXNpZHVhbHMgPC0gc2F2ZS5yCiAJeiRmaXR0ZWQudmFsdWVzIDwtIHNhdmUuZgpJbmRleDogc3JjL2xpYnJhcnkvc3RhdHMvbWFuL2xtZml0LlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL21hbi9sbWZpdC5SZAkocmV2aXNpb24gODg3MTkpCisrKyBzcmMvbGlicmFyeS9zdGF0cy9tYW4vbG1maXQuUmQJKHdvcmtpbmcgY29weSkKQEAgLTcsMTAgKzcsMTAgQEAKIFx0aXRsZXtGaXR0ZXIgRnVuY3Rpb25zIGZvciBMaW5lYXIgTW9kZWxzfQogXHVzYWdlewogbG0uZml0ICh4LCB5LCAgICBvZmZzZXQgPSBOVUxMLCBtZXRob2QgPSAicXIiLCB0b2wgPSAxZS03LAotICAgICAgIHNpbmd1bGFyLm9rID0gVFJVRSwgXGRvdHMpCisgICAgICAgICAgICAgICAgICBzaW5ndWxhci5vayA9IFRSVUUsIFxkb3RzKQogCiBsbS53Zml0KHgsIHksIHcsIG9mZnNldCA9IE5VTEwsIG1ldGhvZCA9ICJxciIsIHRvbCA9IDFlLTcsCi0gICAgICAgIHNpbmd1bGFyLm9rID0gVFJVRSwgXGRvdHMpCisgICAgICAgIHd0b2wgPSAwLCBzaW5ndWxhci5vayA9IFRSVUUsIFxkb3RzKQogCiAubG0uZml0KHgsIHksIHRvbCA9IDFlLTcpCiB9CkBAIC00Niw2ICs0NiwxMCBAQAogICBcaXRlbXt0b2x9e3RvbGVyYW5jZSBmb3IgdGhlIFxjb2Rle1xsaW5re3FyfX0gZGVjb21wb3NpdGlvbi4gIERlZmF1bHQKICAgICBpcyAxZS03Ln0KIAorICBcaXRlbXt3dG9sfXt0b2xlcmFuY2UgZm9yIHRyZWF0aW5nIHNtYWxsIChyZWxhdGl2ZSB0byBcY29kZXtzdW0odyl9KQorICAgIHBvc2l0aXZlIHdlaWdodHMgYXMgemVyby4gIERlZmF1bHQgaXMgMCwgaW5kaWNhdGluZyB0aGF0IG9ubHkgZXhhY3QKKyAgICB6ZXJvcyBhcmUgdHJlYXRlZCBhcyB6ZXJvLCBmb3IgYmFja3dhcmRzIGNvbXBhdGliaWxpdHkufQorCiAgIFxpdGVte3Npbmd1bGFyLm9rfXtsb2dpY2FsLiBJZiBcY29kZXtGQUxTRX0sIGEgc2luZ3VsYXIgbW9kZWwgaXMgYW4KICAgICBlcnJvci59CiAK",
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-09-02 16:21:33"
+}

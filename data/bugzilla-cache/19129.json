@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "version": "R 4.6.x",
+        "creation_time": "2026-08-07T15:16:40Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19129,
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "I/O",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "Rf_EncodeString sometimes over-counts double quotes",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [],
+        "last_change_time": "2026-08-07T15:16:40Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "ikrylov",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "resolution": "",
+        "creator_detail": {
+          "name": "ikrylov",
+          "id": 3307,
+          "real_name": "Ivan Krylov"
+        },
+        "status": "NEW"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19129": {
+        "comments": [
+          {
+            "time": "2026-08-07T15:16:40Z",
+            "id": 103388,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3777,
+            "text": "Created attachment 3777\nSuggested fix\n\nR prints non-existent bytes after the end of strings marked as `CE_BYTES` that contain both non-ASCII characters and quotes:\n\n```\n$ VALGRIND_OPTS=--track-origins=yes R -d valgrind -e '\n \"\\U10ffff\" |> paste0(strrep(\"\\\"\", 64)) |> `Encoding<-`(\"bytes\")\n'\n...\n==9125== Conditional jump or move depends on uninitialised value(s)\n==9125==    at 0x516F651: utf8_internal_loop (loop.c:335)\n==9125==    by 0x516F651: __gconv_transform_utf8_internal (skeleton.c:619)\n==9125==    by 0x51F38D3: mbrtowc (mbrtowc.c:85)\n==9125==    by 0x2AF947: Rf_EncodeString (printutils.c:692)\n...\n==9125==  Uninitialised value was created by a heap allocation\n==9125==    at 0x48417B4: malloc (vg_replace_malloc.c:381)\n==9125==    by 0x27EC59: Rf_allocVector3 (memory.c:2894)\n==9125==    by 0x27FD48: Rf_allocVector (Rinlinedfuns.h:609)\n==9125==    by 0x27FD48: R_alloc (memory.c:2332)\n==9125==    by 0x2AFCB6: Rf_EncodeString (printutils.c:598)\n...\n \"\\\\xf4\\\\x8f\\\\xbf\\\\xbf\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\"\\\n\"\\\"\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\"\n```\n\nIt's probably not practical to make `mbrtowc()` go out of allocation bounds this way.\n\nA purely-ASCII string does not trigger this problem. For other strings, `IS_BYTES(s)` is true, and the code needs to escape all bytes that aren't printable ASCII. For quotes, the byte count is incremented, but no additional byte is written:\n\n```\n// src/main/printutils.c:598\nchar *pp = R_alloc(4*cnt+1, 1), *qq = pp, buf[5]; // <- allocation\nfor (q = p; *q; q++) {\n    unsigned char k = (unsigned char) *q;\n    if (k >= 0x20 && k < 0x80) {\n        *qq++ = *q;\n        if (quote && *q == '\"') cnt++; // <- over-count\n```\n\nLater the function calls `mbrtowc()` `cnt` times, which exceeds the number of ASCII characters in the string:\n\n```\n// src/main/printutils.c:689\n\tfor (i = 0; i < cnt; i++) {\n\t    wchar_t wc;\n\t    int res = (int)(useUTF8 ? utf8toucs(&wc, p):\n\t\t\t    mbrtowc(&wc, p, R_MB_CUR_MAX, &mb_st)); // use of uninitialised trailing contents\n```\n\nThe quotes are escaped later, the memory for those accounted for when allocating the destination buffer:\n\n```\n// src/main/printutils.c:705\n\t\t    switch(wc) {\n// ...\n\t\t    case L'\"':\n\t\t    case L'`':\n\t\t\t{\n\t\t\t    if(quote == *p)  *q++ = '\\\\';\n```\n\nSo it should be fine to remove the `cnt++`.",
+            "bug_id": 19129,
+            "is_markdown": true,
+            "count": 0,
+            "creator": "ikrylov",
+            "creation_time": "2026-08-07T15:16:40Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19129": [
+        {
+          "id": 3777,
+          "is_private": false,
+          "size": 432,
+          "last_change_time": "2026-08-07T15:16:40Z",
+          "bug_id": 19129,
+          "file_name": "PR19129.patch",
+          "summary": "Suggested fix",
+          "creation_time": "2026-08-07T15:16:40Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL3ByaW50dXRpbHMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9wcmludHV0aWxzLmMJKHJldmlzaW9uIDkwMzcxKQorKysgc3JjL21haW4vcHJpbnR1dGlscy5jCSh3b3JraW5nIGNvcHkpCkBAIC02MDAsNyArNjAwLDYgQEAKIAkJdW5zaWduZWQgY2hhciBrID0gKHVuc2lnbmVkIGNoYXIpICpxOwogCQlpZiAoayA+PSAweDIwICYmIGsgPCAweDgwKSB7CiAJCSAgICAqcXErKyA9ICpxOwotCQkgICAgaWYgKHF1b3RlICYmICpxID09ICciJykgY250Kys7CiAJCX0gZWxzZSB7CiAJCSAgICBzbnByaW50ZihidWYsIDUsICJcXHglMDJ4Iiwgayk7CiAJCSAgICBmb3IoaW50IGogPSAwOyBqIDwgNDsgaisrKSAqcXErKyA9IGJ1ZltqXTsK",
+          "creator": "ikrylov"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-08-07 15:16:40"
+}

@@ -1,0 +1,117 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Wishlist",
+        "creation_time": "2021-12-03T21:06:07Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [
+          "elin.waring"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 18249,
+        "dupe_of": {},
+        "severity": "minor",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "status": "UNCONFIRMED",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Follow guidance from Unicode TR31 in determining valid identifiers for UTF-8 locales",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2022-01-01T00:19:27Z",
+        "cc_detail": [
+          {
+            "real_name": "Elin Waring",
+            "name": "elin.waring",
+            "id": 3299
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18249": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2021-12-03T21:06:07Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 98177,
+            "is_private": false,
+            "creation_time": "2021-12-03T21:06:07Z",
+            "text": "Currently, when running in a MBCS locale, R allows for certain unicode strings as symbols -- for example,\n\n> x <- list(\"你好\" = 42)\n> x$你好\n[1] 42\n\nHowever, this is not true for some other unicode strings; for example:\n\n> x <- list(\"नमस्ते\" = 42)\n> x$नमस्ते\nError: unexpected input in \"x$नमस्\"\n\nI believe this occurs because 'नमस्' contains nonspacing marks, as per\n\nhttps://apps.timwhitlock.info/unicode/inspect?s=%E0%A4%A8%E0%A4%AE%E0%A4%B8%E0%A5%8D%E0%A4%A4%E0%A5%87\n\nAnd the R parser requires each individual character in a symbol name to be considered as alphanumeric (or '.' or '_'):\n\nhttps://github.com/wch/r-source/blob/8df226e3b2c140e48bfbbbe5157a459b7e9a213b/src/main/gram.c#L5364-L5367\n\nThis requirement is also checked in do_makenames (which replaces such characters with a '.'):\n\nhttps://github.com/wch/r-source/blob/8df226e3b2c140e48bfbbbe5157a459b7e9a213b/src/main/character.c#L1034\n\nbut may be checked in other places as well.\n\nCould R expand what it considers to be a valid symbol name, to include strings composed of both letters and marks?\n\n(Note: I use links to the GitHub mirror just because it makes it easy to browse the sources directly in a web browser; I understand they're not the canonical sources.)\n\n---\n\n> sessionInfo()\nR version 4.1.2 (2021-11-01)\nPlatform: aarch64-apple-darwin20.6.0 (64-bit)\nRunning under: macOS Monterey 12.0.1\n\nMatrix products: default\nLAPACK: /opt/homebrew/Cellar/r/4.1.2/lib/R/lib/libRlapack.dylib\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8",
+            "bug_id": 18249,
+            "count": 0
+          },
+          {
+            "attachment_id": {},
+            "time": "2021-12-07T18:57:56Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 98196,
+            "creation_time": "2021-12-07T18:57:56Z",
+            "count": 1,
+            "bug_id": 18249,
+            "text": "To add some more color; the Unicode specification provides TR31 to describe recommended defaults for what unicode strings a programming language should consider to be valid identifiers:\n\nhttps://www.unicode.org/reports/tr31/\n\nIn particular, the specification defines a set of unicode classes which can be considered as valid for the 'start' of a symbol, and what can 'continue' a symbol.\n\n> ID_Start characters are derived from the Unicode General_Category of uppercase letters, lowercase letters, titlecase letters, modifier letters, other letters, letter numbers, plus Other_ID_Start, minus Pattern_Syntax and Pattern_White_Space code points.\n\n> ID_Continue characters include ID_Start characters, plus characters having the Unicode General_Category of nonspacing marks, spacing combining marks, decimal number, connector punctuation, plus Other_ID_Continue , minus Pattern_Syntax and Pattern_White_Space code points.\n\nOther programming languages, e.g. Python, appear to adhere to this specification:\n\nhttps://github.com/python/cpython/blob/06c4ae8b1380eec1c5f3cd8faa21102d1c940bab/Objects/unicodeobject.c#L12323-L12358\n\nGiven the prior art in this space, I think it is reasonable for R to try and follow this specification as well."
+          },
+          {
+            "time": "2022-01-01T00:19:27Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "elin.waring",
+            "is_private": false,
+            "id": 98275,
+            "tags": [],
+            "count": 2,
+            "text": "Supporting UTF8 according to the full specification definitely sounds like a good goal.\nAlthough the copyright says 2015 there seem to have been regular bug fixes and updates.  \nCould you possibly propose a patch?",
+            "bug_id": 18249,
+            "creation_time": "2022-01-01T00:19:27Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18249": []
+    }
+  },
+  "source_changed": "2022-01-01 00:19:27"
+}

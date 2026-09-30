@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Wishlist",
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "enhancement",
+        "deadline": {},
+        "id": 18039,
+        "version": "R 4.0.x",
+        "creation_time": "2021-01-27T05:47:58Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "cc_detail": [],
+        "last_change_time": "2021-01-27T05:50:20Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "Wishlist: allow Sys.setenv() to accept named vector",
+        "url": "",
+        "blocks": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18039": {
+        "comments": [
+          {
+            "bug_id": 18039,
+            "text": "For example, to allow the usage:\n\n    keys <- c(\"A\", \"B\")\n    vals <- c(\"1\", \"2\")\n    names(vals) <- keys\n    Sys.setenv(vals)\n\nThis would make Sys.setenv() a bit easier to use when the environment variable names are determined programmatically. The alternative is to use:\n\n    do.call(Sys.setenv, as.list(vals))\n\nwhich is IMHO more verbose.",
+            "count": 0,
+            "creation_time": "2021-01-27T05:47:58Z",
+            "id": 97022,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2021-01-27T05:47:58Z",
+            "attachment_id": {}
+          },
+          {
+            "is_markdown": true,
+            "count": 1,
+            "text": "Created attachment 2794\nPotential patch (move unlist call earlier)",
+            "bug_id": 18039,
+            "creator": "kevinushey",
+            "creation_time": "2021-01-27T05:50:20Z",
+            "is_private": false,
+            "time": "2021-01-27T05:50:20Z",
+            "id": 97023,
+            "attachment_id": 2794,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18039": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "LS0tIHNyYy9saWJyYXJ5L2Jhc2UvUi9nZXRlbnYuUg0KKysrIHNyYy9saWJyYXJ5L2Jhc2UvUi9nZXRlbnYuUg0KQEAgLTQyLDExICs0MiwxMSBAQCBTeXMuZ2V0ZW52IDwtIGZ1bmN0aW9uKHggPSBOVUxMLCB1bnNldCA9ICIiLCBuYW1lcyA9IE5BKQ0KDQogU3lzLnNldGVudiA8LSBmdW5jdGlvbiguLi4pDQogew0KLSAgICB4IDwtIGxpc3QoLi4uKQ0KKyAgICB4IDwtIHVubGlzdChsaXN0KC4uLikpDQogICAgIG5tIDwtIG5hbWVzKHgpDQogICAgIGlmKGlzLm51bGwobm0pIHx8ICIiICVpbiUgbm0pDQogICAgICAgICBzdG9wKCJhbGwgYXJndW1lbnRzIG11c3QgYmUgbmFtZWQiKQ0KLSAgICAuSW50ZXJuYWwoU3lzLnNldGVudihubSwgYXMuY2hhcmFjdGVyKHVubGlzdCh4KSkpKQ0KKyAgICAuSW50ZXJuYWwoU3lzLnNldGVudihubSwgYXMuY2hhcmFjdGVyKHgpKSkNCiB9DQoNCiBTeXMudW5zZXRlbnYgPC0gZnVuY3Rpb24oeCkgLkludGVybmFsKFN5cy51bnNldGVudihhcy5jaGFyYWN0ZXIoeCkpKQ0K",
+          "creator": "kevinushey",
+          "id": 2794,
+          "is_private": false,
+          "size": 516,
+          "last_change_time": "2021-01-27T05:50:20Z",
+          "bug_id": 18039,
+          "file_name": "file_18039.txt",
+          "summary": "Potential patch (move unlist call earlier)",
+          "creation_time": "2021-01-27T05:50:20Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2021-01-27 05:50:20"
+}

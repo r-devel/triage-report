@@ -1,0 +1,156 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "component": "Misc",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "id": 18354,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "maechler"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2022-06-08T17:15:30Z",
+        "version": "R 4.2.x",
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "name": "maechler",
+            "id": 18
+          }
+        ],
+        "last_change_time": "2022-07-18T04:54:43Z",
+        "blocks": [],
+        "url": "",
+        "summary": "trace() fails for S3-classed functions",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18354": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2022-06-08T17:15:30Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 98776,
+            "creation_time": "2022-06-08T17:15:30Z",
+            "count": 0,
+            "bug_id": 18354,
+            "text": "As posted on r-devel:\n\n```r\nfoo <- function() {\n  invisible(1 + 1)\n}\ntrace(foo, quote(message(\"traced\")), print=FALSE)\nfoo()\n# traced\n```\n\nBut fails with small tweak to set S3 class:\n\n```r\nclass(foo) <- \"bar\"\ntrace(foo, quote(message(\"traced\")), print=FALSE)\n# Constructing traceable class “barWithTrace”\n# Error in .classEnv(className) :\n#   unable to find an environment containing class “bar”\n```\n\nFrom what I can tell, `trace()` starts assuming this is an S4 object and `.classEnv()` is looking for an S4 class definition.\n\nI am a bit wary of filing a patch because my S4 knowledge is so weak -- I'm sure I will break something on the S4 side with whatever I do :)"
+          },
+          {
+            "text": "Whoops, markdown mangled. It seems buzilla doesn't support language tagging (\\`\\`\\`r) Reproducing:\n\n```\nfoo <- function() {\n  invisible(1 + 1)\n}\ntrace(foo, quote(message(\"traced\")), print=FALSE)\nfoo()\n# traced\n```\n\nBut fails with small tweak to set S3 class:\n\n```\nclass(foo) <- \"bar\"\ntrace(foo, quote(message(\"traced\")), print=FALSE)\n# Constructing traceable class “barWithTrace”\n# Error in .classEnv(className) :\n#   unable to find an environment containing class “bar”\n```\n\nFrom what I can tell, `trace()` starts assuming this is an S4 object and\n`.classEnv()` is looking for an S4 class definition.\n\nI am a bit wary of filing a patch because my S4 knowledge is so weak -- I'm\nsure I will break something on the S4 side with whatever I do :)",
+            "bug_id": 18354,
+            "count": 1,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "creation_time": "2022-06-08T17:17:15Z",
+            "time": "2022-06-08T17:17:15Z",
+            "id": 98777,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "is_private": false,
+            "id": 98810,
+            "time": "2022-06-16T15:41:34Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 2,
+            "bug_id": 18354,
+            "text": "I confirm this is a bug.\nGiven the current \"setup\" (i.e., implementation of much of `trace()` via\n`.TraceWithMethods()` from the `methods` package; in <Rsrc>`/src/library/methods/R/trace.R`\n\nI'm convinced we should fix `.TraceWithMethods()` to detect the simple case of an S3-classed function `what`   ...\n((yes, there's more I had wanted to say and explore, but am lacking the time now. Hence \"Save Changes\" now instead of waiting for another week with yet another open tab in my web browser ...;-))",
+            "creation_time": "2022-06-16T15:41:34Z",
+            "creator": "maechler"
+          },
+          {
+            "is_markdown": true,
+            "count": 3,
+            "text": "Great! Thanks for confirming. I'll try and take a look at patching in a few weeks.\n\nDoes branching on `isS4(what)` sound like the right starting place?",
+            "bug_id": 18354,
+            "creator": "michaelchirico4",
+            "creation_time": "2022-06-16T17:22:36Z",
+            "is_private": false,
+            "time": "2022-06-16T17:22:36Z",
+            "id": 98813,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "text": "(In reply to Michael Chirico from comment #3)\n> Great! Thanks for confirming. I'll try and take a look at patching in a few\n> weeks.\n> \n> Does branching on `isS4(what)` sound like the right starting place?\n\nI cannot promise that branching on `isS4(what)` will be *it*, but it looks/sounds like a good approach to try.",
+            "bug_id": 18354,
+            "count": 4,
+            "is_markdown": true,
+            "creator": "maechler",
+            "creation_time": "2022-06-17T12:24:32Z",
+            "time": "2022-06-17T12:24:32Z",
+            "id": 98820,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creation_time": "2022-07-18T04:54:43Z",
+            "creator": "michaelchirico4",
+            "bug_id": 18354,
+            "text": "OK, dug into this a little bit more. Unsure the right way to proceed.\n\nFWIW, there does seem to have been some thought put into S4/S3 separation (e.g. the [line that fails](https://github.com/r-devel/r-svn/blob/9bcb4bef2979e608804fb37ab6471b4894bfa2b2/src/library/methods/R/trace.R#L241) has a comment \"e.g. for a simple S3 class name\"), just that it's not executed quite right.\n\nWhen `foo` is unclassed, `class(foo)` is `\"function\"`, and things work because `getClassDef(\"functionWithTrace\")` succeeds.\n\nWhen `class(foo) = \"bar\"`, `getClassDef(\"barWithTrace\")` is tried in a few permutations, and the error arises when it doesn't succeed.\n\nMoreover, when `class(foo) = c(\"bar\", \"function\")`, `trace()` still fails with similar error.\n\nI'm left wondering which helper is misbehaving / what the desired end state is. My first instinct is that `.classEnv()` shouldn't be failing, and we should be getting back the same result as for plain `\"function\"`.\n\nI'm also a bit puzzled what's happening with `.classEnv()` -- in debugging, we wind up in the source of what looks like `..classEnv()`, not `.classEnv()` -- is that intentional? The comments here suggest maybe it isn't:\n\nhttps://github.com/r-devel/r-svn/blob/9bcb4bef2979e608804fb37ab6471b4894bfa2b2/src/library/methods/R/RClassUtils.R#L1851-L1864\n\nAny nudge here would be appreciated :)",
+            "is_markdown": true,
+            "count": 5,
+            "attachment_id": {},
+            "tags": [],
+            "id": 98927,
+            "time": "2022-07-18T04:54:43Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18354": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2022-07-18 04:54:43"
+}

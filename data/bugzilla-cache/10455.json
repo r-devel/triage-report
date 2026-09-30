@@ -1,0 +1,277 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "last_change_time": "2026-04-21T20:10:47Z",
+        "cc_detail": [
+          {
+            "real_name": "Benjamin Tyner",
+            "name": "btyner",
+            "id": 430
+          },
+          {
+            "real_name": "Elin Waring",
+            "id": 3299,
+            "name": "elin.waring"
+          },
+          {
+            "id": 308,
+            "name": "Kurt.Hornik",
+            "real_name": "Kurt Hornik"
+          },
+          {
+            "real_name": "Michael Chirico",
+            "id": 3256,
+            "name": "michaelchirico4"
+          },
+          {
+            "name": "seb.meyer",
+            "id": 274,
+            "real_name": "Sebastian Meyer"
+          },
+          {
+            "real_name": "Simone Giannerini",
+            "id": 2677,
+            "name": "sgiannerini"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Bug in pacf -- Proposed patch",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Jitterbug compatibility account",
+          "name": "jitterbug-import",
+          "id": 2
+        },
+        "status": "TRIAGED",
+        "creator": "jitterbug-import",
+        "is_creator_accessible": true,
+        "alias": [],
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "cc": [
+          "btyner",
+          "elin.waring",
+          "Kurt.Hornik",
+          "michaelchirico4",
+          "seb.meyer",
+          "sgiannerini"
+        ],
+        "qa_contact": "",
+        "id": 10455,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "creation_time": "2007-11-23T23:33:00Z",
+        "version": "old",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Analyses",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "10455": {
+        "comments": [
+          {
+            "bug_id": 10455,
+            "text": "From: \"Simone Giannerini\" <sgiannerini@gmail.com>\nDear all,\n\nfollowing the thread\n\nhttp://tolstoy.newcastle.edu.au/R/e2/devel/07/09/4338.html\n\nregarding the bug in the partial autocorrelation function for\nmultivariate time series.\nI have prepared a web page with patches and relevant information.\n\nhttp://www2.stat.unibo.it/giannerini/R/pacf.htm\n\nPlease do not hesitate to contact me for further clarifications\n\nregards\n\nSimone\n\n-- \n______________________________________________________\n\nSimone Giannerini\nDipartimento di Scienze Statistiche \"Paolo Fortunati\"\nUniversita' di Bologna\nVia delle belle arti 41 - 40126  Bologna,  ITALY\nTel: +39 051 2098262  Fax: +39 051 232153\nhttp://www2.stat.unibo.it/giannerini/\n______________________________________________________",
+            "is_markdown": false,
+            "count": 0,
+            "creation_time": "2007-11-23T23:33:00Z",
+            "creator": "jitterbug-import",
+            "id": 71127,
+            "time": "2007-11-23T23:33:00Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "id": 71128,
+            "is_private": false,
+            "tags": [],
+            "text": "Audit (from Jitterbug):\nSun Nov 25 13:25:13 2007\tripley\tmoved from incoming to Analyses",
+            "bug_id": 10455,
+            "count": 1,
+            "creation_time": "2007-11-25T19:25:13Z",
+            "time": "2007-11-25T19:25:13Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "jitterbug-import"
+          },
+          {
+            "tags": [],
+            "id": 95074,
+            "is_private": false,
+            "creation_time": "2020-01-05T18:03:36Z",
+            "bug_id": 10455,
+            "text": "I believe this is about the tseries package ... does it belong in this section of bugzilla?",
+            "count": 2,
+            "attachment_id": {},
+            "time": "2020-01-05T18:03:36Z",
+            "creator": "elin.waring",
+            "is_markdown": false
+          },
+          {
+            "creator": "btyner",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2020-01-05T18:17:18Z",
+            "creation_time": "2020-01-05T18:17:18Z",
+            "count": 3,
+            "bug_id": 10455,
+            "text": "(In reply to elin.waring from comment #2)\n> I believe this is about the tseries package ... does it belong in this\n> section of bugzilla?\n\nNo, it does not -- because this doesn't say \"R Core Team <R-core@r-project.org>\":\n\n> utils::maintainer(\"tseries\")\n[1] \"Kurt Hornik <Kurt.Hornik@R-project.org>\"",
+            "tags": [],
+            "is_private": false,
+            "id": 95075
+          },
+          {
+            "attachment_id": {},
+            "time": "2020-01-06T12:40:56Z",
+            "creator": "Kurt.Hornik",
+            "is_markdown": false,
+            "tags": [],
+            "is_private": false,
+            "id": 95083,
+            "creation_time": "2020-01-06T12:40:56Z",
+            "count": 4,
+            "bug_id": 10455,
+            "text": "But pacf() is in package stats and not tseries ...?"
+          },
+          {
+            "text": "(In reply to Kurt Hornik from comment #4)\n> But pacf() is in package stats and not tseries ...?\n\nMy mistake; in that case it does belong here (presuming it's an actual bug).\n\nThe original url no longer works, but FWIW there appears to be some cached information at the Internet Archive's Wayback Machine.",
+            "bug_id": 10455,
+            "is_markdown": false,
+            "count": 5,
+            "creator": "btyner",
+            "creation_time": "2020-01-06T13:36:58Z",
+            "time": "2020-01-06T13:36:58Z",
+            "id": 95084,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "attachment_id": {},
+            "time": "2020-01-19T01:55:17Z",
+            "creator": "elin.waring",
+            "is_markdown": false,
+            "tags": [],
+            "id": 95196,
+            "is_private": false,
+            "creation_time": "2020-01-19T01:55:17Z",
+            "text": "I read the original email thread.  Prof. Giannerini finshed by saying possibly a fix could be made but possibly  a citation for the method used could be provided.\n\nGiannerini suggested that\n\nAs I mentioned in private I suspect that pacf() in the multivariate case computes the\npartial autoregression matrix (in the terminology of Reinsel) rather than the partial autocorrelation matrix\nas the two coincide in the univariate case but are different in the multivariate case as stated explicitly\nin Reisel (Sec. 3.3).\nThis would explain the coefficients well above 1 (in modulus) in the example I have given.\n\n\nHe had posted code on a web page at one point but that page is no loner available.",
+            "bug_id": 10455,
+            "count": 6
+          },
+          {
+            "attachment_id": {},
+            "time": "2020-01-29T11:46:41Z",
+            "creator": "sgiannerini",
+            "is_markdown": false,
+            "tags": [],
+            "id": 95257,
+            "is_private": false,
+            "creation_time": "2020-01-29T11:46:41Z",
+            "bug_id": 10455,
+            "text": "(In reply to elin.waring from comment #6)\n> I read the original email thread.  Prof. Giannerini finshed by saying\n> possibly a fix could be made but possibly  a citation for the method used\n> could be provided.\n> \n> Giannerini suggested that\n> \n> As I mentioned in private I suspect that pacf() in the multivariate case\n> computes the\n> partial autoregression matrix (in the terminology of Reinsel) rather than\n> the partial autocorrelation matrix\n> as the two coincide in the univariate case but are different in the\n> multivariate case as stated explicitly\n> in Reisel (Sec. 3.3).\n> This would explain the coefficients well above 1 (in modulus) in the example\n> I have given.\n> \n> \n> He had posted code on a web page at one point but that page is no loner\n> available.\n\nDear Elin,\n\nI remember I had a closer look at the original code and I could not find an easy way to fix the bug (there were many problems). At the time I had also correspondence with at least one R-core member (Stefano Iacus) and later with Duncan Murdoch, but apparently they did not have time/interest to look into the matter.\nFor such reasons I found it easier to re-write from scratch the multivariate pacf routine by following the multivariate Durbin-Levinson algorithm defined in Wei (1990, first ed.). This is what I have and if there is interest I can make it available again, please let me know.\n\nFor the record, I have a pure R implementation and a Fortran one.\n\nKind regards,\n\nSimone\n\n______________________________________________________\n\nSimone Giannerini\nDipartimento di Scienze Statistiche \"Paolo Fortunati\"\nUniversita' di Bologna\nVia delle belle arti 41 - 40126  Bologna,  ITALY\nTel: +39 051 2098262  Fax: +39 051 232153\n______________________________________________________",
+            "count": 7
+          },
+          {
+            "creator": "elin.waring",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2020-02-01T03:16:29Z",
+            "creation_time": "2020-02-01T03:16:29Z",
+            "text": "Perhaps someone from R-core could suggest how to proceed.  Would it make sense to start a new thread on the mailing list?",
+            "bug_id": 10455,
+            "count": 8,
+            "tags": [],
+            "id": 95269,
+            "is_private": false
+          },
+          {
+            "text": "Quick note: adding Internet Archive versions of the links in the original post:\n\nhttps://web.archive.org/web/20190109011357/https://tolstoy.newcastle.edu.au/R/e2/devel/07/09/4338.html\n\nhttps://web.archive.org/web/20181001223707/http://www2.stat.unibo.it/giannerini/R/pacf.htm",
+            "bug_id": 10455,
+            "count": 9,
+            "creation_time": "2026-03-06T22:03:19Z",
+            "id": 102703,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-03-06T22:03:19Z",
+            "attachment_id": {}
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-03-06T22:07:33Z",
+            "creation_time": "2026-03-06T22:07:33Z",
+            "count": 10,
+            "bug_id": 10455,
+            "text": "The former link is an r-devel thread, sharing since the wayback machine doesn't play well with \"next in thread\" links, although vexingly it appears there's some encoding issues as well:\n\nhttps://stat.ethz.ch/pipermail/r-devel/2007-September/046840.html",
+            "tags": [],
+            "is_private": false,
+            "id": 102704
+          },
+          {
+            "text": "I also find some r-devel messages in later months that were not captured yet in this thread, copying for further context:\n\nhttps://stat.ethz.ch/pipermail/r-devel/2008-January/048063.html\n\n----\n\nDear all,\n\nregarding the bug in pacf\nI have prepared a patch (attached) and tested it against the latest R devel\n\nplatform\nx86_64-unknown-linux-gnu\narch\nx86_64\nos\nlinux-gnu\nsystem         x86_64,\nlinux-gnu\nstatus         Under development\n(unstable)\nmajor\n2\nminor          7.0\n\nyear\n2008\nmonth\n01\nday\n18\nsvn rev\n44040\nlanguage\nR\nversion.string R version 2.7.0 Under development (unstable) (2008-01-18\nr44040)\n\n\nHere I reproduce the example I gave in my previous post to trigger the bug\n\n> set.seed(10)\n>\n> x <- rnorm(1000,sd=10000)\n> y <- rnorm(1000,sd=1)\n> pacf(ts(cbind(x,y)),plot=FALSE,lag.max=10)\n\nPartial autocorrelations of series 'ts(cbind(x, y))', by lag\n\n, , x\n\nx            y\n 0.049 (  1)  0.002 ( -1)\n 0.012 (  2) -0.072 ( -2)\n 0.002 (  3)  0.036 ( -3)\n 0.014 (  4)  0.013 ( -4)\n 0.051 (  5)  0.003 ( -5)\n 0.033 (  6) -0.018 ( -6)\n 0.027 (  7)  0.069 ( -7)\n-0.027 (  8)  0.028 ( -8)\n-0.010 (  9) -0.015 ( -9)\n-0.013 ( 10) -0.015 (-10)\n\n, , y\n\nx            y\n 0.041 (  1) -0.045 (  1)\n 0.008 (  2) -0.027 (  2)\n-0.056 (  3) -0.030 (  3)\n 0.013 (  4) -0.020 (  4)\n 0.017 (  5)  0.004 (  5)\n-0.021 (  6) -0.010 (  6)\n 0.022 (  7)  0.061 (  7)\n 0.029 (  8) -0.034 (  8)\n-0.014 (  9)  0.031 (  9)\n-0.002 ( 10)  0.019 ( 10)\n\nbelow you can find relevant info and an example where I reproduce Wei's book\nresults.\n\nhttp://www2.stat.unibo.it/giannerini/R/pacf.htm\n\nThe routine is pure R, on the website there is also a F95 version.\nI am willing to write a FORTRAN 77 version of the patch if needed but I\nthink this might replace the bugged routine temporarily. Let me know.\n\nThanks for your attention\n\nSimone",
+            "bug_id": 10455,
+            "count": 11,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "creation_time": "2026-03-06T22:15:59Z",
+            "time": "2026-03-06T22:15:59Z",
+            "id": 102705,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "is_private": false,
+            "time": "2026-03-06T22:48:17Z",
+            "id": 102706,
+            "tags": [],
+            "attachment_id": {},
+            "count": 12,
+            "is_markdown": true,
+            "text": "Condensing the above. TL;DR: `pacf()` is confirmed buggy because it can easily produce \"correlations\" exceeding 1 in magnitude.\n\nThe reprex is paraphrased here:\n\n```\nset.seed(10)\n\nx <- rnorm(1000,sd=10000)\ny <- rnorm(1000,sd=1)\nz <- pacf(ts(cbind(x,y)),plot=FALSE,lag.max=10)\nz$acf[,\"x\",\"y\", drop=FALSE]\n# , , y\n#             x\n# 1   374.05174\n# 2    66.71705\n# 3  -535.80950\n# 4   120.80163\n# 5   142.82444\n# 6  -211.71098\n# 7   201.85576\n# 8   286.07852\n# 9  -134.05655\n# 10  -18.20016\n```\n\n`acf(type=\"partial\")` does give the identical result:\n\n```\nacf(ts(cbind(x,y)), type='partial', plot=FALSE, lag.max=10)$acf[,\"x\",\"y\",drop=FALSE]\n# , , y\n#             x\n# 1   374.05174\n# 2    66.71705\n# 3  -535.80950\n# 4   120.80163\n# 5   142.82444\n# 6  -211.71098\n# 7   201.85576\n# 8   286.07852\n# 9  -134.05655\n# 10  -18.20016\n```\n\nThere's some ambiguity about whether `pacf()` is intended for \"correlation\" or \"autoregression\"; as of today, the documentation _does_ explicitly say [\"correlation\"](https://github.com/r-devel/r-svn/blob/5a018329613b1f8fc09ca069a336d928ac3b4c25/src/library/stats/man/acf.Rd#L15-L16),\nTo that end, Prof. Giannerini provides some patches based on the Wei text (I don't have access; the Wikipedia page does cite some of the other texts listed here: https://en.wikipedia.org/wiki/Partial_autocorrelation_function, as well as mentioning the [Durbin](https://repository.lib.ncsu.edu/server/api/core/bitstreams/574e3264-2014-487c-9129-37ae4bea7d9e/content)-Levinson algorithm. I belive I _do_ have Shumway-Stoffer at home somewhere...). Internet Archive did not manage to crawl those patch files unfortunately. I e-mailed Prof. Giannerini requesting the patches.\n\nAs to \"correlation\" vs. \"autoregression\", possibly that could be a new option to `pacf()`, possibly with the default being `\"autoregression\"` if there's some value to back-compatibility here.",
+            "bug_id": 10455,
+            "creator": "michaelchirico4",
+            "creation_time": "2026-03-06T22:48:17Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "10455": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-04-21 20:10:47"
+}

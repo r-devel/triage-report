@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "summary": "should recursive package dependencies be checked in install.packages()?",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [
+          {
+            "name": "btyner",
+            "id": 430,
+            "real_name": "Benjamin Tyner"
+          }
+        ],
+        "last_change_time": "2025-04-13T13:14:03Z",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2019-09-09T18:05:49Z",
+        "version": "R 3.6.xx",
+        "whiteboard": "",
+        "id": 17608,
+        "deadline": {},
+        "severity": "enhancement",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "btyner"
+        ],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Wishlist"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17608": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2019-09-09T18:05:49Z",
+            "id": 94600,
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": false,
+            "count": 0,
+            "text": "In particular, if one attempts to install a package whose _immediate_ dependencies are installed, but _recursive_ dependencies are not installed, install.packages() will not install the missing recursive dependencies.\n\nThis can be demonstrated with the CRAN package 'abc', which currently indirectly depends on SparseM through the dependency chain:\n\n    abc -> quantreg -> SparseM\n\nTo reproduce:\n    \n    templib <- tempfile()\n    dir.create(templib)\n    .libPaths(templib)\n    \n    install.packages(\"abc\", lib = templib)\n    remove.packages(\"SparseM\", lib = templib)\n    remove.packages(\"abc\", lib = templib)\n    install.packages(\"abc\", lib = templib)\n    library(abc, lib = templib)\n\nThe full output I see:\n\n    > templib <- tempfile()\n    > dir.create(templib)\n    > .libPaths(templib)\n    > install.packages(\"abc\", lib = templib)\n    also installing the dependencies ‘SparseM’, ‘MatrixModels’, ‘lattice’, ‘abc.data’, ‘quantreg’, ‘locfit’\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/SparseM_1.77.tgz'\n    Content type 'application/x-gzip' length 1115502 bytes (1.1 MB)\n    ==================================================\n    downloaded 1.1 MB\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/MatrixModels_0.4-1.tgz'\n    Content type 'application/x-gzip' length 364078 bytes (355 KB)\n    ==================================================\n    downloaded 355 KB\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/lattice_0.20-38.tgz'\n    Content type 'application/x-gzip' length 1151957 bytes (1.1 MB)\n    ==================================================\n    downloaded 1.1 MB\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/abc.data_1.0.tgz'\n    Content type 'application/x-gzip' length 4905194 bytes (4.7 MB)\n    ==================================================\n    downloaded 4.7 MB\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/quantreg_5.51.tgz'\n    Content type 'application/x-gzip' length 1538380 bytes (1.5 MB)\n    ==================================================\n    downloaded 1.5 MB\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/locfit_1.5-9.1.tgz'\n    Content type 'application/x-gzip' length 788502 bytes (770 KB)\n    ==================================================\n    downloaded 770 KB\n    \n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/abc_2.1.tgz'\n    Content type 'application/x-gzip' length 587620 bytes (573 KB)\n    ==================================================\n    downloaded 573 KB\n    \n    \n    The downloaded binary packages are in\n    \t/var/folders/b4/2422hswx71z8mgwtv4rhxchr0000gn/T//Rtmp2GNCJh/downloaded_packages\n    > remove.packages(\"SparseM\", lib = templib)\n    > remove.packages(\"abc\", lib = templib)\n    > install.packages(\"abc\", lib = templib)\n    trying URL 'https://cran.rstudio.com/bin/macosx/el-capitan/contrib/3.6/abc_2.1.tgz'\n    Content type 'application/x-gzip' length 587620 bytes (573 KB)\n    ==================================================\n    downloaded 573 KB\n    \n    \n    The downloaded binary packages are in\n    \t/var/folders/b4/2422hswx71z8mgwtv4rhxchr0000gn/T//Rtmp2GNCJh/downloaded_packages\n    > library(abc, lib = templib)\n    Loading required package: abc.data\n    Loading required package: nnet\n    Loading required package: quantreg\n    Error: package ‘SparseM’ required by ‘quantreg’ could not be found\n\nNote that, on the second attempt to install 'abc', 'SparseM' was not installed, and so could not be loaded.\n\nNote that this example is artificial, in that we had to forcefully remove a required sub-package. However, we've seen things like this happen in the wild, especially when e.g. a mixture of packages get installed into different libraries (although I don't have the exact steps one might take to reproduce this in a more natural way).\n\n---\n\n> sessionInfo()\nR version 3.6.1 Patched (2019-08-15 r77002)\nPlatform: x86_64-apple-darwin15.6.0 (64-bit)\nRunning under: macOS Mojave 10.14.6\n\nMatrix products: default\nBLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib\nLAPACK: /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRlapack.dylib\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_3.6.1 tools_3.6.1",
+            "bug_id": 17608,
+            "creator": "kevinushey",
+            "creation_time": "2019-09-09T18:05:49Z"
+          },
+          {
+            "time": "2025-04-13T13:14:03Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "btyner",
+            "id": 101683,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 17608,
+            "text": "Tried the example under R 4.5.0 and the result differs slightly from before; at the point of:\n\n> install.packages(\"abc\", lib = templib)\n\nit now directly gives\n\n  Error: package 'SparseM' required by 'quantreg' could not be found\n  Execution halted\n  ERROR: lazy loading failed for package 'abc'\n\nFor what that's worth...",
+            "count": 1,
+            "creation_time": "2025-04-13T13:14:03Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "17608": []
+    }
+  },
+  "source_changed": "2025-04-13 13:14:03"
+}

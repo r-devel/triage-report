@@ -1,0 +1,108 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-06-23T02:21:18Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 19092,
+        "severity": "normal",
+        "dupe_of": {},
+        "cc": [
+          "R-core"
+        ],
+        "qa_contact": "",
+        "assigned_to": "simon.urbanek",
+        "component": "Mac GUI / Mac specific",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "blocks": [],
+        "url": "",
+        "summary": "`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "Simon Urbanek",
+          "id": 5,
+          "name": "simon.urbanek"
+        },
+        "is_cc_accessible": true,
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [
+          {
+            "real_name": "R-core",
+            "name": "R-core",
+            "id": 16
+          }
+        ],
+        "last_change_time": "2026-06-23T02:21:18Z",
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": ""
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19092": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "text": "Created attachment 3736\nCandidate patch.\n\nOn macOS, `R CMD config --ldflags` does not emit a usable link line for a\nfront-end built against the static `libR.a` (`--enable-R-static-lib`).\nThe line it prints is missing several libraries that `libR.a` depends on,\nand lacks the linker flags needed to pull the whole archive in, so linking\nan embedding application against `libR.a` fails outright (or links but then\nfails to load R's modules at run time).\n\nThis affects only `--enable-R-static-lib` builds on macOS. Shared (`--enable-R-shlib`)\nand framework builds are unaffected, and the change below is a no-op on\nnon-macOS platforms.\n\n## How to reproduce\n\nConfigure and build R as a static library:\n\n```sh\n./configure --enable-R-static-lib\nmake\n```\n\nThen ask R how to link a front-end against it:\n\n```sh\nR CMD config --ldflags\n```\n\nand try to use that line to link any program that embeds R (e.g. a trivial\n`Rf_initEmbeddedR()` driver). The link fails with undefined symbols, e.g.:\n\n```\n\"_pcre2_match_8\", referenced from:\n    _do_grep in libR.a[..](grep.o)\n...\n\"_libintl_setlocale\", referenced from:\n    _setup_Rmainloop in libR.a[..](main.o)\n...\nld: symbol(s) not found for architecture arm64\n```\n\n## Root cause\n\n`STATIC_LIBR` in `etc/Makeconf.in` is built from the *package* flavours of\nthe library lists rather than the full ones:\n\n```make\nSTATIC_LIBR = @WANT_R_STATIC_TRUE@ @STATICR1@ \"$(R_HOME)/lib$(R_ARCH)/libR.a\" @STATICR2@ \\\n    $(BLAS_LIBS) $(FLIBS) @R_XTRA_LIBS@ $(LIBINTL) @READLINE_LIBS@ $(LIBS)\n```\n\n`$(LIBS)` is `@LIBS_PKGS@` and `$(LIBINTL)` is `@LIBINTL_PKGS@`. On macOS,\nconfigure intentionally trims those two for *package* use:\n\n- `LIBS_PKGS` drops `-lpcre2-8 -ldeflate -lzstd -llzma` (configure.ac, the\n  `darwin*` case around the `AC_SUBST(LIBS_PKGS)`), and\n- `LIBINTL_PKGS` is blanked, with the comment *\"On a macOS build which uses\n  static libraries, libintl_dgettext etc are provided by libR.dylib.\"*\n\nThat assumption is correct for a **shared** `libR.dylib` (it carries those\nsymbols, so packages need not relink them), but it is exactly wrong for\n`libR.a`: there is no `libR.dylib`, so the front-end linking `libR.a` must\nprovide pcre2/lzma/zstd/deflate and libintl itself. Hence the undefined\nsymbols.\n\nThere is also a second, related gap. On ELF platforms `STATIC_LIBR` wraps\n`libR.a` in `--whole-archive`/`--no-whole-archive` (via `STATICR1`/`STATICR2`)\nand `MAIN_LDFLAGS` carries `--export-dynamic`, so that all of R's symbols end\nup in the executable and are visible to the modules R `dlopen()`s at run time.\nmacOS sets neither `STATICR1`/`STATICR2` nor `-export_dynamic`, so a static\nfront-end can be left without symbols that those modules need.\n\n## Fix\n\nMake `STATIC_LIBR` use the full, untrimmed lists, and give macOS the\nequivalent of the ELF whole-archive/export-dynamic treatment.\n\n`etc/Makeconf.in`: use `@LIBINTL@`/`@LIBS@` instead of the `$(LIBINTL)`/`$(LIBS)`\npackage variants, and drop the spaces around the archive so macOS can use the\nno-space `-Wl,-force_load,<archive>` form.\n\n`configure.ac` (the `darwin*` case): set\n\n```sh\nSTATICR1=\"-Wl,-force_load,\"\nSTATICR2=\" -Wl,-export_dynamic\"\n```\n\n`-force_load` is the macOS counterpart of `--whole-archive`, and\n`-export_dynamic` keeps R's symbols in the dynamic symbol table for the\n`dlopen()`ed modules. The existing GNU-ld values just carry their own\nsurrounding whitespace now (so the shared template works for both linkers):\n\n```sh\nSTATICR1=\"-Wl,--whole-archive \"\nSTATICR2=\" -Wl,--no-whole-archive\"\n```\n\nThe patch is in `r-static-ldflags.patch` (against `configure.ac` and\n`etc/Makeconf.in`; `configure` is regenerated with autoconf).\n\n## Why this is safe / scope\n\n- `STATICR1`/`STATICR2` are used *only* in `STATIC_LIBR`, and `STATIC_LIBR`\n  is emitted only when `WANT_R_STATIC` is true. So nothing outside\n  `--enable-R-static-lib` is touched -- shared and framework builds are\n  unaffected on every platform.\n- On non-macOS platforms the change is a literal no-op: `LIBS_PKGS == LIBS`\n  and `LIBINTL_PKGS == LIBINTL` there (the trimming is `darwin*`-only), and\n  moving the whitespace into `STATICR1`/`STATICR2` reproduces the identical\n  `--whole-archive ... --no-whole-archive` string.\n- The only behavioural change is for `--enable-R-static-lib` on macOS, which\n  is the broken case.\n\n## Testing\n\nOn aarch64-apple-darwin25.5.0:\n\n- Built R with `./configure --enable-R-static-lib` (default shared BLAS).\n- `R CMD config --ldflags` now prints a complete line:\n\n  ```\n  -Wl,-headerpad_max_install_names ... -Wl,-force_load,<R_HOME>/lib/libR.a \\\n  -Wl,-export_dynamic -L<R_HOME>/lib -lRblas <FLIBS> \\\n  -L<prefix>/lib -lintl -Wl,-framework -Wl,CoreFoundation -lreadline \\\n  -lpcre2-8 -ldeflate -lzstd -llzma -lbz2 -lz -licucore -ldl -lm -liconv\n  ```\n\n- A front-end that embeds R (`Rf_initEmbeddedR()` + evaluation) links with\n  just `R CMD config --cppflags`/`--ldflags`, runs, and loads R's base\n  packages. `otool -L` confirms the binary has no `libR.dylib` dependency\n  (R is statically linked in).\n- Re-checked that a `--enable-R-shlib` build still produces the same\n  `--ldflags` as before (the static branch is not taken).",
+            "bug_id": 19092,
+            "creator": "kevinushey",
+            "creation_time": "2026-06-23T02:21:18Z",
+            "is_private": false,
+            "time": "2026-06-23T02:21:18Z",
+            "id": 103225,
+            "attachment_id": 3736,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19092": [
+        {
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IGNvbmZpZ3VyZS5hYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBjb25maWd1cmUuYWMJKHJldmlzaW9uIDg4ODg4KQorKysgY29uZmlndXJlLmFjCSh3b3JraW5nIGNvcHkpCkBAIC0xNTMyLDYgKzE1MzIsMTAgQEAgY2FzZSAiJHtob3N0X29zfSIgaW4KICAgICAjIyB0aGUgaGVhZGVyICh1bm5lY2Vzc2FyaWx5KSwgYW5kIHRodXMgcmVxdWlyZXMgdGhpcyBpbiBvcmRlciB0bwogICAgICMjIGFsbG93IGFic29sdXRlIHBhdGhzIHRvIFIgbGlicmFyaWVzIChlLmcuLCBmb3IgdGhlIGZyYW1ld29yaykKICAgICBtYWluX2xkZmxhZ3M9Ii1XbCwtaGVhZGVycGFkX21heF9pbnN0YWxsX25hbWVzIgorICAgICMjIG1hY09TIGNvdW50ZXJwYXJ0IG9mIHRoZSBHTlUtbGQgLS13aG9sZS1hcmNoaXZlLy0tZXhwb3J0LWR5bmFtaWMKKyAgICAjIyBiZWxvdzsgdXNlZCBvbmx5IGZvciBsaW5raW5nIGEgZnJvbnQtZW5kIHRvIHRoZSBzdGF0aWMgbGliUi5hLgorICAgIFNUQVRJQ1IxPSItV2wsLWZvcmNlX2xvYWQiCisgICAgU1RBVElDUjI9Ii1XbCwtZXhwb3J0X2R5bmFtaWMiCiAgICAgIyMgIC1zaW5nbGVfbW9kdWxlIGlzIGRlZmF1bHQgYW5kIC1tdWx0aXBseV9kZWZpbmVkIGlzIG9ic29sZXRlCiAgICAgIyMgYXQgbGVhc3Qgc2luY2UgbWFjT1MgMTEgKGRhcndpbiAyMCkKICAgICBjYXNlICIke2hvc3Rfb3N9IiBpbgpJbmRleDogZXRjL01ha2Vjb25mLmluCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIGV0Yy9NYWtlY29uZi5pbgkocmV2aXNpb24gODg4ODgpCisrKyBldGMvTWFrZWNvbmYuaW4JKHdvcmtpbmcgY29weSkKQEAgLTE1NSw3ICsxNTUsNyBAQCBUQ0xUS19MSUJTID0gQFRDTFRLX0xJQlNACiBZQUNDID0gQFlBQ0NACiAKICMjIGZvciBsaW5raW5nIHRvIGxpYlIuYQotU1RBVElDX0xJQlIgPSBAV0FOVF9SX1NUQVRJQ19UUlVFQCBAU1RBVElDUjFAICIkKFJfSE9NRSkvbGliJChSX0FSQ0gpL2xpYlIuYSIgQFNUQVRJQ1IyQCAkKEJMQVNfTElCUykgJChGTElCUykgQFJfWFRSQV9MSUJTQCAkKExJQklOVEwpIEBSRUFETElORV9MSUJTQCAkKExJQlMpCitTVEFUSUNfTElCUiA9IEBXQU5UX1JfU1RBVElDX1RSVUVAIEBTVEFUSUNSMUAgIiQoUl9IT01FKS9saWIkKFJfQVJDSCkvbGliUi5hIiBAU1RBVElDUjJAICQoQkxBU19MSUJTKSAkKEZMSUJTKSBAUl9YVFJBX0xJQlNAIEBMSUJJTlRMQCBAUkVBRExJTkVfTElCU0AgQExJQlNACiAKICMjIFRoZXNlIGFyZSByZWNvcmRlZCBhcyBtYWNyb3MgZm9yIGxlZ2FjeSB1c2UgaW4gcGFja2FnZXMKICMjIHNldCBvbiBBSVgsIGZvcm1lcmx5IGZvciBvbGQgZ2xpYmMgKC1EX19OT19NQVRIX0lOTElORVMpCg==",
+          "is_private": false,
+          "id": 3736,
+          "last_change_time": "2026-06-23T02:21:18Z",
+          "size": 1438,
+          "file_name": "r-static-ldflags.patch",
+          "bug_id": 19092,
+          "creation_time": "2026-06-23T02:21:18Z",
+          "summary": "Candidate patch."
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-06-23 02:21:18"
+}

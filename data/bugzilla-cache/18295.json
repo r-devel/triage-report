@@ -1,0 +1,91 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Mac GUI / Mac specific",
+        "assigned_to": "simon.urbanek",
+        "id": 18295,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [
+          "R-core"
+        ],
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2022-01-27T12:04:31Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "jeroenooms",
+          "id": 610,
+          "real_name": "Jeroen Ooms"
+        },
+        "platform": "Other",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "jeroenooms",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2022-01-27T12:04:31Z",
+        "cc_detail": [
+          {
+            "name": "R-core",
+            "id": 16,
+            "real_name": "R-core"
+          }
+        ],
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "Simon Urbanek",
+          "id": 5,
+          "name": "simon.urbanek"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Staged install error on M1 host when building universal binary"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18295": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 18295,
+            "text": "Testing universal (dual-arch) binary packages for MacOS 12. Using a standard R 4.1.2 installation, and added to ~/.R/Makevars:\n\n    CC=clang -arch arm64 -arch x86_64\n\nAnd then install a package with compiled code e.g. install.packages('MASS', type = 'source'). On intel MacOS 12.1 this gives the desired result:\n\n   system2('lipo', c('-info', system.file('libs/MASS.so', package = 'MASS')))\n   # Architectures in the fat file: x86_64 arm64\n\nAnd indeed the same binary package seems to work natively on both architectures.\n\nIf I try to do the same on an M1 machine, the installation fails as follows:\n\n   install.packages(\"MASS\", type = 'source')\n   # ...\n   # ** testing if installed package can be loaded from temporary location\n   # ** checking absolute paths in shared objects and dynamic libraries\n   # ERROR: some hard-coded temporary paths could not be fixed\n\nA workaround is to disable staged installation:\n\n   install.packages(\"MASS\", type = 'source', INSTALL_opts='--no-staged-install')",
+            "creation_time": "2022-01-27T12:04:31Z",
+            "creator": "jeroenooms",
+            "is_private": false,
+            "id": 98400,
+            "time": "2022-01-27T12:04:31Z",
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "18295": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2022-01-27 12:04:31"
+}

@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-09-26T01:44:43Z",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "summary": "read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19183,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-09-26T01:44:36Z",
+        "whiteboard": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19183": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-09-26T01:44:36Z",
+            "count": 0,
+            "is_markdown": false,
+            "text": "read.dcf() leaks about 19 KB -- its 8 KB line buffer plus the internal\nallocations of five compiled TRE regexps -- every time it signals an\nerror for malformed input, such as a line that is neither a field nor a\ncontinuation. A process that reads many DCF files and catches the\nerrors leaks on each malformed one.\n\nReproducible example:\n\n    read.dcf(textConnection(\"no colon here\"))\n    ## Error in read.dcf(textConnection(\"no colon here\")) :\n    ##   Line starting 'no colon here ...' is malformed!\n    tf <- tempfile()\n    writeLines(c(\"Package: x\", \"no colon here\"), tf)\n    for (i in 1:1000) {\n        try(read.dcf(textConnection(\"no colon here\")), silent = TRUE)\n        try(read.dcf(textConnection(\"  continuation first\")), silent = TRUE)\n        try(read.dcf(tf), silent = TRUE)\n    }\n\nObserved: each failing call leaks the buffer and the regexps (46\nallocations), whether or not read.dcf() opened the connection itself.\nExpected: the error is signalled and nothing is retained.\n\nAnalysis: do_readDCF() in src/main/dcf.c (trunk r90590) malloc()s\n'buf' and calls tre_regcompb() five times before its read loop, and\nreleases them only after the loop:\n\n    vmaxset(vmax);\n    if(!wasopen) {endcontext(&cntxt); con->close(con);}\n    free(buf);\n    tre_regfree(&blankline);\n    ...\n\nThe two error() calls inside the loop (\"Found continuation line\nstarting '...' at begin of record.\" and \"Line starting '...' is\nmalformed!\") jump past this. The CTXT_CCODE context that is there only\ncloses the connection, and is only set up when do_readDCF() opened the\nconnection, so with an already-open connection there is no cleanup at\nall.\n\nMeasurements: aarch64-apple-darwin25.6.0, macOS leaks after the loop\nabove (3000 failing calls):\n\n    unpatched trunk r90590:  137976 leaks for 58523552 total leaked bytes.\n    patched:                 0 leaks for 0 total leaked bytes.\n\nThis was found with LeakSanitizer by a new read.dcf() fuzz target in\nhttps://github.com/r-devel/r-oss-fuzz, within its first few dozen\ninputs; the defect itself is independent of fuzzing.\n\nProposed patch: attached as read-dcf-error-leak.diff. It always sets up\nthe cleanup context, with a small struct (like cat_info in cat()) that\npoints at the buffer and the regexps and records the connection; the\ncleanup frees the buffer and the compiled regexps, and closes the\nconnection only if do_readDCF() opened it. The normal path ends the\ncontext and calls the same cleanup. The two realloc() failure branches\nno longer free the buffer themselves, since the cleanup now does.\nResults for the base packages' DESCRIPTION files and a set of edge\ncases (continuation lines, blank \".\" lines, comments, fields =, all =\nTRUE, keep.white) are unchanged, as are the error messages, and make\ntest-Reg passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/343,\nwhere CI results can be seen.",
+            "bug_id": 19183,
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-09-26T01:44:36Z",
+            "id": 103709
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-09-26T01:44:43Z",
+            "text": "Created attachment 3871\npatch: free read.dcf() buffer and regexps on error unwind",
+            "bug_id": 19183,
+            "count": 1,
+            "is_markdown": false,
+            "attachment_id": 3871,
+            "tags": [],
+            "time": "2026-09-26T01:44:43Z",
+            "id": 103710,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19183": [
+        {
+          "bug_id": 19183,
+          "file_name": "read-dcf-error-leak.diff",
+          "summary": "patch: free read.dcf() buffer and regexps on error unwind",
+          "creation_time": "2026-09-26T01:44:43Z",
+          "id": 3871,
+          "is_private": false,
+          "size": 4776,
+          "last_change_time": "2026-09-26T01:44:43Z",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL2RjZi5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2RjZi5jCShyZXZpc2lvbiA5MDU5MCkKKysrIHNyYy9tYWluL2RjZi5jCSh3b3JraW5nIGNvcHkpCkBAIC01MiwxMCArNTIsMjggQEAgc3RhdGljIFNFWFAgbWtDaGFyVVRGOHN1Yihjb25zdCBjaGFyICpzKQogICAgIHJldHVybiBta0NoYXJDRShyZXBhaXJlZCwgQ0VfVVRGOCk7CiB9CiAKLXN0YXRpYyB2b2lkIGNvbl9jbGVhbnVwKHZvaWQgKmRhdGEpCisvKiBXaGF0IGRvX3JlYWREQ0YoKSBoYXMgdG8gcmVsZWFzZSBob3dldmVyIGl0IGV4aXRzOiB0aGUgZXJyb3IoKSBjYWxscworICAgaW4gaXRzIHJlYWQgbG9vcCB3b3VsZCBvdGhlcndpc2UgbGVhayB0aGUgbGluZSBidWZmZXIgYW5kIHRoZSBjb21waWxlZAorICAgcmVnZXhwcywgYW5kIGxlYXZlIG9wZW4gYSBjb25uZWN0aW9uIGl0IG9wZW5lZCBpdHNlbGYuICovCit0eXBlZGVmIHN0cnVjdCBkY2ZfaW5mbyB7CisgICAgUmNvbm5lY3Rpb24gY29uOworICAgIGJvb2wgd2Fzb3BlbjsKKyAgICBjaGFyICoqYnVmOwkJCS8qIHRoZSBsaW5lIGJ1ZmZlciwgd2hpY2ggcmVhbGxvYygpIG1heSBtb3ZlICovCisgICAgcmVnZXhfdCAqcmVnZXhbNV07CisgICAgaW50IG5yZWdleDsJCQkvKiBob3cgbWFueSBvZiByZWdleFtdIGhhdmUgYmVlbiBjb21waWxlZCAqLworfSBkY2ZfaW5mbzsKKworc3RhdGljIHZvaWQgZGNmX2NsZWFudXAodm9pZCAqZGF0YSkKIHsKLSAgICBSY29ubmVjdGlvbiBjb24gPSBkYXRhOwotICAgIGlmKGNvbi0+aXNvcGVuKSBjb24tPmNsb3NlKGNvbik7CisgICAgZGNmX2luZm8gKnBkaSA9IChkY2ZfaW5mbyAqKSBkYXRhOworCisgICAgZm9yKGludCBpID0gMDsgaSA8IHBkaS0+bnJlZ2V4OyBpKyspCisJdHJlX3JlZ2ZyZWUocGRpLT5yZWdleFtpXSk7CisgICAgcGRpLT5ucmVnZXggPSAwOworICAgIGZyZWUoKnBkaS0+YnVmKTsKKyAgICAqcGRpLT5idWYgPSBOVUxMOworICAgIGlmKCFwZGktPndhc29wZW4gJiYgcGRpLT5jb24tPmlzb3BlbikKKwlwZGktPmNvbi0+Y2xvc2UocGRpLT5jb24pOwogfQogCiBzdGF0aWMgYm9vbCBmaWVsZF9pc19mb2xkYWJsZV9wKGNvbnN0IGNoYXIgKiwgU0VYUCk7CkBAIC05MiwxMyArMTEwLDE4IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19yZWFkRENGKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKICAgICBpbnQgbndoYXQsIG5yZXQsIG5jLCBuciwgbSwgaywgbGFzdG0sIG5lZWQsIGksIG5fZWJsYW5rbGluZXMgPSAwOwogICAgIGJvb2wgYmxhbmtfc2tpcCwgZmllbGRfc2tpcCA9IGZhbHNlOwogICAgIGludCB3aGF0bGVuLCBkeW53aGF0LCBidWZsZW4gPSA4MDk2OyAvLyB3YXMgMTAwLCBidXQgdGhhdCByZS1hbGxvY2VkIG9mdGVuCi0gICAgY2hhciAqbGluZSwgKmJ1ZjsKKyAgICBjaGFyICpsaW5lLCAqYnVmID0gTlVMTDsKICAgICByZWdleF90IGJsYW5rbGluZSwgY29udGxpbmUsIHRyYWlsYmxhbmssIHJlZ2xpbmUsIGVibGFua2xpbmU7CiAgICAgcmVnbWF0Y2hfdCByZWdtYXRjaFsxXTsKICAgICBTRVhQIGZpbGUsIHdoYXQsIHdoYXQyLCByZXR2YWwsIHJldHZhbDIsIGRpbXMsIGRpbW5hbWVzOwogICAgIFJjb25uZWN0aW9uIGNvbiA9IE5VTEw7CiAgICAgYm9vbCB3YXNvcGVuLCBpc19lYmxhbmtsaW5lOwogICAgIFJDTlRYVCBjbnR4dDsKKyAgICBkY2ZfaW5mbyBkaSA9IHsKKwkuYnVmID0gJmJ1ZiwKKwkucmVnZXggPSB7ICZibGFua2xpbmUsICZ0cmFpbGJsYW5rLCAmY29udGxpbmUsICZyZWdsaW5lLCAmZWJsYW5rbGluZSB9LAorCS5ucmVnZXggPSAwCisgICAgfTsKIAogICAgIFNFWFAgZm9sZF9leGNsdWRlczsKICAgICBib29sIGZpZWxkX2ZvbGQgPSB0cnVlLCBoYXNfZm9sZF9leGNsdWRlczsKQEAgLTExMCwxNCArMTMzLDE2IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19yZWFkRENGKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKICAgICBmaWxlID0gQ0FSKGFyZ3MpOwogICAgIGNvbiA9IGdldENvbm5lY3Rpb24oYXNJbnRlZ2VyKGZpbGUpKTsKICAgICB3YXNvcGVuID0gY29uLT5pc29wZW47Ci0gICAgaWYoIXdhc29wZW4pIHsKLQlpZighY29uLT5vcGVuKGNvbikpIGVycm9yKF8oImNhbm5vdCBvcGVuIHRoZSBjb25uZWN0aW9uIikpOwotCS8qIFNldCB1cCBhIGNvbnRleHQgd2hpY2ggd2lsbCBjbG9zZSB0aGUgY29ubmVjdGlvbiBvbiBlcnJvciAqLwotCWJlZ2luY29udGV4dCgmY250eHQsIENUWFRfQ0NPREUsIFJfTmlsVmFsdWUsIFJfQmFzZUVudiwgUl9CYXNlRW52LAotCQkgICAgIFJfTmlsVmFsdWUsIFJfTmlsVmFsdWUpOwotCWNudHh0LmNlbmQgPSAmY29uX2NsZWFudXA7Ci0JY250eHQuY2VuZGRhdGEgPSBjb247Ci0gICAgfQorICAgIGlmKCF3YXNvcGVuICYmICFjb24tPm9wZW4oY29uKSkKKwllcnJvcihfKCJjYW5ub3Qgb3BlbiB0aGUgY29ubmVjdGlvbiIpKTsKKyAgICAvKiBTZXQgdXAgYSBjb250ZXh0IHdoaWNoIHdpbGwgY2xvc2UgdGhlIGNvbm5lY3Rpb24gaWYgd2Ugb3BlbmVkIGl0LAorICAgICAgIGFuZCBmcmVlIHRoZSBsaW5lIGJ1ZmZlciBhbmQgcmVnZXhwcywgb24gZXJyb3IgKi8KKyAgICBkaS5jb24gPSBjb247CisgICAgZGkud2Fzb3BlbiA9IHdhc29wZW47CisgICAgYmVnaW5jb250ZXh0KCZjbnR4dCwgQ1RYVF9DQ09ERSwgUl9OaWxWYWx1ZSwgUl9CYXNlRW52LCBSX0Jhc2VFbnYsCisJCSBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKKyAgICBjbnR4dC5jZW5kID0gJmRjZl9jbGVhbnVwOworICAgIGNudHh0LmNlbmRkYXRhID0gJmRpOwogICAgIGlmKCFjb24tPmNhbnJlYWQpIGVycm9yKF8oImNhbm5vdCByZWFkIGZyb20gdGhpcyBjb25uZWN0aW9uIikpOwogCiAgICAgYXJncyA9IENEUihhcmdzKTsKQEAgLTE0Myw2ICsxNjgsNyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fcmVhZERDRihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgdHJlX3JlZ2NvbXBiKCZjb250bGluZSwgIl5bIFx0XSsiLCBSRUdfRVhURU5ERUQpOwogICAgIHRyZV9yZWdjb21wYigmcmVnbGluZSwgIl5bXjpdKzpbIFx0XSoiLCBSRUdfRVhURU5ERUQpOwogICAgIHRyZV9yZWdjb21wYigmZWJsYW5rbGluZSwgIl5bIFxmXG5cclx0XHZdK1xcLlsgXGZcblxyXHRcdl0qJCIsIFJFR19FWFRFTkRFRCk7CisgICAgZGkubnJlZ2V4ID0gNTsKIAogICAgIGsgPSAwOwogICAgIGxhc3RtID0gLTE7IC8qIGluZGV4IG9mIHRoZSBmaWVsZCBjdXJyZW50bHkgYmVpbmcgcmVjb3JkZWQgKi8KQEAgLTIwNSwxMSArMjMxLDExIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19yZWFkRENGKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkJCW5lZWQgKz0gKGludCkgc3RybGVuKGxpbmUgKyBvZmZzZXQpICsgbl9lYmxhbmtsaW5lczsKIAkJICAgIH0KIAkJICAgIGlmKGJ1ZmxlbiA8IG5lZWQpIHsKKwkJCS8qIG9uIGZhaWx1cmUsIGRjZl9jbGVhbnVwKCkgZnJlZXMgdGhlIG9sZCBidWZmZXIgKi8KIAkJCWNoYXIgKnRtcCA9IChjaGFyICopIHJlYWxsb2MoYnVmLCBuZWVkKTsKLQkJCWlmKCF0bXApIHsKLQkJCSAgICBmcmVlKGJ1Zik7CisJCQlpZighdG1wKQogCQkJICAgIGVycm9yKF8oImNvdWxkIG5vdCBhbGxvY2F0ZSBtZW1vcnkgZm9yICdyZWFkLmRjZiciKSk7Ci0JCQl9IGVsc2UgYnVmID0gdG1wOworCQkJYnVmID0gdG1wOwogCQkJYnVmbGVuID0gbmVlZDsKIAkJICAgIH0KIAkJICAgIHN0cmNweShidWYsIENIQVIoU1RSSU5HX0VMVChyZXR2YWwsIGxhc3RtICsgbndoYXQgKiBrKSkpOwpAQCAtMjg3LDEwICszMTMsOSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fcmVhZERDRihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJCQluZWVkID0gKGludCkgKFJmX3N0cmNocihsaW5lLCAnOicpIC0gbGluZSArIDEpOwogCQkJaWYoYnVmbGVuIDwgbmVlZCl7CiAJCQkgICAgY2hhciAqdG1wID0gKGNoYXIgKikgcmVhbGxvYyhidWYsIG5lZWQpOwotCQkJICAgIGlmKCF0bXApIHsKLQkJCQlmcmVlKGJ1Zik7CisJCQkgICAgaWYoIXRtcCkKIAkJCQllcnJvcihfKCJjb3VsZCBub3QgYWxsb2NhdGUgbWVtb3J5IGZvciAncmVhZC5kY2YnIikpOwotCQkJICAgIH0gZWxzZSBidWYgPSB0bXA7CisJCQkgICAgYnVmID0gdG1wOwogCQkJICAgIGJ1ZmxlbiA9IG5lZWQ7CiAJCQl9CiAJCQlzdHJuY3B5KGJ1ZiwgbGluZSwgUmZfc3RyY2hyKGxpbmUsICc6JykgLSBsaW5lKTsKQEAgLTMyNCwxMyArMzQ5LDggQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWREQ0YoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCX0KICAgICB9CiAgICAgdm1heHNldCh2bWF4KTsKLSAgICBpZighd2Fzb3Blbikge2VuZGNvbnRleHQoJmNudHh0KTsgY29uLT5jbG9zZShjb24pO30KLSAgICBmcmVlKGJ1Zik7Ci0gICAgdHJlX3JlZ2ZyZWUoJmJsYW5rbGluZSk7Ci0gICAgdHJlX3JlZ2ZyZWUoJmNvbnRsaW5lKTsKLSAgICB0cmVfcmVnZnJlZSgmdHJhaWxibGFuayk7Ci0gICAgdHJlX3JlZ2ZyZWUoJnJlZ2xpbmUpOwotICAgIHRyZV9yZWdmcmVlKCZlYmxhbmtsaW5lKTsKKyAgICBlbmRjb250ZXh0KCZjbnR4dCk7CisgICAgZGNmX2NsZWFudXAoJmRpKTsKIAogICAgIGlmKCFibGFua19za2lwKSBrKys7CiAK",
+          "creator": "kevinushey",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-26 01:44:43"
+}

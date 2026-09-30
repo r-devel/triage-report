@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2024-04-15T16:45:49Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 18703,
+        "cc": [
+          "maechler"
+        ],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Add-ons",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "Warn in library(include.only=) calls where that directive is ignored",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2024-09-30T15:32:10Z",
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "name": "maechler",
+            "id": 18
+          }
+        ],
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "status": "CONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "18703": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2024-04-15T16:45:49Z",
+            "attachment_id": {},
+            "bug_id": 18703,
+            "text": "Following up r-devel thread https://stat.ethz.ch/pipermail/r-devel/2024-April/083319.html.\n\nThis is Martin's suggestion:\n\n```\n    >> I would assume that\n\n    >> library(Matrix, include.only=\"isDiagonal\")\n\n    >> implies that only `isDiagonal` ends up on the search path\n\n    > This could also be a reasonable behavior, but neither does that happen\n    > today.\n\nIndeed; I think we should signal a warning at least in the case\nit does not happen --- namely when \"parts of Matrix\" are already\nin the search path.\n```\n\nI have interpreted this conservatively so that\n\n```\nlibrary(Matrix)\nlibrary(Matrix)\n```\n\nGives no warning, neither does\n\n```\nlibrary(Matrix, include.only=\"isDiagonal\")\nlibrary(Matrix)\n```\n\nThat is, we only throw a new warning in `library()` when (1) the package is already attached and (2) the current call uses `include.only=`.",
+            "count": 0,
+            "creation_time": "2024-04-15T16:45:49Z",
+            "id": 100730,
+            "is_private": false,
+            "tags": []
+          },
+          {
+            "id": 101221,
+            "time": "2024-09-27T12:34:51Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "bug_id": 18703,
+            "text": "Two extras:\n\n1. If we read  `help(library)`, it becomes clear that `include.only=*` and `exclude=*` are  \"twins\"  and we should treat them consistently.\n\n2. According to your proposal,\n\n```\nlibrary(Matrix, include.only=\"isDiagonal\")\nlibrary(Matrix, include.only=\"isDiagonal\")\n```\n\nthe 2nd call would give a warning, but of course, that's exactly the one case it should *not* give a warning.\n\n----\n\nAlso, I think there are cases, where a warning is too much\n(The caller of `library(<pkg>, include.only= *)` \n only wanted to be to get *some* objects from <pkg> visible in search, but does not at all mind if there are more such objects)\n\nand situations where the warning is appropropriate, because the caller wants carefully make *some* `<pkg>` objects visible in `search()`, but *not* others in order to get no / less conflicts later.\n\nHence, one could argue that we should  rather use `message()` than `warning()`...\n__and__ maybe use a classed condition (in both cases).",
+            "count": 1,
+            "is_markdown": true,
+            "creation_time": "2024-09-27T12:34:51Z",
+            "creator": "maechler"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18703": []
+    }
+  },
+  "source_changed": "2024-09-30 15:32:10"
+}

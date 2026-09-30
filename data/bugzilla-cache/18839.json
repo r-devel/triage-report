@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Translations",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "id": 18839,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2025-01-17T19:10:40Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "last_change_time": "2025-01-17T19:10:40Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "R should produce .mo files",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "18839": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 101449,
+            "tags": [],
+            "count": 0,
+            "bug_id": 18839,
+            "text": ".mo files are compiled .po files.\n\nMuch like how we let R handle compilation of .c to .o files, I think it makes most sense to ship only .po files and let the package build process handle compilation of .po to .mo.\n\nIn particular this would remove one toilsome step from the translation process by eliminating the risk of forgetting to compile .po files and accidentally releasing code where .po and .mo are out of sync.\n\nThis request applies equally to R itself as well as for package code.\n\nOne potential downside I have not thought through carefully enough yet is if this induces any new system requirements:\n\n - For developers of packages with .po files, they should already have `msgfmt` available\n - For users of packages installed from binary, .mo should already be compiled\n - For users of packages installed from source, they may no longer get translations available where they previously came pre-compiled.\n   + There's an interaction with `capabilities('NLS')`, though. I'm not sure it's possible/how common it is to have a machine that has NLS capabilities but not `msgfmt`. Would that be possible if R was installed pre-compiled but packages are built from source?\n   + Windows users building from source require Rtools, which comes with `gettext`, right? Or it could pretty easily be included?\n\nAnother question is how to handle transitioning packages that are currently shipping .mo files -- should we build tooling to always compile .mo, compare it to the existing .mo files, and WARN if different? Simply ignore the inst/po directory right away? Other considerations?\n\nNB: This bug is being filed as a long-overdue follow-up to discussions held at the R Dev Sprint in Warwick, 2023.",
+            "creation_time": "2025-01-17T19:10:40Z",
+            "time": "2025-01-17T19:10:40Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18839": []
+    }
+  },
+  "source_changed": "2025-01-17 19:10:40"
+}

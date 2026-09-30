@@ -1,0 +1,163 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "cc": [
+          "elin.waring"
+        ],
+        "qa_contact": "",
+        "id": 18353,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2022-06-07T22:10:14Z",
+        "version": "R 4.2.x",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "is_confirmed": false,
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "last_change_time": "2025-09-13T19:03:55Z",
+        "cc_detail": [
+          {
+            "id": 3299,
+            "name": "elin.waring",
+            "real_name": "Elin Waring"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "assigning to hashtab via $<- 'corrupts' table",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18353": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 98775,
+            "time": "2022-06-07T22:10:14Z",
+            "is_private": false,
+            "creation_time": "2022-06-07T22:10:14Z",
+            "creator": "kevinushey",
+            "bug_id": 18353,
+            "text": "For example:\n\n```\n> object <- hashtab()\n> object$key <- 42\nError in numhash(x) : not a proper hash table object\n> object\nError in numhash(x) : not a proper hash table object\n```\n\nFrom the documentation of `?hashtab`, it looks like access (or assignment) via `$` and `$<-` isn't supported, but it seems worth either:\n\n1. Supporting access and assignment via `$` for hash tables (perhaps using the accessed value as a string?)\n\n2. Explicitly disallowing access / assignment through `$`, and preventing `$<-` from \"corrupting\" the hashtab object.\n\nSomewhat relatedly, the documentation also states fairly explicitly:\n\n> As an experimental feature, the element operator [[ can also be used get or set hash table entries, and length can be used to obtain the number of entries. It is not yet clear whether this is a good idea.\n\nHas a decision been made as to whether the interface can be considered stable?\n\n---\n\n```\n> sessionInfo()\nR version 4.2.0 (2022-04-22)\nPlatform: aarch64-apple-darwin21.3.0 (64-bit)\nRunning under: macOS Monterey 12.4\n```",
+            "count": 0,
+            "is_markdown": true
+          },
+          {
+            "id": 102222,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18353,
+            "text": "Created attachment 3544\nProvide `$`, `$<-` methods for hashtab",
+            "count": 1,
+            "creation_time": "2025-09-12T13:10:53Z",
+            "time": "2025-09-12T13:10:53Z",
+            "attachment_id": 3544,
+            "is_markdown": true,
+            "creator": "kevinushey"
+          },
+          {
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2025-09-12T13:39:57Z",
+            "attachment_id": 3546,
+            "count": 2,
+            "text": "Created attachment 3546\nAlso disallow `[` and `[<-`",
+            "bug_id": 18353,
+            "creation_time": "2025-09-12T13:39:57Z",
+            "is_private": false,
+            "id": 102225,
+            "tags": []
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 102250,
+            "time": "2025-09-13T19:03:55Z",
+            "creation_time": "2025-09-13T19:03:55Z",
+            "creator": "elin.waring",
+            "count": 3,
+            "is_markdown": true,
+            "bug_id": 18353,
+            "text": "For me, direct assignment like this (especially a key with no value) doesn't make sense.  The `sethash()` function provides access and ensures that it is done properly. \n\n```\n> object <- hashtab()\n> sethash(object, \"1\", 2)\n> object\n<hashtable 0x1248c5760: count = 1, type = \"identical\">\n> gethash(object, \"1\")\n[1] 2\n\n\n```\n\nIf the method is added, I think it should be to signal an error and then preventing corruption of the hash table."
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "18353": [
+        {
+          "data": "ZGlmZiAtLWdpdCBzcmMvbGlicmFyeS91dGlscy9OQU1FU1BBQ0Ugc3JjL2xpYnJhcnkvdXRpbHMvTkFNRVNQQUNFCmluZGV4IDczNzE1MzM0ZjguLmZmZjUxYjU2MGQgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS91dGlscy9OQU1FU1BBQ0UKKysrIHNyYy9saWJyYXJ5L3V0aWxzL05BTUVTUEFDRQpAQCAtMjA5LDYgKzIwOSw4IEBAIFMzbWV0aG9kKHByaW50LCBoYXNodGFiKQogUzNtZXRob2QoZm9ybWF0LCBoYXNodGFiKQogUzNtZXRob2QoIltbIiwgaGFzaHRhYikKIFMzbWV0aG9kKCJbWzwtIiwgaGFzaHRhYikKK1MzbWV0aG9kKCIkIiwgaGFzaHRhYikKK1MzbWV0aG9kKCIkPC0iLCBoYXNodGFiKQogUzNtZXRob2QobGVuZ3RoLCBoYXNodGFiKQogUzNtZXRob2QoYXMuZW52aXJvbm1lbnQsIGhhc2h0YWIpCiBTM21ldGhvZChzdHIsIGhhc2h0YWIpCmRpZmYgLS1naXQgc3JjL2xpYnJhcnkvdXRpbHMvUi9oYXNodGFiLlIgc3JjL2xpYnJhcnkvdXRpbHMvUi9oYXNodGFiLlIKaW5kZXggM2VhODY1ZDUzMi4uMjJjYzY5MTFhZCAxMDA2NDQKLS0tIHNyYy9saWJyYXJ5L3V0aWxzL1IvaGFzaHRhYi5SCisrKyBzcmMvbGlicmFyeS91dGlscy9SL2hhc2h0YWIuUgpAQCAtNjUsNiArNjUsMTUgQEAgcHJpbnQuaGFzaHRhYiA8LSBmdW5jdGlvbih4LCAuLi4pIHsKICAgICBoCiB9CiAKK2AkLmhhc2h0YWJgIDwtIGZ1bmN0aW9uKHgsIG5hbWUpIHsKKyAgICBnZXRoYXNoKHgsIG5hbWUsIE5VTEwpCit9CisKK2AkPC0uaGFzaHRhYmAgPC0gZnVuY3Rpb24oeCwgbmFtZSwgdmFsdWUpIHsKKyAgICBzZXRoYXNoKHgsIG5hbWUsIHZhbHVlKQorICAgIHgKK30KKwogYXMuZW52aXJvbm1lbnQuaGFzaHRhYiA8LSBmdW5jdGlvbih4KQogICAgIHN0b3AoImludmFsaWQgb2JqZWN0IGZvciAnYXMuZW52aXJvbm1lbnQnIikKIApkaWZmIC0tZ2l0IHNyYy9saWJyYXJ5L3V0aWxzL21hbi9oYXNodGFiLlJkIHNyYy9saWJyYXJ5L3V0aWxzL21hbi9oYXNodGFiLlJkCmluZGV4IDMzYzA2NzNmYWUuLjY0MTU4OWRkYmMgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS91dGlscy9tYW4vaGFzaHRhYi5SZAorKysgc3JjL2xpYnJhcnkvdXRpbHMvbWFuL2hhc2h0YWIuUmQKQEAgLTE2LDYgKzE2LDggQEAKIFxhbGlhc3tpcy5oYXNodGFifQogXGFsaWFze1tbLmhhc2h0YWJ9CiBcYWxpYXN7W1s8LS5oYXNodGFifQorXGFsaWFzeyQuaGFzaHRhYn0KK1xhbGlhc3skPC0uaGFzaHRhYn0KIFxhbGlhc3twcmludC5oYXNodGFifQogXGFsaWFze2Zvcm1hdC5oYXNodGFifQogXGFsaWFze2xlbmd0aC5oYXNodGFifQpAQCAtMTYyLDYgKzE2NCwxMiBAQCBoMVtbIkFCQyIsIG5vbWF0Y2ggPSA3N11dCiBoMVtbIkFCQyJdXSA8LSAiREVGIgogaDFbWyJBQkMiXV0KIAorIyMgU2ltaWxhciB1c2luZyAkCitoMSRBQkMgPC0gIkFCQyIKK2gxJEFCQworaDEkQUJDIDwtICJERUYiCitoMSRBQkMKKwogIyMgSW50ZWdlcnMgYW5kIHJlYWwgbnVtYmVycyB0aGF0IGFyZSBlcXVhbCBhcmUgY29uc2lkZXJlZCBkaWZmZXJlbnQKICMjIChub3QgaWRlbnRpY2FsKSBhcyBrZXlzOgogaWRlbnRpY2FsKDMsIDNMKQo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true,
+          "summary": "Provide `$`, `$<-` methods for hashtab",
+          "creation_time": "2025-09-12T13:10:53Z",
+          "bug_id": 18353,
+          "file_name": "18353.patch",
+          "size": 1565,
+          "last_change_time": "2025-09-12T13:10:53Z",
+          "id": 3544,
+          "is_private": false
+        },
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "ZGlmZiAtLWdpdCBzcmMvbGlicmFyeS91dGlscy9OQU1FU1BBQ0Ugc3JjL2xpYnJhcnkvdXRpbHMvTkFNRVNQQUNFCmluZGV4IDczNzE1MzM0ZjguLmE1NDUzMTI4NTQgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS91dGlscy9OQU1FU1BBQ0UKKysrIHNyYy9saWJyYXJ5L3V0aWxzL05BTUVTUEFDRQpAQCAtMjA3LDggKzIwNywxMiBAQCBleHBvcnQoaGFzaHRhYiwgZ2V0aGFzaCwgc2V0aGFzaCwgcmVtaGFzaCwgbnVtaGFzaCwgdHlwaGFzaCwKIAogUzNtZXRob2QocHJpbnQsIGhhc2h0YWIpCiBTM21ldGhvZChmb3JtYXQsIGhhc2h0YWIpCitTM21ldGhvZCgiWyIsIGhhc2h0YWIpCitTM21ldGhvZCgiWzwtIiwgaGFzaHRhYikKIFMzbWV0aG9kKCJbWyIsIGhhc2h0YWIpCiBTM21ldGhvZCgiW1s8LSIsIGhhc2h0YWIpCitTM21ldGhvZCgiJCIsIGhhc2h0YWIpCitTM21ldGhvZCgiJDwtIiwgaGFzaHRhYikKIFMzbWV0aG9kKGxlbmd0aCwgaGFzaHRhYikKIFMzbWV0aG9kKGFzLmVudmlyb25tZW50LCBoYXNodGFiKQogUzNtZXRob2Qoc3RyLCBoYXNodGFiKQpkaWZmIC0tZ2l0IHNyYy9saWJyYXJ5L3V0aWxzL1IvaGFzaHRhYi5SIHNyYy9saWJyYXJ5L3V0aWxzL1IvaGFzaHRhYi5SCmluZGV4IDNlYTg2NWQ1MzIuLmI5MjVlYmJkMjQgMTAwNjQ0Ci0tLSBzcmMvbGlicmFyeS91dGlscy9SL2hhc2h0YWIuUgorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9oYXNodGFiLlIKQEAgLTU3LDYgKzU3LDEyIEBAIHByaW50Lmhhc2h0YWIgPC0gZnVuY3Rpb24oeCwgLi4uKSB7CiAgICAgaW52aXNpYmxlKHgpCiB9CiAKK2BbLmhhc2h0YWJgIDwtIGZ1bmN0aW9uKHgsIGksIGosIC4uLiwgZHJvcCA9IFRSVUUpCisgICAgc3RvcCgib2JqZWN0IG9mIHR5cGUgJ2hhc2h0YWInIGlzIG5vdCBzdWJzZXR0YWJsZSIsIGNhbGwuID0gRkFMU0UpCisKK2BbPC0uaGFzaHRhYmAgPC0gZnVuY3Rpb24oeCwgaSwgaiwgLi4uLCB2YWx1ZSkKKyAgICBzdG9wKCJvYmplY3Qgb2YgdHlwZSAnaGFzaHRhYicgaXMgbm90IHN1YnNldHRhYmxlIiwgY2FsbC4gPSBGQUxTRSkKKwogYFtbLmhhc2h0YWJgIDwtIGZ1bmN0aW9uKGgsIGtleSwgbm9tYXRjaCA9IE5VTEwsIC4uLikKICAgICBnZXRoYXNoKGgsIGtleSwgbm9tYXRjaCkKIApAQCAtNjUsNiArNzEsMTQgQEAgcHJpbnQuaGFzaHRhYiA8LSBmdW5jdGlvbih4LCAuLi4pIHsKICAgICBoCiB9CiAKK2AkLmhhc2h0YWJgIDwtIGZ1bmN0aW9uKHgsIG5hbWUpCisgICAgZ2V0aGFzaCh4LCBuYW1lLCBOVUxMKQorCitgJDwtLmhhc2h0YWJgIDwtIGZ1bmN0aW9uKHgsIG5hbWUsIHZhbHVlKSB7CisgICAgc2V0aGFzaCh4LCBuYW1lLCB2YWx1ZSkKKyAgICB4Cit9CisKIGFzLmVudmlyb25tZW50Lmhhc2h0YWIgPC0gZnVuY3Rpb24oeCkKICAgICBzdG9wKCJpbnZhbGlkIG9iamVjdCBmb3IgJ2FzLmVudmlyb25tZW50JyIpCiAKZGlmZiAtLWdpdCBzcmMvbGlicmFyeS91dGlscy9tYW4vaGFzaHRhYi5SZCBzcmMvbGlicmFyeS91dGlscy9tYW4vaGFzaHRhYi5SZAppbmRleCAzM2MwNjczZmFlLi42NDE1ODlkZGJjIDEwMDY0NAotLS0gc3JjL2xpYnJhcnkvdXRpbHMvbWFuL2hhc2h0YWIuUmQKKysrIHNyYy9saWJyYXJ5L3V0aWxzL21hbi9oYXNodGFiLlJkCkBAIC0xNiw2ICsxNiw4IEBACiBcYWxpYXN7aXMuaGFzaHRhYn0KIFxhbGlhc3tbWy5oYXNodGFifQogXGFsaWFze1tbPC0uaGFzaHRhYn0KK1xhbGlhc3skLmhhc2h0YWJ9CitcYWxpYXN7JDwtLmhhc2h0YWJ9CiBcYWxpYXN7cHJpbnQuaGFzaHRhYn0KIFxhbGlhc3tmb3JtYXQuaGFzaHRhYn0KIFxhbGlhc3tsZW5ndGguaGFzaHRhYn0KQEAgLTE2Miw2ICsxNjQsMTIgQEAgaDFbWyJBQkMiLCBub21hdGNoID0gNzddXQogaDFbWyJBQkMiXV0gPC0gIkRFRiIKIGgxW1siQUJDIl1dCiAKKyMjIFNpbWlsYXIgdXNpbmcgJAoraDEkQUJDIDwtICJBQkMiCitoMSRBQkMKK2gxJEFCQyA8LSAiREVGIgoraDEkQUJDCisKICMjIEludGVnZXJzIGFuZCByZWFsIG51bWJlcnMgdGhhdCBhcmUgZXF1YWwgYXJlIGNvbnNpZGVyZWQgZGlmZmVyZW50CiAjIyAobm90IGlkZW50aWNhbCkgYXMga2V5czoKIGlkZW50aWNhbCgzLCAzTCkK",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2025-09-12T13:39:57Z",
+          "size": 2088,
+          "is_private": false,
+          "id": 3546,
+          "creation_time": "2025-09-12T13:39:57Z",
+          "summary": "Also disallow `[` and `[<-`",
+          "file_name": "18353.patch",
+          "bug_id": 18353
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2025-09-13 19:03:55"
+}

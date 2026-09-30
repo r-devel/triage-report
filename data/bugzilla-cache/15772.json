@@ -1,0 +1,130 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "UNCONFIRMED",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "platform": "All",
+        "flags": [],
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2025-08-13T09:02:24Z",
+        "cc_detail": [
+          {
+            "id": 2442,
+            "name": "tomas.kalibera",
+            "real_name": "Tomas Kalibera"
+          }
+        ],
+        "blocks": [],
+        "url": "",
+        "summary": "WISHLIST: modify behavior of (C entry point) nrows to handle data.frames",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "id": 15772,
+        "deadline": {},
+        "severity": "enhancement",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "tomas.kalibera"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2014-04-22T23:56:16Z",
+        "version": "R-devel (trunk)"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "15772": {
+        "comments": [
+          {
+            "id": 88924,
+            "is_private": false,
+            "tags": [],
+            "text": "This was discussed on R-devel: https://mail.google.com/mail/u/0/#search/R-devel+row.names/1451a88b84e7b6d0\n\nThere are a few things that could be addressed here:\n\n1. `nrows` is part of the C API (ie, it's in Rinternals.h), but AFAICS is not documented. I think it deserves a mention on R-exts or R-ints. Of course, if the reason it is left undocumented is because \"it's exported, but you shouldn't use it unless you're willing to read the source code\", that's okay I suppose. Although its use is illustrated in R-exts 6.1.1 (http://cran.r-project.org/doc/manuals/R-exts.html#Transient-storage-allocation)\n\n2. `nrows` gives misleading results for things that aren't arrays. IIUC, it simply returns the length of ostensibly 1-dimensional objects, leading to things like `nrows(df)` returning the number of 'columns' for a data.frame `df`.\n\n3. There is no 'good' routine in the C API for getting the number of rows from a data.frame. IIUC, by definition, the number of rows is defined by its 'row.names' attribute. However, this attribute can be stored in compact form, and will be expanded automatically on a `getAttrib` call -- a wasteful operation when we just want the number of rows of a `data.frame`. Checking the first column, or one of the columns, is also not preferred since a 'corrupt' data.frame will not have columns of equal length.\n\nI propose the following function (modulo my mistakes):\n\nint df_nrows(SEXP s) {\n    if (!inherits(s, \"data.frame\")) error(\"expecting a data.frame\");\n    SEXP t = getAttrib0(s, R_RowNamesSymbol);\n    // check for compact form\n    if (isInteger(t) && INTEGER(t)[0] == NA_INTEGER && LENGTH(t) == 2)\n      return abs(INTEGER(t)[1]);\n    else\n      return LENGTH(t);\n}\n\nor, alternatively, it could be inlined into the `nrows` function and dispatch in that way for `data.frame`s. Of course, someone out there might be depending on `nrows` returning the number of columns for their `data.frame`...\n\nA similar argument could be made for `ncols`.",
+            "bug_id": 15772,
+            "count": 0,
+            "creation_time": "2014-04-22T23:56:16Z",
+            "time": "2014-04-22T23:56:16Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "kevinushey"
+          },
+          {
+            "creator": "ripley",
+            "creation_time": "2014-04-23T08:32:59Z",
+            "text": "This is not about the R function nrows (pace the original subject) but the C entry point.\n\nC entry point nrows is not part of the C API (read the description in Writing R Extensions more carefully).",
+            "bug_id": 15772,
+            "count": 1,
+            "is_markdown": false,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2014-04-23T08:32:59Z",
+            "id": 88930,
+            "is_private": false
+          },
+          {
+            "bug_id": 15772,
+            "text": "Thanks for the correction, Professor Ripley. This is of course made very clear in R-exts, so I apologise.\n\nI still maintain my request that some API, or function, be made available for computing the number of rows for a data.frame be made available, since the 'best' way of doing so is not obvious, and I think many authors of C code will do something like compute the length of one of the columns (not guaranteed to be correct, e.g. for 0-column data.frames or, more rarely, if an invalid data.frame with columns of different lengths is somehow generated), or could be needlessly expensive if checking e.g. 'length(getAttrib(x, R_RowNamesSymbol))' and a compact-form row.names attribute is expanded.\n\nThanks for taking the time to consider my proposal.",
+            "count": 2,
+            "creation_time": "2014-04-25T06:54:54Z",
+            "id": 88942,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2014-04-25T06:54:54Z",
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "id": 101994,
+            "is_private": false,
+            "creation_time": "2025-08-13T09:02:24Z",
+            "text": "By now C nrows() is part of the API (see R-exts). Still, the function is meant to be used for matrices. As  you found, it doesn't work for data frames, at least since they are implemented on top of (new) lists. I've removed the old and no longer used (and no longer working) data frame code from the implementation to avoid confusion.\n\nWhenever there is R API for something, but not public C API, one can consider going to R (via eval). R function NROW() handles data frames and the underlying code is similar to what you've been proposing.",
+            "bug_id": 15772,
+            "count": 3,
+            "attachment_id": {},
+            "time": "2025-08-13T09:02:24Z",
+            "creator": "tomas.kalibera",
+            "is_markdown": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "15772": []
+    }
+  },
+  "source_changed": "2025-08-13 09:02:24"
+}
