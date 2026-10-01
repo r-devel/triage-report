@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-29._
+_Automatically generated from the R Bugzilla dump updated 2026-09-30._
 
 ## Triaged bugs
 
@@ -22,7 +22,7 @@ _Dates show the most recent triager comment on the bug._
 
 ### Recommended closures
 
-* [Bug 18330](https://bugs.r-project.org/show_bug.cgi?id=18330) — type argument documentation in install.packages (2026-09-19)
+_None._
 
 ### Needs more information
 
@@ -79,6 +79,8 @@ _Dates show when the patch was submitted._
 * [Bug 19182](https://bugs.r-project.org/show_bug.cgi?id=19182) — make.names() leaks its name buffer when a name is invalid in a multibyte locale (2026-09-26)
 * [Bug 19183](https://bugs.r-project.org/show_bug.cgi?id=19183) — read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input (2026-09-26)
 * [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
+* [Bug 19192](https://bugs.r-project.org/show_bug.cgi?id=19192) — sprintf() with a width or precision near INT_MAX overflows the C stack (glibc 2.31) or silently returns "" (2026-09-30)
+* [Bug 19193](https://bugs.r-project.org/show_bug.cgi?id=19193) — mkCharLenCE(): use-after-free of the CHARSXP behind the "embedded nul in string" error (2026-09-30)
 
 ### Mac GUI / Mac specific
 

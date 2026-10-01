@@ -1,0 +1,163 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-09-30T19:47:59Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "id": 19192,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [
+          "luke"
+        ],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Low-level",
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "sprintf() with a width or precision near INT_MAX overflows the C stack (glibc 2.31) or silently returns \"\"",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "real_name": "Luke Tierney",
+            "id": 34,
+            "name": "luke"
+          }
+        ],
+        "last_change_time": "2026-09-30T22:39:18Z",
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19192": {
+        "comments": [
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-09-30T19:47:59Z",
+            "attachment_id": {},
+            "count": 0,
+            "bug_id": 19192,
+            "text": "sprintf() passes a field width or precision near .Machine$integer.max\nstraight to the C library. On glibc 2.31 (e.g. Ubuntu 20.04) that\noverflows the C stack in a standard x86_64 R build; where it doesn't\ncrash, sprintf() silently returns \"\" instead of a result or an error.\n\nReproducible example:\n\n    sprintf(\"%2147483647s\", \"a\")\n    sprintf(\"%.2147483647s\", \"a\")\n    sprintf(\"%*s\", .Machine$integer.max, \"a\")\n\nObserved:\n\n  - x86_64 Ubuntu 20.04 (glibc 2.31), with the distribution's R 3.6.3:\n    the first two give \"Error: segfault from C stack overflow\". R-devel\n    r90601 on glibc 2.31 fails the same way on all three whenever printf\n    hooks are registered (see below; tested on aarch64, which has no\n    libquadmath, with a small LD_PRELOAD library registering a hook in\n    its place).\n  - glibc 2.31 without printf hooks: all three return \"\".\n  - macOS (R-devel r90464): the first and third return \"\".\n\nExpected: the first and third signal the error sprintf() already gives\nfor any width above 8192,\n\n    Error in sprintf(\"%2147483647s\", \"a\") :\n      required resulting string length 2147483647 is greater than maximal 8192\n\nand the second returns \"a\".\n\nAnalysis: do_sprintf() in src/main/sprintf.c (trunk r90601) hands each\nconversion specification to snprintf() unchanged and only checks\nafterwards that the result fits in MAXLINE (8192) bytes. glibc 2.31\nrejects widths and precisions from INT_MAX - 32 up with EOVERFLOW on its\nfast path. But once any printf hooks are registered\n(register_printf_specifier() and friends), it formats every call through\nprintf_positional(), where MAX (prec, width) + EXTSIZ (EXTSIZ is 32)\noverflows int while sizing the work buffer, and the alloca() that\nfollows runs off the end of the stack (stdio-common/vfprintf-internal.c,\nline 2016 in 2.31). libquadmath registers such hooks when it is loaded,\nand x86_64 Linux builds of R load it through libgfortran, so an ordinary\nR session is affected. That alloca() is gone by glibc 2.35, and the\nglibc 2.28 in Rocky 8 does not crash. Where the libc returns -1 instead\n(glibc 2.31 without hooks for widths and precisions, macOS for widths),\nthe nc > MAXLINE check lets it through and sprintf() returns whatever\nits buffer holds.\n\nThis was found by OSS-Fuzz, with AddressSanitizer, on the sprintf target\nin https://github.com/r-devel/r-oss-fuzz, from the input\nsprintf(\"%2147483647s\", \"fuzz\"):\n\n    ERROR: AddressSanitizer: stack-overflow\n        #0 printf_positional     stdio-common/vfprintf-internal.c:2016\n        #1 __vfprintf_internal   stdio-common/vfprintf-internal.c:1733\n        #2 __vsnprintf_internal  libio/vsnprintf.c:114\n        #5 do_sprintf            src/main/sprintf.c:435\n\nProposed patch: attached as sprintf-huge-width.diff (against r90601). A\nnew boundspec() checks the format just before each snprintf() call in\ndo_sprintf(). A width above MAXLINE signals the existing \"required\nresulting string length\" error before the call instead of after it. A\nprecision above MAXLINE is lowered to MAXLINE + 1, which cannot change a\nresult that fits: where precision sets a minimum length (%d, %f, %e,\n%#g) the result is still too long, and for %s and %g it already exceeds\nany string that fits and any significant digit of a double. The check\nruns after checkfmt(), so invalid formats keep their existing errors,\nand '*' arguments are covered because they have already been expanded\nby then.\n\nResults for 42 other formats (ordinary ones, '*' arguments, NA/Inf,\nwidths at and just over the limit, and large precisions such as\n\"%.100000g\" and \"%.9000s\") are identical with the patch, on glibc 2.31\nand on macOS, except for the length quoted in the error for formats\nthat fail either way: sprintf(\"%.9000f\", 1) now reports 8195 rather\nthan 9002. make test-Reg passes.\n\nBug 19188 reports a crash from the same kind of input in format() and\nformatC(); that is a separate int overflow in do_format() (paste.c),\nwhich this patch does not touch.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/346,\nwhere CI results can be seen.",
+            "creation_time": "2026-09-30T19:47:59Z",
+            "is_private": false,
+            "id": 103740,
+            "tags": []
+          },
+          {
+            "attachment_id": 3878,
+            "tags": [],
+            "time": "2026-09-30T19:48:07Z",
+            "id": 103741,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-09-30T19:48:07Z",
+            "text": "Created attachment 3878\npatch: bound sprintf() width and precision before snprintf()",
+            "bug_id": 19192,
+            "is_markdown": false,
+            "count": 1
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "id": 103742,
+            "time": "2026-09-30T20:52:16Z",
+            "is_private": false,
+            "creation_time": "2026-09-30T20:52:16Z",
+            "creator": "luke",
+            "bug_id": 19192,
+            "text": "This feels like it might be something that should be rported and handled upstream by glibc?",
+            "count": 2,
+            "is_markdown": true
+          },
+          {
+            "bug_id": 19192,
+            "text": "Created attachment 3879\npatch v2: bound sprintf() width and precision, with regression tests\n\nGood point -- and it turns out it has been: this is glibc bug 26211,\n\"printf integer overflow calculating allocation size\"\n(https://sourceware.org/bugzilla/show_bug.cgi?id=26211), fixed in glibc\n2.32 by removing that allocation from printf_positional(). (I wrote 2.35\nabove; 2.32 is the first release without it.) Ubuntu 20.04's glibc 2.31\ndoesn't carry the fix, which is why R there, and the OSS-Fuzz runner,\nstill crash. The glibc 2.28 in Rocky 8 doesn't crash, presumably through\na backport.\n\nSo the crash itself is glibc's, and it's fixed there. I'd still suggest\nthe R-side change, for reasons that don't depend on that bug:\n\n  - snprintf() may fail with EOVERFLOW when the output would not fit in\n    an int, and libcs refuse widths near INT_MAX that way: macOS returns\n    -1 for \"%2147483647s\", and so does glibc 2.31's non-positional path.\n    sprintf() only checks nc > MAXLINE, so the -1 goes through and it\n    silently returns \"\", on macOS today and on glibc 2.31 without printf\n    hooks.\n  - A width above MAXLINE can only end in the length error anyway, so\n    checking it before the call costs nothing and gives the same result\n    on every platform, including older glibc that is still in use.\n\nIf you'd rather keep the change smaller, treating nc < 0 as an error in\n_my_sprintf would fix the silent \"\" everywhere, though not the crash on\nglibc 2.31 with printf hooks.\n\nI've also attached sprintf-huge-width-v2.diff, which replaces attachment\n3878. The change to src/main/sprintf.c is identical; v2 adds regression\ntests at the end of tests/reg-tests-1e.R. They assert the usual length\nerror for widths given in the format, through '*', and beyond INT_MAX,\nand that huge precisions give the right result (\"a\" for\n\"%.2147483647s\", and the same string as \"%.9000g\" for \"%.2147483647g\").\nWithout the fix, the width checks fail on macOS, all of them fail on\nglibc 2.31 without printf hooks, and glibc 2.31 with hooks crashes. With\nit, reg-tests-1e.R and make test-Reg pass.\n\nPatch also at https://github.com/r-devel/r-svn/pull/346",
+            "is_markdown": false,
+            "count": 3,
+            "creation_time": "2026-09-30T22:39:12Z",
+            "creator": "kevinushey",
+            "id": 103744,
+            "time": "2026-09-30T22:39:12Z",
+            "is_private": false,
+            "attachment_id": 3879,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19192": [
+        {
+          "bug_id": 19192,
+          "file_name": "sprintf-huge-width.diff",
+          "summary": "patch: bound sprintf() width and precision before snprintf()",
+          "creation_time": "2026-09-30T19:48:07Z",
+          "id": 3878,
+          "is_private": false,
+          "size": 2115,
+          "last_change_time": "2026-09-30T22:39:18Z",
+          "is_obsolete": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL3NwcmludGYuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9zcHJpbnRmLmMJKHJldmlzaW9uIDkwNjAxKQorKysgc3JjL21haW4vc3ByaW50Zi5jCSh3b3JraW5nIGNvcHkpCkBAIC03MCw2ICs3MCw1MSBAQCBzdGF0aWMgYm9vbCBjaGVja2ZtdChjb25zdCBjaGFyICpmbXQsIGNvbnN0IGNoYXIgKnBhdHRlcm4pCiAgICAgcmV0dXJuIHN0cmNzcG4ocCwgcGF0dGVybikgPyB0cnVlIDogZmFsc2U7CiB9CiAKKy8qIFJlYWQgYSBydW4gb2YgZGlnaXRzLCBzYXR1cmF0aW5nIGF0IElOVF9NQVguICovCitzdGF0aWMgaW50IHNjYW5kaWdpdHMoY2hhciAqKnBwKQoreworICAgIGNoYXIgKnAgPSAqcHA7CisgICAgaW50IHYgPSAwOworCisgICAgZm9yICg7ICpwID49ICcwJyAmJiAqcCA8PSAnOSc7IHArKykgeworCWludCBkID0gKnAgLSAnMCc7CisJdiA9ICh2ID4gKElOVF9NQVggLSBkKSAvIDEwKSA/IElOVF9NQVggOiAxMCAqIHYgKyBkOworICAgIH0KKyAgICAqcHAgPSBwOworICAgIHJldHVybiB2OworfQorCisvKgorICAgQm91bmQgdGhlIGZpZWxkIHdpZHRoIGFuZCBwcmVjaXNpb24gYmVmb3JlIHNucHJpbnRmKCkgc2VlcyB0aGVtLgorICAgQSB3aWR0aCBhYm92ZSBNQVhMSU5FIGZhaWxzIHRoZSBsZW5ndGggY2hlY2sgYWZ0ZXIgdGhlIGNhbGwgYW55d2F5LgorICAgQSBwcmVjaXNpb24gYWJvdmUgTUFYTElORSBpcyBsb3dlcmVkIHRvIE1BWExJTkUgKyAxLCB3aGljaCBjYW5ub3QKKyAgIGNoYW5nZSBhIHJlc3VsdCB0aGF0IGZpdHMuICBWYWx1ZXMgbmVhciBJTlRfTUFYIGFyZSBub3Qgc2FmZSB0byBwYXNzCisgICBvbjogZ2xpYmMgMi4zMSBvdmVyZmxvd3MgdGhlIHN0YWNrIG9uIHRoZW0gb25jZSBhbnkgcHJpbnRmIGhvb2tzIGFyZQorICAgcmVnaXN0ZXJlZCwgYXMgbGlicXVhZG1hdGggZG9lcyB3aGVuIGxvYWRlZC4KKyovCitzdGF0aWMgdm9pZCBib3VuZHNwZWMoY2hhciAqZm10KQoreworICAgIGNoYXIgKnAgPSBmbXQsICpwcmVjLCBudW1bMTZdOworICAgIGludCB3aWR0aCwgbmM7CisKKyAgICBpZiAoKnAgIT0gJyUnKSByZXR1cm47CisgICAgZm9yIChwKys7ICpwID09ICctJyB8fCAqcCA9PSAnKycgfHwgKnAgPT0gJyAnIHx8ICpwID09ICcjJyB8fCAqcCA9PSAnMCc7IHArKykKKwk7CisgICAgd2lkdGggPSBzY2FuZGlnaXRzKCZwKTsKKyAgICBpZiAod2lkdGggPiBNQVhMSU5FKQorCWVycm9yKF8oInJlcXVpcmVkIHJlc3VsdGluZyBzdHJpbmcgbGVuZ3RoICVkIGlzIGdyZWF0ZXIgdGhhbiBtYXhpbWFsICVkIiksCisJICAgICAgd2lkdGgsIE1BWExJTkUpOworCisgICAgaWYgKCpwICE9ICcuJykgcmV0dXJuOworICAgIHByZWMgPSArK3A7CisgICAgaWYgKHNjYW5kaWdpdHMoJnApID4gTUFYTElORSkgeworCS8qIG5ldmVyIGxvbmdlciB0aGFuIHRoZSBkaWdpdHMgaXQgcmVwbGFjZXMgKi8KKwluYyA9IHNucHJpbnRmKG51bSwgc2l6ZW9mKG51bSksICIlZCIsIE1BWExJTkUgKyAxKTsKKwltZW1tb3ZlKHByZWMgKyBuYywgcCwgc3RybGVuKHApICsgMSk7CisJbWVtY3B5KHByZWMsIG51bSwgbmMpOworICAgIH0KK30KKwogI2RlZmluZSBUUkFOU0xBVEVfQ0hBUihfU1RSXywgX2lfKSAgXAogICAgKCh1c2VfVVRGOCkgPyB0cmFuc2xhdGVDaGFyVVRGOChTVFJJTkdfRUxUKF9TVFJfLCBfaV8pKSAgXAogICAgIDogdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKF9TVFJfLCBfaV8pKSkKQEAgLTkzLDYgKzEzOCw3IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zcHJpbnRmKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAogI2RlZmluZSBfbXlfc3ByaW50ZihfWF8pCQkJCQkJXAogICAgIHsJCQkJCQkJCQlcCisJYm91bmRzcGVjKGZtdHApOwkJCQkJCVwKIAlpbnQgbmMgPSBzbnByaW50ZihiaXQsIE1BWExJTkUrMSwgZm10cCwgX1hfKTsJCQlcCiAJaWYgKG5jID4gTUFYTElORSkJCQkJCQlcCiAJICAgIGVycm9yKF8oInJlcXVpcmVkIHJlc3VsdGluZyBzdHJpbmcgbGVuZ3RoICVkIGlzIGdyZWF0ZXIgdGhhbiBtYXhpbWFsICVkIiksIFwK",
+          "creator": "kevinushey",
+          "is_patch": true
+        },
+        {
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL3NwcmludGYuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9zcHJpbnRmLmMJKHJldmlzaW9uIDkwNjAxKQorKysgc3JjL21haW4vc3ByaW50Zi5jCSh3b3JraW5nIGNvcHkpCkBAIC03MCw2ICs3MCw1MSBAQCBzdGF0aWMgYm9vbCBjaGVja2ZtdChjb25zdCBjaGFyICpmbXQsIGNvbnN0IGNoYXIgKnBhdHRlcm4pCiAgICAgcmV0dXJuIHN0cmNzcG4ocCwgcGF0dGVybikgPyB0cnVlIDogZmFsc2U7CiB9CiAKKy8qIFJlYWQgYSBydW4gb2YgZGlnaXRzLCBzYXR1cmF0aW5nIGF0IElOVF9NQVguICovCitzdGF0aWMgaW50IHNjYW5kaWdpdHMoY2hhciAqKnBwKQoreworICAgIGNoYXIgKnAgPSAqcHA7CisgICAgaW50IHYgPSAwOworCisgICAgZm9yICg7ICpwID49ICcwJyAmJiAqcCA8PSAnOSc7IHArKykgeworCWludCBkID0gKnAgLSAnMCc7CisJdiA9ICh2ID4gKElOVF9NQVggLSBkKSAvIDEwKSA/IElOVF9NQVggOiAxMCAqIHYgKyBkOworICAgIH0KKyAgICAqcHAgPSBwOworICAgIHJldHVybiB2OworfQorCisvKgorICAgQm91bmQgdGhlIGZpZWxkIHdpZHRoIGFuZCBwcmVjaXNpb24gYmVmb3JlIHNucHJpbnRmKCkgc2VlcyB0aGVtLgorICAgQSB3aWR0aCBhYm92ZSBNQVhMSU5FIGZhaWxzIHRoZSBsZW5ndGggY2hlY2sgYWZ0ZXIgdGhlIGNhbGwgYW55d2F5LgorICAgQSBwcmVjaXNpb24gYWJvdmUgTUFYTElORSBpcyBsb3dlcmVkIHRvIE1BWExJTkUgKyAxLCB3aGljaCBjYW5ub3QKKyAgIGNoYW5nZSBhIHJlc3VsdCB0aGF0IGZpdHMuICBWYWx1ZXMgbmVhciBJTlRfTUFYIGFyZSBub3Qgc2FmZSB0byBwYXNzCisgICBvbjogZ2xpYmMgMi4zMSBvdmVyZmxvd3MgdGhlIHN0YWNrIG9uIHRoZW0gb25jZSBhbnkgcHJpbnRmIGhvb2tzIGFyZQorICAgcmVnaXN0ZXJlZCwgYXMgbGlicXVhZG1hdGggZG9lcyB3aGVuIGxvYWRlZC4KKyovCitzdGF0aWMgdm9pZCBib3VuZHNwZWMoY2hhciAqZm10KQoreworICAgIGNoYXIgKnAgPSBmbXQsICpwcmVjLCBudW1bMTZdOworICAgIGludCB3aWR0aCwgbmM7CisKKyAgICBpZiAoKnAgIT0gJyUnKSByZXR1cm47CisgICAgZm9yIChwKys7ICpwID09ICctJyB8fCAqcCA9PSAnKycgfHwgKnAgPT0gJyAnIHx8ICpwID09ICcjJyB8fCAqcCA9PSAnMCc7IHArKykKKwk7CisgICAgd2lkdGggPSBzY2FuZGlnaXRzKCZwKTsKKyAgICBpZiAod2lkdGggPiBNQVhMSU5FKQorCWVycm9yKF8oInJlcXVpcmVkIHJlc3VsdGluZyBzdHJpbmcgbGVuZ3RoICVkIGlzIGdyZWF0ZXIgdGhhbiBtYXhpbWFsICVkIiksCisJICAgICAgd2lkdGgsIE1BWExJTkUpOworCisgICAgaWYgKCpwICE9ICcuJykgcmV0dXJuOworICAgIHByZWMgPSArK3A7CisgICAgaWYgKHNjYW5kaWdpdHMoJnApID4gTUFYTElORSkgeworCS8qIG5ldmVyIGxvbmdlciB0aGFuIHRoZSBkaWdpdHMgaXQgcmVwbGFjZXMgKi8KKwluYyA9IHNucHJpbnRmKG51bSwgc2l6ZW9mKG51bSksICIlZCIsIE1BWExJTkUgKyAxKTsKKwltZW1tb3ZlKHByZWMgKyBuYywgcCwgc3RybGVuKHApICsgMSk7CisJbWVtY3B5KHByZWMsIG51bSwgbmMpOworICAgIH0KK30KKwogI2RlZmluZSBUUkFOU0xBVEVfQ0hBUihfU1RSXywgX2lfKSAgXAogICAgKCh1c2VfVVRGOCkgPyB0cmFuc2xhdGVDaGFyVVRGOChTVFJJTkdfRUxUKF9TVFJfLCBfaV8pKSAgXAogICAgIDogdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKF9TVFJfLCBfaV8pKSkKQEAgLTkzLDYgKzEzOCw3IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zcHJpbnRmKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAogI2RlZmluZSBfbXlfc3ByaW50ZihfWF8pCQkJCQkJXAogICAgIHsJCQkJCQkJCQlcCisJYm91bmRzcGVjKGZtdHApOwkJCQkJCVwKIAlpbnQgbmMgPSBzbnByaW50ZihiaXQsIE1BWExJTkUrMSwgZm10cCwgX1hfKTsJCQlcCiAJaWYgKG5jID4gTUFYTElORSkJCQkJCQlcCiAJICAgIGVycm9yKF8oInJlcXVpcmVkIHJlc3VsdGluZyBzdHJpbmcgbGVuZ3RoICVkIGlzIGdyZWF0ZXIgdGhhbiBtYXhpbWFsICVkIiksIFwKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDYwMSkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zODAxLDYgKzM4MDEsMjYgQEAgc3RvcGlmbm90KGlkZW50aWNhbChlW1sxXV1bWzJdXSwgZXgpKQogIyMgZ2F2ZSBnYXJiYWdlIChvciBhIGNyYXNoKSBmb3IgdGhlIExIUyBvZiAnKycgaW4gUiA8PSA0LjYueAogCiAKKyMjIHNwcmludGYoKSB3aXRoIGEgd2lkdGggb3IgcHJlY2lzaW9uIG5lYXIgSU5UX01BWCwgUFIjMTkxOTIKK2ltYXggPC0gLk1hY2hpbmUkaW50ZWdlci5tYXgKK2Fzc2VydEVyclYoc3ByaW50ZigiJTIxNDc0ODM2NDdzIiwgImEiKSkKK2Fzc2VydEVyclYoc3ByaW50ZigiJSpzIiwgaW1heCwgImEiKSkKK2Fzc2VydEVyclYoc3ByaW50ZigiJS0yMTQ3NDgzNjQ3ZCIsIDFMKSkKK2Fzc2VydEVyclYoc3ByaW50ZigiJTk5OTk5OTk5OTk5cyIsICJhIikpCithc3NlcnRFcnJWKHNwcmludGYoIiUuMjE0NzQ4MzY0N2YiLCAxKSkKK3N0b3BpZm5vdChleHBycyA9IHsKKyAgICBpZGVudGljYWwoc3ByaW50ZigiJS4yMTQ3NDgzNjQ3cyIsICJhIiksICJhIikKKyAgICBpZGVudGljYWwoc3ByaW50ZigiJS4qcyIsIGltYXgsICJhIiksICJhIikKKyAgICBpZGVudGljYWwoc3ByaW50ZigiJS45OTk5OTk5OTk5OXMiLCAiYSIpLCAiYSIpCisgICAgaWRlbnRpY2FsKHNwcmludGYoIiUuMjE0NzQ4MzY0N2ciLCAwLjEpLCBzcHJpbnRmKCIlLjkwMDBnIiwgMC4xKSkKK30pCitpZihlbmdsaXNoTXNncykKKyAgICBzdG9waWZub3QoZ3JlcGwoImxlbmd0aCAyMTQ3NDgzNjQ3IGlzIGdyZWF0ZXIgdGhhbiBtYXhpbWFsIiwKKyAgICAgICAgICAgICAgICAgICAgdHJ5Q21zZyhzcHJpbnRmKCIlMjE0NzQ4MzY0N3MiLCAiYSIpKSkpCisjIyBvdmVyZmxvd2VkIHRoZSBDIHN0YWNrIChnbGliYyAyLjMxIHdpdGggcHJpbnRmIGhvb2tzIHJlZ2lzdGVyZWQsIGFzCisjIyBsaWJxdWFkbWF0aCBkb2VzKSBvciBzaWxlbnRseSBnYXZlICIiIGluIFIgPD0gNC42LngKKworCiAKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAo=",
+          "creator": "kevinushey",
+          "is_patch": true,
+          "bug_id": 19192,
+          "file_name": "sprintf-huge-width-v2.diff",
+          "summary": "patch v2: bound sprintf() width and precision, with regression tests",
+          "creation_time": "2026-09-30T22:39:12Z",
+          "id": 3879,
+          "is_private": false,
+          "size": 3296,
+          "last_change_time": "2026-09-30T22:39:12Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-09-30 22:39:18"
+}

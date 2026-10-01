@@ -28,6 +28,8 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19182,make.names() leaks its name buffer when a name is invalid in a multibyte locale,Low-level,kevinushey,NEW,2026-09-26 01:44:29 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19182
 19183,read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input,Low-level,kevinushey,NEW,2026-09-26 01:44:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19183
 19184,parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing,Low-level,kevinushey,NEW,2026-09-26 01:44:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19184
+19192,"sprintf() with a width or precision near INT_MAX overflows the C stack (glibc 2.31) or silently returns """"",Low-level,kevinushey,NEW,2026-09-30 22:39:12 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19192
+19193,"mkCharLenCE(): use-after-free of the CHARSXP behind the ""embedded nul in string"" error",Low-level,kevinushey,NEW,2026-09-30 22:50:32 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19193
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19092
 18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18938
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18958
