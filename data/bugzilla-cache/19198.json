@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "cc_detail": [],
+        "last_change_time": "2026-10-01T21:59:55Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "summary": "Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing",
+        "url": "",
+        "blocks": [],
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Windows GUI / Window specific",
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19198,
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-01T21:59:44Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19198": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2026-10-01T21:59:44Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 103759,
+            "is_private": false,
+            "creation_time": "2026-10-01T21:59:44Z",
+            "bug_id": 19198,
+            "text": "On Windows, Rprof()'s sampling thread (ProfileThread() in src/main/eval.c) resumes the main thread before writing each sample to R_ProfileOutfile. R_EndProfiling() only SetEvent()s the stop event and then immediately closes MainThread and fclose()s the output file, without joining the thread. A sample in flight is written through a FILE being closed, and the sampler's next WaitForSingleObject()/SuspendThread() use closed handles. Rprof(file) while profiling takes the same path and then replaces the global profiling state under the old sampler.\n\nTwo smaller issues in the same code: R_InitProfiling() passes the interval as a pointer to a stack-local `wait` and relies on Sleep(wait/2) for the thread to have copied it; and Rprof(NULL) with no profiler running still SetEvent()s and CloseHandle()s already-closed handles.\n\nI ran into this as a Windows CI failure on an unrelated change (https://github.com/r-devel/r-svn/pull/350): the process died in the Rprof() block of tests/reg-tests-2.R with no R-level error and no crash dump.\n\nBeing a race, there is no deterministic reproducer. The attached test in tests/reg-win.R restarts and stops the profiler repeatedly under load and checks that the earlier profile file is left untouched:\n\n    for (i in 1:5) {\n        Rprof(files[1L], memory.profiling = TRUE)\n        out <- lapply(1:10000, rnorm, n = 512)\n        Rprof(files[2L], memory.profiling = TRUE)  # restart while sampling\n        old <- readLines(files[1L])\n        out <- lapply(1:10000, rnorm, n = 512)\n        Rprof(NULL); Rprof(NULL)                   # second stop must be a no-op\n        stopifnot(identical(old, readLines(files[1L])))\n    }\n\nPatch attached as rprof-windows-thread-lifecycle.diff (against r90609):\n\n- _beginthreadex() instead of _beginthread(), so there is a joinable handle;\n- R_EndProfiling() signals, WaitForSingleObject(thread, INFINITE), then closes the thread, event and main-thread handles and the file, and only if a sampler exists;\n- the interval lives in a static that outlives the sampler; the Sleep() is gone;\n- the sampling loop continues only on WAIT_TIMEOUT;\n- DuplicateHandle() and CreateEvent() failures are checked.\n\nValidated on Windows x86_64 (Rtools45 GCC 14.2.0): 1,000 start/restart/stop cycles with a constant process handle count, 25 checks that an in-flight sample completes before its resources are released, and `make -f Makefile.win reg-tests-2.Rout reg-win.Rout` passing on a patched R, including 25 extra iterations of the existing Rprof() block. The new test also passes on macOS.\n\nAlso submitted as https://github.com/r-devel/r-svn/pull/356, where CI results can be seen.",
+            "count": 0
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-10-01T21:59:55Z",
+            "text": "Created attachment 3889\npatch: join the Windows profiling thread before releasing its resources (PR #356)",
+            "bug_id": 19198,
+            "count": 1,
+            "is_markdown": false,
+            "attachment_id": 3889,
+            "tags": [],
+            "time": "2026-10-01T21:59:55Z",
+            "id": 103760,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19198": [
+        {
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDkwNjA5KQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC05MCw3ICs5MCw3IEBAIHN0YXRpYyBpbnQgUl9Qcm9maWxpbmcgPSAwOwogI2lmZGVmIFdpbjMyCiAjIGRlZmluZSBXSU4zMl9MRUFOX0FORF9NRUFOIDEKICMgaW5jbHVkZSA8d2luZG93cy5oPgkJLyogZm9yIENyZWF0ZUV2ZW50LCBTZXRFdmVudCAqLwotIyBpbmNsdWRlIDxwcm9jZXNzLmg+CQkvKiBmb3IgX2JlZ2ludGhyZWFkLCBfZW5kdGhyZWFkICovCisjIGluY2x1ZGUgPHByb2Nlc3MuaD4JCS8qIGZvciBfYmVnaW50aHJlYWRleCAqLwogI2Vsc2UKICMgaWZkZWYgSEFWRV9TWVNfVElNRV9ICiAjICBpbmNsdWRlIDxzeXMvdGltZS5oPgpAQCAtMTM4LDYgKzEzOCw4IEBAIHN0YXRpYyBycGVfdHlwZSBSX1Byb2ZpbGluZ19FdmVudDsKICNpZmRlZiBXaW4zMgogSEFORExFIE1haW5UaHJlYWQ7CiBIQU5ETEUgUHJvZmlsZUV2ZW50Oworc3RhdGljIEhBTkRMRSBQcm9maWxlVGhyZWFkSGFuZGxlID0gTlVMTDsKK3N0YXRpYyBpbnQgUHJvZmlsZVdhaXQ7CiAjZWxzZQogIyBpZmRlZiBIQVZFX1BUSFJFQUQKIHR5cGVkZWYgc3RydWN0IHsKQEAgLTU5MywxNCArNTk1LDE1IEBAIHN0YXRpYyB2b2lkIGRvcHJvZihpbnQgc2lnKSAgLyogc2lnIGlzIGlnbm9yZWQgaW4gV2luZG93cyAqLwogCiAjaWZkZWYgV2luMzIKIC8qIFByb2ZpbGluZyB0aHJlYWQgbWFpbiBmdW5jdGlvbiAqLwotc3RhdGljIHZvaWQgX19jZGVjbCBQcm9maWxlVGhyZWFkKHZvaWQgKnB3YWl0KQorc3RhdGljIHVuc2lnbmVkIF9fc3RkY2FsbCBQcm9maWxlVGhyZWFkKHZvaWQgKnB3YWl0KQogewogICAgIGludCB3YWl0ID0gKigoaW50ICopcHdhaXQpOyAvKiBtaWxsaXNlY29uZHMgKi8KIAogICAgIFNldFRocmVhZFByaW9yaXR5KEdldEN1cnJlbnRUaHJlYWQoKSwgVEhSRUFEX1BSSU9SSVRZX0hJR0hFU1QpOwotICAgIHdoaWxlKFdhaXRGb3JTaW5nbGVPYmplY3QoUHJvZmlsZUV2ZW50LCB3YWl0KSAhPSBXQUlUX09CSkVDVF8wKSB7CisgICAgd2hpbGUoV2FpdEZvclNpbmdsZU9iamVjdChQcm9maWxlRXZlbnQsIHdhaXQpID09IFdBSVRfVElNRU9VVCkgewogCWRvcHJvZigwKTsKICAgICB9CisgICAgcmV0dXJuIDA7CiB9CiAjZWxzZSAvKiBub3QgV2luMzIgKi8KIC8qIFByb2ZpbGluZyB0aHJlYWQgbWFpbiBmdW5jdGlvbiAqLwpAQCAtNjQyLDggKzY0NSwyNCBAQCBzdGF0aWMgdm9pZCBkb3Byb2ZfbnVsbChpbnQgc2lnKQogc3RhdGljIHZvaWQgUl9FbmRQcm9maWxpbmcodm9pZCkKIHsKICNpZmRlZiBXaW4zMgotICAgIFNldEV2ZW50KFByb2ZpbGVFdmVudCk7Ci0gICAgQ2xvc2VIYW5kbGUoTWFpblRocmVhZCk7CisgICAgaWYgKFByb2ZpbGVUaHJlYWRIYW5kbGUpIHsKKwkvKiBUaGUgc2FtcGxpbmcgdGhyZWFkIHJlc3VtZXMgdGhlIG1haW4gdGhyZWFkIGJlZm9yZSB3cml0aW5nIGl0cworCSAgIG91dHB1dCwgc28gaXQgbWF5IHN0aWxsIGJlIHVzaW5nIHRoZSBwcm9maWxpbmcgc3RhdGUgaGVyZS4gKi8KKwlCT09MIHNpZ25hbGVkID0gU2V0RXZlbnQoUHJvZmlsZUV2ZW50KTsKKwlpZiAoIXNpZ25hbGVkKQorCSAgICBSX1N1aWNpZGUoInVuYWJsZSB0byBzdG9wIHByb2ZpbGluZyB0aHJlYWQiKTsKKworCURXT1JEIHN0YXR1cyA9IFdhaXRGb3JTaW5nbGVPYmplY3QoUHJvZmlsZVRocmVhZEhhbmRsZSwgSU5GSU5JVEUpOworCWlmIChzdGF0dXMgIT0gV0FJVF9PQkpFQ1RfMCkKKwkgICAgUl9TdWljaWRlKCJ1bmFibGUgdG8gc3RvcCBwcm9maWxpbmcgdGhyZWFkIik7CisKKwlDbG9zZUhhbmRsZShQcm9maWxlVGhyZWFkSGFuZGxlKTsKKwlQcm9maWxlVGhyZWFkSGFuZGxlID0gTlVMTDsKKwlDbG9zZUhhbmRsZShQcm9maWxlRXZlbnQpOworCVByb2ZpbGVFdmVudCA9IE5VTEw7CisJQ2xvc2VIYW5kbGUoTWFpblRocmVhZCk7CisJTWFpblRocmVhZCA9IE5VTEw7CisgICAgfQogICAgIGlmKFJfUHJvZmlsZU91dGZpbGUpIGZjbG9zZShSX1Byb2ZpbGVPdXRmaWxlKTsKICAgICBSX1Byb2ZpbGVPdXRmaWxlID0gTlVMTDsKICNlbHNlIC8qIG5vdCBXaW4zMiAqLwpAQCAtNzA5LDcgKzcyOCw2IEBAIHN0YXRpYyB2b2lkIFJfSW5pdFByb2ZpbGluZyhTRVhQIGZpbGVuYW1lLCBpbnQgYXBwZW5kLCBkb3VibGUgZGludGVydmFsLAogICAgIH0KICAgICB2bWF4c2V0KHZtYXgpOwogI2Vsc2UKLSAgICBpbnQgd2FpdDsKICAgICBIQU5ETEUgUHJvYyA9IEdldEN1cnJlbnRQcm9jZXNzKCk7CiAKICAgICBpZihSX1Byb2ZpbGVPdXRmaWxlICE9IE5VTEwpIFJfRW5kUHJvZmlsaW5nKCk7CkBAIC03NTUsMTQgKzc3MywzNSBAQCBzdGF0aWMgdm9pZCBSX0luaXRQcm9maWxpbmcoU0VYUCBmaWxlbmFtZSwgaW50IGFwcGVuZCwgZG91YmxlIGRpbnRlcnZhbCwKICAgICBSX1Byb2ZpbGluZ19FdmVudCA9IGV2ZW50OwogCiAjaWZkZWYgV2luMzIKLSAgICAvKiBuZWVkIHRvIGR1cGxpY2F0ZSB0byBtYWtlIGEgcmVhbCBoYW5kbGUgKi8KLSAgICBEdXBsaWNhdGVIYW5kbGUoUHJvYywgR2V0Q3VycmVudFRocmVhZCgpLCBQcm9jLCAmTWFpblRocmVhZCwKLQkJICAgIDAsIEZBTFNFLCBEVVBMSUNBVEVfU0FNRV9BQ0NFU1MpOwotICAgIHdhaXQgPSBpbnRlcnZhbC8xMDAwOwotICAgIGlmKCEoUHJvZmlsZUV2ZW50ID0gQ3JlYXRlRXZlbnQoTlVMTCwgRkFMU0UsIEZBTFNFLCBOVUxMKSkgfHwKLSAgICAgICAoX2JlZ2ludGhyZWFkKFByb2ZpbGVUaHJlYWQsIDAsICZ3YWl0KSA9PSAtMSkpCisgICAgLyogS2VlcCB0aGUgaW50ZXJ2YWwgdmFsaWQgdW50aWwgdGhlIHNhbXBsaW5nIHRocmVhZCBoYXMgZXhpdGVkLgorICAgICAgIFNsZWVwaW5nIGFmdGVyIHN0YXJ0aW5nIGl0IHdvdWxkIG5vdCBndWFyYW50ZWUgaXQgaGFkIHJlYWQgYW4KKyAgICAgICBpbnRlcnZhbCBzdG9yZWQgb24gdGhpcyBmdW5jdGlvbidzIHN0YWNrLiAqLworICAgIFByb2ZpbGVXYWl0ID0gaW50ZXJ2YWwgLyAxMDAwOworCisgICAgQk9PTCBkdXBsaWNhdGVkID0gRHVwbGljYXRlSGFuZGxlKAorCVByb2MsCisJR2V0Q3VycmVudFRocmVhZCgpLAorCVByb2MsCisJJk1haW5UaHJlYWQsCisJMCwKKwlGQUxTRSwKKwlEVVBMSUNBVEVfU0FNRV9BQ0NFU1MpOworICAgIGlmICghZHVwbGljYXRlZCkKKwlSX1N1aWNpZGUoInVuYWJsZSB0byBjcmVhdGUgcHJvZmlsaW5nIHRocmVhZCIpOworCisgICAgUHJvZmlsZUV2ZW50ID0gQ3JlYXRlRXZlbnQoTlVMTCwgRkFMU0UsIEZBTFNFLCBOVUxMKTsKKyAgICBpZiAoIVByb2ZpbGVFdmVudCkKKwlSX1N1aWNpZGUoInVuYWJsZSB0byBjcmVhdGUgcHJvZmlsaW5nIHRocmVhZCIpOworCisgICAgUHJvZmlsZVRocmVhZEhhbmRsZSA9IChIQU5ETEUpIF9iZWdpbnRocmVhZGV4KAorCU5VTEwsCisJMCwKKwlQcm9maWxlVGhyZWFkLAorCSZQcm9maWxlV2FpdCwKKwkwLAorCU5VTEwpOworICAgIGlmICghUHJvZmlsZVRocmVhZEhhbmRsZSkKIAlSX1N1aWNpZGUoInVuYWJsZSB0byBjcmVhdGUgcHJvZmlsaW5nIHRocmVhZCIpOwotICAgIFNsZWVwKHdhaXQvMik7IC8qIHN1c3BlbmQgdGhpcyB0aHJlYWQgdG8gZW5zdXJlIHRoYXQgdGhlIG90aGVyIG9uZSBzdGFydHMgKi8KICNlbHNlIC8qIG5vdCBXaW4zMiAqLwogCiAjIGlmZGVmIEhBVkVfUFRIUkVBRApJbmRleDogdGVzdHMvcmVnLXdpbi5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy13aW4uUgkocmV2aXNpb24gOTA2MDkpCisrKyB0ZXN0cy9yZWctd2luLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ5LDMgKzQ5LDMyIEBAIGNsb3NlKGNvbikKIGRzdCA8LSBmaWxlLnBhdGgoZGlyLCBiYXNlbmFtZShzcmMpKQogc3RvcGlmbm90KG9rLCBmaWxlLm10aW1lKHNyYykgPT0gcHJpbnQoZmlsZS5tdGltZShkc3QpKSkKICMjIHRoZSBmaWxlIHRpbWUgd2FzIG5vdCBjb3BpZWQgaW4gUiA8PSA0LjYuMQorCisKKyMjIFN0YXJ0aW5nIGEgbmV3IHByb2ZpbGUgbXVzdCBmaW5pc2ggdGhlIHByZXZpb3VzIHNhbXBsaW5nIHRocmVhZC4KK2lmIChjYXBhYmlsaXRpZXMoIlJwcm9mIikpIGxvY2FsKHsKKyAgICBmaWxlcyA8LSBjKHRlbXBmaWxlKCJScHJvZi1vbGQiKSwgdGVtcGZpbGUoIlJwcm9mLW5ldyIpKQorICAgIG9uLmV4aXQoeworICAgICAgICBScHJvZihOVUxMKQorICAgICAgICB1bmxpbmsoZmlsZXMpCisgICAgfSkKKyAgICBScHJvZihOVUxMKQorCisgICAgZm9yIChpIGluIDE6NSkgeworICAgICAgICBScHJvZihmaWxlc1sxTF0sIG1lbW9yeS5wcm9maWxpbmcgPSBUUlVFKQorICAgICAgICBvdXQgPC0gbGFwcGx5KDE6MTAwMDAsIHJub3JtLCBuID0gNTEyKQorCisgICAgICAgIFJwcm9mKGZpbGVzWzJMXSwgbWVtb3J5LnByb2ZpbGluZyA9IFRSVUUpCisgICAgICAgIG9sZCA8LSByZWFkTGluZXMoZmlsZXNbMUxdKQorICAgICAgICBvdXQgPC0gbGFwcGx5KDE6MTAwMDAsIHJub3JtLCBuID0gNTEyKQorCisgICAgICAgIFJwcm9mKE5VTEwpCisgICAgICAgIFJwcm9mKE5VTEwpICMgc3RvcHBpbmcgYW4gaW5hY3RpdmUgcHJvZmlsZXIgbXVzdCBiZSBoYXJtbGVzcworICAgICAgICBzdG9waWZub3QoaWRlbnRpY2FsKG9sZCwgcmVhZExpbmVzKGZpbGVzWzFMXSkpKQorICAgICAgICBmb3IgKGZpbGUgaW4gZmlsZXMpIHsKKyAgICAgICAgICAgIHMgPC0gc3VtbWFyeVJwcm9mKGZpbGUsIG1lbW9yeSA9ICJ0c2VyaWVzIiwgY2h1bmtzaXplID0gMUwpCisgICAgICAgICAgICBzdG9waWZub3QoaXMuZGF0YS5mcmFtZShzKSwgbnJvdyhzKSA+IDBMKQorICAgICAgICB9CisgICAgfQorfSkKKyMjIHRoZSBvbGQgdGhyZWFkIGNvdWxkIHN0aWxsIHdyaXRlIGFmdGVyIFJwcm9mKE5VTEwpLCBvciBpbnRvIGEgbmV3IHByb2ZpbGUK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "patch: join the Windows profiling thread before releasing its resources (PR #356)",
+          "creation_time": "2026-10-01T21:59:55Z",
+          "bug_id": 19198,
+          "file_name": "rprof-windows-thread-lifecycle.diff",
+          "size": 5025,
+          "last_change_time": "2026-10-01T21:59:55Z",
+          "id": 3889,
+          "is_private": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-01 21:59:55"
+}

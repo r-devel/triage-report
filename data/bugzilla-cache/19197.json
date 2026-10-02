@@ -1,0 +1,229 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-01T21:45:50Z",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19197,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "blocks": [],
+        "url": "",
+        "summary": "available.packages() speedups: zstd-compressed cache and faster R_version, duplicates, CRAN and subarch filters",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-10-01T21:46:05Z",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19197": {
+        "comments": [
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-10-01T21:45:50Z",
+            "attachment_id": {},
+            "count": 0,
+            "text": "utils::available.packages() is called repeatedly, within the lifetime of its repository cache, by install.packages(), old.packages(), update.packages(), packageStatus() and many package-management tools. Profiling a cached call against CRAN (25,299 source packages) on R-devel shows that nearly all of its ~140 ms goes into two places: readRDS() of the cached PACKAGES.rds, which CRAN and Bioconductor serve xz-compressed (~90 ms), and the default \"R_version\" filter (~43 ms). With overlapping repositories, e.g. CRAN together with a dated Posit Package Manager snapshot, the default \"duplicates\" filter and the opt-in \"CRAN\" filter are also quadratic in the number of duplicated packages and take seconds. On Windows, the \"subarch\" filter adds ~35 ms per call.\n\nBelow are five independent patches, one per hot spot, attached separately. None of them changes results: in every measurement below the patched and unpatched results were identical(), and each new regression test also passes on unpatched trunk.\n\nReproducible example (timings on aarch64-apple-darwin, R-devel r90607):\n\n    options(repos = c(CRAN = \"https://cloud.r-project.org\"))\n    invisible(available.packages())      # downloads and fills the cache\n    system.time(available.packages())    # ~140 ms, from the cache\n    system.time(readRDS(list.files(tempdir(), \"^repos_.*\\\\.rds$\", full.names = TRUE)[1]))\n    # ~90 ms: the xz-compressed index as served by CRAN\n\n    ## overlapping repositories at different versions\n    options(repos = c(CRAN = \"https://cloud.r-project.org\",\n                      PPM = \"https://packagemanager.posit.co/cran/2025-01-02\"))\n    db <- available.packages(filters = list())           # ~47,000 rows, ~20,000 duplicated\n    system.time(tools:::.remove_stale_dups(db))          # ~1.2 s (the \"duplicates\" filter)\n    system.time(utils:::available_packages_filters_db$CRAN(db))  # ~3.4 s (the \"CRAN\" filter)\n\nThe patches:\n\n1. available-packages-cache-zstd.diff (src/library/utils/R/packages.R, tests/internet2.R)\n\n   The cache stores PACKAGES.rds exactly as downloaded, so every cached call pays for xz decompression again. After a download, the cache is now rewritten from the index just read with zstdfile(dest, \"wb\", compression = 1L), or uncompressed in builds without zstd; the PACKAGES.gz / PACKAGES fallback goes through the same code instead of its own saveRDS(compress = TRUE). Level 1 writes about three times as fast as the default level and reads just as fast (CRAN source: 1.2 MB xz read in 90 ms vs 1.8 MB zstd read in 27 ms). Two related changes: a cache file that cannot be read (e.g. a zstd cache in a user cache dir read by a build without zstd, or a file another R process is still writing) is now treated as a miss and downloaded again rather than being an error, and an empty index is never left in the cache; need_dest is gone since the cache is always written when enabled. Warm available.packages() calls: 141 -> 82 ms for CRAN, 170 -> 102 ms for CRAN + 3 Bioconductor repos, 196 -> 92 ms for CRAN macOS binaries; cold calls (the one that downloads) cost 21-29 ms more for the rewrite. A test in tests/internet2.R checks the zstd magic number, that the cached call matches the downloading one, and that an unreadable cache is re-downloaded.\n\n2. available-packages-r-version-filter.diff (src/library/utils/R/packages.R, tests/reg-tests-1e.R)\n\n   The \"R_version\" filter strips and splits Depends for every row with a per-row closure, then parses every R dependency with numeric_version(). CRAN has ~20,800 R dependencies but only ~180 distinct ones. The patch skips rows whose Depends never matches \"R[[:space:]]*\\(\" up front, splits the rest in one vectorized pass recording the db row of each entry, compares each distinct R dependency once and matches the results back. The per-row all() reduction is unchanged, so NA semantics are the same (an NA-only comparison still errors, FALSE + NA is still dropped). 43 -> 17 ms for CRAN, 85 -> 35 ms for CRAN + PPM.\n\n3. available-packages-duplicates-filter.diff (src/library/tools/R/packages.R, tests/reg-tests-1e.R)\n\n   tools:::.remove_stale_dups(), which implements the \"duplicates\" filter and is also used by old.packages(), packageStatus(), write_PACKAGES(latestOnly = TRUE) and update_PACKAGES(), loops over the duplicated package names and for each runs which() over all rows and package_version() on that package's versions. Repeated (Package, Version) pairs are now always dropped first (as the > 100 duplicates branch did), and the remaining entries of duplicated packages are ordered all at once: by package (grouped with match(), so collation does not matter), then by decreasing version via xtfrm(package_version(unique versions)), then by row; all but the first per package are dropped. Ties keep the first row and rows keep their order and row names, as before. 1,164 -> 24 ms for CRAN + PPM, 17 -> 6 ms for r-universe + CRAN; with only a handful of duplicates it is about 1 ms slower (4 -> 5 ms), since the (Package, Version) pass now always runs.\n\n4. available-packages-cran-filter.diff (src/library/utils/R/packages.R, tests/reg-tests-1e.R)\n\n   The \"CRAN\" filter loops over duplicated names with which(packages == d) per name. One startsWith() over Repository and one %in% now find the non-CRAN entries of packages that also have a CRAN entry; the result is selected with a logical index, which keeps the same rows in the same order. 3,385 -> 3 ms for CRAN + PPM, 2,725 -> 2 ms for CRAN listed twice.\n\n5. available-packages-subarch-filter.diff (src/library/utils/R/packages.R, tests/reg-tests-1e.R)\n\n   The \"subarch\" filter (active only when .Platform$r_arch is non-empty, as on Windows) runs strsplit() in a per-row closure over the whole Archs column, although CRAN's Windows index has only two distinct non-NA values. The distinct entries are now split and checked once and matched back; NA rows are kept as before. 35 -> 2 ms for CRAN's Windows binaries (measured on macOS with .Platform$r_arch substituted by \"x64\" in both versions of the function). The regression test has explicit expectations for r_arch \"\", \"x64\", \"i386\" and other values, so it exercises the filter on Windows and returns early elsewhere.\n\nAll patches are against r90609 and apply with patch -p0, each on its own or all five together in any order (the tests are at different spots in reg-tests-1e.R). make test-Reg passes with each of them applied. Each is also submitted as a GitHub pull request with CI results and a few more measurements:\n\n  1. https://github.com/r-devel/r-svn/pull/351\n  2. https://github.com/r-devel/r-svn/pull/352\n  3. https://github.com/r-devel/r-svn/pull/353\n  4. https://github.com/r-devel/r-svn/pull/354\n  5. https://github.com/r-devel/r-svn/pull/355",
+            "bug_id": 19197,
+            "creation_time": "2026-10-01T21:45:50Z",
+            "is_private": false,
+            "id": 103753,
+            "tags": []
+          },
+          {
+            "id": 103754,
+            "time": "2026-10-01T21:46:02Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3884,
+            "bug_id": 19197,
+            "text": "Created attachment 3884\npatch 1: rewrite the repository cache with zstd level 1 (PR #351)",
+            "is_markdown": false,
+            "count": 1,
+            "creation_time": "2026-10-01T21:46:02Z",
+            "creator": "kevinushey"
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 3885,
+            "time": "2026-10-01T21:46:02Z",
+            "creation_time": "2026-10-01T21:46:02Z",
+            "text": "Created attachment 3885\npatch 2: compare each distinct R dependency once in the R_version filter (PR #352)",
+            "bug_id": 19197,
+            "count": 2,
+            "tags": [],
+            "id": 103755,
+            "is_private": false
+          },
+          {
+            "time": "2026-10-01T21:46:03Z",
+            "attachment_id": 3886,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 103756,
+            "tags": [],
+            "count": 3,
+            "text": "Created attachment 3886\npatch 3: order all duplicates at once in tools:::.remove_stale_dups() (PR #353)",
+            "bug_id": 19197,
+            "creation_time": "2026-10-01T21:46:03Z"
+          },
+          {
+            "id": 103757,
+            "is_private": false,
+            "tags": [],
+            "text": "Created attachment 3887\npatch 4: make the CRAN filter linear in the number of duplicates (PR #354)",
+            "bug_id": 19197,
+            "count": 4,
+            "creation_time": "2026-10-01T21:46:04Z",
+            "time": "2026-10-01T21:46:04Z",
+            "attachment_id": 3887,
+            "is_markdown": false,
+            "creator": "kevinushey"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 103758,
+            "creation_time": "2026-10-01T21:46:05Z",
+            "count": 5,
+            "bug_id": 19197,
+            "text": "Created attachment 3888\npatch 5: check distinct Archs entries once in the subarch filter (PR #355)",
+            "attachment_id": 3888,
+            "time": "2026-10-01T21:46:05Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19197": [
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL1IvcGFja2FnZXMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS91dGlscy9SL3BhY2thZ2VzLlIJKHJldmlzaW9uIDkwNjA5KQorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9wYWNrYWdlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMDQsMTEgKzEwNCwxNyBAQCBmdW5jdGlvbihjb250cmlidXJsID0gY29udHJpYi51cmwocmVwb3MsIHR5cGUpLCBtZXRob2QsCiAgICAgICAgICAgICAgICAgaWYoZmlsZS5leGlzdHMoZGVzdCkpIHsKICAgICAgICAgICAgICAgICAgICAgYWdlIDwtIGRpZmZ0aW1lKHRpbWVzdGFtcCwgZmlsZS5tdGltZShkZXN0KSwgdW5pdHMgPSAic2VjcyIpCiAgICAgICAgICAgICAgICAgICAgIGlmKGlzVFJVRShhZ2UgPCBtYXhfcmVwb19jYWNoZV9hZ2UpKSB7Ci0gICAgICAgICAgICAgICAgICAgICAgICByZXMwIDwtIHJlYWRSRFMoZGVzdCkKLSAgICAgICAgICAgICAgICAgICAgICAgIHVzZWRfZGVzdCA8LSBUUlVFCi0gICAgICAgICAgICAgICAgICAgICAgICAjIyBCZSBkZWZlbnNpdmUgOgotICAgICAgICAgICAgICAgICAgICAgICAgaWYobGVuZ3RoKHJlczApKQotICAgICAgICAgICAgICAgICAgICAgICAgICAgIHJvd25hbWVzKHJlczApIDwtIHJlczBbLCAiUGFja2FnZSJdCisgICAgICAgICAgICAgICAgICAgICAgICAjIyBBbiB1bnJlYWRhYmxlIGNhY2hlIChlLmcuLCB3cml0dGVuIHdpdGggenN0ZCBieQorICAgICAgICAgICAgICAgICAgICAgICAgIyMgYW5vdGhlciBSIGJ1aWxkKSBpcyBkb3dubG9hZGVkIGFnYWluIGJlbG93LgorICAgICAgICAgICAgICAgICAgICAgICAgcmVzMCA8LSB0cnlDYXRjaChyZWFkUkRTKGRlc3QpLCBlcnJvciA9IGlkZW50aXR5KQorICAgICAgICAgICAgICAgICAgICAgICAgaWYoaW5oZXJpdHMocmVzMCwgImVycm9yIikpCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgdW5saW5rKGRlc3QpCisgICAgICAgICAgICAgICAgICAgICAgICBlbHNlIHsKKyAgICAgICAgICAgICAgICAgICAgICAgICAgICB1c2VkX2Rlc3QgPC0gVFJVRQorICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIEJlIGRlZmVuc2l2ZSA6CisgICAgICAgICAgICAgICAgICAgICAgICAgICAgaWYobGVuZ3RoKHJlczApKQorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICByb3duYW1lcyhyZXMwKSA8LSByZXMwWywgIlBhY2thZ2UiXQorICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgIGVsc2UKICAgICAgICAgICAgICAgICAgICAgICAgIHVubGluayhkZXN0KSAgICAjIENhY2hlIHRvbyBvbGQuCkBAIC0xMTgsNyArMTI0LDYgQEAgZnVuY3Rpb24oY29udHJpYnVybCA9IGNvbnRyaWIudXJsKHJlcG9zLCB0eXBlKSwgbWV0aG9kLAogICAgICAgICAgICAgICAgICMjIFRyeSAucmRzIGFuZCByZWFkUkRTKCksIGFuZCB0aGVuIC5neiBvciBwbGFpbiBEQ0YgYW5kCiAgICAgICAgICAgICAgICAgIyMgcmVhZC5kY2YoKSwgY2F0Y2hpbmcgcHJvYmxlbXMgZnJvbSBib3RoIG1pc3Npbmcgb3IKICAgICAgICAgICAgICAgICAjIyBpbnZhbGlkIGZpbGVzLgotICAgICAgICAgICAgICAgIG5lZWRfZGVzdCA8LSBGQUxTRQogICAgICAgICAgICAgICAgIG9wIDwtIG9wdGlvbnMod2FybiA9IC0xTCkKICAgICAgICAgICAgICAgICB6IDwtIHRyeUNhdGNoKHsKICAgICAgICAgICAgICAgICAgICAgeiA8LSBkb3dubG9hZC5maWxlKHVybCA9IHBhc3RlMChyZXBvcywgIi9QQUNLQUdFUy5yZHMiKSwKQEAgLTEzNyw3ICsxNDIsNiBAQCBmdW5jdGlvbihjb250cmlidXJsID0gY29udHJpYi51cmwocmVwb3MsIHR5cGUpLCBtZXRob2QsCiAgICAgICAgICAgICAgICAgaWYoaW5oZXJpdHMoeiwgImVycm9yIikpIHsKICAgICAgICAgICAgICAgICAgICAgIyMgRG93bmxvYWRpbmcgb3IgcmVhZGluZyAucmRzIGZhaWxlZCwgc28gdHJ5IHRoZQogICAgICAgICAgICAgICAgICAgICAjIyBEQ0YgdmFyaWFudHMuCi0gICAgICAgICAgICAgICAgICAgIGlmKCFpZ25vcmVfcmVwb19jYWNoZSkgbmVlZF9kZXN0IDwtIFRSVUUKICAgICAgICAgICAgICAgICAgICAgdG1wZiA8LSB0ZW1wZmlsZSgpCiAgICAgICAgICAgICAgICAgICAgIG9uLmV4aXQodW5saW5rKHRtcGYpKQogICAgICAgICAgICAgICAgICAgICBvcCA8LSBvcHRpb25zKHdhcm4gPSAtMUwpCkBAIC0xODUsMTAgKzE4OSwxNyBAQCBmdW5jdGlvbihjb250cmlidXJsID0gY29udHJpYi51cmwocmVwb3MsIHR5cGUpLCBtZXRob2QsCiAKICAgICAgICAgICAgICAgICBpZihsZW5ndGgocmVzMCkpIHsKICAgICAgICAgICAgICAgICAgICAgcm93bmFtZXMocmVzMCkgPC0gcmVzMFssICJQYWNrYWdlIl0KLSAgICAgICAgICAgICAgICAgICAgaWYobmVlZF9kZXN0KQotICAgICAgICAgICAgICAgICAgICAgICAgc2F2ZVJEUyhyZXMwLCBkZXN0LCBjb21wcmVzcyA9IFRSVUUpCi0gICAgICAgICAgICAgICAgfSBlbHNlIGlmKCFuZWVkX2Rlc3QpIHsKLSAgICAgICAgICAgICAgICAgICAgIyMgZG93bmxvYWQuZmlsZSgpIGdhdmUgYW4gZW1wdHkgLnJkcworICAgICAgICAgICAgICAgICAgICBpZighaWdub3JlX3JlcG9fY2FjaGUpIHsKKyAgICAgICAgICAgICAgICAgICAgICAgICMjIChSZSl3cml0ZSB0aGUgY2FjaGUgd2l0aCBmYXN0IGNvbXByZXNzaW9uLCBhcworICAgICAgICAgICAgICAgICAgICAgICAgIyMgcmVwb3NpdG9yaWVzIHR5cGljYWxseSBzZXJ2ZSB4ei1jb21wcmVzc2VkCisgICAgICAgICAgICAgICAgICAgICAgICAjIyBpbmRpY2VzLCB3aGljaCBhcmUgc2xvdyB0byBkZWNvbXByZXNzIG9uIGVhY2ggdXNlLgorICAgICAgICAgICAgICAgICAgICAgICAgY29uIDwtIGlmKG56Y2hhcihleHRTb2Z0VmVyc2lvbigpW1sienN0ZCJdXSkpCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHpzdGRmaWxlKGRlc3QsICJ3YiIsIGNvbXByZXNzaW9uID0gMUwpCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZWxzZSBmaWxlKGRlc3QsICJ3YiIpCisgICAgICAgICAgICAgICAgICAgICAgICBzYXZlUkRTKHJlczAsIGNvbikKKyAgICAgICAgICAgICAgICAgICAgICAgIGNsb3NlKGNvbikKKyAgICAgICAgICAgICAgICAgICAgfQorICAgICAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICAgICAgICMjIERvIG5vdCBjYWNoZSBlbXB0eSByZXN1bHRzLgogICAgICAgICAgICAgICAgICAgICB1bmxpbmsoZGVzdCkKICAgICAgICAgICAgICAgICB9CkluZGV4OiB0ZXN0cy9pbnRlcm5ldDIuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9pbnRlcm5ldDIuUgkocmV2aXNpb24gOTA2MDkpCisrKyB0ZXN0cy9pbnRlcm5ldDIuUgkod29ya2luZyBjb3B5KQpAQCAtMjAsNiArMjAsMTkgQEAgdG9vbHM6OmFzc2VydFdhcm5pbmcoYXAyIDwtIGF2YWlsYWJsZS5wYWNrYWdlcyhyZXBvcyA9ICJodHRwOi8vZm9vLmJhciIpKQogc3RvcGlmbm90KG5yb3coYXAxKSA9PSAwLCBpZGVudGljYWwoYXAxLCBhcDIpKQogIyMgaGFkIGZhaWxlZCBmb3IgYSB3aGlsZSBpbiBSLWRldmVsIChsZWZ0IGVtcHR5ICoucmRzIGZpbGUpCiAKKyMjIGF2YWlsYWJsZS5wYWNrYWdlcygpIHJld3JpdGVzIGl0cyBjYWNoZSB3aXRoIGZhc3QgY29tcHJlc3Npb24sIGFuZAorIyMgZG93bmxvYWRzIHRoZSBpbmRleCBhZ2FpbiBpZiB0aGUgY2FjaGUgY2Fubm90IGJlIHJlYWQKK2N1IDwtIGNvbnRyaWIudXJsKCJodHRwczovL2Nsb3VkLnItcHJvamVjdC5vcmciLCAic291cmNlIikKK2NhY2hlIDwtIGZpbGUucGF0aCh0ZW1wZGlyKCksIHBhc3RlMCgicmVwb3NfIiwgVVJMZW5jb2RlKGN1LCBUUlVFKSwgIi5yZHMiKSkKK2FwMSA8LSBhdmFpbGFibGUucGFja2FnZXMoY3UpCitpZihuemNoYXIoZXh0U29mdFZlcnNpb24oKVtbInpzdGQiXV0pKSAjIHpzdGQgbWFnaWMgbnVtYmVyCisgICAgc3RvcGlmbm90KGlkZW50aWNhbChyZWFkQmluKGNhY2hlLCAicmF3IiwgNEwpLCBhcy5yYXcoYygweDI4LCAweGI1LCAweDJmLCAweGZkKSkpKQorYXAyIDwtIGF2YWlsYWJsZS5wYWNrYWdlcyhjdSkgIyBmcm9tIHRoZSBjYWNoZQord3JpdGVMaW5lcygibm90IGFuIC5yZHMgZmlsZSIsIGNhY2hlKQorYXAzIDwtIGF2YWlsYWJsZS5wYWNrYWdlcyhjdSkgIyBkb3dubG9hZGVkIGFnYWluCitzdG9waWZub3QoaWRlbnRpY2FsKGFwMSwgYXAyKSwgbnJvdyhhcDMpID4gMCkKKyMjIGFuIHVucmVhZGFibGUgY2FjaGUgd2FzIGFuIGVycm9yOyB4ei1jb21wcmVzc2VkIGNhY2hlcyB3ZXJlIHNsb3cgdG8gcmVhZAorCiAjIyBkb3dubG9hZC5maWxlKC4uICwgaGVhZGVycyA9IGNoYXJhY3RlcigpKSAtIFBSIzE3NzEwCiAjIyBodHRwczovL2J1Z3Muci1wcm9qZWN0Lm9yZy9zaG93X2J1Zy5jZ2k/aWQ9MTc3MTAKICMjIGNoYXJhY3RlcigpIHNob3VsZCBiZSB0aGUgc2FtZSBhcyBOVUxMLCBidXQgd2FzIG5vdCBmb3Igd2luaW5ldAo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-10-01T21:46:02Z",
+          "size": 4604,
+          "is_private": false,
+          "id": 3884,
+          "creation_time": "2026-10-01T21:46:02Z",
+          "summary": "patch 1: rewrite the repository cache with zstd level 1 (PR #351)",
+          "file_name": "available-packages-cache-zstd.diff",
+          "bug_id": 19197
+        },
+        {
+          "bug_id": 19197,
+          "file_name": "available-packages-r-version-filter.diff",
+          "summary": "patch 2: compare each distinct R dependency once in the R_version filter (PR #352)",
+          "creation_time": "2026-10-01T21:46:02Z",
+          "id": 3885,
+          "is_private": false,
+          "size": 3240,
+          "last_change_time": "2026-10-01T21:46:02Z",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL1IvcGFja2FnZXMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS91dGlscy9SL3BhY2thZ2VzLlIJKHJldmlzaW9uIDkwNjA5KQorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9wYWNrYWdlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yNjgsMjkgKzI2OCwzMSBAQCBmdW5jdGlvbihkYikKICAgICB9CiAgICAgCiAgICAgZGVwZW5kcyA8LSBkYlssICJEZXBlbmRzIl0KLSAgICBkZXBlbmRzW2lzLm5hKGRlcGVuZHMpXSA8LSAiIgotICAgICMjIENvbGxlY3QgdGhlICh2ZXJzaW9uZWQpIFIgZGVwZW5kcyBlbnRyaWVzLgotICAgIHggPC0gbGFwcGx5KHN0cnNwbGl0KGdzdWIoIltbOnNwYWNlOl1dIiwgIiIsIGRlcGVuZHMpLCAiLCIsCi0gICAgICAgICAgICAgICAgICAgICAgICAgZml4ZWQgPSBUUlVFKSwKLSAgICAgICAgICAgICAgICBmdW5jdGlvbihzKSBzW3N0YXJ0c1dpdGgocywgIlIoIildKQotICAgIGxlbnMgPC0gbGVuZ3Rocyh4KQotICAgIHBvcyA8LSB3aGljaChsZW5zID4gMEwpCisgICAgIyMgT25seSBlbnRyaWVzIG1lbnRpb25pbmcgUiBjYW4gaGF2ZSBhbiBSIGRlcGVuZGVuY3kuCisgICAgcG9zIDwtIHdoaWNoKGdyZXBsKCJSW1s6c3BhY2U6XV0qXFwoIiwgZGVwZW5kcykpCiAgICAgaWYoIWxlbmd0aChwb3MpKSByZXR1cm4oZGIpCi0gICAgbGVucyA8LSBsZW5zW3Bvc10KLSAgICAjIyBVbmxpc3QuCi0gICAgeCA8LSB1bmxpc3QoeCkKLSAgICBlbmQgPC0gM0wgKyAoc3Vic3RyaW5nKHgsIDRMLCA0TCkgPT0gIj0iKQorICAgICMjIENvbGxlY3QgdGhlICh2ZXJzaW9uZWQpIFIgZGVwZW5kcyBlbnRyaWVzIGFuZCB0aGVpciByb3dzIGluIGRiLgorICAgIHggPC0gc3Ryc3BsaXQoZ3N1YigiW1s6c3BhY2U6XV0iLCAiIiwgZGVwZW5kc1twb3NdKSwgIiwiLCBmaXhlZCA9IFRSVUUpCisgICAgcm93IDwtIHJlcC5pbnQocG9zLCBsZW5ndGhzKHgpKQorICAgIHggPC0gdW5saXN0KHgsIHVzZS5uYW1lcyA9IEZBTFNFKQorICAgIGkgPC0gc3RhcnRzV2l0aCh4LCAiUigiKQorICAgIGlmKCFhbnkoaSkpIHJldHVybihkYikKKyAgICB4IDwtIHhbaV0KKyAgICByb3cgPC0gcm93W2ldCisgICAgIyMgUGFja2FnZXMgc2hhcmUgZmV3IGRpc3RpbmN0IFIgZGVwZW5kZW5jaWVzLCBzbyBvbmx5IGNvbXBhcmUgdGhvc2UuCisgICAgdXggPC0gdW5pcXVlKHgpCisgICAgZW5kIDwtIDNMICsgKHN1YnN0cmluZyh1eCwgNEwsIDRMKSA9PSAiPSIpCiAgICAgIyMgRXh0cmFjdCBvcHMuCi0gICAgb3BzIDwtIHN1YnN0cmluZyh4LCAzTCwgZW5kKQotICAgICMjIFNwbGl0IHRhcmdldCB2ZXJzaW9ucyBhY2NvcmRpbmcgdG8gb3BzLgotICAgIHZlciA8LSBzcGxpdChzdWJzdHJpbmcoeCwgZW5kICsgMUwsIG5jaGFyKHgpIC0gMUwpLCBvcHMpCisgICAgb3BzIDwtIHN1YnN0cmluZyh1eCwgM0wsIGVuZCkKKyAgICB2ZXIgPC0gc3Vic3RyaW5nKHV4LCBlbmQgKyAxTCwgbmNoYXIodXgpIC0gMUwpCiAgICAgIyMgQ29tcGFyZSBjdXJyZW50IHRvIHRhcmdldCBncm91cGVkIGJ5IG9wLgotICAgIHJlcyA8LSBsb2dpY2FsKGxlbmd0aCh4KSkKLSAgICBmb3Iob3AgaW4gbmFtZXModmVyKSkKLSAgICAgICAgcmVzW29wcyA9PSBvcF0gPC0gY21wKG9wLCB2ZXJbW29wXV0pCisgICAgcmVzIDwtIGxvZ2ljYWwobGVuZ3RoKHV4KSkKKyAgICBmb3Iob3AgaW4gdW5pcXVlKG9wcykpCisgICAgICAgIHJlc1tvcHMgPT0gb3BdIDwtIGNtcChvcCwgdmVyW29wcyA9PSBvcF0pCisgICAgcmVzIDwtIHJlc1ttYXRjaCh4LCB1eCldCiAgICAgIyMgQW5kIGFzc2VtYmxlIHRlc3QgcmVzdWx0cyBhY2NvcmRpbmcgdG8gdGhlIHJvd3Mgb2YgZGIuCi0gICAgcG9zIDwtIHBvc1shdmFwcGx5KHNwbGl0KHJlcywgcmVwLmludChzZXFfYWxvbmcobGVucyksIGxlbnMpKSwgYWxsLAotICAgICAgICAgICAgICAgICAgICAgICBOQSldCisgICAgcG9zIDwtIHVuaXF1ZShyb3cpCisgICAgcG9zIDwtIHBvc1shdmFwcGx5KHNwbGl0KHJlcywgcm93KSwgYWxsLCBOQSldCiAgICAgaWYobGVuZ3RoKHBvcykpCiAgICAgICAgIGRiIDwtIGRiWy1wb3MsICwgZHJvcCA9IEZBTFNFXQogICAgIGRiCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA2MDkpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtMzgxOCw2ICszODE4LDIyIEBAIHZhcHBseShlcnJzLCBgW1tgLCAiLi4iLCAibWVzc2FnZSIpCiAjIyBqPTEsMiB3b3VsZCBzZWdmYXVsdCBpbiBSIDw9IDQuNi4xCiAKIAorIyMgYXZhaWxhYmxlLnBhY2thZ2VzKCkgIlJfdmVyc2lvbiIgZmlsdGVyLCBub3cgY29tcGFyaW5nIGVhY2ggZGlzdGluY3QgUgorIyMgZGVwZW5kZW5jeSBvbmNlCitsb2NhbCh7CisgICAgZiA8LSB1dGlsczo6OmF2YWlsYWJsZV9wYWNrYWdlc19maWx0ZXJzX2RiJFJfdmVyc2lvbgorICAgIGRiIDwtIGNiaW5kKFBhY2thZ2UgPSBwYXN0ZTAoInAiLCAxOjEwKSwKKyAgICAgICAgICAgICAgICBEZXBlbmRzID0gYyhOQSwgIlIgKD49IDIuMCkiLCAiUiAoPj0gOTk5LjApIiwgIm1ldGhvZHMsIFIoPj0zLjApIiwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAiUiAoPj0gMi4wKSwgUiAoPCAzLjApIiwgIlJjcHAgKD49IDk5OS4wKSIsCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgIlJcbiAgICAoPj0gOTk5LjApIiwgIlhSICg+PSA5OTkuMCkiLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhc3RlMCgiUiAoPT0gIiwgZ2V0UnZlcnNpb24oKSwgIikiKSwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAiUiAoPj0gOTk5LjApLCBtZXRob2RzIikpCisgICAgc3RvcGlmbm90KGlkZW50aWNhbChmKGRiKSwgZGJbYygxLCAyLCA0LCA2LCA4LCA5KSwgXSksCisgICAgICAgICAgICAgIGlkZW50aWNhbChmKGRiW2MoMSwgNiwgOCksIF0pLCBkYltjKDEsIDYsIDgpLCBdKSkKK30pCisjIyBzYW1lIHJlc3VsdHMgYXMgYmVmb3JlLCB3aGljaCB0b29rIDItMyB0aW1lcyBhcyBsb25nIGZvciBDUkFOCisKKwogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "creator": "kevinushey",
+          "is_patch": true
+        },
+        {
+          "creation_time": "2026-10-01T21:46:03Z",
+          "summary": "patch 3: order all duplicates at once in tools:::.remove_stale_dups() (PR #353)",
+          "file_name": "available-packages-duplicates-filter.diff",
+          "bug_id": 19197,
+          "last_change_time": "2026-10-01T21:46:03Z",
+          "size": 3755,
+          "is_private": false,
+          "id": 3886,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL1IvcGFja2FnZXMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9SL3BhY2thZ2VzLlIJKHJldmlzaW9uIDkwNjA5KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvUi9wYWNrYWdlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0zNjEsMjggKzM2MSwyNSBAQCBmdW5jdGlvbihhcCkKICAgICAjIyB3aXRoIGhpZ2hlc3QgdmVyc2lvbiBudW1iZXIuCiAgICAgIyMgKEFsc28gd29ya3MgZm9yIGRhdGEgZnJhbWUgcGFja2FnZSByZXBvc2l0b3J5IGRicy4pCiAgICAgcGtncyA8LSBhcFsgLCAiUGFja2FnZSJdCi0gICAgZHVwX3BrZ3MgPC0gcGtnc1tkdXBsaWNhdGVkKHBrZ3MpXQotICAgIGlmIChsZW5ndGgoZHVwX3BrZ3MpID4gMTAwKSB7Ci0gICAgICAgICMjIFNvbWUgcGFja2FnZXMgbWF5IGJlIGluIG11bHRpcGxlIHJlcG9zaXRvcmllcyBpbiB0aGUgc2FtZQotICAgICAgICAjIyB2ZXJzaW9uLiBIYW5kbGUgdGhvc2Ugc3BlY2lhbGx5IGZvciBwZXJmb3JtYW5jZSByZWFzb25zLgotICAgICAgICBhcCA8LSBhcFshZHVwbGljYXRlZChhcFssIGMoIlBhY2thZ2UiLCAiVmVyc2lvbiIpXSksICwgZHJvcCA9IEZBTFNFXQotICAgICAgICBwa2dzIDwtIGFwWyAsICJQYWNrYWdlIl0KLSAgICAgICAgZHVwX3BrZ3MgPC0gcGtnc1tkdXBsaWNhdGVkKHBrZ3MpXQorICAgIGlmKCFhbnlEdXBsaWNhdGVkKHBrZ3MpKSByZXR1cm4oYXApCisgICAgdmVycyA8LSBhcFsgLCAiVmVyc2lvbiJdCisgICAgIyMgU29tZSBwYWNrYWdlcyBtYXkgYmUgaW4gbXVsdGlwbGUgcmVwb3NpdG9yaWVzIGluIHRoZSBzYW1lCisgICAgIyMgdmVyc2lvbjoga2VlcCB0aGUgZmlyc3QsIHdpdGhvdXQgY29tcGFyaW5nIHZlcnNpb25zLgorICAgIHN0YWxlIDwtIGR1cGxpY2F0ZWQoY2JpbmQocGtncywgdmVycykpCisgICAgIyMgT2YgdGhlIHJlbWFpbmluZyBkdXBsaWNhdGVzIGtlZXAgdGhlIGZpcnN0IHdpdGggdGhlIGhpZ2hlc3QKKyAgICAjIyB2ZXJzaW9uLCBvcmRlcmluZyBhbGwgb2YgdGhlbSBhdCBvbmNlIGFuZCBwYXJzaW5nIGVhY2ggZGlzdGluY3QKKyAgICAjIyB2ZXJzaW9uIG9ubHkgb25jZS4KKyAgICB3aCA8LSB3aGljaCghc3RhbGUpCisgICAgd2ggPC0gd2hbcGtnc1t3aF0gJWluJSBwa2dzW3doXVtkdXBsaWNhdGVkKHBrZ3Nbd2hdKV1dCisgICAgaWYobGVuZ3RoKHdoKSkgeworICAgICAgICBnIDwtIG1hdGNoKHBrZ3Nbd2hdLCBwa2dzW3doXSkKKyAgICAgICAgdiA8LSB2ZXJzW3doXQorICAgICAgICB1diA8LSB1bmlxdWUodikKKyAgICAgICAgcmFuayA8LSB4dGZybShwYWNrYWdlX3ZlcnNpb24odXYpKVttYXRjaCh2LCB1dildCisgICAgICAgIG8gPC0gb3JkZXIoZywgLXJhbmssIHdoKQorICAgICAgICBzdGFsZVt3aFtvXVtkdXBsaWNhdGVkKGdbb10pXV0gPC0gVFJVRQogICAgIH0KLSAgICBzdGFsZV9kdXBzIDwtIGludGVnZXIobGVuZ3RoKGR1cF9wa2dzKSkKLSAgICBpIDwtIDFMCi0gICAgZm9yIChkcCBpbiBkdXBfcGtncykgewotICAgICAgICB3aCA8LSB3aGljaChkcCA9PSBwa2dzKQotICAgICAgICB2ZXJzIDwtIHBhY2thZ2VfdmVyc2lvbihhcFt3aCwgIlZlcnNpb24iXSkKLSAgICAgICAga2VlcF92ZXIgPC0gbWF4KHZlcnMpCi0Ja2VlcF9pZHggPC0gd2hpY2gubWF4KHZlcnMgPT0ga2VlcF92ZXIpICMgdGhleSBtaWdodCBhbGwgYmUgbWF4Ci0gICAgICAgIHdoIDwtIHdoWy1rZWVwX2lkeF0KLSAgICAgICAgZW5kX2kgPC0gaSArIGxlbmd0aCh3aCkgLSAxTAotICAgICAgICBzdGFsZV9kdXBzW2k6ZW5kX2ldIDwtIHdoCi0gICAgICAgIGkgPC0gZW5kX2kgKyAxTAotICAgIH0KLSAgICAjIyBQb3NzaWJsZSB0byBoYXZlIG9ubHkgb25lIHBhY2thZ2UgaW4gYSByZXBvc2l0b3J5Ci0gICAgaWYobGVuZ3RoKHN0YWxlX2R1cHMpKSBhcFstc3RhbGVfZHVwcywgLCBkcm9wID0gRkFMU0VdIGVsc2UgYXAKKyAgICBhcFshc3RhbGUsICwgZHJvcCA9IEZBTFNFXQogfQogCiBwYWNrYWdlX2RlcGVuZGVuY2llcyA8LQpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwNjA5KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTM4MDksNiArMzgwOSwzMSBAQCBmb3Iob2JqIGluIGxpc3Qoc3MsIHNzJGZpdCkpCiAjIyBUaGVzZSBjb3VsZCBjYXVzZSBhIHNlZ2ZhdWx0IGluIFIgPD0gNC42LjEKIAogCisjIyB0b29sczo6Oi5yZW1vdmVfc3RhbGVfZHVwcygpLCB1c2VkIGJ5IGF2YWlsYWJsZS5wYWNrYWdlcygpIGFuZAorIyMgd3JpdGVfUEFDS0FHRVMobGF0ZXN0T25seSA9IFRSVUUpLCBub3cgb3JkZXJpbmcgYWxsIGR1cGxpY2F0ZXMgYXQgb25jZQorbG9jYWwoeworICAgIGRiIDwtIGNiaW5kKFBhY2thZ2UgPSBjKCJhIiwgImIiLCAiYSIsICJjIiwgImEiLCAiYiIsICJjIiwgImQiLCAiZCIpLAorICAgICAgICAgICAgICAgIFZlcnNpb24gPSBjKCIxLjAiLCAiMC45IiwgIjEuMC0xIiwgIjIuMCIsICIxLjAtMSIsICIwLjEwIiwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgICAiMi4wLjAiLCAiMS4wIiwgIjEuMCIpLAorICAgICAgICAgICAgICAgIFJlcG9zaXRvcnkgPSBwYXN0ZTAoInIiLCAxOjkpKQorICAgICMjIHRoZSBoaWdoZXN0IHZlcnNpb24sIGFuZCBvZiBlcXVhbCBvbmVzIHRoZSBmaXJzdAorICAgIGtlZXAgPC0gYygzLCA0LCA2LCA4KQorICAgIHN0b3BpZm5vdChpZGVudGljYWwodG9vbHM6OjoucmVtb3ZlX3N0YWxlX2R1cHMoZGIpLCBkYltrZWVwLCBdKSkKKyAgICBkZiA8LSBhcy5kYXRhLmZyYW1lKGRiKQorICAgIHN0b3BpZm5vdChpZGVudGljYWwodG9vbHM6OjoucmVtb3ZlX3N0YWxlX2R1cHMoZGYpLCBkZltrZWVwLCBdKSkKKyAgICAjIyBtb3JlIHRoYW4gMTAwIGR1cGxpY2F0ZXMsIG1hbnkgaW4gdGhlIHNhbWUgdmVyc2lvbgorICAgIG4gPC0gMTUwCisgICAgZGIgPC0gY2JpbmQoUGFja2FnZSA9IHJlcChwYXN0ZTAoInAiLCAxOm4pLCAzKSwKKyAgICAgICAgICAgICAgICBWZXJzaW9uID0gYyhyZXAoIjEuMCIsIG4pLCByZXAoYygiMS4xIiwgIjAuOSIpLCBsZW5ndGgub3V0ID0gbiksCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgcmVwKCIxLjAiLCBuKSksCisgICAgICAgICAgICAgICAgUmVwb3NpdG9yeSA9IHJlcChjKCJBIiwgIkIiLCAiQyIpLCBlYWNoID0gbikpCisgICAga2VlcCA8LSBpZmVsc2UoMTpuICUlIDIgPT0gMSwgbiArIDE6biwgMTpuKQorICAgIHN0b3BpZm5vdChpZGVudGljYWwodG9vbHM6OjoucmVtb3ZlX3N0YWxlX2R1cHMoZGIpLCBkYltzb3J0KGtlZXApLCBdKSwKKyAgICAgICAgICAgICAgaWRlbnRpY2FsKHRvb2xzOjo6LnJlbW92ZV9zdGFsZV9kdXBzKGRiWzE6biwgXSksIGRiWzE6biwgXSkpCit9KQorIyMgc2FtZSByZXN1bHRzIGFzIGJlZm9yZSwgd2hpY2ggbG9vcGVkIG92ZXIgdGhlIGR1cGxpY2F0ZWQgcGFja2FnZXMKKworCiAjIyBmb3JtYXQoPHV0Zjg+LCB3aWR0aCA9IGxhcmdlKSAtLSBQUiMxOTE4OAogYXNzZXJ0V2FyblYoIyBqPTAgLS0+IHdhcm5pbmc6IE5BcyBpbnRyb2R1Y2VkIGJ5IGNvZXJjaW9uIHRvIGludGVnZXIgcmFuZ2UKICAgbGFwcGx5KDA6MywgXChqKQo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": true
+        },
+        {
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL1IvcGFja2FnZXMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS91dGlscy9SL3BhY2thZ2VzLlIJKHJldmlzaW9uIDkwNjA5KQorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9wYWNrYWdlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0zODgsMTggKzM4OCwxNCBAQCBmdW5jdGlvbihkYikgewogYXZhaWxhYmxlX3BhY2thZ2VzX2ZpbHRlcnNfZGIkQ1JBTiA8LQogZnVuY3Rpb24oZGIpCiB7Ci0gICAgcGFja2FnZXMgPC0gZGJbLCAiUGFja2FnZSJdCi0gICAgZHVwcyA8LSBwYWNrYWdlc1tkdXBsaWNhdGVkKHBhY2thZ2VzKV0KLSAgICBkcm9wIDwtIGludGVnZXIoKQogICAgIENSQU4gPC0gZ2V0T3B0aW9uKCJyZXBvcyIpWyJDUkFOIl0KICAgICAjIyBkbyBub3RoaW5nIGlmIHRoZXJlIGlzIG5vIENSQU4gcmVwb3Mgb24gdGhlIGxpc3QKICAgICBpZihpcy5uYShDUkFOKSkgcmV0dXJuKGRiKQotICAgIGZvcihkIGluIGR1cHMpIHsKLSAgICAgICAgcG9zIDwtIHdoaWNoKHBhY2thZ2VzID09IGQpCi0gICAgICAgIGluZCA8LSAhc3RhcnRzV2l0aChkYltwb3MsICJSZXBvc2l0b3J5Il0sIENSQU4pCi0gICAgICAgIGlmKCFhbGwoaW5kKSkgZHJvcCA8LSBjKGRyb3AsIHBvc1tpbmRdKQotICAgIH0KLSAgICBpZihsZW5ndGgoZHJvcCkpIGRiWy1kcm9wLCAsIGRyb3AgPSBGQUxTRV0gZWxzZSBkYgorICAgIHBhY2thZ2VzIDwtIGRiWywgIlBhY2thZ2UiXQorICAgIG9uQ1JBTiA8LSBzdGFydHNXaXRoKGRiWywgIlJlcG9zaXRvcnkiXSwgQ1JBTikKKyAgICAjIyBEcm9wIHRoZSBub24tQ1JBTiBlbnRyaWVzIG9mIHBhY2thZ2VzIHdoaWNoIGFyZSBhbHNvIG9uIENSQU4uCisgICAgZHJvcCA8LSAhb25DUkFOICYgcGFja2FnZXMgJWluJSBwYWNrYWdlc1tvbkNSQU5dCisgICAgaWYoYW55KGRyb3ApKSBkYlshZHJvcCwgLCBkcm9wID0gRkFMU0VdIGVsc2UgZGIKIH0KIAogCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA2MDkpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtMzgwMSw2ICszODAxLDI0IEBAIHN0b3BpZm5vdChpZGVudGljYWwoZVtbMV1dW1syXV0sIGV4KSkKICMjIGdhdmUgZ2FyYmFnZSAob3IgYSBjcmFzaCkgZm9yIHRoZSBMSFMgb2YgJysnIGluIFIgPD0gNC42LngKIAogCisjIyBhdmFpbGFibGUucGFja2FnZXMoKSAiQ1JBTiIgZmlsdGVyLCBub3cgbGluZWFyIGluIHRoZSBudW1iZXIgb2YgZHVwbGljYXRlcworbG9jYWwoeworICAgIG9wIDwtIG9wdGlvbnMocmVwb3MgPSBjKENSQU4gPSAiaHR0cHM6Ly9jcmFuLmV4YW1wbGUub3JnIiwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgICBvdGhlciA9ICJodHRwczovL290aGVyLmV4YW1wbGUub3JnIikpCisgICAgb24uZXhpdChvcHRpb25zKG9wKSkKKyAgICBmIDwtIHV0aWxzOjo6YXZhaWxhYmxlX3BhY2thZ2VzX2ZpbHRlcnNfZGIkQ1JBTgorICAgIGNyYW4gPC0gImh0dHBzOi8vY3Jhbi5leGFtcGxlLm9yZy9zcmMvY29udHJpYiIKKyAgICB4IDwtICJodHRwczovL3guZXhhbXBsZS5vcmcvc3JjL2NvbnRyaWIiCisgICAgeSA8LSAiaHR0cHM6Ly95LmV4YW1wbGUub3JnL3NyYy9jb250cmliIgorICAgIGRiIDwtIGNiaW5kKFBhY2thZ2UgPSBjKCJhIiwgImEiLCAiYiIsICJiIiwgImMiLCAiYSIsICJkIiwgImQiLCAiZSIsICJlIiksCisgICAgICAgICAgICAgICAgUmVwb3NpdG9yeSA9IGMoY3JhbiwgeCwgeCwgeSwgeCwgeSwgY3JhbiwgY3JhbiwgeCwgY3JhbikpCisgICAgc3RvcGlmbm90KGlkZW50aWNhbChmKGRiKSwgZGJbYygxLCAzLCA0LCA1LCA3LCA4LCAxMCksIF0pKQorICAgIG9wdGlvbnMocmVwb3MgPSBjKG90aGVyID0gImh0dHBzOi8vb3RoZXIuZXhhbXBsZS5vcmciKSkKKyAgICBzdG9waWZub3QoaWRlbnRpY2FsKGYoZGIpLCBkYikpCit9KQorIyMgc2FtZSByZXN1bHRzIGFzIGJlZm9yZSwgd2hpY2ggdG9vayBzZWNvbmRzIGZvciB0aG91c2FuZHMgb2YgZHVwbGljYXRlcworCisKICMjIE5VTEwgYW5kIG5lZ2F0aXZlICdkZXJpdicgaW4gcHJlZGljdC5zbW9vdGguc3BsaW5lKCkgLSBQUiMxOTE5MAogc3MgPC0gc21vb3RoLnNwbGluZSgxOjQpCiBmb3Iob2JqIGluIGxpc3Qoc3MsIHNzJGZpdCkpCg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": true,
+          "creation_time": "2026-10-01T21:46:04Z",
+          "summary": "patch 4: make the CRAN filter linear in the number of duplicates (PR #354)",
+          "file_name": "available-packages-cran-filter.diff",
+          "bug_id": 19197,
+          "last_change_time": "2026-10-01T21:46:04Z",
+          "size": 2299,
+          "is_private": false,
+          "id": 3887
+        },
+        {
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL1IvcGFja2FnZXMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS91dGlscy9SL3BhY2thZ2VzLlIJKHJldmlzaW9uIDkwNjA5KQorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9wYWNrYWdlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0zMTMsMTEgKzMxMywxMSBAQCBmdW5jdGlvbihkYikKICAgICBpZighbnpjaGFyKGN1cnJlbnQpKSByZXR1cm4oZGIpCiAgICAgYXJjaHMgPC0gZGJbLCAiQXJjaHMiXQogICAgIGlmKGFsbChpcy5uYShhcmNocykpKSByZXR1cm4oZGIpCi0gICAgT0sgPC0gdW5saXN0KGxhcHBseShhcmNocywgZnVuY3Rpb24oeCkgewotICAgICAgICBpZihpcy5uYSh4KSkgcmV0dXJuKFRSVUUpCi0gICAgICAgIHRoaXMgPC0gc3Ryc3BsaXQoeCwgIltbOnNwYWNlOl1dKixbWzpzcGFjZTpdXSoiKVtbMUxdXQotICAgICAgICBjdXJyZW50ICVpbiUgdGhpcwotICAgIH0pKQorICAgICMjIFRoZXJlIGFyZSBmZXcgZGlzdGluY3QgQXJjaHMgZW50cmllcywgc28gb25seSBjaGVjayB0aG9zZS4KKyAgICB1IDwtIHVuaXF1ZShhcmNoc1shaXMubmEoYXJjaHMpXSkKKyAgICBvayA8LSB2YXBwbHkoc3Ryc3BsaXQodSwgIltbOnNwYWNlOl1dKixbWzpzcGFjZTpdXSoiKSwKKyAgICAgICAgICAgICAgICAgZnVuY3Rpb24odGhpcykgY3VycmVudCAlaW4lIHRoaXMsIE5BKQorICAgIE9LIDwtIGlzLm5hKGFyY2hzKSB8IG9rW21hdGNoKGFyY2hzLCB1KV0KICAgICBkYltPSywgLCBkcm9wID0gRkFMU0VdCiB9CiAKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDYwOSkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zNzg3LDYgKzM3ODcsMjIgQEAgbG9jYWwoewogIyMgcHJvZHVjZWQgdW5kZWZpbmVkIGJlaHZhaW9yCiAKIAorIyMgYXZhaWxhYmxlLnBhY2thZ2VzKCkgInN1YmFyY2giIGZpbHRlciAob25seSBhY3RpdmUgaW4gYnVpbGRzIHdpdGggYQorIyMgc3ViLWFyY2hpdGVjdHVyZSwgYXMgb24gV2luZG93cyksIG5vdyBjaGVja2luZyBkaXN0aW5jdCBBcmNocyBlbnRyaWVzIG9uY2UKK2xvY2FsKHsKKyAgICBmIDwtIHV0aWxzOjo6YXZhaWxhYmxlX3BhY2thZ2VzX2ZpbHRlcnNfZGIkc3ViYXJjaAorICAgIGRiIDwtIGNiaW5kKFBhY2thZ2UgPSBwYXN0ZTAoInAiLCAxOjYpLAorICAgICAgICAgICAgICAgIEFyY2hzID0gYyhOQSwgIng2NCIsICJpMzg2LCB4NjQiLCAiaTM4NiIsICJ4NjQiLCAiaTM4Nix4NjQiKSkKKyAgICByX2FyY2ggPC0gLlBsYXRmb3JtJHJfYXJjaAorICAgIGtlZXAgPC0gaWYoIW56Y2hhcihyX2FyY2gpKSAxOjYKKyAgICAgICAgICAgIGVsc2UgaWYocl9hcmNoID09ICJ4NjQiKSBjKDEsIDIsIDMsIDUsIDYpCisgICAgICAgICAgICBlbHNlIGlmKHJfYXJjaCA9PSAiaTM4NiIpIGMoMSwgMywgNCwgNikKKyAgICAgICAgICAgIGVsc2UgMQorICAgIHN0b3BpZm5vdChpZGVudGljYWwoZihkYiksIGRiW2tlZXAsICwgZHJvcCA9IEZBTFNFXSkpCit9KQorIyMgc2FtZSByZXN1bHRzIGFzIGJlZm9yZSwgd2hpY2ggdG9vayAxNSB0aW1lcyBhcyBsb25nIGZvciBDUkFOIG9uIFdpbmRvd3MKKworCiAjIyBwYXJzaW5nICc8bGhzPiB8PiA8dmFyPiA9PiA8ZXhwcj4nIGxlZnQgdGhlIHJlZHVjZWQgY2FsbCB1bnByb3RlY3RlZCBvbiB0aGUKICMjIHBhcnNlciBzdGFjaywgc28gYSBHQyBiZWZvcmUgdGhlIGVuY2xvc2luZyByZWR1Y3Rpb24gY291bGQgZnJlZSBpdAogIyMgKGZvdW5kIGJ5IGZ1enppbmc7ICc9PicgaXMgc3RpbGwgb3B0LWluLCBhbmQgc3RheXMgZW5hYmxlZCBvbmNlIHNlZW4pCg==",
+          "is_patch": true,
+          "file_name": "available-packages-subarch-filter.diff",
+          "bug_id": 19197,
+          "creation_time": "2026-10-01T21:46:05Z",
+          "summary": "patch 5: check distinct Archs entries once in the subarch filter (PR #355)",
+          "is_private": false,
+          "id": 3888,
+          "last_change_time": "2026-10-01T21:46:05Z",
+          "size": 1978
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-01 21:46:05"
+}

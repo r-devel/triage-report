@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-30._
+_Automatically generated from the R Bugzilla dump updated 2026-10-01._
 
 ## Triaged bugs
 
@@ -46,6 +46,7 @@ _Dates show when the patch was submitted._
 ### I/O
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
+* [Bug 19194](https://bugs.r-project.org/show_bug.cgi?id=19194) — read.dcf() adds a duplicate column for every repeat of a field name containing invalid UTF-8 (regression from r90200) (2026-10-01)
 
 ### Language
 
@@ -109,6 +110,7 @@ _Dates show when the patch was submitted._
 ### Windows GUI / Window specific
 
 * [Bug 19143](https://bugs.r-project.org/show_bug.cgi?id=19143) — `Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8 (2026-08-28)
+* [Bug 19198](https://bugs.r-project.org/show_bug.cgi?id=19198) — Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing (2026-10-01)
 
 ### Wishlist
 
@@ -127,6 +129,7 @@ _Dates show when the patch was submitted._
 * [Bug 19105](https://bugs.r-project.org/show_bug.cgi?id=19105) — Provide a traceback when crashing on Windows (2026-07-19)
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
+* [Bug 19197](https://bugs.r-project.org/show_bug.cgi?id=19197) — available.packages() speedups: zstd-compressed cache and faster R_version, duplicates, CRAN and subarch filters (2026-10-01)
 
 ## About this report
 

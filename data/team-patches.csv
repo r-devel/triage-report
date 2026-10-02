@@ -1,6 +1,7 @@
 bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18705
 19129,Rf_EncodeString sometimes over-counts double quotes,I/O,ikrylov,NEW,2026-08-07 15:16:40 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19129
+19194,read.dcf() adds a duplicate column for every repeat of a field name containing invalid UTF-8 (regression from r90200),I/O,kevinushey,NEW,2026-10-01 05:55:06 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19194
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18583
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18096
 18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18863
@@ -43,6 +44,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18793,checkPoFile() has a really strong assumption of no blank lines between msgid and msgstr entries,Translations,michaelchirico4,UNCONFIRMED,2024-09-09 03:52:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18793
 18091,tools::xgettext fails on a wrapper of a gettextf,Translations,michaelchirico4,UNCONFIRMED,2024-09-14 18:32:20 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18091
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,https://bugs.r-project.org/show_bug.cgi?id=19143
+19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19198
 17676,vcov.lm should calculate vcov more directly for efficiency,Wishlist,michaelchirico4,UNCONFIRMED,2019-12-17 09:02:33 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17676
 17778,barplot should take user-supplied lwd,Wishlist,michaelchirico4,UNCONFIRMED,2020-05-01 02:45:12 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17778
 17918,"Improve debugcall and debugcallonce to support calls to funs via :: :::, patch included",Wishlist,gabembecker,UNCONFIRMED,2020-09-08 10:48:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17918
@@ -58,3 +60,4 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19105,Provide a traceback when crashing on Windows,Wishlist,ikrylov,NEW,2026-07-19 20:25:09 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19105
 19141,`is.na()` and the `as.*()` coercions read their argument one element at a time,Wishlist,kevinushey,NEW,2026-09-03 18:54:12 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19141
 19159,"hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash",Wishlist,kevinushey,NEW,2026-09-04 00:20:58 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19159
+19197,"available.packages() speedups: zstd-compressed cache and faster R_version, duplicates, CRAN and subarch filters",Wishlist,kevinushey,NEW,2026-10-01 21:46:05 +0000,5,https://bugs.r-project.org/show_bug.cgi?id=19197

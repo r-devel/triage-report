@@ -1,63 +1,63 @@
 {
   "bug": {
-    "faults": [],
     "bugs": [
       {
-        "deadline": {},
-        "id": 19189,
-        "severity": "normal",
-        "dupe_of": {},
-        "cc": [
-          "ikrylov"
-        ],
-        "qa_contact": "",
-        "priority": "P5",
-        "product": "R",
-        "whiteboard": "",
-        "creation_time": "2026-09-29T10:50:36Z",
-        "version": "R-devel (trunk)",
-        "component": "Analyses",
-        "classification": "Unclassified",
-        "keywords": [],
-        "depends_on": [],
-        "is_open": true,
-        "assigned_to": "R-core",
-        "see_also": [],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "adam.berkes2002",
+        "status": "TRIAGED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Adam Berkeš",
+          "name": "adam.berkes2002",
+          "id": 3792
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "summary": "Segfault in stats::fisher.test (f2exact)",
         "target_milestone": "---",
-        "last_change_time": "2026-09-30T15:17:27Z",
+        "see_also": [],
         "cc_detail": [
           {
-            "name": "ikrylov",
             "id": 3307,
+            "name": "ikrylov",
             "real_name": "Ivan Krylov"
           }
         ],
-        "blocks": [],
-        "url": "",
-        "summary": "Segfault in stats::fisher.test (f2exact)",
-        "assigned_to_detail": {
-          "real_name": "R-core",
-          "name": "R-core",
-          "id": 16
-        },
-        "groups": [],
-        "is_cc_accessible": true,
-        "status": "UNCONFIRMED",
-        "creator_detail": {
-          "name": "adam.berkes2002",
-          "id": 3792,
-          "real_name": "Adam Berkeš"
-        },
-        "resolution": "",
-        "op_sys": "Other",
-        "is_confirmed": false,
-        "platform": "Other",
-        "flags": [],
-        "alias": [],
-        "is_creator_accessible": true,
-        "creator": "adam.berkes2002"
+        "last_change_time": "2026-10-02T12:12:00Z",
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Analyses",
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-09-29T10:50:36Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19189,
+        "qa_contact": "",
+        "cc": [
+          "ikrylov"
+        ]
       }
-    ]
+    ],
+    "faults": []
   },
   "comments": {
     "bugs": {
@@ -65,29 +65,55 @@
         "comments": [
           {
             "creation_time": "2026-09-29T10:50:36Z",
-            "bug_id": 19189,
-            "text": "Calling `stats::fisher.test` with crafted input results in a segfault due to an out of bounds write:\n\n```\n> stats::fisher.test(matrix(300000000L, nrow = 2L, ncol = 3L))\n\n *** caught segfault ***\naddress 0xbb3e1afceb60, cause 'memory not mapped'\n\nTraceback:\n 1: stats::fisher.test(matrix(300000000L, nrow = 2L, ncol = 3L))\nAn irrecoverable exception occurred. R is aborting now ...\n[1]    12139 segmentation fault (core dumped)\n```\n\nThe fault originates from an out of bounds write in `f2exact`, located in `fexact.c:401`, as reported by valgrind:\n\n```\n==12318== Invalid write of size 4\n==12318==    at 0xBF4E300: f2xact (fexact.c:401)\n==12318==    by 0xBF4E300: fexact (fexact.c:291)\n==12318==    by 0xBF516CB: Fexact (fexact.c:2070)\n==12318==    by 0x410265F: R_doDotCall (dotcode.c:763)\n...\n```\n\nThere's also a possibly related integer overflow reported by ubsan when running the same input:\n\n```\n.../R-devel/src/library/stats/src/fexact.c:1842:20: runtime error: left shift of 1800000001 by 1 places cannot be represented in type 'int'\n```\n\nVersion:\n```\nsvn rev r90590\n```\n\nOS:\n```\nLinux Ubuntu 26.04, aarch64\n```\n\nAlso fails fataly on M1 Mac, although with a bus error.",
             "count": 0,
+            "text": "Calling `stats::fisher.test` with crafted input results in a segfault due to an out of bounds write:\n\n```\n> stats::fisher.test(matrix(300000000L, nrow = 2L, ncol = 3L))\n\n *** caught segfault ***\naddress 0xbb3e1afceb60, cause 'memory not mapped'\n\nTraceback:\n 1: stats::fisher.test(matrix(300000000L, nrow = 2L, ncol = 3L))\nAn irrecoverable exception occurred. R is aborting now ...\n[1]    12139 segmentation fault (core dumped)\n```\n\nThe fault originates from an out of bounds write in `f2exact`, located in `fexact.c:401`, as reported by valgrind:\n\n```\n==12318== Invalid write of size 4\n==12318==    at 0xBF4E300: f2xact (fexact.c:401)\n==12318==    by 0xBF4E300: fexact (fexact.c:291)\n==12318==    by 0xBF516CB: Fexact (fexact.c:2070)\n==12318==    by 0x410265F: R_doDotCall (dotcode.c:763)\n...\n```\n\nThere's also a possibly related integer overflow reported by ubsan when running the same input:\n\n```\n.../R-devel/src/library/stats/src/fexact.c:1842:20: runtime error: left shift of 1800000001 by 1 places cannot be represented in type 'int'\n```\n\nVersion:\n```\nsvn rev r90590\n```\n\nOS:\n```\nLinux Ubuntu 26.04, aarch64\n```\n\nAlso fails fataly on M1 Mac, although with a bus error.",
+            "bug_id": 19189,
             "tags": [],
-            "id": 103728,
             "is_private": false,
+            "id": 103728,
             "creator": "adam.berkes2002",
             "is_markdown": true,
             "attachment_id": {},
             "time": "2026-09-29T10:50:36Z"
           },
           {
-            "is_private": false,
+            "attachment_id": 3877,
+            "tags": [],
             "time": "2026-09-30T15:17:27Z",
             "id": 103739,
-            "tags": [],
-            "attachment_id": 3877,
-            "is_markdown": true,
-            "count": 1,
+            "is_private": false,
+            "creator": "ikrylov",
+            "creation_time": "2026-09-30T15:17:27Z",
             "text": "Created attachment 3877\nproposed fixes\n\nDear Adam Berkeš,\nThank you for the report!\n\nThere are many opportunities for integer overflow in `fisher.test`:\n\n```\n// src/library/stats/src/fexact.c\n// fexact():\n    ntot = 0;\n    for (i = 0; i < nrow; ++i) {\n\tfor (j = 0; j < ncol; ++j) {\n\t    if (table[i + j * ldtabl] < 0) // line 212\n\t\tprterr(2, \"All elements of TABLE must be nonnegative.\");\n\t    ntot += table[i + j * ldtabl]; // line 214\n// ...\n    kk = k * nco; // line 234\n// ...\n    i1  = iwork(iwkmax, &iwkpt, ntot + 1, i_real); // line 236\n// ...\n    int ikh = imax2(k * 5 + (kk << 1), nco * 7 + 4*n2_stack); // line 242\n// ...\n    /* Compute row marginals and total */\n    ntot = 0;\n    for (i = 1; i <= nrow; ++i) {\n\tiro[i] = 0;\n\tfor (j = 1; j <= ncol; ++j) {\n\t    if (table[i + j * ldtabl] < 0.)\n\t\tprterr(2, \"All elements of TABLE must be nonnegative.\");\n\n\t    iro[i] += table[i + j * ldtabl]; // line 422\n\t}\n\tntot += iro[i];\n// ...\n    /* Column marginals */\n    for (i = 1; i <= ncol; ++i) {\n\tico[i] = 0;\n\tfor (j = 1; j <= nrow; ++j)\n\t    ico[i] += table[j + i * ldtabl]; // line 438\n    }\n// ...\n// f2xact():\n\t    for (i = 1, ii = j * ldtabl + 1; i <= nro; i++, ii++) {\n\t\tdd += fact[table[ii]]; // line 503\n// ...\n// iwork():\n    if (itype == 2 || itype == 3)\n\t*iwkpt += number; // line 1838\n    else { /* double */\n\tif (i % 2 != 0)\n\t    ++i;\n\t*iwkpt += (number << 1); // line 1842, originally reported overflow\n```\n\n`ntot` is used as an allocation size and overflows to a small number:\n```\n> fisher.test(matrix(2^30+1, 2, 4))\n../../../../../src/library/stats/src/fexact.c:214:11: runtime error: signed integer overflow: 1073741825 + 1073741825 cannot be represented in type 'int'\n../../../../../src/library/stats/src/fexact.c:422:13: runtime error: signed integer overflow: 1073741825 + 1073741825 cannot be represented in type 'int'\n../../../../../src/library/stats/src/fexact.c:438:13: runtime error: signed integer overflow: 1073741825 + 1073741825 cannot be represented in type 'int'\n```\n...so the following memory access to the buffer is out of bounds:\n```\n==21661== Invalid read of size 8\n==21661==    at 0xC6D5B57: f2xact (fexact.c:503)\n==21661==    by 0xC6D5B57: fexact (fexact.c:291)\n...\n==21661==  Address 0x20d539b98 is not stack'd, malloc'd or (recently) free'd\n```\n\nLong matrices overflow the offset calculation:\n\n```\n> fisher.test(matrix(1L, 2^31-1, 2)) # requires 48G of memory! or very fast swap and patience\n../../../../../src/library/stats/src/fexact.c:212:18: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'\n=================================================================\n==11078==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x7f193419b828 at pc 0x7f1f36b9cad3 bp 0x7ffdd6ecd140 sp 0x7ffdd6ecd138\nREAD of size 4 at 0x7f193419b828 thread T0\n    #0 0x7f1f36b9cad2 in fexact ../../../../../src/library/stats/src/fexact.c:212\n```\n\nOther size calculations can overflow as well:\n\n```\n> fisher.test(matrix(c(1L, 0L, 0L), 2, 2^31/3), workspace = .Machine$integer.max)\n../../../../../src/library/stats/src/fexact.c:234:8: runtime error: signed integer overflow: 715827882 * 715827885 cannot be represented in type 'int'\n../../../../../src/library/stats/src/fexact.c:1838:9: runtime error: signed integer overflow: 715827882 + 1670265060 cannot be represented in type 'int'\n../../../../../src/library/stats/src/fexact.c:242:44: runtime error: signed integer overflow: 715827882 * 7 cannot be represented in type 'int'\n../../../../../src/library/stats/src/fexact.c:242:33: runtime error: left shift of 1670265058 by 1 places cannot be represented in type 'int'\n../../../../../src/library/stats/src/fexact.c:242:23: runtime error: signed integer overflow: 715827885 * 5 cannot be represented in type 'int'\n```\n\n```\n> fisher.test(matrix(c(2^30,2^30-1,0,0,0,0), 2, 3))\n../../../../../src/library/stats/src/fexact.c:236:11: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'\n```\n\nI've modified the function to be more careful about its allocation size calculations (tested with `make check-devel` on Linux). Do you think this is sufficient?",
             "bug_id": 19189,
-            "creator": "ikrylov",
-            "creation_time": "2026-09-30T15:17:27Z"
+            "is_markdown": true,
+            "count": 1
+          },
+          {
+            "id": 103752,
+            "time": "2026-10-01T19:49:44Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "bug_id": 19189,
+            "text": "Hello,\n\n(In reply to Ivan Krylov from comment #1)\n> ...\n> I've modified the function to be more careful about its allocation size\n> calculations (tested with `make check-devel` on Linux). Do you think this is\n> sufficient?\n\nThere is one check in the patch that doesn't seem correct:\n```\n@@ -239,6 +246,8 @@\n     i3a = iwork(iwkmax, &iwkpt, nco, i_int);\n     i3b = iwork(iwkmax, &iwkpt, nro, i_int);\n     i3c = iwork(iwkmax, &iwkpt, nro, i_int);\n+    if (kk > ((INT_MAX - k * 2) >> 1) || nco > (INT_MAX - 4*n2_stack) / 7)\n+\tprterr(40, \"Workspace allocation size overflow (ikh > INT_MAX).\");\n     int ikh = imax2(k * 5 + (kk << 1), nco * 7 + 4*n2_stack);\n     iiwk= iwork(iwkmax, &iwkpt, ikh, i_int);\n     ikh = imax2(nco + 1 + 2*n2_stack, k);\n```\n\nspecifically, the `k * 2`. The `int ikh` definition two lines below uses `k * 5`, which still allows for overflow, for example:\n```\nx <- matrix(0L, 2L, 32766L)\nx[1L] <- 1L\nstats::fisher.test(x)\n\n.../src/library/stats/src/fexact.c:251:27: runtime error: signed integer overflow: 163845 + 2147418108 cannot be represented in type 'int'\n```\n\nOther than that the patch seems fine to me and passes my tests. Thank you for identifying and fixing bugs beside the one mentioned in my original report.",
+            "is_markdown": true,
+            "count": 2,
+            "creation_time": "2026-10-01T19:49:44Z",
+            "creator": "adam.berkes2002"
+          },
+          {
+            "id": 103761,
+            "is_private": false,
+            "tags": [],
+            "text": "Created attachment 3890\nproposed fixes\n\n(In reply to Adam Berkeš from comment #2)\n\nThank you for the review! Fixed the typo in the patch.",
+            "bug_id": 19189,
+            "count": 3,
+            "creation_time": "2026-10-02T12:11:49Z",
+            "time": "2026-10-02T12:11:49Z",
+            "attachment_id": 3890,
+            "is_markdown": true,
+            "creator": "ikrylov"
           }
         ]
       }
@@ -98,24 +124,40 @@
     "bugs": {
       "19189": [
         {
-          "creation_time": "2026-09-30T15:17:27Z",
           "summary": "proposed fixes",
+          "creation_time": "2026-09-30T15:17:27Z",
+          "bug_id": 19189,
+          "file_name": "PR19189.patch",
+          "size": 2536,
+          "last_change_time": "2026-10-02T12:11:49Z",
+          "id": 3877,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9mZXhhY3QuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy9zcmMvZmV4YWN0LmMJKHJldmlzaW9uIDkwNTk4KQorKysgc3JjL2xpYnJhcnkvc3RhdHMvc3JjL2ZleGFjdC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTEsNyArMjExLDEwIEBACiAJZm9yIChqID0gMDsgaiA8IG5jb2w7ICsraikgewogCSAgICBpZiAodGFibGVbaSArIGogKiBsZHRhYmxdIDwgMCkKIAkJcHJ0ZXJyKDIsICJBbGwgZWxlbWVudHMgb2YgVEFCTEUgbXVzdCBiZSBub25uZWdhdGl2ZS4iKTsKLQkgICAgbnRvdCArPSB0YWJsZVtpICsgaiAqIGxkdGFibF07CisJICAgIGludCBpbmMgPSB0YWJsZVtpICsgaiAqIGxkdGFibF07CisJICAgIGlmIChudG90ID4gSU5UX01BWCAtIGluYykKKwkJcHJ0ZXJyKDQwLCAiV29ya3NwYWNlIGFsbG9jYXRpb24gc2l6ZSBvdmVyZmxvdyAobnRvdCArIGluYyA+IElOVF9NQVgpLiIpOworCSAgICBudG90ICs9IGluYzsKIAl9CiAgICAgfQogICAgIGlmIChudG90ID09IDApIHsKQEAgLTIzMSw4ICsyMzQsMTIgQEAKIAlucm8gPSBuY29sOwogICAgIH0KICAgICBrID0gbnJvdyArIG5jb2wgKyAxOworICAgIGlmIChrID4gSU5UX01BWCAvIG5jbykKKwlwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChrICogbmNvID4gSU5UX01BWCkuIik7CiAgICAga2sgPSBrICogbmNvOwogCisgICAgaWYgKG50b3QgPT0gSU5UX01BWCkKKwlwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChudG90ID09IElOVF9NQVgpLiIpOwogICAgIGkxICA9IGl3b3JrKGl3a21heCwgJml3a3B0LCBudG90ICsgMSwgaV9yZWFsKTsKICAgICBpMiAgPSBpd29yayhpd2ttYXgsICZpd2twdCwgbmNvLCBpX2ludCk7CiAgICAgaTMgID0gaXdvcmsoaXdrbWF4LCAmaXdrcHQsIG5jbywgaV9pbnQpOwpAQCAtMjM5LDYgKzI0Niw4IEBACiAgICAgaTNhID0gaXdvcmsoaXdrbWF4LCAmaXdrcHQsIG5jbywgaV9pbnQpOwogICAgIGkzYiA9IGl3b3JrKGl3a21heCwgJml3a3B0LCBucm8sIGlfaW50KTsKICAgICBpM2MgPSBpd29yayhpd2ttYXgsICZpd2twdCwgbnJvLCBpX2ludCk7CisgICAgaWYgKGtrID4gKChJTlRfTUFYIC0gayAqIDIpID4+IDEpIHx8IG5jbyA+IChJTlRfTUFYIC0gNCpuMl9zdGFjaykgLyA3KQorCXBydGVycig0MCwgIldvcmtzcGFjZSBhbGxvY2F0aW9uIHNpemUgb3ZlcmZsb3cgKGlraCA+IElOVF9NQVgpLiIpOwogICAgIGludCBpa2ggPSBpbWF4MihrICogNSArIChrayA8PCAxKSwgbmNvICogNyArIDQqbjJfc3RhY2spOwogICAgIGlpd2s9IGl3b3JrKGl3a21heCwgJml3a3B0LCBpa2gsIGlfaW50KTsKICAgICBpa2ggPSBpbWF4MihuY28gKyAxICsgMipuMl9zdGFjaywgayk7CkBAIC0xODM0LDEyICsxODQzLDIwIEBACiAgICAgaW50IGk7CiAKICAgICBpID0gKml3a3B0OwotICAgIGlmIChpdHlwZSA9PSAyIHx8IGl0eXBlID09IDMpCisgICAgaWYgKGl0eXBlID09IDIgfHwgaXR5cGUgPT0gMykgeworCWlmIChpID4gSU5UX01BWCAtIG51bWJlcikKKwkgICAgcHJ0ZXJyKDQwLCAiV29ya3NwYWNlIGFsbG9jYXRpb24gc2l6ZSBvdmVyZmxvdyAoaXdrbWF4ICsgbnVtYmVyID4gSU5UX01BWCkuIik7CiAJKml3a3B0ICs9IG51bWJlcjsKKyAgICB9CiAgICAgZWxzZSB7IC8qIGRvdWJsZSAqLwogCWlmIChpICUgMiAhPSAwKQogCSAgICArK2k7Ci0JKml3a3B0ICs9IChudW1iZXIgPDwgMSk7CisJaWYgKG51bWJlciA+IChJTlRfTUFYID4+IDEpKQorCSAgICBwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChudW1iZXIgPDwgMSA+IElOVF9NQVgpLiIpOworCW51bWJlciA8PD0gMTsKKwlpZiAoaSA+IElOVF9NQVggLSBudW1iZXIpCisJICAgIHBydGVycig0MCwgIldvcmtzcGFjZSBhbGxvY2F0aW9uIHNpemUgb3ZlcmZsb3cgKGl3a21heCArIG51bWJlciA+IElOVF9NQVgpLiIpOworCSppd2twdCArPSBudW1iZXI7CiAJaSAvPSAyOwogICAgIH0KICAgICBpZiAoKml3a3B0ID4gaXdrbWF4KQpAQCAtMjA2NSw2ICsyMDgyLDkgQEAKIHsKICAgICBpbnQgbnIgPSBucm93cyh4KSwgbmMgPSBuY29scyh4KSwgd3MgPSBhc0ludGVnZXIod29yayksCiAJbXVsdCA9IGFzSW50ZWdlcihzbXVsdCk7CisgICAgaWYgKHhsZW5ndGgoeCkgPiBJTlRfTUFYKQorCWVycm9yKF8oIkZleGFjdCgpOiBtYXRyaXggaXMgdG9vIGxhcmdlLCAlbGxkID4gSU5UX01BWFxuIgorCSAgICAgICAgIlJhdGhlciBzZXQgJ3NpbXVsYXRlLnAudmFsdWU9VFJVRSdcbiIpLCAobG9uZyBsb25nKXhsZW5ndGgoeCkpOwogICAgIHBhcnMgPSBQUk9URUNUKGNvZXJjZVZlY3RvcihwYXJzLCBSRUFMU1hQKSk7CiAgICAgZG91YmxlIHAsIHBydCwgKnJwID0gIFJFQUwocGFycyk7CiAgICAgZmV4YWN0KG5yLCBuYywgSU5URUdFUih4KSwgbnIsCg==",
+          "creator": "ikrylov",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        },
+        {
+          "is_private": false,
+          "id": 3890,
+          "last_change_time": "2026-10-02T12:11:49Z",
+          "size": 2536,
           "file_name": "PR19189.patch",
           "bug_id": 19189,
-          "last_change_time": "2026-09-30T15:17:27Z",
-          "size": 2536,
-          "is_private": false,
-          "id": 3877,
-          "creator": "ikrylov",
-          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9mZXhhY3QuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy9zcmMvZmV4YWN0LmMJKHJldmlzaW9uIDkwNTk4KQorKysgc3JjL2xpYnJhcnkvc3RhdHMvc3JjL2ZleGFjdC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTEsNyArMjExLDEwIEBACiAJZm9yIChqID0gMDsgaiA8IG5jb2w7ICsraikgewogCSAgICBpZiAodGFibGVbaSArIGogKiBsZHRhYmxdIDwgMCkKIAkJcHJ0ZXJyKDIsICJBbGwgZWxlbWVudHMgb2YgVEFCTEUgbXVzdCBiZSBub25uZWdhdGl2ZS4iKTsKLQkgICAgbnRvdCArPSB0YWJsZVtpICsgaiAqIGxkdGFibF07CisJICAgIGludCBpbmMgPSB0YWJsZVtpICsgaiAqIGxkdGFibF07CisJICAgIGlmIChudG90ID4gSU5UX01BWCAtIGluYykKKwkJcHJ0ZXJyKDQwLCAiV29ya3NwYWNlIGFsbG9jYXRpb24gc2l6ZSBvdmVyZmxvdyAobnRvdCArIGluYyA+IElOVF9NQVgpLiIpOworCSAgICBudG90ICs9IGluYzsKIAl9CiAgICAgfQogICAgIGlmIChudG90ID09IDApIHsKQEAgLTIzMSw4ICsyMzQsMTIgQEAKIAlucm8gPSBuY29sOwogICAgIH0KICAgICBrID0gbnJvdyArIG5jb2wgKyAxOworICAgIGlmIChrID4gSU5UX01BWCAvIG5jbykKKwlwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChrICogbmNvID4gSU5UX01BWCkuIik7CiAgICAga2sgPSBrICogbmNvOwogCisgICAgaWYgKG50b3QgPT0gSU5UX01BWCkKKwlwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChudG90ID09IElOVF9NQVgpLiIpOwogICAgIGkxICA9IGl3b3JrKGl3a21heCwgJml3a3B0LCBudG90ICsgMSwgaV9yZWFsKTsKICAgICBpMiAgPSBpd29yayhpd2ttYXgsICZpd2twdCwgbmNvLCBpX2ludCk7CiAgICAgaTMgID0gaXdvcmsoaXdrbWF4LCAmaXdrcHQsIG5jbywgaV9pbnQpOwpAQCAtMjM5LDYgKzI0Niw4IEBACiAgICAgaTNhID0gaXdvcmsoaXdrbWF4LCAmaXdrcHQsIG5jbywgaV9pbnQpOwogICAgIGkzYiA9IGl3b3JrKGl3a21heCwgJml3a3B0LCBucm8sIGlfaW50KTsKICAgICBpM2MgPSBpd29yayhpd2ttYXgsICZpd2twdCwgbnJvLCBpX2ludCk7CisgICAgaWYgKGtrID4gKChJTlRfTUFYIC0gayAqIDIpID4+IDEpIHx8IG5jbyA+IChJTlRfTUFYIC0gNCpuMl9zdGFjaykgLyA3KQorCXBydGVycig0MCwgIldvcmtzcGFjZSBhbGxvY2F0aW9uIHNpemUgb3ZlcmZsb3cgKGlraCA+IElOVF9NQVgpLiIpOwogICAgIGludCBpa2ggPSBpbWF4MihrICogNSArIChrayA8PCAxKSwgbmNvICogNyArIDQqbjJfc3RhY2spOwogICAgIGlpd2s9IGl3b3JrKGl3a21heCwgJml3a3B0LCBpa2gsIGlfaW50KTsKICAgICBpa2ggPSBpbWF4MihuY28gKyAxICsgMipuMl9zdGFjaywgayk7CkBAIC0xODM0LDEyICsxODQzLDIwIEBACiAgICAgaW50IGk7CiAKICAgICBpID0gKml3a3B0OwotICAgIGlmIChpdHlwZSA9PSAyIHx8IGl0eXBlID09IDMpCisgICAgaWYgKGl0eXBlID09IDIgfHwgaXR5cGUgPT0gMykgeworCWlmIChpID4gSU5UX01BWCAtIG51bWJlcikKKwkgICAgcHJ0ZXJyKDQwLCAiV29ya3NwYWNlIGFsbG9jYXRpb24gc2l6ZSBvdmVyZmxvdyAoaXdrbWF4ICsgbnVtYmVyID4gSU5UX01BWCkuIik7CiAJKml3a3B0ICs9IG51bWJlcjsKKyAgICB9CiAgICAgZWxzZSB7IC8qIGRvdWJsZSAqLwogCWlmIChpICUgMiAhPSAwKQogCSAgICArK2k7Ci0JKml3a3B0ICs9IChudW1iZXIgPDwgMSk7CisJaWYgKG51bWJlciA+IChJTlRfTUFYID4+IDEpKQorCSAgICBwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChudW1iZXIgPDwgMSA+IElOVF9NQVgpLiIpOworCW51bWJlciA8PD0gMTsKKwlpZiAoaSA+IElOVF9NQVggLSBudW1iZXIpCisJICAgIHBydGVycig0MCwgIldvcmtzcGFjZSBhbGxvY2F0aW9uIHNpemUgb3ZlcmZsb3cgKGl3a21heCArIG51bWJlciA+IElOVF9NQVgpLiIpOworCSppd2twdCArPSBudW1iZXI7CiAJaSAvPSAyOwogICAgIH0KICAgICBpZiAoKml3a3B0ID4gaXdrbWF4KQpAQCAtMjA2NSw2ICsyMDgyLDkgQEAKIHsKICAgICBpbnQgbnIgPSBucm93cyh4KSwgbmMgPSBuY29scyh4KSwgd3MgPSBhc0ludGVnZXIod29yayksCiAJbXVsdCA9IGFzSW50ZWdlcihzbXVsdCk7CisgICAgaWYgKHhsZW5ndGgoeCkgPiBJTlRfTUFYKQorCWVycm9yKF8oIkZleGFjdCgpOiBtYXRyaXggaXMgdG9vIGxhcmdlLCAlbGxkID4gSU5UX01BWFxuIgorCSAgICAgICAgIlJhdGhlciBzZXQgJ3NpbXVsYXRlLnAudmFsdWU9VFJVRSdcbiIpLCAobG9uZyBsb25nKXhsZW5ndGgoeCkpOwogICAgIHBhcnMgPSBQUk9URUNUKGNvZXJjZVZlY3RvcihwYXJzLCBSRUFMU1hQKSk7CiAgICAgZG91YmxlIHAsIHBydCwgKnJwID0gIFJFQUwocGFycyk7CiAgICAgZmV4YWN0KG5yLCBuYywgSU5URUdFUih4KSwgbnIsCg==",
-          "content_type": "text/plain",
+          "creation_time": "2026-10-02T12:11:49Z",
+          "summary": "proposed fixes",
+          "is_patch": true,
           "flags": [],
+          "content_type": "text/plain",
           "is_obsolete": false,
-          "is_patch": true
+          "creator": "ikrylov",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9mZXhhY3QuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9zdGF0cy9zcmMvZmV4YWN0LmMJKHJldmlzaW9uIDkwNTk4KQorKysgc3JjL2xpYnJhcnkvc3RhdHMvc3JjL2ZleGFjdC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTEsNyArMjExLDEwIEBACiAJZm9yIChqID0gMDsgaiA8IG5jb2w7ICsraikgewogCSAgICBpZiAodGFibGVbaSArIGogKiBsZHRhYmxdIDwgMCkKIAkJcHJ0ZXJyKDIsICJBbGwgZWxlbWVudHMgb2YgVEFCTEUgbXVzdCBiZSBub25uZWdhdGl2ZS4iKTsKLQkgICAgbnRvdCArPSB0YWJsZVtpICsgaiAqIGxkdGFibF07CisJICAgIGludCBpbmMgPSB0YWJsZVtpICsgaiAqIGxkdGFibF07CisJICAgIGlmIChudG90ID4gSU5UX01BWCAtIGluYykKKwkJcHJ0ZXJyKDQwLCAiV29ya3NwYWNlIGFsbG9jYXRpb24gc2l6ZSBvdmVyZmxvdyAobnRvdCArIGluYyA+IElOVF9NQVgpLiIpOworCSAgICBudG90ICs9IGluYzsKIAl9CiAgICAgfQogICAgIGlmIChudG90ID09IDApIHsKQEAgLTIzMSw4ICsyMzQsMTIgQEAKIAlucm8gPSBuY29sOwogICAgIH0KICAgICBrID0gbnJvdyArIG5jb2wgKyAxOworICAgIGlmIChrID4gSU5UX01BWCAvIG5jbykKKwlwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChrICogbmNvID4gSU5UX01BWCkuIik7CiAgICAga2sgPSBrICogbmNvOwogCisgICAgaWYgKG50b3QgPT0gSU5UX01BWCkKKwlwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChudG90ID09IElOVF9NQVgpLiIpOwogICAgIGkxICA9IGl3b3JrKGl3a21heCwgJml3a3B0LCBudG90ICsgMSwgaV9yZWFsKTsKICAgICBpMiAgPSBpd29yayhpd2ttYXgsICZpd2twdCwgbmNvLCBpX2ludCk7CiAgICAgaTMgID0gaXdvcmsoaXdrbWF4LCAmaXdrcHQsIG5jbywgaV9pbnQpOwpAQCAtMjM5LDYgKzI0Niw4IEBACiAgICAgaTNhID0gaXdvcmsoaXdrbWF4LCAmaXdrcHQsIG5jbywgaV9pbnQpOwogICAgIGkzYiA9IGl3b3JrKGl3a21heCwgJml3a3B0LCBucm8sIGlfaW50KTsKICAgICBpM2MgPSBpd29yayhpd2ttYXgsICZpd2twdCwgbnJvLCBpX2ludCk7CisgICAgaWYgKGtrID4gKChJTlRfTUFYIC0gayAqIDUpID4+IDEpIHx8IG5jbyA+IChJTlRfTUFYIC0gNCpuMl9zdGFjaykgLyA3KQorCXBydGVycig0MCwgIldvcmtzcGFjZSBhbGxvY2F0aW9uIHNpemUgb3ZlcmZsb3cgKGlraCA+IElOVF9NQVgpLiIpOwogICAgIGludCBpa2ggPSBpbWF4MihrICogNSArIChrayA8PCAxKSwgbmNvICogNyArIDQqbjJfc3RhY2spOwogICAgIGlpd2s9IGl3b3JrKGl3a21heCwgJml3a3B0LCBpa2gsIGlfaW50KTsKICAgICBpa2ggPSBpbWF4MihuY28gKyAxICsgMipuMl9zdGFjaywgayk7CkBAIC0xODM0LDEyICsxODQzLDIwIEBACiAgICAgaW50IGk7CiAKICAgICBpID0gKml3a3B0OwotICAgIGlmIChpdHlwZSA9PSAyIHx8IGl0eXBlID09IDMpCisgICAgaWYgKGl0eXBlID09IDIgfHwgaXR5cGUgPT0gMykgeworCWlmIChpID4gSU5UX01BWCAtIG51bWJlcikKKwkgICAgcHJ0ZXJyKDQwLCAiV29ya3NwYWNlIGFsbG9jYXRpb24gc2l6ZSBvdmVyZmxvdyAoaXdrbWF4ICsgbnVtYmVyID4gSU5UX01BWCkuIik7CiAJKml3a3B0ICs9IG51bWJlcjsKKyAgICB9CiAgICAgZWxzZSB7IC8qIGRvdWJsZSAqLwogCWlmIChpICUgMiAhPSAwKQogCSAgICArK2k7Ci0JKml3a3B0ICs9IChudW1iZXIgPDwgMSk7CisJaWYgKG51bWJlciA+IChJTlRfTUFYID4+IDEpKQorCSAgICBwcnRlcnIoNDAsICJXb3Jrc3BhY2UgYWxsb2NhdGlvbiBzaXplIG92ZXJmbG93IChudW1iZXIgPDwgMSA+IElOVF9NQVgpLiIpOworCW51bWJlciA8PD0gMTsKKwlpZiAoaSA+IElOVF9NQVggLSBudW1iZXIpCisJICAgIHBydGVycig0MCwgIldvcmtzcGFjZSBhbGxvY2F0aW9uIHNpemUgb3ZlcmZsb3cgKGl3a21heCArIG51bWJlciA+IElOVF9NQVgpLiIpOworCSppd2twdCArPSBudW1iZXI7CiAJaSAvPSAyOwogICAgIH0KICAgICBpZiAoKml3a3B0ID4gaXdrbWF4KQpAQCAtMjA2NSw2ICsyMDgyLDkgQEAKIHsKICAgICBpbnQgbnIgPSBucm93cyh4KSwgbmMgPSBuY29scyh4KSwgd3MgPSBhc0ludGVnZXIod29yayksCiAJbXVsdCA9IGFzSW50ZWdlcihzbXVsdCk7CisgICAgaWYgKHhsZW5ndGgoeCkgPiBJTlRfTUFYKQorCWVycm9yKF8oIkZleGFjdCgpOiBtYXRyaXggaXMgdG9vIGxhcmdlLCAlbGxkID4gSU5UX01BWFxuIgorCSAgICAgICAgIlJhdGhlciBzZXQgJ3NpbXVsYXRlLnAudmFsdWU9VFJVRSdcbiIpLCAobG9uZyBsb25nKXhsZW5ndGgoeCkpOwogICAgIHBhcnMgPSBQUk9URUNUKGNvZXJjZVZlY3RvcihwYXJzLCBSRUFMU1hQKSk7CiAgICAgZG91YmxlIHAsIHBydCwgKnJwID0gIFJFQUwocGFycyk7CiAgICAgZmV4YWN0KG5yLCBuYywgSU5URUdFUih4KSwgbnIsCg=="
         }
       ]
     },
     "attachments": {}
   },
-  "source_changed": "2026-09-30 15:17:27"
+  "source_changed": "2026-10-01 19:49:44"
 }
