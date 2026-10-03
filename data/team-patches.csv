@@ -25,12 +25,8 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19157,unserialize() leaks the CHARSXP read buffer when the stream errors mid-string,Low-level,kevinushey,NEW,2026-09-03 21:10:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19157
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19158
 19161,unserialize() leaks its iconv conversion descriptors when an error unwinds mid-stream,Low-level,kevinushey,NEW,2026-09-06 16:40:34 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19161
-19165,as.complex()/as.numeric() on an invalid multibyte string reads past the end (Mbrtowc),Low-level,kevinushey,NEW,2026-09-10 19:23:42 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19165
-19182,make.names() leaks its name buffer when a name is invalid in a multibyte locale,Low-level,kevinushey,NEW,2026-09-26 01:44:29 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19182
 19183,read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input,Low-level,kevinushey,NEW,2026-09-26 01:44:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19183
 19184,parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing,Low-level,kevinushey,NEW,2026-09-26 01:44:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19184
-19192,"sprintf() with a width or precision near INT_MAX overflows the C stack (glibc 2.31) or silently returns """"",Low-level,kevinushey,NEW,2026-09-30 22:39:12 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19192
-19193,"mkCharLenCE(): use-after-free of the CHARSXP behind the ""embedded nul in string"" error",Low-level,kevinushey,NEW,2026-09-30 22:50:32 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19193
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19092
 18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18938
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18958

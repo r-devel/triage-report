@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-01._
+_Automatically generated from the R Bugzilla dump updated 2026-10-02._
 
 ## Triaged bugs
 
@@ -15,7 +15,6 @@ _Dates show the most recent triager comment on the bug._
 * [Bug 18258](https://bugs.r-project.org/show_bug.cgi?id=18258) — 'trace' only half-works for generated functions in packages (2025-09-02)
 * [Bug 16135](https://bugs.r-project.org/show_bug.cgi?id=16135) — error in: convolve( 1:5, 1, type='filter') (2026-02-20)
 * [Bug 19074](https://bugs.r-project.org/show_bug.cgi?id=19074) — parallel::makeCluster(<cluster>, type = "PSOCK") does not give an error (2026-05-19)
-* [Bug 19150](https://bugs.r-project.org/show_bug.cgi?id=19150) — scan() crashes interactive R when opening an unz() connection for a missing member (2026-09-03)
 * [Bug 19163](https://bugs.r-project.org/show_bug.cgi?id=19163) — axis() throws error and plot() runs out of memory when repeated many times (> 1000 plots) (2026-09-12)
 * [Bug 18911](https://bugs.r-project.org/show_bug.cgi?id=18911) — cleanup tcltk (2026-09-19)
 * [Bug 19098](https://bugs.r-project.org/show_bug.cgi?id=19098) — Ctrl-D does not exit R console on Windows (2026-09-22)
@@ -33,7 +32,6 @@ _None._
 * [Bug 10455](https://bugs.r-project.org/show_bug.cgi?id=10455) — Bug in pacf -- Proposed patch (2026-03-06)
 * [Bug 17928](https://bugs.r-project.org/show_bug.cgi?id=17928) — NextMethod does not appear to dispatch to group generic methods from specific methods. (2026-04-08)
 * [Bug 17702](https://bugs.r-project.org/show_bug.cgi?id=17702) — Assignment to data.frame column (`$<-` or `[[<-`) should convert POSIXlt to POSIXct (2026-04-13)
-* [Bug 16615](https://bugs.r-project.org/show_bug.cgi?id=16615) — Allow multi-character separator in scan() (2026-05-18)
 
 ## Additional Triage Team patches awaiting review
 
@@ -76,12 +74,8 @@ _Dates show when the patch was submitted._
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19161](https://bugs.r-project.org/show_bug.cgi?id=19161) — unserialize() leaks its iconv conversion descriptors when an error unwinds mid-stream (2026-09-06)
-* [Bug 19165](https://bugs.r-project.org/show_bug.cgi?id=19165) — as.complex()/as.numeric() on an invalid multibyte string reads past the end (Mbrtowc) (2026-09-10)
-* [Bug 19182](https://bugs.r-project.org/show_bug.cgi?id=19182) — make.names() leaks its name buffer when a name is invalid in a multibyte locale (2026-09-26)
 * [Bug 19183](https://bugs.r-project.org/show_bug.cgi?id=19183) — read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input (2026-09-26)
 * [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
-* [Bug 19192](https://bugs.r-project.org/show_bug.cgi?id=19192) — sprintf() with a width or precision near INT_MAX overflows the C stack (glibc 2.31) or silently returns "" (2026-09-30)
-* [Bug 19193](https://bugs.r-project.org/show_bug.cgi?id=19193) — mkCharLenCE(): use-after-free of the CHARSXP behind the "embedded nul in string" error (2026-09-30)
 
 ### Mac GUI / Mac specific
 
