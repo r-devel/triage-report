@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-03T22:25:56Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "memDecompress(type = \"gzip\") loops forever on a truncated gzip/zlib stream (builds without libdeflate)",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "id": 19200,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-10-03T22:25:41Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "I/O",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19200": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 103782,
+            "time": "2026-10-03T22:25:41Z",
+            "creation_time": "2026-10-03T22:25:41Z",
+            "creator": "kevinushey",
+            "count": 0,
+            "is_markdown": false,
+            "bug_id": 19200,
+            "text": "On builds without libdeflate, memDecompress(type = \"gzip\") never returns for a gzip or zlib stream that ends prematurely: every pass of its retry loop R_alloc()s another output buffer of the same size, so the call exhausts memory, or spins at zero bytes if nothing was decoded at all. Found by OSS-Fuzz (testcases 5726025607348224, 6383420146778112 and 6066205270802432, all the same cause).\n\nReproducible example (r90638 configured with ac_cv_header_libdeflate_h=no; the libdeflate build gives 'internal error 1' immediately in both cases):\n\n  memDecompress(as.raw(c(0x78, 0x9c, 0x0a, 0x20)), \"gzip\")  # zlib header + 2 bytes: hangs\n  z <- memCompress(raw(1000), \"gzip\")\n  memDecompress(z[-length(z)], \"gzip\")                      # allocates until the vector limit\n\nAnalysis:\n\nR_uncompress() in gzio.h writes stream.total_out through destLen on every return, not only on success. do_memDecompress() passes outlen by reference and treats Z_BUF_ERROR as \"buffer too small\", doubling outlen and retrying. inflate() also returns Z_BUF_ERROR when the input runs out mid-stream, and then total_out is independent of the buffer size, so the doubled value is the same on every pass and the loop never terminates. The libdeflate branch is a separate loop keyed on LIBDEFLATE_INSUFFICIENT_SPACE and is not affected.\n\nProposed patch: attached as memdecompress-truncated-gzip.diff. It keeps the size of the buffer just allocated in its own variable, grows only when Z_BUF_ERROR comes back with that buffer completely filled, and otherwise falls through to the existing error (-5 for truncated input). A regression test in reg-tests-1e.R asserts an error for both inputs above and for a gzip member without its trailer; it passes with and without libdeflate, and make test-Reg passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/357, where CI results can be seen."
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 103783,
+            "creation_time": "2026-10-03T22:25:56Z",
+            "count": 1,
+            "text": "Created attachment 3894\ntrack the buffer size separately; grow only when it filled up",
+            "bug_id": 19200,
+            "attachment_id": 3894,
+            "time": "2026-10-03T22:25:56Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19200": [
+        {
+          "summary": "track the buffer size separately; grow only when it filled up",
+          "creation_time": "2026-10-03T22:25:56Z",
+          "bug_id": 19200,
+          "file_name": "memdecompress-truncated-gzip.diff",
+          "size": 2316,
+          "last_change_time": "2026-10-03T22:25:56Z",
+          "id": 3894,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA2MzgpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC03MzQwLDE1ICs3MzQwLDIwIEBAIGRvX21lbURlY29tcHJlc3MoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCSAgICBvcHQgPSAxNjsgIC8vIGZvcmNlIGd6aXAgZm9ybWF0CiAJfQogCXdoaWxlKDEpIHsKLQkgICAgYnVmID0gKEJ5dGVmICopIFJfYWxsb2Mob3V0bGVuLCBzaXplb2YoQnl0ZWYpKTsKLQkgICAgLy8gUl91bmNvbXByZXNzIGlzIGluIGd6aW8uaAorCSAgICB1TG9uZyBidWZsZW4gPSBvdXRsZW47CisJICAgIGJ1ZiA9IChCeXRlZiAqKSBSX2FsbG9jKGJ1Zmxlbiwgc2l6ZW9mKEJ5dGVmKSk7CisJICAgIC8vIFJfdW5jb21wcmVzcyBpcyBpbiBnemlvLmguICBJdCBzZXRzIG91dGxlbiB0byB0aGUgbnVtYmVyIG9mCisJICAgIC8vIGJ5dGVzIGFjdHVhbGx5IHByb2R1Y2VkLCB3aGF0ZXZlciB0aGUgcmVzdWx0LgogCSAgICBpbnQgcmVzID0gUl91bmNvbXByZXNzKGJ1ZiwgJm91dGxlbiwgcCwgaW5sZW4sIG9wdCk7Ci0JICAgIGlmKHJlcyA9PSBaX0JVRl9FUlJPUikgewotCQlpZihvdXRsZW4gPCBVTE9OR19NQVgvMikgewotCQkgICAgb3V0bGVuICo9IDI7IGNvbnRpbnVlOworCSAgICBpZihyZXMgPT0gWl9CVUZfRVJST1IgJiYgb3V0bGVuID09IGJ1ZmxlbikgeworCQkvLyB0aGUgb3V0cHV0IGJ1ZmZlciBmaWxsZWQgdXA6IGdyb3cgaXQgYW5kIHJldHJ5CisJCWlmKGJ1ZmxlbiA8IFVMT05HX01BWC8yKSB7CisJCSAgICBvdXRsZW4gPSBidWZsZW4gPyAyKmJ1ZmxlbiA6IDE7IGNvbnRpbnVlOwogCQl9IGVsc2UgYnJlYWs7CiAJICAgIH0KIAkgICAgaWYocmVzID49IDApIGJyZWFrOworCSAgICAvLyBaX0JVRl9FUlJPUiB3aXRoIHJvb20gbGVmdCBpbiB0aGUgYnVmZmVyIG1lYW5zIHRoZSBpbnB1dAorCSAgICAvLyBlbmRlZCBwcmVtYXR1cmVseSwgc28gYSBiaWdnZXIgYnVmZmVyIGNhbm5vdCBoZWxwLgogCSAgICBlcnJvcigiaW50ZXJuYWwgZXJyb3IgJWQgaW4gbWVtRGVjb21wcmVzcyglcykiLCByZXMsCiAJCSAgInR5cGUgPSBcImd6aXBcIiIpOwogCX0KSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDYzOCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zODU5LDYgKzM4NTksMjAgQEAgZm9yIChmcmFjIGluIGMoMS8yLCAxLzQpKSB7ICMgbnVsIHBvc2l0aW9uIHdoZXJlIHRoZSB0cmFuc2xhdGlvbiBpcyBhcyBsb25nCiAjIyBnYXZlICInUmZfZ2V0Q2hhckNFJyBtdXN0IGJlIGNhbGxlZCBvbiBhIENIQVJTWFAiIChvciBhIGNyYXNoKSBpbiBSIDw9IDQuNi54CiAKIAorIyMgbWVtRGVjb21wcmVzcyh0eXBlID0gImd6aXAiKSBvbiBhIHRydW5jYXRlZCBnemlwIG9yIHpsaWIgc3RyZWFtIGxvb3BlZAorIyMgZm9yZXZlciwgYWxsb2NhdGluZyBhIGZyZXNoIG91dHB1dCBidWZmZXIgb24gZXZlcnkgcGFzcywgd2hlbiBSIHdhcyBidWlsdAorIyMgd2l0aG91dCBsaWJkZWZsYXRlIChmb3VuZCBieSBmdXp6aW5nKQoreCA8LSBhcy5yYXcocmVwKDBMLCAxMDAwKSkKK3ogPC0gbWVtQ29tcHJlc3MoeCwgImd6aXAiKSAgICAgICAgICAgICAgICAgICAgICMgYSB6bGliIHN0cmVhbQorYXNzZXJ0RXJyVihtZW1EZWNvbXByZXNzKHpbLWxlbmd0aCh6KV0sICJnemlwIikpCit0ZiA8LSB0ZW1wZmlsZShmaWxlZXh0ID0gIi5neiIpCitjb24gPC0gZ3pmaWxlKHRmLCAid2IiKTsgd3JpdGVCaW4oeCwgY29uKTsgY2xvc2UoY29uKQorZyA8LSByZWFkQmluKHRmLCAicmF3IiwgZmlsZS5zaXplKHRmKSk7IHVubGluayh0ZikgIyBhIGd6aXAgbWVtYmVyCithc3NlcnRFcnJWKG1lbURlY29tcHJlc3MoZ1tzZXFfbGVuKGxlbmd0aChnKSAtIDhMKV0sICJnemlwIikpICMgbm8gdHJhaWxlcgorYXNzZXJ0RXJyVihtZW1EZWNvbXByZXNzKGFzLnJhdyhjKDB4NzgsIDB4OWMsIDB4MGEsIDB4MjApKSwgImd6aXAiKSkKKyMjIGh1bmcgb3IgZXhoYXVzdGVkIG1lbW9yeSBpbiBSIDw9IDQuNi54CisKKwogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-03 22:25:56"
+}

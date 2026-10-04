@@ -2,6 +2,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18705
 19129,Rf_EncodeString sometimes over-counts double quotes,I/O,ikrylov,NEW,2026-08-07 15:16:40 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19129
 19194,read.dcf() adds a duplicate column for every repeat of a field name containing invalid UTF-8 (regression from r90200),I/O,kevinushey,NEW,2026-10-01 05:55:06 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19194
+19200,"memDecompress(type = ""gzip"") loops forever on a truncated gzip/zlib stream (builds without libdeflate)",I/O,kevinushey,NEW,2026-10-03 22:25:56 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19200
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18583
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18096
 18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18863
