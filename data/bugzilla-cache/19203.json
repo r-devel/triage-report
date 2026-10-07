@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-10-06T20:16:56Z",
+        "blocks": [],
+        "url": "",
+        "summary": "read.dcf() escapes code points above U+10FFFF as \"????\", not <xx>, and slows quadratically",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "component": "I/O",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19203,
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-06T20:16:47Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19203": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2026-10-06T20:16:47Z",
+            "creation_time": "2026-10-06T20:16:47Z",
+            "bug_id": 19203,
+            "text": "?read.dcf documents that invalid UTF-8 bytes are \"preserved visually by escaping them as <xx>\". Since r90200, a well-formed 4-byte sequence for a code point above U+10FFFF (lead bytes F5 to F7, or F4 90 and up) instead comes back as \"????\", and the C reader re-encodes the whole accumulated field value for every further continuation line of that field. R 4.6.1 returns the raw bytes unchanged.\n\nReproducible example (R-devel r90642, macOS; same on Linux with glibc 2.39):\n\n    bad <- rawToChar(as.raw(c(0xf6, 0xb6, 0xb6, 0xb6)))\n    f <- function(x) { con <- textConnection(x); on.exit(close(con)); read.dcf(con) }\n    f(paste0(\"A: v\\n \", bad, \"\\n lue\\n\"))[[1L, \"A\"]]\n    ## observed:  \"v\\n????\\nlue\"\n    ## expected:  \"v\\n<f6><b6><b6><b6>\\nlue\"\n\n    for (n in c(5000L, 20000L)) {\n        x <- paste0(\"A: v\\n \", bad, strrep(\"\\n lue\", n), \"\\n\")\n        print(system.time(f(x))[[\"elapsed\"]])\n    }\n    ## observed:  0.84 s and 18.0 s      (R 4.6.1: 0.05 s and 0.86 s)\n\nAnalysis:\n\nmkCharUTF8sub() in src/main/dcf.c checks utf8Valid() and, when that fails, repairs the string through reEnc3() (iconv UTF-8 to UTF-8 with \"<xx>\" substitution). glibc and libiconv both accept the 4-byte sequence (as a code point up to U+1FFFFF) and pass it through, while utf8Valid() rejects it per RFC 3629, so the repaired value never satisfies the check. The continuation-line branch of do_readDCF() rebuilds the value as \"stored value + newline + line\" and calls mkCharUTF8sub() on the whole thing, so every further line goes through iconv() again. The R wrapper then sees that the result fails validUTF8() and applies .enc2utf8_sub(), whose ASCII fallback yields the \"????\".\n\nProposed patch: attached as readdcf-escape-invalid-utf8.diff (against r90642). It escapes invalid bytes using utf8Valid()'s own rules instead of iconv(): a small utf8ValidClen() helper next to utf8Valid() in src/main/util.c gives the length of the valid character at a position (or 0), and mkCharUTF8sub() copies valid characters and escapes every other byte as \"<xx>\". The result is valid by construction, so later lines take the fast path, and the escapes match those of iconv(sub = \"byte\") for everything it does reject. With the patch the example gives \"v\\n<f6><b6><b6><b6>\\nlue\" in 0.07 s and 1.1 s. A regression test is added to tests/reg-tests-1e.R.\n\nThe patch is independent of the one in bug 19194, which changes the same function for the field-name matching regression; both are fallout from r90200. The underlying discrepancy, that iconv(x, \"UTF-8\", \"UTF-8\", sub = \"byte\") can return a string validUTF8() rejects, is what the ASCII fallback in .enc2utf8_sub() exists for; this patch only addresses the C reader.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/359, where CI results can be seen.",
+            "count": 0,
+            "tags": [],
+            "id": 103795,
+            "is_private": false
+          },
+          {
+            "attachment_id": 3896,
+            "tags": [],
+            "id": 103796,
+            "time": "2026-10-06T20:16:56Z",
+            "is_private": false,
+            "creation_time": "2026-10-06T20:16:56Z",
+            "creator": "kevinushey",
+            "bug_id": 19203,
+            "text": "Created attachment 3896\nescape invalid bytes by utf8Valid()'s rules instead of iconv() (against r90642)",
+            "is_markdown": false,
+            "count": 1
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19203": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL0RlZm4uaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9EZWZuLmgJKHJldmlzaW9uIDkwNjQyKQorKysgc3JjL2luY2x1ZGUvRGVmbi5oCSh3b3JraW5nIGNvcHkpCkBAIC0yNDU0LDYgKzI0NTQsNyBAQCBzaXplX3QgTWJydG93Yyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcywgc2l6ZV90IG4sIG1ic3RhdGVfdCAqcHMpOwogUmJvb2xlYW4gbWJjc1ZhbGlkKGNvbnN0IGNoYXIgKnN0cik7CiBjaGFyICptYmNzVHJ1bmNhdGVUb1ZhbGlkKGNoYXIgKnMpOwogUmJvb2xlYW4gdXRmOFZhbGlkKGNvbnN0IGNoYXIgKnN0cik7CitpbnQgdXRmOFZhbGlkQ2xlbihjb25zdCBjaGFyICopOwogY2hhciAqUmZfc3RyY2hyKGNoYXIgKnMsIGludCBjKTsKIGNoYXIgKlJmX3N0cnJjaHIoY2hhciAqcywgaW50IGMpOwogY29uc3QgY2hhciAqUmZfc3RyY2hyX2NvbnN0KGNvbnN0IGNoYXIgKnMsIGludCBjKTsKSW5kZXg6IHNyYy9tYWluL2RjZi5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2RjZi5jCShyZXZpc2lvbiA5MDY0MikKKysrIHNyYy9tYWluL2RjZi5jCSh3b3JraW5nIGNvcHkpCkBAIC0zNCwyMiArMzQsNDUgQEAgc3RhdGljIHZvaWQgdHJhbnNmZXJWZWN0b3IoU0VYUCBzLCBTRVhQIHQpOwogLyogQnVpbGQgYSBDSEFSU1hQIG1hcmtlZCBhcyBVVEYtOCBmcm9tIHRoZSBOVUwtdGVybWluYXRlZCBzdHJpbmcgJ3MnLgogICAgRENGIGZpbGVzIGFyZSByZXF1aXJlZCB0byBiZSBVVEYtOCwgc28gJ3MnIGlzIGludGVycHJldGVkIGFzIFVURi04CiAgICByZWdhcmRsZXNzIG9mIGl0cyBhY3R1YWwgZW5jb2Rpbmc7IGFueSBpbnZhbGlkIGJ5dGUgc2VxdWVuY2VzIGFyZQotICAgcmVwYWlyZWQgYnkgZXNjYXBpbmcgdGhlbSBhcyAiPHh4PiIsIGV4YWN0bHkgYXMKKyAgIHJlcGFpcmVkIGJ5IGVzY2FwaW5nIHRoZW0gYXMgIjx4eD4iLCBhcwogICAgaWNvbnYoZnJvbSA9ICJVVEYtOCIsIHRvID0gIlVURi04Iiwgc3ViID0gImJ5dGUiKSBkb2VzICh3aGljaCB0aGUgUgogICAgY29kZSBwYXRocyBpbiByZWFkLmRjZigpL3dyaXRlLmRjZigpIGFsc28gdXNlKS4gIFRoZSBjb21tb24gY2FzZSBvZgotICAgYWxyZWFkeS12YWxpZCBpbnB1dCBpcyBoYW5kbGVkIHdpdGhvdXQgY29udmVyc2lvbi4gKi8KKyAgIGFscmVhZHktdmFsaWQgaW5wdXQgaXMgaGFuZGxlZCB3aXRob3V0IGNvbnZlcnNpb24uCisKKyAgIFRoZSBlc2NhcGluZyBpcyBkb25lIHdpdGggdXRmOFZhbGlkKCkncyBydWxlcyByYXRoZXIgdGhhbiBieSBpY29udigpOgorICAgZ2xpYmMgYW5kIGxpYmljb252IHBhc3MgNC1ieXRlIHNlcXVlbmNlcyBhYm92ZSBVKzEwRkZGRiB0aHJvdWdoLAorICAgd2hpY2ggdXRmOFZhbGlkKCkgcmVqZWN0cywgc28gYW4gaWNvbnYoKSByb3VuZCB0cmlwIGNvdWxkIGxlYXZlIHRoZQorICAgcmVzdWx0IGludmFsaWQgYW5kIGRvX3JlYWREQ0YoKSB3b3VsZCB0aGVuIHJlLWVuY29kZSB0aGUgd2hvbGUgZmllbGQKKyAgIHZhbHVlIGZvciBldmVyeSBmdXJ0aGVyIGNvbnRpbnVhdGlvbiBsaW5lLiAqLwogc3RhdGljIFNFWFAgbWtDaGFyVVRGOHN1Yihjb25zdCBjaGFyICpzKQogewogICAgIGlmICh1dGY4VmFsaWQocykpCiAJcmV0dXJuIG1rQ2hhckNFKHMsIENFX1VURjgpOwogCi0gICAgLyogcmVFbmMzKCkgcGVyZm9ybXMgdGhlIGljb252KCkgcmVwYWlyIHZpYSBSaWNvbnYoKTsgc3Vic3QgPSAxIHNlbGVjdHMKLSAgICAgICB0aGUgIjx4eD4iIGhleGFkZWNpbWFsIHN1YnN0aXR1dGlvbiBmb3IgaW52YWxpZCBieXRlcy4gIEl0IHJldHVybnMgYQotICAgICAgIHN0cmluZyBhbGxvY2F0ZWQgd2l0aCBSX2FsbG9jKCkgKGFuZCBmcmVlZCBhdCB0aGUgdm1heHNldCgpIGluCi0gICAgICAgZG9fcmVhZERDRigpKSwgb3IgJ3MnIGl0c2VsZiBpZiBpY29udiBpcyB1bmF2YWlsYWJsZS4gIEVpdGhlciB3YXkKLSAgICAgICBta0NoYXJDRSgpIGNvcGllcyB0aGUgYnl0ZXMgaW50byB0aGUgQ0hBUlNYUCBiZWxvdy4gKi8KLSAgICBjb25zdCBjaGFyICpyZXBhaXJlZCA9IHJlRW5jMyhzLCAiVVRGLTgiLCAiVVRGLTgiLCAxKTsKLSAgICByZXR1cm4gbWtDaGFyQ0UocmVwYWlyZWQsIENFX1VURjgpOworICAgIGNvbnN0IHZvaWQgKnZtYXggPSB2bWF4Z2V0KCk7CisgICAgY2hhciAqb3V0ID0gUl9hbGxvYyg0ICogc3RybGVuKHMpICsgMSwgc2l6ZW9mKGNoYXIpKTsgLyogYWxsIGVzY2FwZWQgKi8KKyAgICBjaGFyICpxID0gb3V0OworICAgIGZvciAoY29uc3QgY2hhciAqcCA9IHM7ICpwOyApIHsKKwlpZiAoKHVuc2lnbmVkIGNoYXIpICpwIDwgMHg4MCkgeworCSAgICAqcSsrID0gKnArKzsKKwkgICAgY29udGludWU7CisJfQorCWludCBsZW4gPSB1dGY4VmFsaWRDbGVuKHApOworCWlmIChsZW4gPiAwKSB7CisJICAgIG1lbWNweShxLCBwLCBsZW4pOworCSAgICBxICs9IGxlbjsKKwkgICAgcCArPSBsZW47CisJfSBlbHNlIHsKKwkgICAgc25wcmludGYocSwgNSwgIjwlMDJ4PiIsICh1bnNpZ25lZCBjaGFyKSAqcCk7CisJICAgIHEgKz0gNDsKKwkgICAgcCsrOworCX0KKyAgICB9CisgICAgKnEgPSAnXDAnOworCisgICAgU0VYUCBhbnMgPSBta0NoYXJDRShvdXQsIENFX1VURjgpOworICAgIHZtYXhzZXQodm1heCk7CisgICAgcmV0dXJuIGFuczsKIH0KIAogc3RhdGljIHZvaWQgY29uX2NsZWFudXAodm9pZCAqZGF0YSkKSW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwNjQyKQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNzA2LDYgKzE3MDYsMTcgQEAgUmJvb2xlYW4gdXRmOFZhbGlkKGNvbnN0IGNoYXIgKnN0cikKICAgICByZXR1cm4gdmFsaWRfdXRmOChzdHIsIHN0cmxlbihzdHIpKSA9PSAwOwogfQogCisvKiBOdW1iZXIgb2YgYnl0ZXMgaW4gdGhlIHZhbGlkIFVURi04IGNoYXJhY3RlciBzdGFydGluZyBhdCAncycsIGp1ZGdlZAorICAgYnkgdGhlIHNhbWUgcnVsZXMgYXMgdXRmOFZhbGlkKCksIG9yIDAgaWYgJ3MnIGRvZXMgbm90IHN0YXJ0IG9uZS4gKi8KK2F0dHJpYnV0ZV9oaWRkZW4gaW50IHV0ZjhWYWxpZENsZW4oY29uc3QgY2hhciAqcykKK3sKKyAgICBpbnQgbGVuID0gdXRmOGNsZW4oKnMpOworICAgIGZvciAoaW50IGkgPSAxOyBpIDwgbGVuOyBpKyspCisJaWYgKCFzW2ldKQorCSAgICByZXR1cm4gMDsKKyAgICByZXR1cm4gdmFsaWRfdXRmOChzLCBsZW4pID09IDAgPyBsZW4gOiAwOworfQorCiBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fdmFsaWRVVEY4KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykKIHsKICAgICBjaGVja0FyaXR5KG9wLCBhcmdzKTsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDY0MikKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zODg1LDYgKzM4ODUsMjAgQEAgc3RvcGlmbm90KHByaW50KGFicyhwdlcvcHZYIC0gMSkpIDw9IGMoMmUtMTQsIDJlLTE0LCAwKSwKIAogCiAKKyMjIHJlYWQuZGNmKCkgZXNjYXBlcyA0LWJ5dGUgc2VxdWVuY2VzIGFib3ZlIFUrMTBGRkZGLCB3aGljaCBpY29udigpCisjIyBwYXNzZXMgdGhyb3VnaCBidXQgdmFsaWRVVEY4KCkgcmVqZWN0cywgbGlrZSBvdGhlciBpbnZhbGlkIGJ5dGVzCitsb2NhbCh7CisgICAgYmFkIDwtIGFzLnJhdyhjKDB4ZjYsIDB4YjYsIDB4YjYsIDB4YjYpKQorICAgIHggPC0gcmF3VG9DaGFyKGMoY2hhclRvUmF3KCJBOiB2XG4gIiksIGJhZCwgY2hhclRvUmF3KCJcbiBsdWVcbiIpKSkKKyAgICBjb24gPC0gdGV4dENvbm5lY3Rpb24oeCkKKyAgICBkIDwtIHJlYWQuZGNmKGNvbikKKyAgICBjbG9zZShjb24pCisgICAgc3RvcGlmbm90KGlkZW50aWNhbChkW1sxTCwgIkEiXV0sICJ2XG48ZjY+PGI2PjxiNj48YjY+XG5sdWUiKSwgdmFsaWRVVEY4KGQpKQorfSkKKyMjIGdhdmUgIj8/Pz8iIGluIFItZGV2ZWwgc2luY2UgcjkwMjAwLCBhbmQgcmUtZW5jb2RlZCB0aGUgd2hvbGUgZmllbGQKKyMjIHZhbHVlIGZvciBlYWNoIGZ1cnRoZXIgY29udGludWF0aW9uIGxpbmUKKworCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwKICAgICAgIHRvdGFsID0gcHJvYy50aW1lKCkpCg==",
+          "creator": "kevinushey",
+          "is_patch": true,
+          "bug_id": 19203,
+          "file_name": "readdcf-escape-invalid-utf8.diff",
+          "summary": "escape invalid bytes by utf8Valid()'s rules instead of iconv() (against r90642)",
+          "creation_time": "2026-10-06T20:16:56Z",
+          "id": 3896,
+          "is_private": false,
+          "size": 4420,
+          "last_change_time": "2026-10-06T20:16:56Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-06 20:16:56"
+}

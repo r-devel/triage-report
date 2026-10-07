@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-04._
+_Automatically generated from the R Bugzilla dump updated 2026-10-06._
 
 ## Triaged bugs
 
@@ -46,6 +46,7 @@ _Dates show when the patch was submitted._
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19194](https://bugs.r-project.org/show_bug.cgi?id=19194) — read.dcf() adds a duplicate column for every repeat of a field name containing invalid UTF-8 (regression from r90200) (2026-10-01)
 * [Bug 19200](https://bugs.r-project.org/show_bug.cgi?id=19200) — memDecompress(type = "gzip") loops forever on a truncated gzip/zlib stream (builds without libdeflate) (2026-10-03)
+* [Bug 19203](https://bugs.r-project.org/show_bug.cgi?id=19203) — read.dcf() escapes code points above U+10FFFF as "????", not <xx>, and slows quadratically (2026-10-06)
 
 ### Language
 
