@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Language",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-07T17:48:18Z",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19204,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "status": "NEW",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "getParseData should support returning untruncated long STR_CONST text",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-10-07T18:53:54Z",
+        "cc_detail": []
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19204": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-10-07T17:48:18Z",
+            "attachment_id": {},
+            "count": 0,
+            "text": "`getParseData()` is documented not to return full string text for very long character strings:\n\n> Very long strings (with source of 1000 characters or more) will not be stored; a message giving their length and delimiter will be included instead.\n\nThis follows Bug #16354, where the previous behavior was worse.\n\nHowever, such strings are not too uncommon (e.g., scripts including full SQL queries, or other paragraphs of text), and there are still valid reasons to try and inspect that content programmatically.\n\nThe reason gram.c does the truncation is because there is a 1010-byte buffer `currtext` for parsing that shouldn't be grown just for this edge case:\n\nhttps://github.com/r-devel/r-svn/blob/b6cae4686be5e3f6ac3fa0ee95714cc578de54b7/src/main/gram.c#L5200\n\nBut `getParseData()` already uses `getParseText()` to fix up the `text` column in the parse data ex-post -- we need only to tweak this logic to check for the long string truncations as well.\n\n---\n\nPS, the documentation is not strictly correct -- raw strings are reproduced in full:\n\n```\ngetParseData(parse(text = sprintf('R\"(%s)\"', strrep(\"a\", 1000))))$text[1L]\n[1] \"R\\\"(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\\\"\"\n```",
+            "bug_id": 19204,
+            "creation_time": "2026-10-07T17:48:18Z",
+            "is_private": false,
+            "id": 103798,
+            "tags": []
+          },
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-10-07T18:53:54Z",
+            "attachment_id": 3897,
+            "text": "Created attachment 3897\nUse getParseText() to remove more token text truncations\n\nIn the process of debugging, I also found that other parse tokens have a similar truncation pattern when backtick-wrapped:\n\n```\nlong_a <- strrep(\"a\", 1200L)\nlong_expr <- sprintf(\"`%1$s`::`%1$s`(`%1$s` = '%1$s', . = function(`%1$s`) 0, .. = .@`%1$s`)\", long_a)\npd <- getParseData(parse(text = long_expr))\npd\n```\n\ngives:\n\n```\n   line1 col1 line2 col2 id parent                token terminal                         text\n40     1    1     1 7246 40      0                 expr    FALSE                             \n4      1    1     1 2406  4     40                 expr    FALSE                             \n1      1    1     1 1202  1      4       SYMBOL_PACKAGE     TRUE [1200 chars quoted with '`']\n2      1 1203     1 1204  2      4               NS_GET     TRUE                           ::\n3      1 1205     1 2406  3      4 SYMBOL_FUNCTION_CALL     TRUE [1200 chars quoted with '`']\n5      1 2407     1 2407  5     40                  '('     TRUE                            (\n6      1 2408     1 3609  6     40           SYMBOL_SUB     TRUE [1200 chars quoted with '`']\n7      1 3611     1 3611  7     40               EQ_SUB     TRUE                            =\n8      1 3613     1 4814  8     10            STR_CONST     TRUE [1200 chars quoted with ''']\n10     1 3613     1 4814 10     40                 expr    FALSE                             \n9      1 4815     1 4815  9     40                  ','     TRUE                            ,\n14     1 4817     1 4817 14     40           SYMBOL_SUB     TRUE                            .\n15     1 4819     1 4819 15     40               EQ_SUB     TRUE                            =\n25     1 4821     1 6034 25     40                 expr    FALSE                             \n16     1 4821     1 4828 16     25             FUNCTION     TRUE                     function\n17     1 4829     1 4829 17     25                  '('     TRUE                            (\n18     1 4830     1 6031 18     25       SYMBOL_FORMALS     TRUE [1200 chars quoted with '`']\n19     1 6032     1 6032 19     25                  ')'     TRUE                            )\n21     1 6034     1 6034 21     22            NUM_CONST     TRUE                            0\n22     1 6034     1 6034 22     25                 expr    FALSE                             \n23     1 6035     1 6035 23     40                  ','     TRUE                            ,\n29     1 6037     1 6038 29     40           SYMBOL_SUB     TRUE                           ..\n30     1 6040     1 6040 30     40               EQ_SUB     TRUE                            =\n35     1 6042     1 7245 35     40                 expr    FALSE                             \n31     1 6042     1 6042 31     33               SYMBOL     TRUE                            .\n33     1 6042     1 6042 33     35                 expr    FALSE                             \n32     1 6043     1 6043 32     35                  '@'     TRUE                            @\n34     1 6044     1 7245 34     35                 SLOT     TRUE [1200 chars quoted with '`']\n36     1 7246     1 7246 36     40                  ')'     TRUE                            )\n```\n\nNote that this is not true if we simply remove the backticks, making the output vexingly inconsistent:\n\n```\nlong_a <- strrep(\"a\", 1200L)\nlong_expr <- sprintf(\"%1$s::%1$s(%1$s = '%1$s', . = function(%1$s) 0, .. = .@%1$s)\", long_a)\npd <- getParseData(parse(text = long_expr))\n```\n\n(omitting output here but only the `STR_CONST` is \"censored\" in this case).\n\nIt also doesn't apply to `$` extractions, making `@` vs. `$` again vexingly inconsistent (this is just downstream of `@` getting its own `SLOT` token while `$` uses `SYMBOL` on its RHS).\n\nThe attached patch handles all of this by extending the existing check in `getParseText()` for `startsWith(text, \"[\")` to (1) actually be used in `getParseData()` and (2) correctly apply to the other tokens as well.\n\nNote that `startsWith(text, \"[\")` is also not _strictly speaking_ enough -- beyond the obvious `[` and `LBB` tokens, it can wind up there for `ERROR` tokens too if we try hard enough (i.e. force an LLM to come up with such an example):\n\n```\nsf <- srcfilecopy(\"test.R\", \"x[ << 1\")\ntryCatch(parse(text = \"x[ << 1\", srcfile=sf, keep.source=TRUE), error=identity)\ngetParseData(sf)\n#   line1 col1 line2 col2 id parent  token terminal text\n# 1     1    1     1    1  1      3 SYMBOL     TRUE    x\n# 3     1    1     1    1  3      0   expr    FALSE     \n# 2     1    2     1    2  2      0    '['     TRUE    [\n# 4     1    4     1    5  4      0  ERROR     TRUE    [\n```\n\nThat steers us towards either the inclusive `token %in% c(...)` approach here or an exclusive `token %notin% c(\"'['\", \"LBB\", \"ERROR\")`, where the former is easier to understand immediately.",
+            "bug_id": 19204,
+            "count": 1,
+            "creation_time": "2026-10-07T18:53:54Z",
+            "id": 103799,
+            "is_private": false,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19204": [
+        {
+          "id": 3897,
+          "is_private": false,
+          "size": 4532,
+          "last_change_time": "2026-10-07T18:53:54Z",
+          "bug_id": 19204,
+          "file_name": "parse-data-trunc.patch",
+          "summary": "Use getParseText() to remove more token text truncations",
+          "creation_time": "2026-10-07T18:53:54Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL1Ivc291cmNldXRpbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS91dGlscy9SL3NvdXJjZXV0aWxzLlIJKHJldmlzaW9uIDkwNjQzKQorKysgc3JjL2xpYnJhcnkvdXRpbHMvUi9zb3VyY2V1dGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xNTMsMzIgKzE1MywzMiBAQAogICAgIGlmIChpcy5udWxsKGRhdGEpICYmICFpcy5udWxsKHNyY2ZpbGUkb3JpZ2luYWwpKQogICAgICAgICBkYXRhIDwtIHNyY2ZpbGUkb3JpZ2luYWwkcGFyc2VEYXRhCiAgICAgICAgIAotICAgIGlmICghaXMubnVsbChkYXRhKSkgewotICAgICAgICB0b2tlbnMgPC0gYXR0cihkYXRhLCAidG9rZW5zIikKLSAgICAgICAgZGF0YSA8LSB0KHVuY2xhc3MoZGF0YSkpCi0gICAgICAgIGNvbG5hbWVzKGRhdGEpIDwtIGMoICJsaW5lMSIsICJjb2wxIiwKLQkJIAkgICAgICJsaW5lMiIsICJjb2wyIiwKLQkJIAkgICAgICJ0ZXJtaW5hbCIsICJ0b2tlbi5udW0iLCAiaWQiLCAicGFyZW50IiApCi0gICAgCWRhdGEgPC0gZGF0YS5mcmFtZShkYXRhWywgLWMoNSw2KSwgZHJvcCA9IEZBTFNFXSwgdG9rZW4gPSB0b2tlbnMsCi0gICAgCSAgICAgICAgICAgICAgICAgICB0ZXJtaW5hbCA9IGFzLmxvZ2ljYWwoZGF0YVssInRlcm1pbmFsIl0pLAotICAgIAkgICAgICAgICAgICAgICAgICAgdGV4dCA9IGF0dHIoZGF0YSwgInRleHQiKSwKLSAgICAJCQkgICBzdHJpbmdzQXNGYWN0b3JzID0gRkFMU0UpCi0gICAgCW8gPC0gb3JkZXIoZGF0YVssMV0sIGRhdGFbLDJdLCAtZGF0YVssM10sIC1kYXRhWyw0XSkKLSAgICAJZGF0YSA8LSBkYXRhW28sXQotICAgIAlyb3duYW1lcyhkYXRhKSA8LSBkYXRhJGlkCi0gICAgCWF0dHIoZGF0YSwgInNyY2ZpbGUiKSA8LSBzcmNmaWxlCi0JZ2V0dGV4dCA8LQotCSAgICBpZihpc1RSVUUoaW5jbHVkZVRleHQpKQotCQl3aGljaCghbnpjaGFyKGRhdGEkdGV4dCkpCi0JICAgIGVsc2UgaWYoaXMubmEoaW5jbHVkZVRleHQpKQotCQl3aGljaCghbnpjaGFyKGRhdGEkdGV4dCkgJiBkYXRhJHRlcm1pbmFsKQotCSAgICBlbHNlIHsKLQkJZGF0YSR0ZXh0IDwtIE5VTEwKLQkJaW50ZWdlcigwKQotCSAgICB9Ci0gICAgICAgIGlmIChsZW5ndGgoZ2V0dGV4dCkpCi0JICAgIGRhdGEkdGV4dFtnZXR0ZXh0XSA8LSBnZXRQYXJzZVRleHQoZGF0YSwgZGF0YSRpZFtnZXR0ZXh0XSkKKyAgICBpZiAoaXMubnVsbChkYXRhKSkKKyAgICAgIHJldHVybihOVUxMKQorICAgIHRva2VucyA8LSBhdHRyKGRhdGEsICJ0b2tlbnMiKQorICAgIGRhdGEgPC0gdCh1bmNsYXNzKGRhdGEpKQorICAgIGNvbG5hbWVzKGRhdGEpIDwtIGMoICJsaW5lMSIsICJjb2wxIiwKKyAgICAgICAgICAgICAgICAibGluZTIiLCAiY29sMiIsCisgICAgICAgICAgICAgICAgInRlcm1pbmFsIiwgInRva2VuLm51bSIsICJpZCIsICJwYXJlbnQiICkKKyAgICBkYXRhIDwtIGRhdGEuZnJhbWUoZGF0YVssIC1jKDUsNiksIGRyb3AgPSBGQUxTRV0sIHRva2VuID0gdG9rZW5zLAorICAgICAgICAgICAgICAgICAgICAgICAgdGVybWluYWwgPSBhcy5sb2dpY2FsKGRhdGFbLCJ0ZXJtaW5hbCJdKSwKKyAgICAgICAgICAgICAgICAgICAgICAgIHRleHQgPSBhdHRyKGRhdGEsICJ0ZXh0IiksCisgICAgICAgICAgICAgICAgc3RyaW5nc0FzRmFjdG9ycyA9IEZBTFNFKQorICAgIG8gPC0gb3JkZXIoZGF0YVssMV0sIGRhdGFbLDJdLCAtZGF0YVssM10sIC1kYXRhWyw0XSkKKyAgICBkYXRhIDwtIGRhdGFbbyxdCisgICAgcm93bmFtZXMoZGF0YSkgPC0gZGF0YSRpZAorICAgIGF0dHIoZGF0YSwgInNyY2ZpbGUiKSA8LSBzcmNmaWxlCisgICAgaWYgKCFpc1RSVUUoaW5jbHVkZVRleHQpICYmICFpcy5uYShpbmNsdWRlVGV4dCkpIHsKKyAgICAgICAgZGF0YSR0ZXh0IDwtIE5VTEwKKyAgICAgICAgcmV0dXJuKGRhdGEpCiAgICAgfQorICAgIGdldHRleHQgPC0gLmlzX3RleHRfdHJ1bmNhdGlvbihkYXRhJHRleHQsIGRhdGEkdG9rZW4pCisgICAgaWYgKGlzLm5hKGluY2x1ZGVUZXh0KSkKKyAgICAgIGdldHRleHQgPC0gZ2V0dGV4dCAmIGRhdGEkdGVybWluYWwKKyAgICBnZXR0ZXh0IDwtIHdoaWNoKGdldHRleHQpCisgICAgaWYgKCFsZW5ndGgoZ2V0dGV4dCkpCisgICAgICByZXR1cm4oZGF0YSkKKyAgICBkYXRhJHRleHRbZ2V0dGV4dF0gPC0gZ2V0UGFyc2VUZXh0KGRhdGEsIGRhdGEkaWRbZ2V0dGV4dF0pCiAgICAgZGF0YQogfQogCkBAIC0xOTAsNyArMTkwLDcgQEAKICAgICAJdGV4dCA8LSBjaGFyYWN0ZXIobnJvdyhkKSkKICAgICAJYmxhbmsgPC0gc2VxX2Fsb25nKHRleHQpCiAgICAgfSBlbHNlCi0gICAgCWJsYW5rIDwtIHdoaWNoKCFuemNoYXIodGV4dCkgfCAoZCR0b2tlbiA9PSAiU1RSX0NPTlNUIiAmIHN0YXJ0c1dpdGgodGV4dCwgIlsiKSkpCisgICAgCWJsYW5rIDwtIHdoaWNoKC5pc190ZXh0X3RydW5jYXRpb24oZCR0ZXh0LCBkJHRva2VuKSkKICAgICBmb3IgKGkgaW4gYmxhbmspIHsKIAlsaW5lcyA8LSBnZXRTcmNMaW5lcyhzcmNmaWxlLCBkJGxpbmUxW2ldLCBkJGxpbmUyW2ldKQogICAgICAgICBuIDwtIGxlbmd0aChsaW5lcykKQEAgLTIwMCwzICsyMDAsOSBAQAogICAgIH0KICAgICB0ZXh0CiB9CisKKy5pc190ZXh0X3RydW5jYXRpb24gPC0gZnVuY3Rpb24odGV4dCwgdG9rZW4pIHsKKyAgICAhbnpjaGFyKHRleHQpIHwKKyAgICAgIChzdGFydHNXaXRoKHRleHQsICJbIikgJgorICAgICAgIHRva2VuICVpbiUgYygiU1RSX0NPTlNUIiwgIlNZTUJPTCIsICJTWU1CT0xfRlVOQ1RJT05fQ0FMTCIsICJTWU1CT0xfU1VCIiwgIlNZTUJPTF9GT1JNQUxTIiwgIlNZTUJPTF9QQUNLQUdFIiwgIlNMT1QiKSkKK30KSW5kZXg6IHNyYy9saWJyYXJ5L3V0aWxzL21hbi9nZXRQYXJzZURhdGEuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvdXRpbHMvbWFuL2dldFBhcnNlRGF0YS5SZAkocmV2aXNpb24gOTA2NDMpCisrKyBzcmMvbGlicmFyeS91dGlscy9tYW4vZ2V0UGFyc2VEYXRhLlJkCSh3b3JraW5nIGNvcHkpCkBAIC01Nyw5ICs1Nyw3IEBACiAgICAgYSBsZWFmIGluIHRoZSBwYXJzZSB0cmVlLn0KICAgXGl0ZW17dGV4dH17Y2hhcmFjdGVyIHN0cmluZy4gSWYgXGNvZGV7aW5jbHVkZVRleHR9IGlzIFxjb2Rle1RSVUV9LCB0aGUKICAgICB0ZXh0IG9mIGFsbCB0b2tlbnM7IGlmIGl0IGlzIFxjb2Rle05BfSAodGhlIGRlZmF1bHQpLCB0aGUgdGV4dCBvZiB0ZXJtaW5hbAotICAgIHRva2Vucy4gIElmIFxjb2Rle2luY2x1ZGVUZXh0ID09IEZBTFNFfSwgdGhpcyBjb2x1bW4gaXMgbm90IGluY2x1ZGVkLgotICAgIFZlcnkgbG9uZyBzdHJpbmdzICh3aXRoIHNvdXJjZSBvZiAxMDAwIGNoYXJhY3RlcnMgb3IgbW9yZSkgd2lsbCBub3QgYmUgc3RvcmVkOwotICAgIGEgbWVzc2FnZSBnaXZpbmcgdGhlaXIgbGVuZ3RoIGFuZCBkZWxpbWl0ZXIgd2lsbCBiZSBpbmNsdWRlZCBpbnN0ZWFkLn0KKyAgICB0b2tlbnMuICBJZiBcY29kZXtpbmNsdWRlVGV4dCA9PSBGQUxTRX0sIHRoaXMgY29sdW1uIGlzIG5vdCBpbmNsdWRlZC59CiAKICAgVGhlIHJvd25hbWVzIG9mIHRoZSBkYXRhIGZyYW1lIHdpbGwgYmUgZXF1YWwgdG8gdGhlIFxjb2Rle2lkfSB2YWx1ZXMsCiAgIGFuZCB0aGUgZGF0YSBmcmFtZSB3aWxsIGhhdmUgYSBcY29kZXsic3JjZmlsZSJ9IGF0dHJpYnV0ZSBjb250YWluaW5nCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA2NDMpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtMzg4Myw4ICszODgzLDE0IEBACiAgICAgICAgICAgYWxsLmVxdWFsKDIsIHB2V1tbInR3by5zaWRlZCJdXS9wdldbWyJncmVhdGVyIl1dKSkKICMjIG5vdCBvayBpbiAgUiA8PSA0LjYuMQogCisjIyBnZXRQYXJzZURhdGEgZG9lc24ndCB0cnVuY2F0ZSBsb25nIHN0cmluZ3MKK2xvbmdfYSA8LSBzdHJyZXAoImEiLCAxMjAwTCkKK2xvbmdfZXhwciA8LSBzcHJpbnRmKCJgJTEkc2A6OmAlMSRzYChgJTEkc2AgPSAnJTEkcycsIC4gPSBmdW5jdGlvbihgJTEkc2ApIDAsIC4uID0gLkBgJTEkc2ApIiwgbG9uZ19hKQorcGQgPC0gZ2V0UGFyc2VEYXRhKHBhcnNlKHRleHQgPSBsb25nX2V4cHIpKQorbG9uZ19pZHggPC0gbmNoYXIocGQkdGV4dCkgPiAxMDAwTAorc3RvcGlmbm90KHN1bShsb25nX2lkeCkgPT0gNkwsCisgICAgICAgICAgZ3JlcGwoIl4oU1RSX0NPTlNUfFNZTUJPTHxTTE9UKSIsIHBkJHRva2VuW2xvbmdfaWR4XSkpCiAKLQogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
+          "creator": "michaelchirico4"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-07 18:53:54"
+}
