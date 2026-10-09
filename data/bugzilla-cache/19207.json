@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "I/O",
+        "assigned_to": "R-core",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19207,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-08T17:49:16Z",
+        "whiteboard": "",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-10-08T17:49:25Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "iconv() with sub = \"Unicode\" or \"c99\" never returns on invalid UTF-8 input"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19207": {
+        "comments": [
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 103809,
+            "creation_time": "2026-10-08T17:49:16Z",
+            "count": 0,
+            "text": "iconv() with sub = \"Unicode\" or sub = \"c99\" never returns when the input is not valid UTF-8. These are the modes ?iconv recommends for making UTF-8 text printable, so a single stray byte in a file or web response hangs the session.\n\nReproducible example:\n\niconv(\"a\\xc3(\", \"UTF-8\", \"ASCII\", sub = \"Unicode\")\niconv(\"a\\xc3(\", \"UTF-8\", \"ASCII\", sub = \"c99\")\n\nObserved (R 4.6.1 and R-devel r90646): neither call returns; R spins at 100% CPU until interrupted. Expected: a result along the lines of sub = \"byte\", which gives \"a<c3>(\".\n\nAnalysis:\n\nWhen the converter stops on an invalid or truncated sequence, the \"Unicode\" and \"c99\" branches of do_iconv() (src/main/sysutils.c, around line 809) decode the offending bytes with utf8toucs() to name the code point. If that fails (an invalid lead byte, or fewer bytes left than the sequence needs) nothing is written and nothing is consumed; the code then jumps back to Riconv(), which fails at the very same byte, forever. The sub = \"byte\" branch always advances by at least one byte, which is why it does not loop. The loop is in R's own code: it only needs iconv() to stop with EILSEQ or EINVAL at the invalid byte, which glibc, GNU libiconv and win_iconv all do. Reproduced here on macOS (Apple/GNU libiconv 1.11).\n\nProposed patch: attached as iconv-substitution-loop.diff. When there is no code point to name it substitutes the byte as sub = \"byte\" does (\"<c3>\") and consumes it; the surrounding buffer checks already leave room for the four bytes written. It adds a regression test to tests/reg-tests-1e.R. With the patch:\n\nx <- rawToChar(as.raw(c(0x61, 0xc3, 0x28, 0xe2, 0x82)))\niconv(x, \"UTF-8\", \"ASCII\", sub = \"Unicode\")\n#> [1] \"a<c3>(<e2><82>\"\n\nFound by fuzzing R with libFuzzer + AddressSanitizer (r-devel/r-oss-fuzz, as a timeout).\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/361, where CI results can be seen.",
+            "bug_id": 19207,
+            "attachment_id": {},
+            "time": "2026-10-08T17:49:16Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          },
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-10-08T17:49:25Z",
+            "attachment_id": 3899,
+            "count": 1,
+            "bug_id": 19207,
+            "text": "Created attachment 3899\npatch: consume invalid bytes under iconv()'s Unicode and c99 substitution",
+            "creation_time": "2026-10-08T17:49:25Z",
+            "is_private": false,
+            "id": 103810,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19207": [
+        {
+          "id": 3899,
+          "is_private": false,
+          "size": 2067,
+          "last_change_time": "2026-10-08T17:49:25Z",
+          "bug_id": 19207,
+          "file_name": "iconv-substitution-loop.diff",
+          "summary": "patch: consume invalid bytes under iconv()'s Unicode and c99 substitution",
+          "creation_time": "2026-10-08T17:49:25Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL3N5c3V0aWxzLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vc3lzdXRpbHMuYwkocmV2aXNpb24gOTA2NDYpCisrKyBzcmMvbWFpbi9zeXN1dGlscy5jCSh3b3JraW5nIGNvcHkpCkBAIC04MzQsNiArODM0LDE1IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19pY29udihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJCQkgICAgc2l6ZV90IGwgPSBzdHJsZW4ob3V0YnVmKTsKIAkJCSAgICBvdXRidWYgKz0gbDsgb3V0YiAtPSBsOwogCQkJfQorCQkgICAgfSBlbHNlIHsKKwkJCS8qIE5vdCBhIFVURi04IHNlcXVlbmNlIGF0IGFsbCAob3IgY3V0IHNob3J0KToKKwkJCSAgIHRoZXJlIGlzIG5vIGNvZGUgcG9pbnQgdG8gbmFtZSwgc28gc3Vic3RpdHV0ZQorCQkJICAgdGhlIGJ5dGUgYXMgc3ViID0gImJ5dGUiIHdvdWxkLiAgU29tZXRoaW5nIG11c3QKKwkJCSAgIGJlIGNvbnN1bWVkLCBvciB0aGUgbmV4dCBSaWNvbnYoKSBjYWxsIGZhaWxzIGF0CisJCQkgICB0aGUgc2FtZSBieXRlIGZvcmV2ZXIuICovCisJCQlzbnByaW50ZihvdXRidWYsIDUsICI8JTAyeD4iLCAodW5zaWduZWQgY2hhcikqaW5idWYpOworCQkJb3V0YnVmICs9IDQ7IG91dGIgLT0gNDsKKwkJCWluYnVmKys7IGluYi0tOwogCQkgICAgfQogCQkgICAgZ290byBuZXh0X2NoYXI7CiAJCX0gZWxzZSBpZihmcm9tVVRGOCAmJiBzdHJlcWwoc3ViLCAiYzk5IikpIHsKQEAgLTg2Miw2ICs4NzEsMTEgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2ljb252KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkJCSAgICBzbnByaW50ZihvdXRidWYsIDExLCAiXFxVJTA4eCIsICh1bnNpZ25lZCBpbnQpIHVjcyk7CiAJCQkgICAgb3V0YnVmICs9IDEwOyBvdXRiIC09IDEwOwogCQkJfQorCQkgICAgfSBlbHNlIHsKKwkJCS8qIEFzIGFib3ZlOiBhbiBpbnZhbGlkIGJ5dGUgaGFzIG5vIGNvZGUgcG9pbnQuICovCisJCQlzbnByaW50ZihvdXRidWYsIDUsICI8JTAyeD4iLCAodW5zaWduZWQgY2hhcikqaW5idWYpOworCQkJb3V0YnVmICs9IDQ7IG91dGIgLT0gNDsKKwkJCWluYnVmKys7IGluYi0tOwogCQkgICAgfQogCQkgICAgZ290byBuZXh0X2NoYXI7CiAJCX0gZWxzZSB7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA2NDYpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtMzkyNSw2ICszOTI1LDE0IEBAIGxvY2FsKHsKICMjIGdhdmUgIj8/Pz8iIGluIFItZGV2ZWwgc2luY2UgcjkwMjAwLCBhbmQgcmUtZW5jb2RlZCB0aGUgd2hvbGUgZmllbGQKICMjIHZhbHVlIGZvciBlYWNoIGZ1cnRoZXIgY29udGludWF0aW9uIGxpbmUKIAorIyMgaWNvbnYoc3ViID0gIlVuaWNvZGUiKSBhbmQgc3ViID0gImM5OSIgbmV2ZXIgcmV0dXJuZWQgb24gaW52YWxpZCBVVEYtOCBpbnB1dAoreCA8LSByYXdUb0NoYXIoYXMucmF3KGMoMHg2MSwgMHhjMywgMHgyOCwgMHhlMiwgMHg4MikpKSAjICJhIiwgYSBsb25lIGxlYWQgYnl0ZSwgYSB0cnVuY2F0ZWQgc2VxdWVuY2UKK3N0b3BpZm5vdChpZGVudGljYWwoaWNvbnYoeCwgIlVURi04IiwgIkFTQ0lJIiwgc3ViID0gIlVuaWNvZGUiKSwgImE8YzM+KDxlMj48ODI+IiksCisgICAgICAgICAgaWRlbnRpY2FsKGljb252KHgsICJVVEYtOCIsICJBU0NJSSIsIHN1YiA9ICJjOTkiKSwgICAgICJhPGMzPig8ZTI+PDgyPiIpLAorICAgICAgICAgIGlkZW50aWNhbChpY29udigiY2FmXHUwMGU5IiwgIlVURi04IiwgIkFTQ0lJIiwgc3ViID0gIlVuaWNvZGUiKSwgImNhZjxVKzAwRTk+IikpCisjIyBsb29wZWQgZm9yZXZlciBpbiBSIDw9IDQuNi4xCisKKwogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "creator": "kevinushey"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-08 17:49:25"
+}

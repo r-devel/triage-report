@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-07._
+_Automatically generated from the R Bugzilla dump updated 2026-10-09._
 
 ## Triaged bugs
 
@@ -44,14 +44,13 @@ _Dates show when the patch was submitted._
 ### I/O
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
-* [Bug 19194](https://bugs.r-project.org/show_bug.cgi?id=19194) — read.dcf() adds a duplicate column for every repeat of a field name containing invalid UTF-8 (regression from r90200) (2026-10-01)
-* [Bug 19200](https://bugs.r-project.org/show_bug.cgi?id=19200) — memDecompress(type = "gzip") loops forever on a truncated gzip/zlib stream (builds without libdeflate) (2026-10-03)
-* [Bug 19203](https://bugs.r-project.org/show_bug.cgi?id=19203) — read.dcf() escapes code points above U+10FFFF as "????", not <xx>, and slows quadratically (2026-10-06)
+* [Bug 19207](https://bugs.r-project.org/show_bug.cgi?id=19207) — iconv() with sub = "Unicode" or "c99" never returns on invalid UTF-8 input (2026-10-08)
+* [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
 
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
-* [Bug 19204](https://bugs.r-project.org/show_bug.cgi?id=19204) — getParseData should support returning untruncated long STR_CONST text (2026-10-07)
+* [Bug 19204](https://bugs.r-project.org/show_bug.cgi?id=19204) — getParseData should support returning untruncated long STR_CONST, SYMBOL*, and SLOT text (2026-10-07)
 
 ### Low-level
 
@@ -76,9 +75,8 @@ _Dates show when the patch was submitted._
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
-* [Bug 19161](https://bugs.r-project.org/show_bug.cgi?id=19161) — unserialize() leaks its iconv conversion descriptors when an error unwinds mid-stream (2026-09-06)
-* [Bug 19183](https://bugs.r-project.org/show_bug.cgi?id=19183) — read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input (2026-09-26)
 * [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
+* [Bug 19206](https://bugs.r-project.org/show_bug.cgi?id=19206) — chartr() and case conversion read past utf8_table2 on UTF-8-marked strings with 0xFF runs (utf8toucs decodes 5/6-byte forms unchecked) (2026-10-08)
 
 ### Mac GUI / Mac specific
 

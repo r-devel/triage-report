@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "id": 19206,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2026-10-08T17:42:16Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "last_change_time": "2026-10-08T17:42:25Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "chartr() and case conversion read past utf8_table2 on UTF-8-marked strings with 0xFF runs (utf8toucs decodes 5/6-byte forms unchecked)",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19206": {
+        "comments": [
+          {
+            "time": "2026-10-08T17:42:16Z",
+            "id": 103807,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "text": "utf8toucs() in src/main/util.c decodes the withdrawn 5- and 6-byte UTF-8 forms \"with no testing\": it neither checks the continuation bytes nor masks the lead byte to the bits those forms carry. A run of 0xFF bytes is therefore accepted as a 6-byte sequence whose value overflows 31 bits, and Rwcrtomb32() then reads one element past utf8_table2 when encoding it back. Any UTF-8-marked string can hold such bytes (the mark is not validated), and chartr(), toupper(), tolower() and casefold() all go through this code.\n\nReproducible example:\n\nx <- \"J\\xff\\xff\\xff\\xff z\"\nEncoding(x) <- \"UTF-8\"\nchartr(\"a\", \"b\", x)\n\nObserved (R 4.6.1 and R-devel r90646): [1] \"J\\xff\\xbf\\xbf\\xbf\\xbf\\xa0\\xba\" -- garbage, with the trailing \" z\" lost. Under AddressSanitizer:\n\n==1==ERROR: AddressSanitizer: global-buffer-overflow\nREAD of size 4\n    #0 Rwcrtomb32      src/main/util.c:1551\n    #1 Rf_wcstoutf8    src/main/util.c:1580\n    #2 do_chartr       src/main/character.c:1630\n\nExpected: the \"invalid input in 'utf8towcs'\" error that runs of 1-3 or 7+ such bytes already produce.\n\nAnalysis:\n\nutf8toucs() validates 2- to 4-byte sequences but masks a 5- or 6-byte lead with 0x0F and never checks what follows, so an 0xFF lead contributes 0xF << 30. Rwcrtomb32() searches utf8_table1 (largest entry 0x7FFFFFFF), runs off the end with i == 6, and reads utf8_table2[6]. The 5-byte branch also shifts its first two continuation bytes by the same amount (12 and 12 rather than 18 and 12), so it has never decoded those sequences correctly.\n\nProposed patch: attached as utf8toucs-long-sequences.diff. It checks the 5- and 6-byte forms like the shorter ones (continuation bytes must be 10xxxxxx, the lead byte contributes only its low 2 or 1 bits, 0xFE and 0xFF are rejected), fixes the 5-byte shift, and makes Rwcrtomb32() refuse values above 0x7FFFFFFF as a backstop. With it, an ASAN build raises the utf8towcs error for every 0xFF run length, and valid 5/6-byte forms and ordinary UTF-8 are unchanged.\n\nFound by fuzzing R with libFuzzer + AddressSanitizer (r-devel/r-oss-fuzz).\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/360, where CI results can be seen.",
+            "bug_id": 19206,
+            "count": 0,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-10-08T17:42:16Z"
+          },
+          {
+            "text": "Created attachment 3898\npatch: validate 5- and 6-byte UTF-8 sequences in utf8toucs()",
+            "bug_id": 19206,
+            "count": 1,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-10-08T17:42:25Z",
+            "time": "2026-10-08T17:42:25Z",
+            "id": 103808,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3898
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19206": [
+        {
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwNjQ2KQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNDM1LDI1ICsxNDM1LDM0IEBAIHV0Zjh0b3Vjcyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcykKIAl9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CiAgICAgfQogICAgIGlmKHNpemVvZih3Y2hhcl90KSA8IDQpIHJldHVybiAoc2l6ZV90KS0yOwotICAgIC8qIFNvIG5vdyBoYW5kbGUgNS42IGJ5dGUgc2VxdWVuY2VzIHdpdGggbm8gdGVzdGluZyAqLworICAgIC8qIDUtIGFuZCA2LWJ5dGUgc2VxdWVuY2VzIChSRkMgMjI3OSwgd2l0aGRyYXduIGJ5IFJGQyAzNjI5KToga2VwdAorICAgICAgIGZvciBjb21wYXRpYmlsaXR5LCBidXQgY2hlY2tlZCBsaWtlIHRoZSBzaG9ydGVyIGZvcm1zIHNvIHRoZQorICAgICAgIHJlc3VsdCBmaXRzIGluIDMxIGJpdHMuICAweEZFIGFuZCAweEZGIGFyZSBuZXZlciBsZWFkIGJ5dGVzLiAqLwogICAgIGlmIChieXRlIDwgMHhGQykgewogCWlmKHN0cmxlbihzKSA8IDUpIHJldHVybiAoc2l6ZV90KS0yOwotCSp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDBGKSA8PCAyNCkKLQkJCXwgKHVuc2lnbmVkIGludCkgKChzWzFdICYgMHgzRikgPDwgMTIpCi0JCQl8ICh1bnNpZ25lZCBpbnQpICgoc1syXSAmIDB4M0YpIDw8IDEyKQotCQkJfCAodW5zaWduZWQgaW50KSAoKHNbM10gJiAweDNGKSA8PCA2KQotCQkJfCAoc1s0XSAmIDB4M0YpKTsKLQlyZXR1cm4gNTsKLSAgICB9IGVsc2UgeworCWlmICgoKHNbMV0gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbMl0gJiAweEMwKSA9PSAweDgwKQorCSAgICAmJiAoKHNbM10gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbNF0gJiAweEMwKSA9PSAweDgwKSkgeworCSAgICAqdyA9ICh3Y2hhcl90KSAoKChieXRlICYgMHgwMykgPDwgMjQpCisJCQkgICAgfCAodW5zaWduZWQgaW50KSAoKHNbMV0gJiAweDNGKSA8PCAxOCkKKwkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1syXSAmIDB4M0YpIDw8IDEyKQorCQkJICAgIHwgKHVuc2lnbmVkIGludCkgKChzWzNdICYgMHgzRikgPDwgNikKKwkJCSAgICB8IChzWzRdICYgMHgzRikpOworCSAgICByZXR1cm4gNTsKKwl9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CisgICAgfSBlbHNlIGlmIChieXRlIDwgMHhGRSkgewogCWlmKHN0cmxlbihzKSA8IDYpIHJldHVybiAoc2l6ZV90KS0yOwotCSp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDBGKSA8PCAzMCkKLQkJCXwgKHVuc2lnbmVkIGludCkgKChzWzFdICYgMHgzRikgPDwgMjQpCi0JCQl8ICh1bnNpZ25lZCBpbnQpICgoc1syXSAmIDB4M0YpIDw8IDE4KQotCQkJfCAodW5zaWduZWQgaW50KSAoKHNbM10gJiAweDNGKSA8PCAxMikKLQkJCXwgKHVuc2lnbmVkIGludCkgKChzWzRdICYgMHgzRikgPDwgNikKLQkJCXwgKHNbNV0gJiAweDNGKSk7Ci0JcmV0dXJuIDY7Ci0gICAgfQorCWlmICgoKHNbMV0gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbMl0gJiAweEMwKSA9PSAweDgwKQorCSAgICAmJiAoKHNbM10gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbNF0gJiAweEMwKSA9PSAweDgwKQorCSAgICAmJiAoKHNbNV0gJiAweEMwKSA9PSAweDgwKSkgeworCSAgICAqdyA9ICh3Y2hhcl90KSAoKChieXRlICYgMHgwMSkgPDwgMzApCisJCQkgICAgfCAodW5zaWduZWQgaW50KSAoKHNbMV0gJiAweDNGKSA8PCAyNCkKKwkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1syXSAmIDB4M0YpIDw8IDE4KQorCQkJICAgIHwgKHVuc2lnbmVkIGludCkgKChzWzNdICYgMHgzRikgPDwgMTIpCisJCQkgICAgfCAodW5zaWduZWQgaW50KSAoKHNbNF0gJiAweDNGKSA8PCA2KQorCQkJICAgIHwgKHNbNV0gJiAweDNGKSk7CisJICAgIHJldHVybiA2OworCX0gZWxzZSByZXR1cm4gKHNpemVfdCktMTsKKyAgICB9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CiB9CiAKIC8qIGRlc3BpdGUgaXRzIG5hbWUgdGhpcyB0cmFuc2xhdGVzIHRvIFVURi0xNiBpZiB0aGVyZSBhcmUgKGludmFsaWQpCkBAIC0xNTQxLDYgKzE1NTAsNyBAQCBzdGF0aWMgc2l6ZV90IFJ3Y3J0b21iMzIoY2hhciAqcywgUl93Y2hhcl90IGN2YWx1ZSwgc2l6ZV90IG4pCiAgICAgaWYoY3ZhbHVlID09IDApIHJldHVybiAwOwogICAgIGZvciAoaSA9IDA7IGkgPCBzaXplb2YodXRmOF90YWJsZTEpL3NpemVvZihpbnQpOyBpKyspCiAJaWYgKGN2YWx1ZSA8PSB1dGY4X3RhYmxlMVtpXSkgYnJlYWs7CisgICAgaWYgKGkgPj0gc2l6ZW9mKHV0ZjhfdGFibGUxKS9zaXplb2YoaW50KSkgcmV0dXJuIDA7IC8qIG5vdCBlbmNvZGFibGUgKi8KICAgICBpZiAoaSA+PSBuIC0gMSkgcmV0dXJuIDA7ICAvKiBuZWVkIHNwYWNlIGZvciB0ZXJtaW5hbCBudWxsICovCiAgICAgaWYgKHMpIHsKIAlzICs9IGk7Cg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "size": 2497,
+          "last_change_time": "2026-10-08T17:42:25Z",
+          "id": 3898,
+          "is_private": false,
+          "summary": "patch: validate 5- and 6-byte UTF-8 sequences in utf8toucs()",
+          "creation_time": "2026-10-08T17:42:25Z",
+          "bug_id": 19206,
+          "file_name": "utf8toucs-long-sequences.diff"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-08 17:42:25"
+}
