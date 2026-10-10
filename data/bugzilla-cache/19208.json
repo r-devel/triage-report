@@ -3,190 +3,203 @@
     "faults": [],
     "bugs": [
       {
+        "priority": "P5",
+        "product": "R",
         "whiteboard": "",
         "creation_time": "2026-10-08T18:51:49Z",
         "version": "R-devel (trunk)",
-        "priority": "P5",
-        "product": "R",
+        "deadline": {},
+        "id": 19208,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
         "cc": [
           "luke"
         ],
-        "qa_contact": "",
-        "id": 19208,
-        "deadline": {},
-        "dupe_of": {},
-        "severity": "normal",
         "assigned_to": "R-core",
         "component": "I/O",
         "classification": "Unclassified",
-        "is_open": true,
         "keywords": [],
+        "is_open": true,
         "depends_on": [],
+        "blocks": [],
+        "url": "",
         "summary": "readLines() leaks its line buffer when an error unwinds mid-read",
         "groups": [],
         "assigned_to_detail": {
-          "id": 16,
           "name": "R-core",
+          "id": 16,
           "real_name": "R-core"
         },
         "is_cc_accessible": true,
-        "blocks": [],
-        "url": "",
+        "target_milestone": "---",
+        "see_also": [],
         "cc_detail": [
           {
-            "real_name": "Luke Tierney",
             "id": 34,
-            "name": "luke"
+            "name": "luke",
+            "real_name": "Luke Tierney"
           }
         ],
-        "last_change_time": "2026-10-09T03:28:18Z",
-        "see_also": [],
-        "target_milestone": "---",
-        "is_creator_accessible": true,
-        "alias": [],
-        "creator": "kevinushey",
+        "last_change_time": "2026-10-09T18:15:55Z",
         "is_confirmed": true,
         "op_sys": "All",
         "platform": "All",
         "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "CONFIRMED",
         "creator_detail": {
           "real_name": "Kevin Ushey",
-          "id": 1044,
-          "name": "kevinushey"
+          "name": "kevinushey",
+          "id": 1044
         },
-        "resolution": "",
-        "status": "CONFIRMED"
+        "resolution": ""
       }
     ]
   },
   "comments": {
-    "comments": {},
     "bugs": {
       "19208": {
         "comments": [
           {
-            "id": 103811,
-            "is_private": false,
-            "tags": [],
-            "text": "readLines() leaks its line buffer whenever an error unwinds mid-read. do_readLines() (src/main/connections.c) malloc()s the buffer it reads each line into (1000 bytes, doubled by realloc() as needed) and free()s it only on its two normal exits, so an error raised in between -- a read error or encoding-conversion failure inside Rconn_fgetc(), \"too many items\", an allocation failure for the result -- unwinds past both frees. A corrupt gzip file is enough to trigger it, so a process that reads untrusted files and catches the errors leaks 1000 bytes or more per failure.\n\nReproducible example:\n\ntf <- tempfile()\nwriteBin(as.raw(c(0x1f, 0x8b, 0x08, 0, 0, 0, 0, 0, 0, 3, rep(0xaf, 40))), tf)\nreadLines(gzfile(tf, \"rt\"))\n\nObserved (R 4.6.1 and R-devel r90646): the expected \"error reading from the connection\" (after a warning about invalid compressed data), but under LeakSanitizer:\n\n==47==ERROR: LeakSanitizer: detected memory leaks\nDirect leak of 1000 byte(s) in 1 object(s) allocated from:\n    #0 malloc\n    #1 do_readLines src/main/connections.c:4472\n    #2 bcEval_loop  src/main/eval.c:8150\n\nExpected: the same error with nothing leaked.\n\nAnalysis:\n\nThe buffer is allocated at connections.c:4472 with malloc() and released by the free() calls at the two returns (lines 4520 and 4537 in r90646). The error paths between them are all longjmps out of the function: Rconn_fgetc() signals a read or conversion error, allocVector() can fail, and the \"too many items\" check raises directly. The connection itself is already protected by a cleanup context when readLines() opened it, but that context does not know about the buffer.\n\nProposed patch: attached as readlines-buffer-leak.diff. It takes the buffer from R_alloc() instead, growing it by allocating a larger block and copying, and releases it with vmaxset() on the normal exits; memory from R_alloc() is reclaimed by the error unwind, so nothing leaks whichever way the function leaves. Checked on a rebuilt R: plain files, lines longer than the initial buffer, an incomplete final line, gzip input and chunked reads from an open connection return the same results as before, and 2000 consecutive error unwinds run cleanly.\n\nFound by fuzzing R with libFuzzer + AddressSanitizer (r-devel/r-oss-fuzz).\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/363, where CI results can be seen.",
-            "bug_id": 19208,
-            "count": 0,
             "creation_time": "2026-10-08T18:51:49Z",
-            "time": "2026-10-08T18:51:49Z",
-            "attachment_id": {},
+            "creator": "kevinushey",
             "is_markdown": false,
-            "creator": "kevinushey"
+            "count": 0,
+            "bug_id": 19208,
+            "text": "readLines() leaks its line buffer whenever an error unwinds mid-read. do_readLines() (src/main/connections.c) malloc()s the buffer it reads each line into (1000 bytes, doubled by realloc() as needed) and free()s it only on its two normal exits, so an error raised in between -- a read error or encoding-conversion failure inside Rconn_fgetc(), \"too many items\", an allocation failure for the result -- unwinds past both frees. A corrupt gzip file is enough to trigger it, so a process that reads untrusted files and catches the errors leaks 1000 bytes or more per failure.\n\nReproducible example:\n\ntf <- tempfile()\nwriteBin(as.raw(c(0x1f, 0x8b, 0x08, 0, 0, 0, 0, 0, 0, 3, rep(0xaf, 40))), tf)\nreadLines(gzfile(tf, \"rt\"))\n\nObserved (R 4.6.1 and R-devel r90646): the expected \"error reading from the connection\" (after a warning about invalid compressed data), but under LeakSanitizer:\n\n==47==ERROR: LeakSanitizer: detected memory leaks\nDirect leak of 1000 byte(s) in 1 object(s) allocated from:\n    #0 malloc\n    #1 do_readLines src/main/connections.c:4472\n    #2 bcEval_loop  src/main/eval.c:8150\n\nExpected: the same error with nothing leaked.\n\nAnalysis:\n\nThe buffer is allocated at connections.c:4472 with malloc() and released by the free() calls at the two returns (lines 4520 and 4537 in r90646). The error paths between them are all longjmps out of the function: Rconn_fgetc() signals a read or conversion error, allocVector() can fail, and the \"too many items\" check raises directly. The connection itself is already protected by a cleanup context when readLines() opened it, but that context does not know about the buffer.\n\nProposed patch: attached as readlines-buffer-leak.diff. It takes the buffer from R_alloc() instead, growing it by allocating a larger block and copying, and releases it with vmaxset() on the normal exits; memory from R_alloc() is reclaimed by the error unwind, so nothing leaks whichever way the function leaves. Checked on a rebuilt R: plain files, lines longer than the initial buffer, an incomplete final line, gzip input and chunked reads from an open connection return the same results as before, and 2000 consecutive error unwinds run cleanly.\n\nFound by fuzzing R with libFuzzer + AddressSanitizer (r-devel/r-oss-fuzz).\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/363, where CI results can be seen.",
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 103811,
+            "time": "2026-10-08T18:51:49Z"
           },
           {
-            "is_private": false,
-            "id": 103812,
-            "time": "2026-10-08T18:52:00Z",
-            "attachment_id": 3900,
-            "tags": [],
-            "is_markdown": false,
-            "count": 1,
+            "creation_time": "2026-10-08T18:52:00Z",
             "bug_id": 19208,
             "text": "Created attachment 3900\npatch: take readLines()'s line buffer from R_alloc() so error unwinds free it",
-            "creation_time": "2026-10-08T18:52:00Z",
-            "creator": "kevinushey"
+            "count": 1,
+            "tags": [],
+            "id": 103812,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 3900,
+            "time": "2026-10-08T18:52:00Z"
           },
           {
+            "creator": "luke",
+            "creation_time": "2026-10-08T21:15:24Z",
             "count": 2,
             "is_markdown": true,
-            "bug_id": 19208,
             "text": "Thanks.\n\nOne worry about the proposed patch is that after allocating a new larger buffer with `R_alloc` the old one is not released until the end of the call. May not be a big issue but would be nice to avoid. We could add `R_realloc` or some such that addresses this.",
-            "creation_time": "2026-10-08T21:15:24Z",
-            "creator": "luke",
-            "is_private": false,
-            "id": 103817,
-            "time": "2026-10-08T21:15:24Z",
+            "bug_id": 19208,
             "attachment_id": {},
-            "tags": []
+            "tags": [],
+            "is_private": false,
+            "time": "2026-10-08T21:15:24Z",
+            "id": 103817
           },
           {
-            "creator": "kevinushey",
-            "creation_time": "2026-10-08T23:33:44Z",
+            "time": "2026-10-08T23:33:44Z",
+            "id": 103818,
+            "is_private": false,
+            "attachment_id": 3901,
+            "tags": [],
             "text": "Created attachment 3901\npatch v2: R_realloc() for the buffer, vmaxset() mark check, NEWS and R-exts\n\nGood idea, thanks. The updated patch adds R_realloc() and uses it for the buffer growth.\n\nR_realloc()\n\n    char *R_realloc(void *p, size_t nelem, int eltsize);\n\nSemantics follow realloc(): contents are kept up to the smaller size, a NULL p allocates, a zero size releases the block and returns NULL. The new block takes the old one's position on the R_alloc stack and the old node is unlinked, so it becomes garbage immediately while a vmaxset() to a mark taken before the original allocation still releases everything, as does an error unwind. The relink goes through CHECK_OLD_TO_NEW when the predecessor is older.\n\nStale marks\n\nAs with pointers into a realloc()ed block, a vmaxget() mark taken while p was the most recent allocation is invalidated. The R-exts text documents this and the rule (record the mark before allocating the block). To catch mistakes, vmaxset() in a PROTECTCHECK build (--enable-strict-barrier) now walks the stack and signals an error for a mark that is no longer on it, which also catches reusing a mark after a lower vmaxset() has popped it. If the unwind target's own mark is stale the state cannot be repaired, so that case calls R_Suicide() rather than recursing.\n\nreadLines()\n\n    buf_size *= 2;\n    buf = R_realloc(buf, buf_size, sizeof(char));\n\nTesting\n\nThe readLines() cases from before (long lines across several doublings, incomplete final line, gzip, chunked reads, 2000 error unwinds) behave the same, also under gctorture(TRUE). An R CMD SHLIB test exercises R_realloc() directly: growing and shrinking a block buried under up to 200 later R_alloc()s with R_gc() between steps, the same-size, NULL and zero-size cases, the error for a foreign pointer, and stack depth and vmaxset() behaviour, with and without gctorture. In a strict-barrier build a deliberately stale mark is refused and the session stays usable. make check passes in the normal build; the strict-barrier build only fails the pre-existing \"inserting non-tracking CDR in tracking cell\" assertion in reg-tests-1d.R, which fails identically on unmodified trunk.\n\nThe patch (readlines-buffer-leak-v2.diff, against r90646) also includes a NEWS entry and the R-exts text. The GitHub PR at https://github.com/r-devel/r-svn/pull/363 has been updated to match, where CI results can be seen.",
             "bug_id": 19208,
             "is_markdown": false,
             "count": 3,
-            "tags": [],
-            "attachment_id": 3901,
-            "time": "2026-10-08T23:33:44Z",
-            "id": 103818,
-            "is_private": false
+            "creator": "kevinushey",
+            "creation_time": "2026-10-08T23:33:44Z"
           },
           {
-            "attachment_id": 3902,
-            "tags": [],
             "time": "2026-10-09T03:26:44Z",
+            "attachment_id": 3902,
+            "is_markdown": false,
+            "creator": "kevinushey",
             "id": 103820,
             "is_private": false,
-            "creator": "kevinushey",
-            "creation_time": "2026-10-09T03:26:44Z",
+            "tags": [],
             "text": "Created attachment 3902\npatch v3: free readLines() buffers with a shared cleanup context\n\nThis patch supersedes attachment 3901. I've deferred R_realloc(): my implementation invalidated allocation-stack marks saved by R_ToplevelExec() and R_UnwindProtect(), making error unwinding unsafe. That needs a separate fix.\n\nThe readLines() patch keeps malloc()/realloc() and uses one cleanup context for the buffer and any connection opened by the reader. Cleanup frees the buffer first, since closing can also raise an error.\n\nRegression tests pass in normal and strict-barrier builds. Leak checks, including read and close failures, report no leaks.\n\nPatch also at https://github.com/r-devel/r-svn/pull/363.",
             "bug_id": 19208,
             "count": 4,
-            "is_markdown": false
+            "creation_time": "2026-10-09T03:26:44Z"
+          },
+          {
+            "is_markdown": false,
+            "count": 5,
+            "bug_id": 19208,
+            "text": "The R_realloc() suggested in comment 2 is now proposed separately as bug 19209, so that the readLines() patch here stays independent of it.",
+            "creation_time": "2026-10-09T18:15:55Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 103826,
+            "time": "2026-10-09T18:15:55Z",
+            "attachment_id": {},
+            "tags": []
           }
         ]
       }
-    }
+    },
+    "comments": {}
   },
   "attachments": {
     "attachments": {},
     "bugs": {
       "19208": [
         {
-          "is_patch": true,
+          "summary": "patch: take readLines()'s line buffer from R_alloc() so error unwinds free it",
+          "creation_time": "2026-10-08T18:52:00Z",
+          "bug_id": 19208,
+          "file_name": "readlines-buffer-leak.diff",
+          "size": 2109,
+          "last_change_time": "2026-10-08T23:33:46Z",
+          "id": 3900,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA2NDYpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC00NDY5LDkgKzQ0NjksMTIgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgZWxzZSBpZihzdHJlcWwoZW5jb2RpbmcsICJsYXRpbjEiKSkgb2VuYyA9IENFX0xBVElOMTsKICAgICBlbHNlIGlmKHN0cmVxbChlbmNvZGluZywgImJ5dGVzIikpIG9lbmMgPSBDRV9CWVRFUzsKIAotICAgIGJ1ZiA9IChjaGFyICopIG1hbGxvYyhidWZfc2l6ZSk7Ci0gICAgaWYoIWJ1ZikKLQllcnJvcihfKCJjYW5ub3QgYWxsb2NhdGUgYnVmZmVyIGluIHJlYWRMaW5lcyIpKTsKKyAgICAvKiBSX2FsbG9jIHJhdGhlciB0aGFuIG1hbGxvYzogYW4gZXJyb3IgcmFpc2VkIHdoaWxlIHJlYWRpbmcgKGEKKyAgICAgICBjb252ZXJzaW9uIGZhaWx1cmUgb3IgcmVhZCBlcnJvciBpbiBSY29ubl9mZ2V0YywgInRvbyBtYW55CisgICAgICAgaXRlbXMiLCBhbiBhbGxvY2F0aW9uIGZhaWx1cmUpIHVud2luZHMgcGFzdCB0aGUgZnJlZXMgYmVsb3csIGFuZAorICAgICAgIG1lbW9yeSBmcm9tIFJfYWxsb2MgaXMgcmVjbGFpbWVkIGJ5IHRoZSB1bndpbmQuICovCisgICAgY29uc3Qgdm9pZCAqdm1heCA9IHZtYXhnZXQoKTsKKyAgICBidWYgPSBSX2FsbG9jKGJ1Zl9zaXplLCBzaXplb2YoY2hhcikpOwogICAgIG5uID0gKG4gPCAwKSA/IDEwMDAgOiBuOyAvKiBpbml0aWFsbHkgYWxsb2NhdGUgc3BhY2UgZm9yIDEwMDAgbGluZXMgKi8KICAgICBubm4gPSAobiA8IDApID8gUl9YTEVOX1RfTUFYIDogbjsKICAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgbm4pKTsKQEAgLTQ0ODksMTIgKzQ0OTIsMTAgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJbmJ1ZiA9IDA7CiAJd2hpbGUoKGMgPSBSY29ubl9mZ2V0Yyhjb24pKSAhPSBSX0VPRikgewogCSAgICBpZihuYnVmID09IGJ1Zl9zaXplLTEpIHsgIC8qIG5lZWQgc3BhY2UgZm9yIHRoZSB0ZXJtaW5hdG9yICovCisJCWNoYXIgKnRtcCA9IFJfYWxsb2MoMiAqIGJ1Zl9zaXplLCBzaXplb2YoY2hhcikpOworCQltZW1jcHkodG1wLCBidWYsIG5idWYpOworCQlidWYgPSB0bXA7CiAJCWJ1Zl9zaXplICo9IDI7Ci0JCWNoYXIgKnRtcCA9IChjaGFyICopIHJlYWxsb2MoYnVmLCBidWZfc2l6ZSk7Ci0JCWlmKCF0bXApIHsKLQkJICAgIGZyZWUoYnVmKTsKLQkJICAgIGVycm9yKF8oImNhbm5vdCBhbGxvY2F0ZSBidWZmZXIgaW4gcmVhZExpbmVzIikpOwotCQl9IGVsc2UgYnVmID0gdG1wOwogCSAgICB9CiAJICAgIGlmKHNraXBOdWwgJiYgYyA9PSAnXDAnKSBjb250aW51ZTsKIAkgICAgaWYoYyAhPSAnXG4nKQpAQCAtNDUxNyw3ICs0NTE4LDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgfQogICAgIGlmKCF3YXNvcGVuKSB7ZW5kY29udGV4dCgmY250eHQpOyBjb24tPmNsb3NlKGNvbik7fQogICAgIFVOUFJPVEVDVCgxKTsKLSAgICBmcmVlKGJ1Zik7CisgICAgdm1heHNldCh2bWF4KTsKICAgICByZXR1cm4gYW5zOwogbm9fbW9yZV9saW5lczoKICAgICBpZighd2Fzb3Blbikge2VuZGNvbnRleHQoJmNudHh0KTsgY29uLT5jbG9zZShjb24pO30KQEAgLTQ1MzQsNyArNDUzNSw3IEBAIG5vX21vcmVfbGluZXM6CiAJCQljb24tPmRlc2NyaXB0aW9uKTsKIAl9CiAgICAgfQotICAgIGZyZWUoYnVmKTsKKyAgICB2bWF4c2V0KHZtYXgpOwogICAgIGlmKG5yZWFkIDwgbm5uICYmICFvaykKIAllcnJvcihfKCJ0b28gZmV3IGxpbmVzIHJlYWQgaW4gcmVhZExpbmVzIikpOwogICAgIFBST1RFQ1QoYW5zMiA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgbnJlYWQpKTsK",
+          "creator": "kevinushey",
           "is_obsolete": true,
           "content_type": "text/plain",
           "flags": [],
-          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA2NDYpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC00NDY5LDkgKzQ0NjksMTIgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgZWxzZSBpZihzdHJlcWwoZW5jb2RpbmcsICJsYXRpbjEiKSkgb2VuYyA9IENFX0xBVElOMTsKICAgICBlbHNlIGlmKHN0cmVxbChlbmNvZGluZywgImJ5dGVzIikpIG9lbmMgPSBDRV9CWVRFUzsKIAotICAgIGJ1ZiA9IChjaGFyICopIG1hbGxvYyhidWZfc2l6ZSk7Ci0gICAgaWYoIWJ1ZikKLQllcnJvcihfKCJjYW5ub3QgYWxsb2NhdGUgYnVmZmVyIGluIHJlYWRMaW5lcyIpKTsKKyAgICAvKiBSX2FsbG9jIHJhdGhlciB0aGFuIG1hbGxvYzogYW4gZXJyb3IgcmFpc2VkIHdoaWxlIHJlYWRpbmcgKGEKKyAgICAgICBjb252ZXJzaW9uIGZhaWx1cmUgb3IgcmVhZCBlcnJvciBpbiBSY29ubl9mZ2V0YywgInRvbyBtYW55CisgICAgICAgaXRlbXMiLCBhbiBhbGxvY2F0aW9uIGZhaWx1cmUpIHVud2luZHMgcGFzdCB0aGUgZnJlZXMgYmVsb3csIGFuZAorICAgICAgIG1lbW9yeSBmcm9tIFJfYWxsb2MgaXMgcmVjbGFpbWVkIGJ5IHRoZSB1bndpbmQuICovCisgICAgY29uc3Qgdm9pZCAqdm1heCA9IHZtYXhnZXQoKTsKKyAgICBidWYgPSBSX2FsbG9jKGJ1Zl9zaXplLCBzaXplb2YoY2hhcikpOwogICAgIG5uID0gKG4gPCAwKSA/IDEwMDAgOiBuOyAvKiBpbml0aWFsbHkgYWxsb2NhdGUgc3BhY2UgZm9yIDEwMDAgbGluZXMgKi8KICAgICBubm4gPSAobiA8IDApID8gUl9YTEVOX1RfTUFYIDogbjsKICAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgbm4pKTsKQEAgLTQ0ODksMTIgKzQ0OTIsMTAgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJbmJ1ZiA9IDA7CiAJd2hpbGUoKGMgPSBSY29ubl9mZ2V0Yyhjb24pKSAhPSBSX0VPRikgewogCSAgICBpZihuYnVmID09IGJ1Zl9zaXplLTEpIHsgIC8qIG5lZWQgc3BhY2UgZm9yIHRoZSB0ZXJtaW5hdG9yICovCisJCWNoYXIgKnRtcCA9IFJfYWxsb2MoMiAqIGJ1Zl9zaXplLCBzaXplb2YoY2hhcikpOworCQltZW1jcHkodG1wLCBidWYsIG5idWYpOworCQlidWYgPSB0bXA7CiAJCWJ1Zl9zaXplICo9IDI7Ci0JCWNoYXIgKnRtcCA9IChjaGFyICopIHJlYWxsb2MoYnVmLCBidWZfc2l6ZSk7Ci0JCWlmKCF0bXApIHsKLQkJICAgIGZyZWUoYnVmKTsKLQkJICAgIGVycm9yKF8oImNhbm5vdCBhbGxvY2F0ZSBidWZmZXIgaW4gcmVhZExpbmVzIikpOwotCQl9IGVsc2UgYnVmID0gdG1wOwogCSAgICB9CiAJICAgIGlmKHNraXBOdWwgJiYgYyA9PSAnXDAnKSBjb250aW51ZTsKIAkgICAgaWYoYyAhPSAnXG4nKQpAQCAtNDUxNyw3ICs0NTE4LDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgfQogICAgIGlmKCF3YXNvcGVuKSB7ZW5kY29udGV4dCgmY250eHQpOyBjb24tPmNsb3NlKGNvbik7fQogICAgIFVOUFJPVEVDVCgxKTsKLSAgICBmcmVlKGJ1Zik7CisgICAgdm1heHNldCh2bWF4KTsKICAgICByZXR1cm4gYW5zOwogbm9fbW9yZV9saW5lczoKICAgICBpZighd2Fzb3Blbikge2VuZGNvbnRleHQoJmNudHh0KTsgY29uLT5jbG9zZShjb24pO30KQEAgLTQ1MzQsNyArNDUzNSw3IEBAIG5vX21vcmVfbGluZXM6CiAJCQljb24tPmRlc2NyaXB0aW9uKTsKIAl9CiAgICAgfQotICAgIGZyZWUoYnVmKTsKKyAgICB2bWF4c2V0KHZtYXgpOwogICAgIGlmKG5yZWFkIDwgbm5uICYmICFvaykKIAllcnJvcihfKCJ0b28gZmV3IGxpbmVzIHJlYWQgaW4gcmVhZExpbmVzIikpOwogICAgIFBST1RFQ1QoYW5zMiA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgbnJlYWQpKTsK",
-          "creator": "kevinushey",
-          "id": 3900,
-          "is_private": false,
-          "size": 2109,
-          "last_change_time": "2026-10-08T23:33:46Z",
-          "bug_id": 19208,
-          "file_name": "readlines-buffer-leak.diff",
-          "summary": "patch: take readLines()'s line buffer from R_alloc() so error unwinds free it",
-          "creation_time": "2026-10-08T18:52:00Z"
+          "is_patch": true
         },
         {
-          "last_change_time": "2026-10-09T03:28:18Z",
-          "size": 7836,
-          "is_private": false,
-          "id": 3901,
-          "creation_time": "2026-10-08T23:33:44Z",
           "summary": "patch v2: R_realloc() for the buffer, vmaxset() mark check, NEWS and R-exts",
-          "file_name": "readlines-buffer-leak-v2.diff",
+          "creation_time": "2026-10-08T23:33:44Z",
           "bug_id": 19208,
-          "is_patch": true,
-          "creator": "kevinushey",
+          "file_name": "readlines-buffer-leak-v2.diff",
+          "size": 7836,
+          "last_change_time": "2026-10-09T03:28:18Z",
+          "id": 3901,
+          "is_private": false,
           "data": "SW5kZXg6IGRvYy9ORVdTLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIGRvYy9ORVdTLlJkCShyZXZpc2lvbiA5MDY0NikKKysrIGRvYy9ORVdTLlJkCSh3b3JraW5nIGNvcHkpCkBAIC0xMzUsNyArMTM1LDEwIEBACiAKICAgXHN1YnNlY3Rpb257Qy1MZXZlbCBGYWNpbGl0aWVzfXsKICAgICBcaXRlbWl6ZXsKLSAgICAgIFxpdGVtIC4KKyAgICAgIFxpdGVtIE5ldyBmdW5jdGlvbiBcY29kZXtSX3JlYWxsb2MoKX0gcmVzaXplcyBhIGJsb2NrIG9mIG1lbW9yeQorICAgICAgb2J0YWluZWQgZnJvbSBcY29kZXtSX2FsbG9jKCl9IGluIHBsYWNlIG9uIHRoZSBcY29kZXtSX2FsbG9jKCl9CisgICAgICBzdGFjaywgc28gdGhlIG9sZCBibG9jayBjYW4gYmUgcmVjbGFpbWVkIGJlZm9yZSB0aGUgc3RhY2sgaXMKKyAgICAgIHVud291bmQuCiAgICAgfQogICB9CiAKSW5kZXg6IGRvYy9tYW51YWwvUi1leHRzLnRleGkKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gZG9jL21hbnVhbC9SLWV4dHMudGV4aQkocmV2aXNpb24gOTA2NDYpCisrKyBkb2MvbWFudWFsL1ItZXh0cy50ZXhpCSh3b3JraW5nIGNvcHkpCkBAIC0xNTM2Myw2ICsxNTM2Myw3IEBAIGluY2x1ZGVkIGJ5IEBmaWxle1IuaH0uCiBAbm9kZSBUcmFuc2llbnQgc3RvcmFnZSBhbGxvY2F0aW9uCiBAc3Vic2VjdGlvbiBUcmFuc2llbnQgc3RvcmFnZSBhbGxvY2F0aW9uCiBAYXBpZnVuIFJfYWxsb2MKK0BhcGlmdW4gUl9yZWFsbG9jCiBAYXBpZnVuIFJfYWxsb2NMRAogQGFwaWZ1biBTX2FsbG9jCiBAYXBpZnVuIFNfcmVhbGxvYwpAQCAtMTUzOTEsNiArMTUzOTIsMjcgQEAgeCA9IChpbnQgKikgUl9hbGxvYyhucm93cyhtZXJnZSkrMiwgc2l6ZW9mKGludCkpOwogKEBjb2Rle3NpemVfdH0gaXMgZGVmaW5lZCBpbiBAZmlsZXtzdGRkZWYuaH0gd2hpY2ggdGhlIGhlYWRlciBkZWZpbmluZwogQGNvZGV7Ul9hbGxvY30gaW5jbHVkZXMuKQogCitBIGJsb2NrIG9idGFpbmVkIGZyb20gQGNvZGV7Ul9hbGxvY30gY2FuIGJlIHJlc2l6ZWQgd2l0aAorCitAZXhhbXBsZQorY2hhciAqUl9yZWFsbG9jKHZvaWQgKkB2YXJ7cH0sIHNpemVfdCBAdmFye259LCBpbnQgQHZhcntzaXplfSkKK0BlbmQgZXhhbXBsZQorCitAbm9pbmRlbnQKK3doaWNoIGJlaGF2ZXMgbGlrZSBAY29kZXtyZWFsbG9jfTogdGhlIGNvbnRlbnRzIGFyZSBrZXB0IHVwIHRvIHRoZQorc21hbGxlciBvZiB0aGUgb2xkIGFuZCBuZXcgc2l6ZXMsIGEgQGNvZGV7TlVMTH0gQHZhcntwfSBhbGxvY2F0ZXMgYQorbmV3IGJsb2NrIGFuZCBhIHplcm8gc2l6ZSByZWxlYXNlcyBAdmFye3B9IGFuZCByZXR1cm5zIEBjb2Rle05VTEx9LgorVGhlIG5ldyBibG9jayB0YWtlcyB0aGUgcGxhY2Ugb2YgdGhlIG9sZCBvbmUsIHNvIGl0IGlzIHN0aWxsIHJlbGVhc2VkCitieSBhIEBjb2Rle3ZtYXhzZXR9IHRvIGEgcG9zaXRpb24gcmVjb3JkZWQgYmVmb3JlIEB2YXJ7cH0gd2FzCithbGxvY2F0ZWQgKHNlZSBiZWxvdyksIHdoZXJlYXMgdGhlIG9sZCBibG9jayBjYW4gYmUgcmVjbGFpbWVkIGJ5IHRoZQorZ2FyYmFnZSBjb2xsZWN0b3IgcmlnaHQgYXdheS4gIEFzIHdpdGggQGNvZGV7cmVhbGxvY30sIEB2YXJ7cH0gbXVzdAorbm90IGJlIHVzZWQgYWZ0ZXIgdGhlIGNhbGwsIGFuZCBhIHBvc2l0aW9uIHJlY29yZGVkIGJ5CitAY29kZXt2bWF4Z2V0fSB3aGlsZSBAdmFye3B9IHdhcyB0aGUgbW9zdCByZWNlbnQgYWxsb2NhdGlvbiBpcyBubworbG9uZ2VyIHZhbGlkOiByZWNvcmQgdGhlIHBvc2l0aW9uIGJlZm9yZSBhbGxvY2F0aW5nIEB2YXJ7cH0sIHR5cGljYWxseQorYXQgdGhlIHN0YXJ0IG9mIHRoZSBmdW5jdGlvbi4gIChBbiBAUnt9IGNvbmZpZ3VyZWQgd2l0aAorQG9wdGlvbnstLWVuYWJsZS1zdHJpY3QtYmFycmllcn0gY2hlY2tzIHRoZSBwb3NpdGlvbiBwYXNzZWQgdG8KK0Bjb2Rle3ZtYXhzZXR9IGFuZCBzaWduYWxzIGFuIGVycm9yIGlmIGl0IGlzIHN0YWxlLikKKwogVGhlcmUgaXMgYSBzaW1pbGFyIGNhbGwsIEBjb2Rle1NfYWxsb2N9IChuYW1lZCBmb3IgY29tcGF0aWJpbGl0eSB3aXRoIG9sZGVyCiB2ZXJzaW9ucyBvZiBAU2x7fSkgd2hpY2ggemVyb2VzIHRoZSBtZW1vcnkgYWxsb2NhdGVkLAogCkluZGV4OiBzcmMvaW5jbHVkZS9SX2V4dC9NZW1vcnkuaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9SX2V4dC9NZW1vcnkuaAkocmV2aXNpb24gOTA2NDYpCisrKyBzcmMvaW5jbHVkZS9SX2V4dC9NZW1vcnkuaAkod29ya2luZyBjb3B5KQpAQCAtNTAsNiArNTAsNyBAQCBpbnQJUl9nY19ydW5uaW5nKHZvaWQpOwogI2VuZGlmCiAKIGNoYXIqCVJfYWxsb2MoUl9TSVpFX1QsIGludCk7CitjaGFyKglSX3JlYWxsb2Modm9pZCAqLCBSX1NJWkVfVCwgaW50KTsKIGxvbmcgZG91YmxlICpSX2FsbG9jTEQoUl9TSVpFX1QgbmVsZW0pOwogY2hhcioJU19hbGxvYyhsb25nLCBpbnQpOwogY2hhcioJU19yZWFsbG9jKGNoYXIgKiwgbG9uZywgbG9uZywgaW50KTsKSW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA2NDYpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC00NDY5LDkgKzQ0NjksMTIgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgZWxzZSBpZihzdHJlcWwoZW5jb2RpbmcsICJsYXRpbjEiKSkgb2VuYyA9IENFX0xBVElOMTsKICAgICBlbHNlIGlmKHN0cmVxbChlbmNvZGluZywgImJ5dGVzIikpIG9lbmMgPSBDRV9CWVRFUzsKIAotICAgIGJ1ZiA9IChjaGFyICopIG1hbGxvYyhidWZfc2l6ZSk7Ci0gICAgaWYoIWJ1ZikKLQllcnJvcihfKCJjYW5ub3QgYWxsb2NhdGUgYnVmZmVyIGluIHJlYWRMaW5lcyIpKTsKKyAgICAvKiBSX2FsbG9jIHJhdGhlciB0aGFuIG1hbGxvYzogYW4gZXJyb3IgcmFpc2VkIHdoaWxlIHJlYWRpbmcgKGEKKyAgICAgICBjb252ZXJzaW9uIGZhaWx1cmUgb3IgcmVhZCBlcnJvciBpbiBSY29ubl9mZ2V0YywgInRvbyBtYW55CisgICAgICAgaXRlbXMiLCBhbiBhbGxvY2F0aW9uIGZhaWx1cmUpIHVud2luZHMgcGFzdCB0aGUgZnJlZXMgYmVsb3csIGFuZAorICAgICAgIG1lbW9yeSBmcm9tIFJfYWxsb2MgaXMgcmVjbGFpbWVkIGJ5IHRoZSB1bndpbmQuICovCisgICAgY29uc3Qgdm9pZCAqdm1heCA9IHZtYXhnZXQoKTsKKyAgICBidWYgPSBSX2FsbG9jKGJ1Zl9zaXplLCBzaXplb2YoY2hhcikpOwogICAgIG5uID0gKG4gPCAwKSA/IDEwMDAgOiBuOyAvKiBpbml0aWFsbHkgYWxsb2NhdGUgc3BhY2UgZm9yIDEwMDAgbGluZXMgKi8KICAgICBubm4gPSAobiA8IDApID8gUl9YTEVOX1RfTUFYIDogbjsKICAgICBQUk9URUNUKGFucyA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgbm4pKTsKQEAgLTQ0OTAsMTEgKzQ0OTMsNyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fcmVhZExpbmVzKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAl3aGlsZSgoYyA9IFJjb25uX2ZnZXRjKGNvbikpICE9IFJfRU9GKSB7CiAJICAgIGlmKG5idWYgPT0gYnVmX3NpemUtMSkgeyAgLyogbmVlZCBzcGFjZSBmb3IgdGhlIHRlcm1pbmF0b3IgKi8KIAkJYnVmX3NpemUgKj0gMjsKLQkJY2hhciAqdG1wID0gKGNoYXIgKikgcmVhbGxvYyhidWYsIGJ1Zl9zaXplKTsKLQkJaWYoIXRtcCkgewotCQkgICAgZnJlZShidWYpOwotCQkgICAgZXJyb3IoXygiY2Fubm90IGFsbG9jYXRlIGJ1ZmZlciBpbiByZWFkTGluZXMiKSk7Ci0JCX0gZWxzZSBidWYgPSB0bXA7CisJCWJ1ZiA9IFJfcmVhbGxvYyhidWYsIGJ1Zl9zaXplLCBzaXplb2YoY2hhcikpOwogCSAgICB9CiAJICAgIGlmKHNraXBOdWwgJiYgYyA9PSAnXDAnKSBjb250aW51ZTsKIAkgICAgaWYoYyAhPSAnXG4nKQpAQCAtNDUxNyw3ICs0NTE2LDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgfQogICAgIGlmKCF3YXNvcGVuKSB7ZW5kY29udGV4dCgmY250eHQpOyBjb24tPmNsb3NlKGNvbik7fQogICAgIFVOUFJPVEVDVCgxKTsKLSAgICBmcmVlKGJ1Zik7CisgICAgdm1heHNldCh2bWF4KTsKICAgICByZXR1cm4gYW5zOwogbm9fbW9yZV9saW5lczoKICAgICBpZighd2Fzb3Blbikge2VuZGNvbnRleHQoJmNudHh0KTsgY29uLT5jbG9zZShjb24pO30KQEAgLTQ1MzQsNyArNDUzMyw3IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19yZWFkTGluZXMoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCQkJY29uLT5kZXNjcmlwdGlvbik7CiAJfQogICAgIH0KLSAgICBmcmVlKGJ1Zik7CisgICAgdm1heHNldCh2bWF4KTsKICAgICBpZihucmVhZCA8IG5ubiAmJiAhb2spCiAJZXJyb3IoXygidG9vIGZldyBsaW5lcyByZWFkIGluIHJlYWRMaW5lcyIpKTsKICAgICBQUk9URUNUKGFuczIgPSBhbGxvY1ZlY3RvcihTVFJTWFAsIG5yZWFkKSk7CkluZGV4OiBzcmMvbWFpbi9tZW1vcnkuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9tZW1vcnkuYwkocmV2aXNpb24gOTA2NDYpCisrKyBzcmMvbWFpbi9tZW1vcnkuYwkod29ya2luZyBjb3B5KQpAQCAtMjMxMyw4ICsyMzEzLDM4IEBAIHZvaWQgKnZtYXhnZXQodm9pZCkKICAgICByZXR1cm4gKHZvaWQgKikgUl9WU3RhY2s7CiB9CiAKKyNpZmRlZiBQUk9URUNUQ0hFQ0sKKy8qIEEgbWFyayBmcm9tIHZtYXhnZXQoKSBpcyBvbmx5IHZhbGlkIHdoaWxlIGl0cyBub2RlIGlzIG9uIHRoZSBzdGFjay4KKyAgIE9uZSBwb3BwZWQgYnkgYW4gZWFybGllciB2bWF4c2V0KCksIG9yIHJlcGxhY2VkIGJ5IFJfcmVhbGxvYygpLCBpcworICAgc3RhbGU6IGluc3RhbGxpbmcgaXQgd291bGQgdHJ1bmNhdGUgdGhlIHN0YWNrIGF0IGEgZGVhZCBub2RlIGFuZAorICAgbGVhdmUgdGhlIGNvbGxlY3RvciBmb2xsb3dpbmcgaXQuICBUaGUgdW53aW5kIGZvciB0aGUgZXJyb3IgcGFzc2VzCisgICB0aGUgdGFyZ2V0IGNvbnRleHQncyBvd24gbWFyayBiYWNrIHRocm91Z2ggaGVyZTsgaWYgdGhhdCBvbmUgaXMKKyAgIHN0YWxlIHRvbyB0aGUgc3RhdGUgY2Fubm90IGJlIHJlcGFpcmVkLCBzbyBnaXZlIHVwIGluc3RlYWQgb2YKKyAgIHJlY3Vyc2luZy4gKi8KK3N0YXRpYyB2b2lkIGNoZWNrX3ZtYXhfbWFyayhTRVhQIG1hcmspCit7CisgICAgc3RhdGljIFJib29sZWFuIHJlcG9ydGluZyA9IEZBTFNFOworCisgICAgU0VYUCBzID0gUl9WU3RhY2s7CisgICAgd2hpbGUgKHMgIT0gTlVMTCAmJiBzICE9IFJfTmlsVmFsdWUgJiYgcyAhPSBtYXJrKQorCXMgPSBBVFRSSUIocyk7CisgICAgaWYgKHMgPT0gbWFyayB8fCBtYXJrID09IE5VTEwgfHwgbWFyayA9PSBSX05pbFZhbHVlKSB7CisJcmVwb3J0aW5nID0gRkFMU0U7CisJcmV0dXJuOworICAgIH0KKworICAgIGlmIChyZXBvcnRpbmcpCisJUl9TdWljaWRlKCJ2bWF4c2V0OiBzdGFsZSBSX2FsbG9jIHN0YWNrIG1hcmsgaW4gZXJyb3IgdW53aW5kIik7CisgICAgcmVwb3J0aW5nID0gVFJVRTsKKyAgICBlcnJvcigidm1heHNldDogbWFyayBpcyBub3Qgb24gdGhlIFJfYWxsb2Mgc3RhY2siKTsKK30KKyNlbmRpZgorCiB2b2lkIHZtYXhzZXQoY29uc3Qgdm9pZCAqb3ZtYXgpCiB7CisjaWZkZWYgUFJPVEVDVENIRUNLCisgICAgY2hlY2tfdm1heF9tYXJrKChTRVhQKSBvdm1heCk7CisjZW5kaWYKICAgICBSX1ZTdGFjayA9IChTRVhQKSBvdm1heDsKIH0KIApAQCAtMjM0NSw2ICsyMzc1LDU1IEBAIGNoYXIgKlJfYWxsb2Moc2l6ZV90IG5lbGVtLCBpbnQgZWx0c2l6ZSkKICAgICBlbHNlIHJldHVybiBOVUxMOwogfQogCisvKiBSZXNpemUgYSBibG9jayBvYnRhaW5lZCBmcm9tIFJfYWxsb2MuICBUaGUgbmV3IGJsb2NrIHRha2VzIHRoZSBvbGQKKyAgIG9uZSdzIHBsYWNlIG9uIHRoZSBSX2FsbG9jIHN0YWNrLCBzbyBhIHZtYXhzZXQoKSB0byBhIG1hcmsgdGFrZW4KKyAgIGJlZm9yZSB0aGUgb3JpZ2luYWwgYWxsb2NhdGlvbiBzdGlsbCByZWxlYXNlcyBpdCwgd2hpbGUgdGhlIG9sZAorICAgYmxvY2sgYmVjb21lcyBnYXJiYWdlIGF0IG9uY2UgcmF0aGVyIHRoYW4gbGl2aW5nIG9uIHVudGlsIHRoZQorICAgc3RhY2sgaXMgdW53b3VuZC4gIEFzIHdpdGggcmVhbGxvYygpLCBwID09IE5VTEwgYWxsb2NhdGVzLCBhIHplcm8KKyAgIHNpemUgcmVsZWFzZXMgdGhlIGJsb2NrIGFuZCByZXR1cm5zIE5VTEwsIGFuZCB0aGUgY29udGVudHMgYXJlCisgICBrZXB0IHVwIHRvIHRoZSBzbWFsbGVyIG9mIHRoZSBvbGQgYW5kIG5ldyBzaXplcy4gKi8KK2NoYXIgKlJfcmVhbGxvYyh2b2lkICpwLCBzaXplX3QgbmVsZW0sIGludCBlbHRzaXplKQoreworICAgIGlmIChwID09IE5VTEwpCisJcmV0dXJuIFJfYWxsb2MobmVsZW0sIGVsdHNpemUpOworCisgICAgLyogZmluZCB0aGUgYmxvY2s7IGl0IGlzIHVzdWFsbHkgYXQgb3IgbmVhciB0aGUgdG9wIG9mIHRoZSBzdGFjayAqLworICAgIFNFWFAgcHJldiA9IE5VTEwsIHMgPSBSX1ZTdGFjazsKKyAgICB3aGlsZSAocyAhPSBOVUxMICYmIHMgIT0gUl9OaWxWYWx1ZSAmJiBTVERWRUNfREFUQVBUUihzKSAhPSBwKSB7CisJcHJldiA9IHM7CisJcyA9IEFUVFJJQihzKTsKKyAgICB9CisgICAgaWYgKHMgPT0gTlVMTCB8fCBzID09IFJfTmlsVmFsdWUpCisJZXJyb3IoXygiJyVzJyBjYWxsZWQgb24gYSBwb2ludGVyIG5vdCBhbGxvY2F0ZWQgYnkgJyVzJyIpLAorCSAgICAgICJSX3JlYWxsb2MiLCAiUl9hbGxvYyIpOworCisgICAgZG91YmxlIG9zaXplID0gKGRvdWJsZSkgKFhMRU5HVEgocykgLSAxKTsKKyAgICBkb3VibGUgbnNpemUgPSAoZG91YmxlKSBuZWxlbSAqIGVsdHNpemU7CisgICAgaWYgKG5zaXplID09IG9zaXplKQorCXJldHVybiBwOworCisgICAgLyogUl9hbGxvYyBtYXkgcnVuIHRoZSBjb2xsZWN0b3I6IHMgaXMgc3RpbGwgbGlua2VkIGluLCBzbyB0aGUgb2xkCisgICAgICAgY29udGVudHMgc3Vydml2ZS4gIE5vdGhpbmcgYmVsb3cgYWxsb2NhdGVzIHVudGlsIHRoZSBuZXcgYmxvY2sKKyAgICAgICBpcyBsaW5rZWQgaW4gcGxhY2Ugb2Ygcy4gKi8KKyAgICBjaGFyICpxID0gUl9hbGxvYyhuZWxlbSwgZWx0c2l6ZSk7CisgICAgU0VYUCByZXBsID0gQVRUUklCKHMpOworICAgIGlmIChxICE9IE5VTEwpIHsKKwlyZXBsID0gUl9WU3RhY2s7CisJUl9WU3RhY2sgPSBBVFRSSUIocmVwbCk7CisJbWVtY3B5KHEsIHAsIChzaXplX3QpIChuc2l6ZSA8IG9zaXplID8gbnNpemUgOiBvc2l6ZSkpOworCUFUVFJJQihyZXBsKSA9IEFUVFJJQihzKTsKKyAgICB9CisgICAgaWYgKHByZXYgPT0gTlVMTCkgeworCVJfVlN0YWNrID0gcmVwbDsKKyAgICB9IGVsc2UgeworCUNIRUNLX09MRF9UT19ORVcocHJldiwgcmVwbCk7CisJQVRUUklCKHByZXYpID0gcmVwbDsKKyAgICB9CisgICAgQVRUUklCKHMpID0gUl9OaWxWYWx1ZTsKKworICAgIHJldHVybiBxOworfQorCiAjaWZkZWYgSEFWRV9TVERBTElHTl9ICiAjIGluY2x1ZGUgPHN0ZGFsaWduLmg+CiAjZW5kaWYK",
+          "creator": "kevinushey",
+          "is_obsolete": true,
           "flags": [],
           "content_type": "text/plain",
-          "is_obsolete": true
+          "is_patch": true
         },
         {
-          "is_patch": true,
+          "is_obsolete": false,
           "content_type": "text/plain",
           "flags": [],
-          "is_obsolete": false,
-          "creator": "kevinushey",
           "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA2NTApCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC00NDA4LDYgKzQ0MDgsMTkgQEAgc3RhdGljIHZvaWQgY29uX2NsZWFudXAodm9pZCAqZGF0YSkKICAgICBjaGVja0Nsb3NlKGNvbik7CiB9CiAKK3R5cGVkZWYgc3RydWN0IHsKKyAgICBjaGFyICoqYnVmOyAvKiBhZGRyZXNzIG9mIHRoZSBidWZmZXIgcG9pbnRlciwgdG8gdHJhY2sgcmVhbGxvY2F0aW9ucyAqLworICAgIFJjb25uZWN0aW9uIGNvbjsgLyogTlVMTCB1bmxlc3MgdGhlIGNvbm5lY3Rpb24gc3RpbGwgbmVlZHMgY2xvc2luZyAqLworfSByZWFkTGluZXNfZGF0YTsKKworc3RhdGljIHZvaWQgcmVhZExpbmVzX2NsZWFudXAodm9pZCAqZGF0YSkKK3sKKyAgICByZWFkTGluZXNfZGF0YSAqZCA9IGRhdGE7CisgICAgLyogQ2xvc2luZyB0aGUgY29ubmVjdGlvbiBtYXkgaXRzZWxmIHJhaXNlIGFuIGVycm9yLiAqLworICAgIGZyZWUoKmQtPmJ1Zik7CisgICAgaWYgKGQtPmNvbikgY2hlY2tDbG9zZShkLT5jb24pOworfQorCiAvKiByZWFkTGluZXMoY29uID0gc3RkaW4oKSwgbiA9IDEsIG9rID0gVFJVRSwgd2FybiA9IFRSVUUpICovCiAjZGVmaW5lIEJVRl9TSVpFIDEwMDAKIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19yZWFkTGluZXMoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQpAQCAtNDQxOCw3ICs0NDMxLDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAgICAgaW50IG9lbmMgPSBDRV9OQVRJVkU7CiAgICAgUmNvbm5lY3Rpb24gY29uID0gTlVMTDsKICAgICBSYm9vbGVhbiB3YXNvcGVuOwotICAgIGNoYXIgKmJ1ZjsKKyAgICBjaGFyICpidWYgPSBOVUxMOwogICAgIGNvbnN0IGNoYXIgKmVuY29kaW5nOwogICAgIFJDTlRYVCBjbnR4dDsKICAgICBSX3hsZW5fdCBpLCBuLCBubiwgbm5uLCBucmVhZDsKQEAgLTQ0NDMsNiArNDQ1NiwxMyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fcmVhZExpbmVzKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKICAgICBpZihza2lwTnVsID09IE5BX0xPR0lDQUwpCiAJZXJyb3IoXygiaW52YWxpZCAnJXMnIGFyZ3VtZW50IiksICJza2lwTnVsIik7CiAKKyAgICAvKiBDbGVhbiB1cCB0aGUgY3VycmVudCBidWZmZXIgYW5kIGFueSBjb25uZWN0aW9uIG9wZW5lZCBoZXJlIG9uIGVycm9yLiAqLworICAgIHJlYWRMaW5lc19kYXRhIGRhdGEgPSB7JmJ1ZiwgTlVMTH07CisgICAgYmVnaW5jb250ZXh0KCZjbnR4dCwgQ1RYVF9DQ09ERSwgUl9OaWxWYWx1ZSwgUl9CYXNlRW52LCBSX0Jhc2VFbnYsCisJCSBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKKyAgICBjbnR4dC5jZW5kID0gJnJlYWRMaW5lc19jbGVhbnVwOworICAgIGNudHh0LmNlbmRkYXRhID0gJmRhdGE7CisKICAgICB3YXNvcGVuID0gY29uLT5pc29wZW47CiAgICAgaWYoIXdhc29wZW4pIHsKIAljaGFyIG1vZGVbNV07CkBAIC00NDUxLDExICs0NDcxLDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJc3RyY3B5KGNvbi0+bW9kZSwgInJ0Iik7CiAJaWYoIWNvbi0+b3Blbihjb24pKSBlcnJvcihfKCJjYW5ub3Qgb3BlbiB0aGUgY29ubmVjdGlvbiIpKTsKIAlzdHJjcHkoY29uLT5tb2RlLCBtb2RlKTsKLQkvKiBTZXQgdXAgYSBjb250ZXh0IHdoaWNoIHdpbGwgY2xvc2UgdGhlIGNvbm5lY3Rpb24gb24gZXJyb3IgKi8KLQliZWdpbmNvbnRleHQoJmNudHh0LCBDVFhUX0NDT0RFLCBSX05pbFZhbHVlLCBSX0Jhc2VFbnYsIFJfQmFzZUVudiwKLQkJICAgICBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKLQljbnR4dC5jZW5kID0gJmNvbl9jbGVhbnVwOwotCWNudHh0LmNlbmRkYXRhID0gY29uOworCWRhdGEuY29uID0gY29uOwogCWlmKCFjb24tPmNhbnJlYWQpIGVycm9yKF8oImNhbm5vdCByZWFkIGZyb20gdGhpcyBjb25uZWN0aW9uIikpOwogICAgIH0gZWxzZSB7CiAJaWYoIWNvbi0+Y2FucmVhZCkgZXJyb3IoXygiY2Fubm90IHJlYWQgZnJvbSB0aGlzIGNvbm5lY3Rpb24iKSk7CkBAIC00NDkxLDEwICs0NTA3LDkgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJICAgIGlmKG5idWYgPT0gYnVmX3NpemUtMSkgeyAgLyogbmVlZCBzcGFjZSBmb3IgdGhlIHRlcm1pbmF0b3IgKi8KIAkJYnVmX3NpemUgKj0gMjsKIAkJY2hhciAqdG1wID0gKGNoYXIgKikgcmVhbGxvYyhidWYsIGJ1Zl9zaXplKTsKLQkJaWYoIXRtcCkgewotCQkgICAgZnJlZShidWYpOworCQlpZighdG1wKQogCQkgICAgZXJyb3IoXygiY2Fubm90IGFsbG9jYXRlIGJ1ZmZlciBpbiByZWFkTGluZXMiKSk7Ci0JCX0gZWxzZSBidWYgPSB0bXA7CisJCWJ1ZiA9IHRtcDsKIAkgICAgfQogCSAgICBpZihza2lwTnVsICYmIGMgPT0gJ1wwJykgY29udGludWU7CiAJICAgIGlmKGMgIT0gJ1xuJykKQEAgLTQ1MTUsMTIgKzQ1MzAsMTkgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3JlYWRMaW5lcyhTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJICAgICAgICAgICAgKGxvbmcgbG9uZylucmVhZCArIDEpOwogCWlmKGMgPT0gUl9FT0YpIGdvdG8gbm9fbW9yZV9saW5lczsKICAgICB9Ci0gICAgaWYoIXdhc29wZW4pIHtlbmRjb250ZXh0KCZjbnR4dCk7IGNvbi0+Y2xvc2UoY29uKTt9CisgICAgaWYoIXdhc29wZW4pIHsKKwlkYXRhLmNvbiA9IE5VTEw7IC8qIGRvIG5vdCBjbG9zZSBhZ2FpbiBpZiBjbG9zaW5nIHJhaXNlcyBhbiBlcnJvciAqLworCWNvbi0+Y2xvc2UoY29uKTsKKyAgICB9CisgICAgZW5kY29udGV4dCgmY250eHQpOwogICAgIFVOUFJPVEVDVCgxKTsKICAgICBmcmVlKGJ1Zik7CiAgICAgcmV0dXJuIGFuczsKIG5vX21vcmVfbGluZXM6Ci0gICAgaWYoIXdhc29wZW4pIHtlbmRjb250ZXh0KCZjbnR4dCk7IGNvbi0+Y2xvc2UoY29uKTt9CisgICAgaWYoIXdhc29wZW4pIHsKKwlkYXRhLmNvbiA9IE5VTEw7CisJY29uLT5jbG9zZShjb24pOworICAgIH0KICAgICBpZihuYnVmID4gMCkgeyAvKiBpbmNvbXBsZXRlIGxhc3QgbGluZSAqLwogCWlmKGNvbi0+dGV4dCAmJiAhY29uLT5ibG9ja2luZyAmJgogCSAgIChzdHJjbXAoY29uLT5jbGFzcywgImd6ZmlsZSIpICE9IDApKSB7CkBAIC00NTM0LDYgKzQ1NTYsNyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fcmVhZExpbmVzKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkJCWNvbi0+ZGVzY3JpcHRpb24pOwogCX0KICAgICB9CisgICAgZW5kY29udGV4dCgmY250eHQpOwogICAgIGZyZWUoYnVmKTsKICAgICBpZihucmVhZCA8IG5ubiAmJiAhb2spCiAJZXJyb3IoXygidG9vIGZldyBsaW5lcyByZWFkIGluIHJlYWRMaW5lcyIpKTsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDY1MCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zOTU5LDYgKzM5NTksMzggQEAgbG9jYWwoewogIyMgdmFsdWUgZm9yIGVhY2ggZnVydGhlciBjb250aW51YXRpb24gbGluZQogCiAKKyMjIHJlYWRMaW5lcygpIG11c3QgZnJlZSBpdHMgbGluZSBidWZmZXIgb24gZXJyb3IsIGluY2x1ZGluZyBhZnRlciBncm93dGguCisjIyBUaGUgZXJyb3IgY2FzZXMgYWxzbyBleGVyY2lzZSB0aGUgY2xlYW51cCB1bmRlciBsZWFrIGNoZWNrZXJzLgorbG9jYWwoeworICAgIHRmIDwtIHRlbXBmaWxlKCkKKyAgICBvbGQgPC0gb3B0aW9ucyh3YXJuID0gMikKKyAgICBmb3IgKG1vZGUgaW4gYygiIiwgInJ0IikpIHsKKyAgICAgICAgIyMgQSBjb3JydXB0IGd6aXAgc3RyZWFtIGZhaWxzIHdoaWxlIHJlYWRpbmcgdGhlIGZpcnN0IGxpbmUuCisgICAgICAgIHdyaXRlQmluKGFzLnJhdyhjKDB4MWYsIDB4OGIsIDB4MDgsIDAsIDAsIDAsIDAsIDAsIDAsIDMsCisgICAgICAgICAgICAgICAgICAgICAgICAgIHJlcCgweGFmLCA0MCkpKSwgdGYpCisgICAgICAgIGNvbiA8LSBnemZpbGUodGYsIG1vZGUpCisgICAgICAgIHN0b3BpZm5vdChpbmhlcml0cyh0cnlDaWQocmVhZExpbmVzKGNvbikpLCAiZXJyb3IiKSwKKyAgICAgICAgICAgICAgICAgIGlkZW50aWNhbChpc09wZW4oY29uKSwgbnpjaGFyKG1vZGUpKSkKKyAgICAgICAgY2xvc2UoY29uKQorICAgICAgICAjIyBFcnJvcnMgYWZ0ZXIgZ3Jvd3RoLCBib3RoIGR1cmluZyByZWFkaW5nIGFuZCBhZnRlciBjbG9zaW5nLgorICAgICAgICBsaW5lIDwtIHN0cnJlcCgiYSIsIDgwMDApCisgICAgICAgIHdyaXRlQmluKGMoY2hhclRvUmF3KGxpbmUpLCBhcy5yYXcoMCksIGNoYXJUb1JhdygieFxuIikpLCB0ZikKKyAgICAgICAgY29uIDwtIGZpbGUodGYsIG1vZGUpCisgICAgICAgIHN0b3BpZm5vdChpbmhlcml0cyh0cnlDaWQocmVhZExpbmVzKGNvbikpLCAiZXJyb3IiKSwKKyAgICAgICAgICAgICAgICAgIGlkZW50aWNhbChpc09wZW4oY29uKSwgbnpjaGFyKG1vZGUpKSkKKyAgICAgICAgY2xvc2UoY29uKQorICAgICAgICB3cml0ZUNoYXIobGluZSwgdGYsIGVvcyA9IE5VTEwpCisgICAgICAgIGNvbiA8LSBmaWxlKHRmLCBtb2RlKQorICAgICAgICBzdG9waWZub3QoaW5oZXJpdHModHJ5Q2lkKHJlYWRMaW5lcyhjb24pKSwgImVycm9yIiksCisgICAgICAgICAgICAgICAgICBpZGVudGljYWwoaXNPcGVuKGNvbiksIG56Y2hhcihtb2RlKSkpCisgICAgICAgIGNsb3NlKGNvbikKKyAgICB9CisgICAgb3B0aW9ucyhvbGQpCisgICAgdW5saW5rKHRmKQorfSkKKyMjIGxlYWtlZCB0aGUgYnVmZmVyIG9uIGVycm9ycyBpbiBSIDw9IDQuNi54CisKKwogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
-          "is_private": false,
-          "id": 3902,
-          "last_change_time": "2026-10-09T03:26:44Z",
-          "size": 5222,
-          "file_name": "readlines-buffer-leak-v3.diff",
+          "creator": "kevinushey",
+          "is_patch": true,
           "bug_id": 19208,
+          "file_name": "readlines-buffer-leak-v3.diff",
+          "summary": "patch v3: free readLines() buffers with a shared cleanup context",
           "creation_time": "2026-10-09T03:26:44Z",
-          "summary": "patch v3: free readLines() buffers with a shared cleanup context"
+          "id": 3902,
+          "is_private": false,
+          "size": 5222,
+          "last_change_time": "2026-10-09T03:26:44Z"
         }
       ]
     }
   },
-  "source_changed": "2026-10-09 03:28:18"
+  "source_changed": "2026-10-09 18:15:55"
 }

@@ -77,6 +77,7 @@ _Dates show when the patch was submitted._
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
 * [Bug 19206](https://bugs.r-project.org/show_bug.cgi?id=19206) — chartr() and case conversion read past utf8_table2 on UTF-8-marked strings with 0xFF runs (utf8toucs decodes 5/6-byte forms unchecked) (2026-10-08)
+* [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 
 ### Mac GUI / Mac specific
 

@@ -28,6 +28,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19158
 19184,parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing,Low-level,kevinushey,NEW,2026-09-26 01:44:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19184
 19206,chartr() and case conversion read past utf8_table2 on UTF-8-marked strings with 0xFF runs (utf8toucs decodes 5/6-byte forms unchecked),Low-level,kevinushey,NEW,2026-10-08 17:42:25 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19206
+19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19209
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19092
 18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18938
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18958
