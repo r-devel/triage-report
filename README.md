@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-10._
+_Automatically generated from the R Bugzilla dump updated 2026-10-11._
 
 ## Triaged bugs
 
@@ -49,7 +49,6 @@ _Dates show when the patch was submitted._
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
-* [Bug 19204](https://bugs.r-project.org/show_bug.cgi?id=19204) — getParseData should support returning untruncated long STR_CONST, SYMBOL*, and SLOT text (2026-10-07)
 
 ### Low-level
 
