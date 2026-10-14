@@ -45,6 +45,7 @@ _Dates show when the patch was submitted._
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
+* [Bug 19213](https://bugs.r-project.org/show_bug.cgi?id=19213) — scan() reads past its field buffer when stripping a UTF-8 BOM from a buffer-filling first field (2026-10-13)
 
 ### Language
 
