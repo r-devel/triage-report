@@ -4,6 +4,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19208,readLines() leaks its line buffer when an error unwinds mid-read,I/O,kevinushey,CONFIRMED,2026-10-09 03:26:44 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=19208
 19213,scan() reads past its field buffer when stripping a UTF-8 BOM from a buffer-filling first field,I/O,kevinushey,NEW,2026-10-13 17:46:14 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19213
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18583
+19215,parse(keep.source = TRUE) loops forever in finalizeData() after a lexer error in a previous parse,Language,kevinushey,NEW,2026-10-14 18:37:39 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19215
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18096
 18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18863
 18353,assigning to hashtab via $<- 'corrupts' table,Low-level,kevinushey,UNCONFIRMED,2025-09-12 13:39:57 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=18353
@@ -41,6 +42,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18091,tools::xgettext fails on a wrapper of a gettextf,Translations,michaelchirico4,UNCONFIRMED,2024-09-14 18:32:20 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18091
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,https://bugs.r-project.org/show_bug.cgi?id=19143
 19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19198
+19214,Qualifying base:: for OS-specific objects can produce R CMD check issues,Windows GUI / Window specific,michaelchirico4,NEW,2026-10-14 18:27:07 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19214
 17676,vcov.lm should calculate vcov more directly for efficiency,Wishlist,michaelchirico4,UNCONFIRMED,2019-12-17 09:02:33 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17676
 17778,barplot should take user-supplied lwd,Wishlist,michaelchirico4,UNCONFIRMED,2020-05-01 02:45:12 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17778
 17918,"Improve debugcall and debugcallonce to support calls to funs via :: :::, patch included",Wishlist,gabembecker,UNCONFIRMED,2020-09-08 10:48:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17918

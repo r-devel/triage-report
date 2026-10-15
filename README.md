@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-13._
+_Automatically generated from the R Bugzilla dump updated 2026-10-14._
 
 ## Triaged bugs
 
@@ -50,6 +50,7 @@ _Dates show when the patch was submitted._
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
+* [Bug 19215](https://bugs.r-project.org/show_bug.cgi?id=19215) — parse(keep.source = TRUE) loops forever in finalizeData() after a lexer error in a previous parse (2026-10-14)
 
 ### Low-level
 
@@ -105,6 +106,7 @@ _Dates show when the patch was submitted._
 
 * [Bug 19143](https://bugs.r-project.org/show_bug.cgi?id=19143) — `Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8 (2026-08-28)
 * [Bug 19198](https://bugs.r-project.org/show_bug.cgi?id=19198) — Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing (2026-10-01)
+* [Bug 19214](https://bugs.r-project.org/show_bug.cgi?id=19214) — Qualifying base:: for OS-specific objects can produce R CMD check issues (2026-10-14)
 
 ### Wishlist
 

@@ -2,133 +2,146 @@
   "bug": {
     "bugs": [
       {
-        "whiteboard": "",
-        "version": "R-devel (trunk)",
-        "creation_time": "2026-10-13T17:20:18Z",
-        "priority": "P5",
-        "product": "R",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-10-14T16:03:01Z",
+        "cc_detail": [
+          {
+            "real_name": "Martin Maechler",
+            "id": 18,
+            "name": "maechler"
+          }
+        ],
+        "blocks": [],
+        "url": "",
+        "summary": "strsplit(perl = TRUE) heap-buffer-overflow on empty match with bytes or single-byte-locale input",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19212,
+        "deadline": {},
         "qa_contact": "",
         "cc": [
           "maechler"
         ],
-        "dupe_of": {},
-        "severity": "normal",
-        "id": 19212,
-        "deadline": {},
-        "assigned_to": "R-core",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-13T17:20:18Z",
         "component": "Language",
-        "depends_on": [],
         "keywords": [],
         "is_open": true,
+        "depends_on": [],
         "classification": "Unclassified",
-        "summary": "strsplit(perl = TRUE) heap-buffer-overflow on empty match with bytes or single-byte-locale input",
-        "is_cc_accessible": true,
-        "assigned_to_detail": {
-          "name": "R-core",
-          "id": 16,
-          "real_name": "R-core"
-        },
-        "groups": [],
-        "blocks": [],
-        "url": "",
-        "cc_detail": [
-          {
-            "name": "maechler",
-            "id": 18,
-            "real_name": "Martin Maechler"
-          }
-        ],
-        "last_change_time": "2026-10-14T09:12:22Z",
-        "target_milestone": "---",
-        "see_also": [],
-        "is_creator_accessible": true,
-        "alias": [],
-        "creator": "kevinushey",
-        "is_confirmed": true,
-        "op_sys": "All",
-        "flags": [],
-        "platform": "All",
-        "creator_detail": {
-          "real_name": "Kevin Ushey",
-          "id": 1044,
-          "name": "kevinushey"
-        },
-        "resolution": "",
-        "status": "CONFIRMED"
+        "assigned_to": "R-core"
       }
     ],
     "faults": []
   },
   "comments": {
+    "comments": {},
     "bugs": {
       "19212": {
         "comments": [
           {
-            "is_markdown": false,
-            "count": 0,
             "bug_id": 19212,
             "text": "strsplit(x, split, perl = TRUE) overruns a heap buffer when an empty match is followed by a byte that is not a valid UTF-8 lead byte and the input is bytes-encoded, or native in a single-byte locale. Found by OSS-Fuzz; tested against trunk r90664.\n\nReproducible example:\n\nx <- \"\\xff\"; Encoding(x) <- \"bytes\"\nstrsplit(x, \"|\", perl = TRUE, useBytes = TRUE)\n\nExpected (and what the TRE path, strsplit(x, \"|\", useBytes = TRUE), returns): list(\"\\xff\"). Under AddressSanitizer R-devel instead reports\n\n    ERROR: AddressSanitizer: heap-buffer-overflow ... WRITE of size 6\n        #0 strncpy\n        #1 do_strsplit grep.c:908\n    0x... is located 0 bytes after 2-byte region\n        #1 R_chk_realloc memory.c:3561\n        #2 do_strsplit grep.c:887\n\nThe same happens for strsplit(\"\\xff\", \"|\", perl = TRUE) in the C locale, and in a Latin-1 locale for any native non-ASCII string with a pattern that can match the empty string, e.g. strsplit(\"\\xe9\", \" *\", perl = TRUE). Without ASan the result is silent heap corruption, or garbage tokens read from beyond the string.\n\nAnalysis:\n\nSince r84516 (PR#18546) the PCRE branch of do_strsplit() (src/main/grep.c) steps over an empty match by utf8clen() of the next byte, so that multibyte UTF-8 characters are not split. That is applied unconditionally, but only the use_UTF8 input has been validated with utf8Valid(); for useBytes = TRUE or a native string in a single-byte locale, utf8clen(0xff) claims 6 bytes. The counting loop then advances past the terminator and keeps matching on whatever follows, and the fill loop's strncpy(pt, bufp, clen) writes clen bytes into the token buffer, which was sized strlen(buf) + 1. Affects R 4.4.0 onwards; the R-4-3 branch does not have r84516.\n\nProposed patch: attached as strsplit-perl-empty-match.diff. It advances by one byte unless use_UTF8, as do_gsub()'s PCRE path already does for empty matches, and adds a regression test to tests/reg-tests-1e.R. One visible consequence: in a single-byte locale, perl = TRUE on non-ASCII native input now yields single bytes for empty matches, agreeing with the TRE path and with split = \"\" (previously it happened to group bytes that looked like UTF-8 lead bytes). make check passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/376, where CI results can be seen.",
+            "count": 0,
+            "is_markdown": false,
             "creation_time": "2026-10-13T17:20:18Z",
             "creator": "kevinushey",
-            "is_private": false,
             "id": 103840,
             "time": "2026-10-13T17:20:18Z",
+            "is_private": false,
             "attachment_id": {},
             "tags": []
           },
           {
-            "tags": [],
             "id": 103841,
-            "is_private": false,
-            "creation_time": "2026-10-13T17:20:33Z",
-            "text": "Created attachment 3909\nadvance by one byte after an empty match unless use_UTF8; regression test",
-            "bug_id": 19212,
-            "count": 1,
-            "attachment_id": 3909,
             "time": "2026-10-13T17:20:33Z",
-            "creator": "kevinushey",
-            "is_markdown": false
+            "is_private": false,
+            "attachment_id": 3909,
+            "tags": [],
+            "bug_id": 19212,
+            "text": "Created attachment 3909\nadvance by one byte after an empty match unless use_UTF8; regression test",
+            "is_markdown": false,
+            "count": 1,
+            "creation_time": "2026-10-13T17:20:33Z",
+            "creator": "kevinushey"
           },
           {
-            "time": "2026-10-14T09:12:22Z",
-            "attachment_id": {},
-            "is_markdown": true,
             "creator": "maechler",
-            "is_private": false,
-            "id": 103847,
-            "tags": [],
+            "creation_time": "2026-10-14T09:12:22Z",
+            "is_markdown": true,
             "count": 2,
             "text": "Thank you Kevin; I've confirmed it on my platform, and am testing the patch.\n\nThank you for the regr.test, too. \nR-core \"style\" is to have details here on bugzilla, hence \"PR#19212\" (of course you don't know the number at PR reporting time)\nand (often) in source code comments, but the regr.test R script rather not using deep technical explanations.\nHence my edits there {you see once I'd commit}.",
             "bug_id": 19212,
-            "creation_time": "2026-10-14T09:12:22Z"
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2026-10-14T09:12:22Z",
+            "id": 103847
+          },
+          {
+            "attachment_id": {},
+            "time": "2026-10-14T16:03:01Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 103848,
+            "creation_time": "2026-10-14T16:03:01Z",
+            "count": 3,
+            "text": "Thank you, Martin! I'll keep an eye out for your commit and adhere to that style for future patches.",
+            "bug_id": 19212
           }
         ]
       }
-    },
-    "comments": {}
+    }
   },
   "attachments": {
+    "attachments": {},
     "bugs": {
       "19212": [
         {
-          "is_patch": true,
-          "creator": "kevinushey",
-          "data": "SW5kZXg6IHNyYy9tYWluL2dyZXAuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ncmVwLmMJKHJldmlzaW9uIDkwNjY0KQorKysgc3JjL21haW4vZ3JlcC5jCSh3b3JraW5nIGNvcHkpCkBAIC04NjksMTEgKzg2OSwxNCBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc3Ryc3BsaXQoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCQkJCQkgIChpbnQpIHN0cmxlbihidWZwKSwKIAkJCQkJICAwLCAwLCBvdmVjdG9yLCBvdmVjc2l6ZSkpID49IDApIHsKICNlbmRpZgotCQkJLyogRW1wdHkgbWF0Y2hlcyBnZXQgdGhlIG5leHQgY2hhciwgc28gbW92ZSBieSBvbmUuICovCisJCQkvKiBFbXB0eSBtYXRjaGVzIGdldCB0aGUgbmV4dCBjaGFyLCBzbyBtb3ZlIGJ5IG9uZS4KKwkJCSAgIE9ubHkgdXNlX1VURjggaW5wdXQgaGFzIGJlZW4gdmFsaWRhdGVkIGFzIFVURi04OworCQkJICAgdXRmOGNsZW4oKSBvbiBhbiBhcmJpdHJhcnkgYnl0ZSBjbGFpbXMgdXAgdG8gNiBhbmQKKwkJCSAgIHdvdWxkIHJ1biBwYXN0IHRoZSB0ZXJtaW5hdG9yLiAqLwogCQkJaWYgKG92ZWN0b3JbMV0gPiAwKQogCQkJICAgIGJ1ZnAgKz0gb3ZlY3RvclsxXTsKIAkJCWVsc2UgaWYgKCpidWZwKQotCQkJICAgIGJ1ZnAgKz0gdXRmOGNsZW4oKmJ1ZnApOworCQkJICAgIGJ1ZnAgKz0gdXNlX1VURjggPyB1dGY4Y2xlbigqYnVmcCkgOiAxOwogCQkJbnRvaysrOwogCQkJaWYgKCpidWZwID09ICdcMCcpCiAJCQkgICAgYnJlYWs7CkBAIC05MDMsOCArOTA2LDggQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3N0cnNwbGl0KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkJCXB0W292ZWN0b3JbMF1dID0gJ1wwJzsKIAkJCWJ1ZnAgKz0gb3ZlY3RvclsxXTsKIAkJICAgIH0gZWxzZSB7Ci0JCQkvKiBNYXRjaCB3YXMgZW1wdHkuICovCi0JCQlpbnQgY2xlbiA9IHV0ZjhjbGVuKCpidWZwKTsKKwkJCS8qIE1hdGNoIHdhcyBlbXB0eTogY29weSBvbmUgY2hhcmFjdGVyIChzZWUgYWJvdmUpLiAqLworCQkJaW50IGNsZW4gPSB1c2VfVVRGOCA/IHV0ZjhjbGVuKCpidWZwKSA6IDE7CiAJCQlzdHJuY3B5KHB0LCBidWZwLCBjbGVuKTsKIAkJCXB0W2NsZW5dID0gJ1wwJzsKIAkJCWJ1ZnAgKz0gY2xlbjsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDY2NCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zOTc1LDYgKzM5NzUsMTcgQEAgc3RvcGlmbm90KHN1bShsb25nX2lkeCkgPT0gNkwsCiAgICAgICAgICAgZ3JlcGwoIl4oU1RSX0NPTlNUfFNZTUJPTHxTTE9UKSIsIHBkJHRva2VuW2xvbmdfaWR4XSkpCiBvcHRpb25zKG9wKQogCisjIyBzdHJzcGxpdChwZXJsID0gVFJVRSkgc3RlcHBlZCBvdmVyIGFuIGVtcHR5IG1hdGNoIGJ5IHV0ZjhjbGVuKCkgb2YgdGhlCisjIyBuZXh0IGJ5dGUgZXZlbiBmb3IgYnl0ZXMtZW5jb2RlZCBvciBzaW5nbGUtYnl0ZS1sb2NhbGUgaW5wdXQsIHJ1bm5pbmcKKyMjIHBhc3QgdGhlIGVuZCBvZiB0aGUgc3RyaW5nIChhbmQgb2YgdGhlIHRva2VuIGJ1ZmZlcikgZm9yIGJ5dGVzID49IDB4ZjAKK3ggPC0gIlx4ZmYiOyBFbmNvZGluZyh4KSA8LSAiYnl0ZXMiCit5IDwtICJhXHhmZmIiOyBFbmNvZGluZyh5KSA8LSAiYnl0ZXMiCitzdG9waWZub3QoaWRlbnRpY2FsKHN0cnNwbGl0KHgsICJ8IiwgcGVybCA9IFRSVUUsIHVzZUJ5dGVzID0gVFJVRSksCisgICAgICAgICAgICAgICAgICAgIHN0cnNwbGl0KHgsICJ8IiwgdXNlQnl0ZXMgPSBUUlVFKSksCisgICAgICAgICAgaWRlbnRpY2FsKHN0cnNwbGl0KHksICJ4KiIsIHBlcmwgPSBUUlVFLCB1c2VCeXRlcyA9IFRSVUUpLAorICAgICAgICAgICAgICAgICAgICBzdHJzcGxpdCh5LCAieCoiLCB1c2VCeXRlcyA9IFRSVUUpKSkKKyMjIGhlYXAtYnVmZmVyLW92ZXJmbG93IGluIFIgNC40LjAgdG8gNC42LjEgKHZpc2libGUgdW5kZXIgQVNhbikKKwogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
-          "content_type": "text/plain",
-          "flags": [],
-          "is_obsolete": false,
+          "creation_time": "2026-10-13T17:20:33Z",
+          "summary": "advance by one byte after an empty match unless use_UTF8; regression test",
+          "file_name": "strsplit-perl-empty-match.diff",
+          "bug_id": 19212,
           "last_change_time": "2026-10-13T17:20:33Z",
           "size": 2219,
           "is_private": false,
           "id": 3909,
-          "creation_time": "2026-10-13T17:20:33Z",
-          "summary": "advance by one byte after an empty match unless use_UTF8; regression test",
-          "file_name": "strsplit-perl-empty-match.diff",
-          "bug_id": 19212
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2dyZXAuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ncmVwLmMJKHJldmlzaW9uIDkwNjY0KQorKysgc3JjL21haW4vZ3JlcC5jCSh3b3JraW5nIGNvcHkpCkBAIC04NjksMTEgKzg2OSwxNCBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc3Ryc3BsaXQoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCQkJCQkgIChpbnQpIHN0cmxlbihidWZwKSwKIAkJCQkJICAwLCAwLCBvdmVjdG9yLCBvdmVjc2l6ZSkpID49IDApIHsKICNlbmRpZgotCQkJLyogRW1wdHkgbWF0Y2hlcyBnZXQgdGhlIG5leHQgY2hhciwgc28gbW92ZSBieSBvbmUuICovCisJCQkvKiBFbXB0eSBtYXRjaGVzIGdldCB0aGUgbmV4dCBjaGFyLCBzbyBtb3ZlIGJ5IG9uZS4KKwkJCSAgIE9ubHkgdXNlX1VURjggaW5wdXQgaGFzIGJlZW4gdmFsaWRhdGVkIGFzIFVURi04OworCQkJICAgdXRmOGNsZW4oKSBvbiBhbiBhcmJpdHJhcnkgYnl0ZSBjbGFpbXMgdXAgdG8gNiBhbmQKKwkJCSAgIHdvdWxkIHJ1biBwYXN0IHRoZSB0ZXJtaW5hdG9yLiAqLwogCQkJaWYgKG92ZWN0b3JbMV0gPiAwKQogCQkJICAgIGJ1ZnAgKz0gb3ZlY3RvclsxXTsKIAkJCWVsc2UgaWYgKCpidWZwKQotCQkJICAgIGJ1ZnAgKz0gdXRmOGNsZW4oKmJ1ZnApOworCQkJICAgIGJ1ZnAgKz0gdXNlX1VURjggPyB1dGY4Y2xlbigqYnVmcCkgOiAxOwogCQkJbnRvaysrOwogCQkJaWYgKCpidWZwID09ICdcMCcpCiAJCQkgICAgYnJlYWs7CkBAIC05MDMsOCArOTA2LDggQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3N0cnNwbGl0KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkJCXB0W292ZWN0b3JbMF1dID0gJ1wwJzsKIAkJCWJ1ZnAgKz0gb3ZlY3RvclsxXTsKIAkJICAgIH0gZWxzZSB7Ci0JCQkvKiBNYXRjaCB3YXMgZW1wdHkuICovCi0JCQlpbnQgY2xlbiA9IHV0ZjhjbGVuKCpidWZwKTsKKwkJCS8qIE1hdGNoIHdhcyBlbXB0eTogY29weSBvbmUgY2hhcmFjdGVyIChzZWUgYWJvdmUpLiAqLworCQkJaW50IGNsZW4gPSB1c2VfVVRGOCA/IHV0ZjhjbGVuKCpidWZwKSA6IDE7CiAJCQlzdHJuY3B5KHB0LCBidWZwLCBjbGVuKTsKIAkJCXB0W2NsZW5dID0gJ1wwJzsKIAkJCWJ1ZnAgKz0gY2xlbjsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDY2NCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zOTc1LDYgKzM5NzUsMTcgQEAgc3RvcGlmbm90KHN1bShsb25nX2lkeCkgPT0gNkwsCiAgICAgICAgICAgZ3JlcGwoIl4oU1RSX0NPTlNUfFNZTUJPTHxTTE9UKSIsIHBkJHRva2VuW2xvbmdfaWR4XSkpCiBvcHRpb25zKG9wKQogCisjIyBzdHJzcGxpdChwZXJsID0gVFJVRSkgc3RlcHBlZCBvdmVyIGFuIGVtcHR5IG1hdGNoIGJ5IHV0ZjhjbGVuKCkgb2YgdGhlCisjIyBuZXh0IGJ5dGUgZXZlbiBmb3IgYnl0ZXMtZW5jb2RlZCBvciBzaW5nbGUtYnl0ZS1sb2NhbGUgaW5wdXQsIHJ1bm5pbmcKKyMjIHBhc3QgdGhlIGVuZCBvZiB0aGUgc3RyaW5nIChhbmQgb2YgdGhlIHRva2VuIGJ1ZmZlcikgZm9yIGJ5dGVzID49IDB4ZjAKK3ggPC0gIlx4ZmYiOyBFbmNvZGluZyh4KSA8LSAiYnl0ZXMiCit5IDwtICJhXHhmZmIiOyBFbmNvZGluZyh5KSA8LSAiYnl0ZXMiCitzdG9waWZub3QoaWRlbnRpY2FsKHN0cnNwbGl0KHgsICJ8IiwgcGVybCA9IFRSVUUsIHVzZUJ5dGVzID0gVFJVRSksCisgICAgICAgICAgICAgICAgICAgIHN0cnNwbGl0KHgsICJ8IiwgdXNlQnl0ZXMgPSBUUlVFKSksCisgICAgICAgICAgaWRlbnRpY2FsKHN0cnNwbGl0KHksICJ4KiIsIHBlcmwgPSBUUlVFLCB1c2VCeXRlcyA9IFRSVUUpLAorICAgICAgICAgICAgICAgICAgICBzdHJzcGxpdCh5LCAieCoiLCB1c2VCeXRlcyA9IFRSVUUpKSkKKyMjIGhlYXAtYnVmZmVyLW92ZXJmbG93IGluIFIgNC40LjAgdG8gNC42LjEgKHZpc2libGUgdW5kZXIgQVNhbikKKwogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true
         }
       ]
-    },
-    "attachments": {}
+    }
   },
-  "source_changed": "2026-10-13 17:20:33"
+  "source_changed": "2026-10-14 16:03:01"
 }
