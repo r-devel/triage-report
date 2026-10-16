@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc_detail": [],
+        "last_change_time": "2026-10-15T16:01:05Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "R_MakeWeakRefC() can lose its finalizer to the garbage collector",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "qa_contact": "",
+        "cc": [],
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19216,
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-15T16:00:58Z",
+        "priority": "P5",
+        "product": "R",
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19216": {
+        "comments": [
+          {
+            "text": "NewWeakRef() (src/main/memory.c) protects key, val, fin in that order, but the val step may allocate (duplicate() of a referenced value), and R_MakeWeakRefC() passes a freshly allocated RAWSXP as fin. The duplicate() can collect it, so the weak reference ends up holding a recycled node as its finalizer; when the key is collected, R_RunWeakRefFinalizer() calls a stale pointer or tries to eval() whatever reused the node.\n\nCallers inside R all pass val = R_NilValue, so base R is not affected. Packages using R_MakeWeakRefC() with a value are.\n\nReproducible example (helper built with R CMD SHLIB):\n\n/* wr.c */\n#include <Rinternals.h>\nstatic void fin(SEXP key) { Rprintf(\"C finalizer ran\\n\"); }\nSEXP mkwr(SEXP key, SEXP val) { return R_MakeWeakRefC(key, val, fin, FALSE); }\nSEXP wrfin(SEXP w) { return VECTOR_ELT(w, 2); }   /* the finalizer slot */\n\ndyn.load(\"wr.so\")\nkey <- new.env(); val <- as.list(1:50)   # bound, so NewWeakRef duplicates it\ngctorture(TRUE)\nw <- .Call(\"mkwr\", key, val)\ngctorture(FALSE)\ntypeof(.Call(\"wrfin\", w))\nrm(key); invisible(gc())\n\nObserved (R 4.6.1 and R-devel r90668):\n\n  [1] \"integer\"\n  Error: attempt to apply non-function\n\nExpected: \"raw\", then \"C finalizer ran\". Without gctorture() it behaves as expected; the window is a single allocation.\n\nAnalysis: in NewWeakRef(),\n\n    PROTECT(key);\n    PROTECT(val = MAYBE_REFERENCED(val) ? duplicate(val) : val);\n    PROTECT(fin);\n\nfin is unprotected across the duplicate(). R_MakeWeakRefC() protects key and val but not the finalizer object it creates in the call. Present since C finalizers were introduced.\n\nProposed patch: attached as weakref-finalizer-protect.diff; it moves PROTECT(fin) above the val step. Verified with the helper above against a patched build. No regression test, since the path needs C code with a non-NULL value.\n\nAlso submitted as https://github.com/r-devel/r-svn/pull/379, where CI results can be seen.",
+            "bug_id": 19216,
+            "count": 0,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-10-15T16:00:58Z",
+            "time": "2026-10-15T16:00:58Z",
+            "id": 103853,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "tags": [],
+            "id": 103854,
+            "is_private": false,
+            "creation_time": "2026-10-15T16:01:05Z",
+            "bug_id": 19216,
+            "text": "Created attachment 3915\nProtect fin before duplicating val in NewWeakRef()",
+            "count": 1,
+            "attachment_id": 3915,
+            "time": "2026-10-15T16:01:05Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19216": [
+        {
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL21lbW9yeS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL21lbW9yeS5jCShyZXZpc2lvbiA5MDY2OCkKKysrIHNyYy9tYWluL21lbW9yeS5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMzk5LDggKzEzOTksMTAgQEAgc3RhdGljIFNFWFAgTmV3V2Vha1JlZihTRVhQIGtleSwgU0VYUCB2YWwsIFNFWFAgZmluLCBSYm9vbGVhbiBvbmV4aXQpCiAgICAgfQogCiAgICAgUFJPVEVDVChrZXkpOwotICAgIFBST1RFQ1QodmFsID0gTUFZQkVfUkVGRVJFTkNFRCh2YWwpID8gZHVwbGljYXRlKHZhbCkgOiB2YWwpOworICAgIC8qIGZpbiBiZWZvcmUgdmFsOiBSX01ha2VXZWFrUmVmQygpIHBhc3NlcyBhIGZyZXNoIGZpbmFsaXplciBvYmplY3QsCisgICAgICAgYW5kIGR1cGxpY2F0ZSh2YWwpIGJlbG93IGNhbiBjb2xsZWN0IGl0ICovCiAgICAgUFJPVEVDVChmaW4pOworICAgIFBST1RFQ1QodmFsID0gTUFZQkVfUkVGRVJFTkNFRCh2YWwpID8gZHVwbGljYXRlKHZhbCkgOiB2YWwpOwogICAgIHcgPSBhbGxvY1ZlY3RvcihWRUNTWFAsIFdFQUtSRUZfU0laRSk7CiAgICAgU0VUX1RZUEVPRih3LCBXRUFLUkVGU1hQKTsKICAgICBpZiAoa2V5ICE9IFJfTmlsVmFsdWUpIHsK",
+          "is_private": false,
+          "id": 3915,
+          "last_change_time": "2026-10-15T16:01:05Z",
+          "size": 672,
+          "file_name": "weakref-finalizer-protect.diff",
+          "bug_id": 19216,
+          "creation_time": "2026-10-15T16:01:05Z",
+          "summary": "Protect fin before duplicating val in NewWeakRef()"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-15 16:01:05"
+}

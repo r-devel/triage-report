@@ -1,0 +1,134 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Models",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "whiteboard": "",
+        "creation_time": "2026-10-15T18:14:06Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "adam.berkes2002"
+        ],
+        "id": 19217,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "KalmanLike() and other Kalman*() functions segfault on a 'mod' list without names",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "real_name": "Adam Berkeš",
+            "id": 3792,
+            "name": "adam.berkes2002"
+          }
+        ],
+        "last_change_time": "2026-10-15T19:44:26Z",
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19217": {
+        "comments": [
+          {
+            "creation_time": "2026-10-15T18:14:06Z",
+            "text": "stats' getListElement() (src/library/stats/src/optim.c) looks a component up by name with\n\n    for (i = 0; i < length(list); i++)\n        if (strcmp(CHAR(STRING_ELT(names, i)), str) == 0) {\n\nWhen the list has no names attribute, names is R_NilValue, and STRING_ELT() here is the unchecked Defn.h accessor, so the loop reads the payload of R_NilValue as a CHARSXP pointer and dereferences it. The type checks in the callers never run. The exported KalmanLike(), KalmanRun(), KalmanForecast() and KalmanSmooth() pass their user-supplied 'mod' straight through it.\n\nReproducible example:\n\n    KalmanLike(1:5, list(1, 2))\n    KalmanForecast(3L, list(1, \"a\"))\n\nObserved (R 4.6.1 and R-devel r90668):\n\n     *** caught segfault ***\n    address 0x30, cause 'invalid permissions'\n\nExpected: the \"invalid argument type\" error that a named but wrong list such as list(Z = \"a\") already gets.\n\nThe other callers of the helper (optim()'s control list, lm.influence()'s qr) build the list in R and cannot reach the unnamed case. grid has its own copy of the helper with the same loop, used only with internal lists.\n\nProposed patch: attached as stats-getlistelement-unnamed.diff; it returns R_NilValue when the names attribute is not a character vector, so the callers see a missing component and raise their error, and adds a regression test to tests/reg-tests-1e.R. Verified against a patched build: all four functions error, and unpatched R 4.6.1 segfaults on each.\n\nAlso submitted as https://github.com/r-devel/r-svn/pull/380, where CI results can be seen.",
+            "bug_id": 19217,
+            "count": 0,
+            "tags": [],
+            "id": 103855,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2026-10-15T18:14:06Z"
+          },
+          {
+            "tags": [],
+            "id": 103856,
+            "is_private": false,
+            "creation_time": "2026-10-15T18:14:13Z",
+            "text": "Created attachment 3916\nReturn R_NilValue from stats getListElement() for an unnamed list",
+            "bug_id": 19217,
+            "count": 1,
+            "attachment_id": 3916,
+            "time": "2026-10-15T18:14:13Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          },
+          {
+            "creator": "adam.berkes2002",
+            "creation_time": "2026-10-15T19:44:26Z",
+            "text": "\n(In reply to Kevin Ushey from comment #0)\n> The other callers of the helper (optim()'s control list, lm.influence()'s\n> qr) build the list in R and cannot reach the unnamed case. grid has its own\n> copy of the helper with the same loop, used only with internal lists.\n\n\n`lm.influence` can't, but the unnamed case is also reachable and crashes at the same place via `qr.influence`, i.e.:\n```\nqr.influence(qr = list(1, \"a\"), res = 0)\n```\n\nThe attached patch already covers this, since the fix is in the shared helper, but may be worth adding the `qr` case to the regression test:\n```\ntools::assertError(qr.influence(qr = list(1, \"a\"), res = 0))\n```",
+            "bug_id": 19217,
+            "is_markdown": true,
+            "count": 2,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-10-15T19:44:26Z",
+            "id": 103857,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19217": [
+        {
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9vcHRpbS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9vcHRpbS5jCShyZXZpc2lvbiA5MDY2OCkKKysrIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9vcHRpbS5jCSh3b3JraW5nIGNvcHkpCkBAIC0zNCw2ICszNCwxMCBAQCBTRVhQIGdldExpc3RFbGVtZW50KFNFWFAgbGlzdCwgY2hhciAqc3RyKQogICAgIFNFWFAgZWxtdCA9IFJfTmlsVmFsdWUsIG5hbWVzID0gZ2V0QXR0cmliKGxpc3QsIFJfTmFtZXNTeW1ib2wpOwogICAgIGludCBpOwogCisgICAgLyogYW4gdW5uYW1lZCBsaXN0IGhhcyBubyBlbGVtZW50IGNhbGxlZCBzdHI7IFNUUklOR19FTFQoKSBvbiB0aGUKKyAgICAgICBOVUxMIG5hbWVzIGlzIHVuY2hlY2tlZCBoZXJlIChEZWZuLmgpIGFuZCByZWFkcyBvZmYgUl9OaWxWYWx1ZSAqLworICAgIGlmIChUWVBFT0YobmFtZXMpICE9IFNUUlNYUCkKKwlyZXR1cm4gUl9OaWxWYWx1ZTsKICAgICBmb3IgKGkgPSAwOyBpIDwgbGVuZ3RoKGxpc3QpOyBpKyspCiAJaWYgKHN0cmNtcChDSEFSKFNUUklOR19FTFQobmFtZXMsIGkpKSwgc3RyKSA9PSAwKSB7IC8qIEFTQ0lJIG9ubHkgKi8KIAkgICAgZWxtdCA9IFZFQ1RPUl9FTFQobGlzdCwgaSk7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA2NjgpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtMzk3Myw2ICszOTczLDEyIEBAIGxvbmdfaWR4IDwtIG5jaGFyKHBkJHRleHQpID4gMTAwMEwKIHN0b3BpZm5vdChzdW0obG9uZ19pZHgpID09IDZMLAogICAgICAgICAgIGdyZXBsKCJeKFNUUl9DT05TVHxTWU1CT0x8U0xPVCkiLCBwZCR0b2tlbltsb25nX2lkeF0pKQogCisjIyBLYWxtYW4qKCkgd2l0aCBhIGxpc3QgJ21vZCcgbGFja2luZyBuYW1lcyAtLSBQUiNOTk5OTgordG9vbHM6OmFzc2VydEVycm9yKEthbG1hbkxpa2UoMTo1LCBsaXN0KDEsIDIpKSkKK3Rvb2xzOjphc3NlcnRFcnJvcihLYWxtYW5Gb3JlY2FzdCgzTCwgbGlzdCgxLCAiYSIpKSkKKyMjIHNlZ2ZhdWx0ZWQgaW4gUiA8PSA0LjYuMQorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "is_private": false,
+          "id": 3916,
+          "last_change_time": "2026-10-15T18:14:13Z",
+          "size": 1302,
+          "file_name": "stats-getlistelement-unnamed.diff",
+          "bug_id": 19217,
+          "creation_time": "2026-10-15T18:14:13Z",
+          "summary": "Return R_NilValue from stats getListElement() for an unnamed list"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-15 19:44:26"
+}

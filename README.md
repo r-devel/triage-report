@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-14._
+_Automatically generated from the R Bugzilla dump updated 2026-10-15._
 
 ## Triaged bugs
 
@@ -77,6 +77,7 @@ _Dates show when the patch was submitted._
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
+* [Bug 19216](https://bugs.r-project.org/show_bug.cgi?id=19216) — R_MakeWeakRefC() can lose its finalizer to the garbage collector (2026-10-15)
 
 ### Mac GUI / Mac specific
 
@@ -87,6 +88,10 @@ _Dates show when the patch was submitted._
 * [Bug 18938](https://bugs.r-project.org/show_bug.cgi?id=18938) — seq.Date inconsistent on whether to= can be a string (2025-08-21)
 * [Bug 18958](https://bugs.r-project.org/show_bug.cgi?id=18958) — 'methods_message' component of 'check_packages_used' internal class should be character(), not "", when empty (2025-10-16)
 * [Bug 19156](https://bugs.r-project.org/show_bug.cgi?id=19156) — MASS, boot are Suggests for parallel (2026-09-03)
+
+### Models
+
+* [Bug 19217](https://bugs.r-project.org/show_bug.cgi?id=19217) — KalmanLike() and other Kalman*() functions segfault on a 'mod' list without names (2026-10-15)
 
 ### S4methods
 
