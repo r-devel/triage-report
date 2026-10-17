@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "S4methods",
+        "product": "R",
+        "priority": "P5",
+        "version": "R 4.3.x",
+        "creation_time": "2024-04-19T12:25:21Z",
+        "whiteboard": "",
+        "dupe_of": {},
+        "severity": "enhancement",
+        "id": 18707,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [
+          "jaganmn2"
+        ],
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Windows 64-bit",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "creator": "2283592023",
+        "alias": [],
+        "status": "CONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "2283592023",
+          "id": 3620,
+          "real_name": "Hao Wang"
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "\"methods:::.TraceWithMethods()\" nesting error for S4 methods",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-10-17T01:29:01Z",
+        "cc_detail": [
+          {
+            "real_name": "Mikael Jagan",
+            "name": "jaganmn2",
+            "id": 3462
+          }
+        ]
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18707": {
+        "comments": [
+          {
+            "creator": "2283592023",
+            "creation_time": "2024-04-19T12:25:21Z",
+            "text": "For some reasons, I need to define a function, like the one below. In reality, both the parameters and the body of the function are much more complex than this example.\n```\nmyfun <- function(method, insert, signature = NULL){\n  # Other code\n  trace(method, tracer = insert, signature = signature)\n  # Other code\n}\n```\n\nThen I create S3 and S4 methods with the same body, simulating the real-life scenario encountered.\n```\n# For S3\nS3Fun <- function(x){ UseMethod(\"S3Fun\") }\nS3Fun.default <- function(x){\n  .local <- function(x){\n    x\n  }\n  .local(x)\n}\n\n# For S4\nsetGeneric(\"S4Fun\", function(x) standardGeneric(\"S4Fun\"))\nsetMethod(\"S4Fun\", \"ANY\", function(x){\n  .local <- function(x){\n    x\n  }\n  .local(x)\n})\n```\n\nNext, I will proceed with the following steps:\n```\n# For S3\nmyfun(\"S3Fun.default\", insert = quote(message(\"tracing ...\")))\nS3Fun(1)\n\n# For S4\nmyfun(\"S4Fun\", insert = quote(message(\"tracing ...\")), signature = \"ANY\")\nS4Fun(1)\n```\n\nYou will find that \"S3Fun\" produces the expected result, while \"S4Fun\" throws an error.\n```\n# For S4\nError in eval(expr, p) : object 'insert' not found\n```\n\nI believe that \"trace()\" as a fundamental function should not produce such differences on S3 and S4. Therefore, I consider this to be a potential bug.\n\nI checked the source code of the \"trace()\" method and found that the problem occurred in this code in the \"`methods:::.TraceWithMethods()`\" method:\n```\nif (isRematched(def)) {\n  expr <- substitute(trace(.local, tracer = tr, at = at,\n                           exit = ex, print = pr, edit = ed, where = sys.frame(sys.nframe())),\n                     list(tr = substitute(tracer), ex = exit, at = at, pr = print, ed = edit))\n  at <- 3L\n  tracer <- expr\n  print <- FALSE\n}\n```\n\nI think the 'substitute()' function should not be used here. When I change \"`substitute(tracer)`\" to just \"`tracer`\", the issue is indeed resolved.\n\nI think this segment of code should be modified to:\n```\nif (isRematched(def)) {\n  expr <- substitute(trace(.local, tracer = tr, at = at,\n                           exit = ex, print = pr, edit = ed, where = sys.frame(sys.nframe())),\n                     list(tr = tracer, ex = exit, at = at, pr = print, ed = edit))\n  at <- 3L\n  tracer <- expr\n  print <- FALSE\n}\n```",
+            "bug_id": 18707,
+            "is_markdown": true,
+            "count": 0,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2024-04-19T12:25:21Z",
+            "id": 100754,
+            "is_private": false
+          },
+          {
+            "creator": "jaganmn2",
+            "creation_time": "2026-10-17T01:29:01Z",
+            "text": "Yes, `tr=substitute(tracer)` is wrong, but so are `tr=tracer` and `ex=exit`, because the case `is.function(.)` must be handled specially, according to `is.name(substitute(.))` in the current frame.  I am testing a different patch.",
+            "bug_id": 18707,
+            "is_markdown": true,
+            "count": 1,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-10-17T01:29:01Z",
+            "id": 103882,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18707": []
+    }
+  },
+  "source_changed": "2026-10-17 01:29:01"
+}

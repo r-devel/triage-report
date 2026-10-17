@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-10-16T20:14:14Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "id": 19226,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Low-level",
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "chartr() reads past buffer when translated output is not representable in native locale",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-10-16T20:14:29Z",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        }
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19226": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-10-16T20:14:14Z",
+            "text": "In a C locale, chartr() can read past a heap allocation when a UTF-8 replacement character cannot be represented in the native encoding. The OSS-Fuzz testcase below reaches this path; a smaller reproducer is:\n\nReproducible example:\n\nSys.setlocale(\"LC_CTYPE\", \"C\")\nchartr(\"a\", intToUtf8(256L), \"a\")\n\nObserved on R-devel r90684: an AddressSanitizer heap-buffer-overflow read in mkCharCE() (READ of size 3). Expected: an ordinary R error indicating that the translated string cannot be represented in the current locale.\n\nAnalysis:\n\nIn do_chartr() (src/main/character.c), wcstombs(NULL, wc, 0) returns (size_t)-1 when the translated output cannot be encoded in the native locale. The code casts this to int -1 and passes it to CallocCharBuf(). The subsequent wcstombs() call has no room to write a terminating NUL; markKnown() then reaches mkCharCE(), which reads past the buffer while finding its length.\n\nProposed patch: attached as chartr-native-conversion.diff. It retains the size_t byte count, checks for conversion failure and the R string-length limit before allocating, and adds a C-locale regression test. The patch applies with patch -p0 against trunk r90684. In an ASan build, the smaller reproducer and an R-level replay of the 267-byte OSS-Fuzz input now raise an ordinary R error; reg-tests-1a.Rout passes.\n\nOSS-Fuzz testcase: https://oss-fuzz.com/testcase-detail/5327307326423040\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/383, where CI results can be seen.",
+            "bug_id": 19226,
+            "count": 0,
+            "is_markdown": false,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-10-16T20:14:14Z",
+            "id": 103873,
+            "is_private": false
+          },
+          {
+            "time": "2026-10-16T20:14:29Z",
+            "attachment_id": 3923,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 103874,
+            "tags": [],
+            "count": 1,
+            "bug_id": 19226,
+            "text": "Created attachment 3923\npatch: reject unrepresentable chartr native output",
+            "creation_time": "2026-10-16T20:14:29Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19226": [
+        {
+          "data": "SW5kZXg6IHNyYy9tYWluL2NoYXJhY3Rlci5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2NoYXJhY3Rlci5jCShyZXZpc2lvbiA5MDY4NCkKKysrIHNyYy9tYWluL2NoYXJhY3Rlci5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNjMwLDkgKzE2MzAsMTMgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2NoYXJ0cihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJCSAgICB3Y3N0b3V0ZjgoY2J1Ziwgd2MsIG5iKTsKIAkJICAgIFNFVF9TVFJJTkdfRUxUKHksIGksIG1rQ2hhckNFKGNidWYsIENFX1VURjgpKTsKIAkJfSBlbHNlIHsKLQkJICAgIG5iID0gKGludCkgd2NzdG9tYnMoTlVMTCwgd2MsIDApOwotCQkgICAgY2J1ZiA9IENhbGxvY0NoYXJCdWYobmIpOwotCQkgICAgd2NzdG9tYnMoY2J1Ziwgd2MsIG5iICsgMSk7CisJCSAgICBzaXplX3QgbmJ5dGVzID0gd2NzdG9tYnMoTlVMTCwgd2MsIDApOworCQkgICAgaWYgKG5ieXRlcyA9PSAoc2l6ZV90KS0xKQorCQkJZXJyb3IoXygidHJhbnNsYXRlZCBzdHJpbmcgaXMgbm90IHJlcHJlc2VudGFibGUgaW4gdGhlIGN1cnJlbnQgbG9jYWxlIikpOworCQkgICAgaWYgKG5ieXRlcyA+IElOVF9NQVgpCisJCQllcnJvcihfKCJSIGNoYXJhY3RlciBzdHJpbmdzIGFyZSBsaW1pdGVkIHRvIDJeMzEtMSBieXRlcyIpKTsKKwkJICAgIGNidWYgPSBDYWxsb2NDaGFyQnVmKG5ieXRlcyk7CisJCSAgICB3Y3N0b21icyhjYnVmLCB3YywgbmJ5dGVzICsgMSk7CiAJCSAgICBTRVRfU1RSSU5HX0VMVCh5LCBpLCBtYXJrS25vd24oY2J1ZiwgZWwpKTsKIAkJfQogCQlSX0ZyZWUoY2J1Zik7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWEuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWEuUgkocmV2aXNpb24gOTA2ODQpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWEuUgkod29ya2luZyBjb3B5KQpAQCAtMjI2NSw2ICsyMjY1LDggQEAgYTQgPC0gYWJicmV2aWF0ZShhKQogc3RvcGlmbm90KGlzLm5hKGE0KSA9PSBpcy5uYShhKSkKIGE1IDwtIGNoYXJ0cigiTkEiLCAibmEiLCBhKQogc3RvcGlmbm90KGlzLm5hKGE1KSA9PSBpcy5uYShhKSkKKyMjIEEgVVRGLTggcmVwbGFjZW1lbnQgbWF5IG5vdCBiZSByZXByZXNlbnRhYmxlIGluIHRoZSBuYXRpdmUgQyBsb2NhbGUuCit0b29sczo6YXNzZXJ0RXJyb3IoY2hhcnRyKCJhIiwgaW50VG9VdGY4KDI1NkwpLCAiYSIpKQogYTYgPC0gZ3N1YihuYSwgIm5hIiwgYSkKIHN0b3BpZm5vdChpcy5uYShhNikpCiBhNmEgPC0gZ3N1YigiTkFOQSIsIG5hLCBhKQo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "patch: reject unrepresentable chartr native output",
+          "creation_time": "2026-10-16T20:14:29Z",
+          "bug_id": 19226,
+          "file_name": "chartr-native-conversion.diff",
+          "size": 1400,
+          "last_change_time": "2026-10-16T20:14:29Z",
+          "id": 3923,
+          "is_private": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-16 20:14:29"
+}

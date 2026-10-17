@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-15._
+_Automatically generated from the R Bugzilla dump updated 2026-10-17._
 
 ## Triaged bugs
 
@@ -77,7 +77,8 @@ _Dates show when the patch was submitted._
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
-* [Bug 19216](https://bugs.r-project.org/show_bug.cgi?id=19216) — R_MakeWeakRefC() can lose its finalizer to the garbage collector (2026-10-15)
+* [Bug 19226](https://bugs.r-project.org/show_bug.cgi?id=19226) — chartr() reads past buffer when translated output is not representable in native locale (2026-10-16)
+* [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
 
 ### Mac GUI / Mac specific
 
@@ -111,7 +112,6 @@ _Dates show when the patch was submitted._
 
 * [Bug 19143](https://bugs.r-project.org/show_bug.cgi?id=19143) — `Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8 (2026-08-28)
 * [Bug 19198](https://bugs.r-project.org/show_bug.cgi?id=19198) — Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing (2026-10-01)
-* [Bug 19214](https://bugs.r-project.org/show_bug.cgi?id=19214) — Qualifying base:: for OS-specific objects can produce R CMD check issues (2026-10-14)
 
 ### Wishlist
 
