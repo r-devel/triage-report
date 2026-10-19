@@ -18,7 +18,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19066,Provide a more explicit error message for array(dim = NA),Low-level,kevinushey,NEW,2026-04-29 20:47:55 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19066
 19096,Update handling of overflow in integer operations,Low-level,michaelchirico4,NEW,2026-06-30 17:39:29 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19096
 19114,poison free small-node data to catch use of collected objects,Low-level,kevinushey,NEW,2026-08-01 21:07:10 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19114
-19116,"<matrix>[[i, j]]: stochastic error with negative i",Low-level,kevinushey,NEW,2026-08-02 00:45:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19116
 19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19119
 19123,Memory leak in `scan()` when a field fails type conversion,Low-level,kevinushey,NEW,2026-08-04 14:45:42 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19123
 19125,Integer arithmetic means '%z' for minute-level offsets is incorrect,Low-level,michaelchirico4,NEW,2026-08-04 17:34:22 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19125

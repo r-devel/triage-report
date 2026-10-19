@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-17._
+_Automatically generated from the R Bugzilla dump updated 2026-10-18._
 
 ## Triaged bugs
 
@@ -67,7 +67,6 @@ _Dates show when the patch was submitted._
 * [Bug 19066](https://bugs.r-project.org/show_bug.cgi?id=19066) — Provide a more explicit error message for array(dim = NA) (2026-04-29)
 * [Bug 19096](https://bugs.r-project.org/show_bug.cgi?id=19096) — Update handling of overflow in integer operations (2026-06-30)
 * [Bug 19114](https://bugs.r-project.org/show_bug.cgi?id=19114) — poison free small-node data to catch use of collected objects (2026-08-01)
-* [Bug 19116](https://bugs.r-project.org/show_bug.cgi?id=19116) — <matrix>[[i, j]]: stochastic error with negative i (2026-08-02)
 * [Bug 19119](https://bugs.r-project.org/show_bug.cgi?id=19119) — `writeChar()` on Windows counts supplementary characters twice (2026-08-03)
 * [Bug 19123](https://bugs.r-project.org/show_bug.cgi?id=19123) — Memory leak in `scan()` when a field fails type conversion (2026-08-04)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
