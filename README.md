@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-18._
+_Automatically generated from the R Bugzilla dump updated 2026-10-19._
 
 ## Triaged bugs
 
@@ -29,7 +29,6 @@ _None._
 
 ### Needs core developer discussion
 
-* [Bug 10455](https://bugs.r-project.org/show_bug.cgi?id=10455) — Bug in pacf -- Proposed patch (2026-03-06)
 * [Bug 17928](https://bugs.r-project.org/show_bug.cgi?id=17928) — NextMethod does not appear to dispatch to group generic methods from specific methods. (2026-04-08)
 * [Bug 17702](https://bugs.r-project.org/show_bug.cgi?id=17702) — Assignment to data.frame column (`$<-` or `[[<-`) should convert POSIXlt to POSIXct (2026-04-13)
 
