@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "I/O",
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 19233,
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-10-20T17:18:51Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-20T17:18:58Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "unzip(unzip = \"internal\") leaks the zip handle on error"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19233": {
+        "comments": [
+          {
+            "id": 103909,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19233,
+            "text": "unzip(unzip = \"internal\") leaks the open zip handle, and the file descriptor it owns, whenever extraction fails with an R error.\n\nzipunzip() in src/main/dounzip.c opens the archive with unzOpen64() and closes it only on its normal return. extract_one() calls error() when the output file cannot be opened (\"cannot open file '...': File name too long\", a read-only exdir, ...), and that error unwinds past the unzClose(), so the unz64_s handle and its FILE are lost. Each failed call costs one descriptor (checked by counting /dev/fd across repeated calls on R 4.6.1 and R-devel r90728), and under AddressSanitizer it shows up as a 248-byte direct leak from unzOpenInternal(), which is how OSS-Fuzz found it. The same path is taken by any other error raised inside the loop, e.g. the \"skipped ../ path component(s)\" warning under options(warn = 2). unz_open() for unz() connections has a smaller instance of the same shape: its \"cannot locate file\" warning is issued before the handle is closed.\n\nProposed patch: attached as unzip-handle-leak.diff (against r90728). It registers the close in a CTXT_CCODE context in zipunzip() so an error unwind runs unzClose(), as connections.c does for the connections it opens, and has unz_open() close the handle before warning. On a patched build the descriptor count stays flat across failed calls, and extraction, listing and unz() reads are unchanged.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/387, where CI results can be seen.",
+            "count": 0,
+            "creation_time": "2026-10-20T17:18:51Z",
+            "time": "2026-10-20T17:18:51Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "kevinushey"
+          },
+          {
+            "attachment_id": 3931,
+            "tags": [],
+            "is_private": false,
+            "id": 103910,
+            "time": "2026-10-20T17:18:58Z",
+            "creation_time": "2026-10-20T17:18:58Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "count": 1,
+            "bug_id": 19233,
+            "text": "Created attachment 3931\npatch: close the zip handle when unzip() errors while extracting"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19233": [
+        {
+          "size": 2010,
+          "last_change_time": "2026-10-20T17:18:58Z",
+          "id": 3931,
+          "is_private": false,
+          "summary": "patch: close the zip handle when unzip() errors while extracting",
+          "creation_time": "2026-10-20T17:18:58Z",
+          "bug_id": 19233,
+          "file_name": "unzip-handle-leak.diff",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL2RvdW56aXAuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9kb3VuemlwLmMJKHJldmlzaW9uIDkwNzI4KQorKysgc3JjL21haW4vZG91bnppcC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yNSw2ICsyNSw3IEBACiAKICNkZWZpbmUgSEFWRV9CWklQMgogCisjZGVmaW5lIFJfVVNFX1NJR05BTFMgMQogI2luY2x1ZGUgPERlZm4uaD4KICNpbmNsdWRlIDxGaWxlaW8uaD4gLyogZm9yIFJfZm9wZW4gKi8KICNpbmNsdWRlICJ1bnppcC5oIgpAQCAtMjQyLDYgKzI0MywxMSBAQCBleHRyYWN0X29uZSh1bnpGaWxlIHVmLCBjb25zdCBjaGFyICpjb25zdCBkZXN0LCBjb25zdCBjaGFyICogY29uc3QgZmlsZW5hbWUsCiB9CiAKIAorc3RhdGljIHZvaWQgdW56X2NsZWFudXAodm9pZCAqZGF0YSkKK3sKKyAgICB1bnpDbG9zZSgodW56RmlsZSkgZGF0YSk7Cit9CisKIHN0YXRpYyBpbnQKIHppcHVuemlwKGNvbnN0IGNoYXIgKnppcG5hbWUsIGNvbnN0IGNoYXIgKmRlc3QsIGludCBuZmlsZXMsIGNvbnN0IGNoYXIgKipmaWxlcywKIAkgU0VYUCAqcG5hbWVzLCBpbnQgKm5uYW1lcywgaW50IG92ZXJ3cml0ZSwgaW50IGp1bmssIGludCBzZXRUaW1lKQpAQCAtMjQ5LDkgKzI1NSwxNyBAQCB6aXB1bnppcChjb25zdCBjaGFyICp6aXBuYW1lLCBjb25zdCBjaGFyICpkZXN0LCBpbnQgbmZpbGVzLCBjb25zdCBjaGFyICoqZmlsZXMsCiAgICAgaW50ICAgaSwgZXJyID0gVU5aX09LOwogICAgIHVuekZpbGUgdWY7CiAgICAgU0VYUCBuYW1lcyA9ICpwbmFtZXM7CisgICAgUkNOVFhUIGNudHh0OwogCiAgICAgdWYgPSB1bnpPcGVuNjQoemlwbmFtZSk7CiAgICAgaWYgKCF1ZikgcmV0dXJuIDE7CisgICAgLyogZXh0cmFjdF9vbmUoKSByYWlzZXMgYW4gUiBlcnJvciB3aGVuIGFuIG91dHB1dCBmaWxlIGNhbm5vdCBiZQorICAgICAgIG9wZW5lZCwgd2hpY2ggd291bGQgdW53aW5kIHBhc3QgdGhlIHVuekNsb3NlKCkgYmVsb3cgYW5kIGxlYWsgdGhlCisgICAgICAgaGFuZGxlIGFuZCBpdHMgb3BlbiBGSUxFOiBjbG9zZSBpdCBmcm9tIHRoZSBjb250ZXh0IGluc3RlYWQuICovCisgICAgYmVnaW5jb250ZXh0KCZjbnR4dCwgQ1RYVF9DQ09ERSwgUl9OaWxWYWx1ZSwgUl9CYXNlRW52LCBSX0Jhc2VFbnYsCisJCSBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKKyAgICBjbnR4dC5jZW5kID0gJnVuel9jbGVhbnVwOworICAgIGNudHh0LmNlbmRkYXRhID0gdWY7CiAgICAgaWYgKG5maWxlcyA9PSAwKSB7IC8qIGFsbCBmaWxlcyAqLwogCXVuel9nbG9iYWxfaW5mbzY0IGdpOwogCXVuekdldEdsb2JhbEluZm82NCh1ZiwgJmdpKTsKQEAgLTI4Nyw2ICszMDEsNyBAQCB6aXB1bnppcChjb25zdCBjaGFyICp6aXBuYW1lLCBjb25zdCBjaGFyICpkZXN0LCBpbnQgbmZpbGVzLCBjb25zdCBjaGFyICoqZmlsZXMsCiAJfQogICAgIH0KICAgICAqcG5hbWVzID0gbmFtZXM7CisgICAgZW5kY29udGV4dCgmY250eHQpOwogICAgIHVuekNsb3NlKHVmKTsKICAgICBVTlBST1RFQ1QoMSk7IC8qIG5hbWVzICovCiAgICAgcmV0dXJuIGVycjsKQEAgLTQ3Niw4ICs0OTEsOSBAQCBzdGF0aWMgUmJvb2xlYW4gdW56X29wZW4oUmNvbm5lY3Rpb24gY29uKQogCXJldHVybiBGQUxTRTsKICAgICB9CiAgICAgaWYgKHVuekxvY2F0ZUZpbGUodWYsIHArMSwgMSkgIT0gVU5aX09LKSB7Ci0Jd2FybmluZyhfKCJjYW5ub3QgbG9jYXRlIGZpbGUgJyVzJyBpbiB6aXAgZmlsZSAnJXMnIiksIHArMSwgcGF0aCk7CisJLyogY2xvc2UgZmlyc3Q6IHRoZSB3YXJuaW5nIGlzIGFuIGVycm9yIHVuZGVyIG9wdGlvbnMod2FybiA9IDIpICovCiAJdW56Q2xvc2UodWYpOworCXdhcm5pbmcoXygiY2Fubm90IGxvY2F0ZSBmaWxlICclcycgaW4gemlwIGZpbGUgJyVzJyIpLCBwKzEsIHBhdGgpOwogCXJldHVybiBGQUxTRTsKICAgICB9CiAgICAgdW56T3BlbkN1cnJlbnRGaWxlKHVmKTsK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": []
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-20 17:18:58"
+}

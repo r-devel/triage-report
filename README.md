@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-19._
+_Automatically generated from the R Bugzilla dump updated 2026-10-20._
 
 ## Triaged bugs
 
@@ -45,10 +45,12 @@ _Dates show when the patch was submitted._
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
 * [Bug 19213](https://bugs.r-project.org/show_bug.cgi?id=19213) — scan() reads past its field buffer when stripping a UTF-8 BOM from a buffer-filling first field (2026-10-13)
+* [Bug 19233](https://bugs.r-project.org/show_bug.cgi?id=19233) — unzip(unzip = "internal") leaks the zip handle on error (2026-10-20)
 
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
+* [Bug 19234](https://bugs.r-project.org/show_bug.cgi?id=19234) — perl = TRUE regex compile errors leak the PCRE character tables (2026-10-20)
 
 ### Low-level
 
@@ -72,7 +74,6 @@ _Dates show when the patch was submitted._
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
-* [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
 
@@ -91,6 +92,7 @@ _Dates show when the patch was submitted._
 * [Bug 18833](https://bugs.r-project.org/show_bug.cgi?id=18833) — methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments (2024-12-07)
 * [Bug 19079](https://bugs.r-project.org/show_bug.cgi?id=19079) — S4 packages with group methods error with "subscript out of bounds" under unloadNamespace with Imports: methods (2026-05-29)
 * [Bug 19083](https://bugs.r-project.org/show_bug.cgi?id=19083) — setGeneric("f", \(x) { standardGeneric("x") }) makes generic with class 'nonstandardGenericFunction' (2026-06-22)
+* [Bug 19235](https://bugs.r-project.org/show_bug.cgi?id=19235) — cacheMetaData() handles duplicates incorrectly (2026-10-20)
 
 ### Translations
 

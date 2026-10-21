@@ -1,0 +1,129 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-20T22:35:17Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "minor",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19235,
+        "assigned_to": "R-core",
+        "component": "S4methods",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "summary": "cacheMetaData() handles duplicates incorrectly",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-10-20T22:50:48Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "NEW"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19235": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-10-20T22:35:17Z",
+            "attachment_id": 3933,
+            "count": 0,
+            "text": "Created attachment 3933\ncacheMetadata and ..checkRequiredGenerics handle duplicates correctly\n\nThere are two minor logic bugs in `methods::cacheMetaData()` surrounding handling of duplicates\n\n1. `duplicate()` is run independently for `package` and `generic`\n2. We prune the duplicates only for the `generic` object but not the paired `package`\n\nThe attached bug handles this, and also cleans up the storage type of the `.NeedPrimitiveMethods` which is currently `list`, which is a bit more complicated to work with where plain `character` will suffice. NB: for simplicity, this patch is written with a new major release (e.g. 4.7.0) in mind, where we can assume existing `.requireCachedGenerics` list objects in pre-compiled namespaces needn't be accommodated.\n\nThe patch also reaches for the convenient `get0()` over `if (exists(...)) get(...)` in a number of places, and includes an early return refactoring. These grow the patch beyond something strictly minimal, but I think are manageable.\n\nI didn't find any packages affected by this -- the fact that `package` is most often simply `\"base\"` is a saving grace -- but we _can_ see the benefit of deduplication in `..checkRequiredGenerics` immediately, e.g. {Rcpp} currently has:\n\n```\nRcpp:::.requireCachedGenerics\n# [[1]]\n# [1] \"$\"\n\n# [[2]]\n# [1] \"$<-\"\n\n# [[3]]\n# [1] \"$\"\n\n# [[4]]\n# [1] \"$<-\"\n\n# [[5]]\n# [1] \"$\"\n\n# [[6]]\n# [1] \"$<-\"\n\n# [[7]]\n# [1] \"Ops\"\n\n# [[8]]\n# [1] \"$\"\n\n# [[9]]\n# [1] \"$<-\"\n\n# attr(,\"package\")\n# [1] \"base\" \"base\" \"base\" \"base\" \"base\" \"base\" \"base\" \"base\" \"base\"\n```\n\nWhich this patch would instead simplify to:\n\n```\n# [1] \"$\"   \"$<-\" \"Ops\"\n# attr(,\"package\")\n# [1] \"base\" \"base\" \"base\"\n```\n\nAs to the bug, courtesy LLM, here is a toy example that doesn't require writing out all the test package sources:\n\n```\nmk_ns <- function(name) {\n  ns <- new.env(parent=.GlobalEnv)\n  ns$.packageName <- name\n  .Internal(registerNamespace(name, ns))\n  ns\n}\nPkgA <- mk_ns(\"PkgA\")\nPkgB <- mk_ns(\"PkgB\")\nPkgC <- mk_ns(\"PkgC\")\n\ninvisible({\nsetGeneric(\"bar\", \\(x) standardGeneric(\"bar\"), where=PkgB)\nsetGeneric(\"foo\", \\(x) standardGeneric(\"foo\"), where=PkgA)\nsetGeneric(\"foo\", \\(x) standardGeneric(\"foo\"), where=PkgB)\nsetGeneric(\"zzz\", \\(x) standardGeneric(\"zzz\"), where=PkgC)\n})\n\n# PkgD defines a class and methods on all 4 generics:\nPkgD <- mk_ns(\"PkgD\")\nsetClass(\"MyClass\", slots=c(x=\"numeric\"), where = PkgD)\nsetMethod(PkgB$bar, \"MyClass\", \\(x) \"PkgB::bar\", where=PkgD)\nsetMethod(PkgA$foo, \"MyClass\", \\(x) \"PkgA::foo\", where=PkgD)\nsetMethod(PkgB$foo, \"MyClass\", \\(x) \"PkgB::foo\", where=PkgD)\nsetMethod(PkgC$zzz, \"MyClass\", \\(x) \"PkgC::zzz\", where=PkgD)\n\n# Simulate fresh package load: uncache methods, then run cacheMetaData(PkgD, TRUE)\nfor (g in list(PkgB$bar, PkgA$foo, PkgB$foo, PkgC$zzz)) {\n  methods:::.updateMethodsInTable(g, PkgD, attach=FALSE)\n}\ncacheMetaData(PkgD, attach = TRUE)\n\n# Test dispatch on all 4 generics:\nx <- new(\"MyClass\", x=1)\nPkgB$bar(x) # [1] \"PkgB::bar\"\nPkgA$foo(x) # [1] \"PkgA::foo\"\ntry(PkgB$foo(x))\ntry(PkgC$zzz(x))\n```\n\nErrors on the last two:\n\n```\nError : unable to find an inherited method for function 'foo' for signature 'x = \"MyClass\"'\nError : unable to find an inherited method for function 'zzz' for signature 'x = \"MyClass\"'\n```\n\nI've left this patch without tests, as I'm still not sure the preferred style for regression tests requiring test packages such as here. With some guidance I can write some tests to spec.",
+            "bug_id": 19235,
+            "creation_time": "2026-10-20T22:35:17Z",
+            "is_private": false,
+            "id": 103914,
+            "tags": []
+          },
+          {
+            "attachment_id": 3934,
+            "time": "2026-10-20T22:50:48Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "id": 103915,
+            "is_private": false,
+            "creation_time": "2026-10-20T22:50:48Z",
+            "bug_id": 19235,
+            "text": "Created attachment 3934\ncacheMetadata and ..checkRequiredGenerics handle duplicates correctly\n\nMade one tweak to change `length(.) > 1L` to `anyDuplicated(.)` which is (1) a little clearer and (2) skips the more accurate `duplicated(paste(...))` allocation on the \"happy path\" where there are no duplicates generics to further disambiguate with `package`.\n\nI also put this on the GitHub mirror: https://github.com/r-devel/r-svn/pull/391",
+            "count": 1
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19235": [
+        {
+          "summary": "cacheMetadata and ..checkRequiredGenerics handle duplicates correctly",
+          "creation_time": "2026-10-20T22:35:17Z",
+          "bug_id": 19235,
+          "file_name": "s4-cache-generic-dup.patch",
+          "size": 4936,
+          "last_change_time": "2026-10-20T22:50:48Z",
+          "id": 3933,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9NZXRob2RzTGlzdENsYXNzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL01ldGhvZHNMaXN0Q2xhc3MuUgkocmV2aXNpb24gOTA3MjgpCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kc0xpc3RDbGFzcy5SCSh3b3JraW5nIGNvcHkpCkBAIC0yOTAsMTYgKzI5MCwxMiBAQAogICAgICMjIGZ1bmN0aW9ucyBpbiB0aGUgZ3JvdXApIGlmIGEgY2xhc3MgaXMgbG9hZGVkIHRoYXQgZXh0ZW5kcwogICAgICMjIG9uZSBvZiB0aGUgY2xhc3NlcyBpbiBgbmVlZGVkYCAob3RoZXIgY2xhc3NlcyB0aGFuICJzdHJ1Y3R1cmUiIG5vdwogICAgICMjIGFsc28gcmVxdWlyZSBnZW5lcmljcyBmb3Igc29tZSBwcmltaXRpdmVzKS4KLSAgICBpZighZXhpc3RzKCIuTmVlZFByaW1pdGl2ZU1ldGhvZHMiLCB3aGVyZSkpCi0gICAgICBuZWVkZWQgPC0gbGlzdCgpCi0gICAgZWxzZQotICAgICAgbmVlZGVkIDwtIGdldCgiLk5lZWRQcmltaXRpdmVNZXRob2RzIiwgd2hlcmUpCi0gICAgbmVlZGVkIDwtIGMobmVlZGVkLCBsaXN0KHN0cnVjdHVyZSA9ICJPcHMiLCB2ZWN0b3IgPSAiT3BzIiwKLSAgICAgICAgICBhcnJheSA9ICJPcHMiLCBub25TdHJ1Y3R1cmUgPSAiT3BzIiksCi0gICAgICAgICAgYXJyYXkgPSAiWyIsIHN0cnVjdHVyZSA9ICJbIiwgbm9uU3RydWN0dXJlID0gIlsiLAotICAgICAgICAgIHN0cnVjdHVyZSA9ICJNYXRoIiwgbm9uU3RydWN0dXJlID0gIk1hdGgiLAotICAgICAgICAgIHJlZkNsYXNzID0gIiQiLCByZWZDbGFzcyA9ICIkPC0iLCBkYXRhLmZyYW1lID0gIiQ8LSIKLSAgICAgICAgICAgICAgICApCisgICAgbmVlZGVkIDwtIGdldDAoIi5OZWVkUHJpbWl0aXZlTWV0aG9kcyIsIHdoZXJlLCBpZm5vdGZvdW5kID0gY2hhcmFjdGVyKCkpCisgICAgbmVlZGVkIDwtIGMobmVlZGVkLAorICAgICAgICAgICAgICAgIHN0cnVjdHVyZSA9ICJPcHMiLCB2ZWN0b3IgPSAiT3BzIiwgYXJyYXkgPSAiT3BzIiwgbm9uU3RydWN0dXJlID0gIk9wcyIsCisgICAgICAgICAgICAgICAgYXJyYXkgPSAiWyIsIHN0cnVjdHVyZSA9ICJbIiwgbm9uU3RydWN0dXJlID0gIlsiLAorICAgICAgICAgICAgICAgIHN0cnVjdHVyZSA9ICJNYXRoIiwgbm9uU3RydWN0dXJlID0gIk1hdGgiLAorICAgICAgICAgICAgICAgIHJlZkNsYXNzID0gIiQiLCByZWZDbGFzcyA9ICIkPC0iLCBkYXRhLmZyYW1lID0gIiQ8LSIpCiAgICAgYXNzaWduKCIuTmVlZFByaW1pdGl2ZU1ldGhvZHMiLCBuZWVkZWQsIHdoZXJlKQogICAgIHNldE1ldGhvZCgiT3BzIiwgYygic3RydWN0dXJlIiwgInZlY3RvciIpLCB3aGVyZSA9IHdoZXJlLAogICAgICAgICAgICAgICBmdW5jdGlvbihlMSwgZTIpIHsKSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SCShyZXZpc2lvbiA5MDcyOCkKKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC01NzAsNyArNTcwLDcgQEAKICMjICAgIGFzc2lnbkNsYXNzRGVmKCJjbGFzc1JlcHJlc2VudGF0aW9uIiwgb2JqZWN0LCB3aGVyZSkKICAgICBhc3NpZ24oY2xhc3NNZXRhTmFtZSgiY2xhc3NSZXByZXNlbnRhdGlvbiIpLCBvYmplY3QsIHdoZXJlKQogICAgICMjIHRoZSBsaXN0IG9mIG5lZWRlZCBnZW5lcmljcywgaW5pdGlhbGx5IGVtcHR5IChzZWUgLkluaXRTdHJ1Y3R1cmVNZXRob2RzKQotICAgIGFzc2lnbigiLk5lZWRQcmltaXRpdmVNZXRob2RzIiwgbGlzdCgpLCB3aGVyZSkKKyAgICBhc3NpZ24oIi5OZWVkUHJpbWl0aXZlTWV0aG9kcyIsIGNoYXJhY3RlcigpLCB3aGVyZSkKIH0KIAogLmNsYXNzTmFtZUZyb21NZXRob2RzIDwtIGZ1bmN0aW9uKHdoYXQpIHsKSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9STWV0aG9kVXRpbHMuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIJKHJldmlzaW9uIDkwNzI4KQorKysgc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JNZXRob2RVdGlscy5SCSh3b3JraW5nIGNvcHkpCkBAIC04NDksMTQgKzg0OSwxNiBAQAogICAgIHBhY2thZ2VzIDwtIGF0dHIoZ2VuZXJpY3MsICJwYWNrYWdlIikKICAgICBpZihsZW5ndGgocGFja2FnZXMpIDwgIGxlbmd0aChnZW5lcmljcykpCiAgICAgICAgIHBhY2thZ2VzIDwtIHJlcChwYWNrYWdlcywgbGVuZ3RoLm91dCA9IGxlbmd0aChnZW5lcmljcykpCi0gICAgaWYoYXR0YWNoICYmIGV4aXN0cygiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIHdoZXJlLCBpbmhlcml0cyA9IEZBTFNFKSkgewotICAgICAgICBvdGhlcnMgPC0gZ2V0KCIucmVxdWlyZUNhY2hlZEdlbmVyaWNzIiwgd2hlcmUpCisgICAgaWYoYXR0YWNoICYmICFpcy5udWxsKG90aGVycyA8LSBnZXQwKCIucmVxdWlyZUNhY2hlZEdlbmVyaWNzIiwgd2hlcmUsIGluaGVyaXRzID0gRkFMU0UpKSkgewogICAgICAgICBnZW5lcmljcyA8LSBjKGdlbmVyaWNzLCBvdGhlcnMpCiAgICAgICAgIHBhY2thZ2VzIDwtIGMocGFja2FnZXMsIGF0dHIob3RoZXJzLCAicGFja2FnZSIpKQogICAgIH0KICAgICAjIyBjaGVjayBmb3IgZHVwbGljYXRlcwotICAgIGR1cHMgPC0gZHVwbGljYXRlZChnZW5lcmljcykgJiBkdXBsaWNhdGVkKHBhY2thZ2VzKQotICAgIGdlbmVyaWNzIDwtIGdlbmVyaWNzWyFkdXBzXQorICAgIGlmIChsZW5ndGgoZ2VuZXJpY3MpID4gMUwpIHsKKyAgICAgICAga2VlcF9pZHggPC0gIWR1cGxpY2F0ZWQocGFzdGUocGFja2FnZXMsIGdlbmVyaWNzKSkKKyAgICAgICAgZ2VuZXJpY3MgPC0gZ2VuZXJpY3Nba2VlcF9pZHhdCisgICAgICAgIHBhY2thZ2VzIDwtIHBhY2thZ2VzW2tlZXBfaWR4XQorICAgIH0KICAgICBmb3IoaSBpbiBzZXFfYWxvbmcoZ2VuZXJpY3MpKSB7CiAgICAgICAgIGYgPC0gZ2VuZXJpY3NbW2ldXQogICAgICAgICBmcGtnIDwtIHBhY2thZ2VzW1tpXV0KSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SCShyZXZpc2lvbiA5MDcyOCkKKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SCSh3b3JraW5nIGNvcHkpCkBAIC04NjEsMjEgKzg2MSwyNiBAQAogICBhbGxOZWVkZWQgPC0gZ2V0KCIuTmVlZFByaW1pdGl2ZU1ldGhvZHMiLCBlbnZpciA9IC5tZXRob2RzTmFtZXNwYWNlKQogICBzcGVjaWFscyA8LSBuYW1lcyhhbGxOZWVkZWQpCiAgIG5lZWRlZCA8LSBtYXRjaChzcGVjaWFscywgc3VwZXJzLCAwTCkgPiAwTAotICBpZihhbnkobmVlZGVkKSkgewotICAgIGdlbmVyaWNzIDwtIHVuaXF1ZShhbGxOZWVkZWRbbmVlZGVkXSkKLSAgICBwYWNrYWdlcyA8LSB2YXBwbHkoZ2VuZXJpY3MsIGZ1bmN0aW9uKGcpIHsKLSAgICAgICAgZGVmIDwtIGdldEdlbmVyaWMoZykKLSAgICAgICAgcGtnIDwtIGRlZkBwYWNrYWdlICMgbXVzdCBiZSAibWV0aG9kcyIgPwotICAgICAgICBjYWNoZUdlbmVyaWNzTWV0YURhdGEoZywgZGVmLCBUUlVFLCB3aGVyZSwgcGtnKQotICAgICAgICBwa2cKLSAgICB9LCBjaGFyYWN0ZXIoMSkpCi0gICAgcHJldmlvdXMgPC0gaWYoZXhpc3RzKCIucmVxdWlyZUNhY2hlZEdlbmVyaWNzIiwgd2hlcmUsIGluaGVyaXRzID0gRkFMU0UpKQotCQkgICAgICBnZXQoIi5yZXF1aXJlQ2FjaGVkR2VuZXJpY3MiLCB3aGVyZSkgZWxzZSBjaGFyYWN0ZXIoKQotICAgIHBhY2thZ2VzIDwtIGMoYXR0cihwcmV2aW91cywgInBhY2thZ2UiKSwgcGFja2FnZXMpCi0gICAgZ2cgPC0gYyhwcmV2aW91cywgZ2VuZXJpY3MpCi0gICAgYXR0cihnZywgInBhY2thZ2UiKSA8LSBwYWNrYWdlcwotICAgIGFzc2lnbigiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIGdnLCB3aGVyZSkKKyAgaWYoIWFueShuZWVkZWQpKQorICAgIHJldHVybihpbnZpc2libGUoKSkKKworICBnZW5lcmljcyA8LSB1bmlxdWUoYWxsTmVlZGVkW25lZWRlZF0pCisgIHBhY2thZ2VzIDwtIHZhcHBseShnZW5lcmljcywgZnVuY3Rpb24oZykgeworICAgICAgZGVmIDwtIGdldEdlbmVyaWMoZykKKyAgICAgIHBrZyA8LSBkZWZAcGFja2FnZSAjIG11c3QgYmUgIm1ldGhvZHMiID8KKyAgICAgIGNhY2hlR2VuZXJpY3NNZXRhRGF0YShnLCBkZWYsIFRSVUUsIHdoZXJlLCBwa2cpCisgICAgICBwa2cKKyAgfSwgY2hhcmFjdGVyKDEpLCBVU0UuTkFNRVMgPSBGQUxTRSkKKyAgcHJldmlvdXMgPC0gZ2V0MCgiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIHdoZXJlLCBpbmhlcml0cyA9IEZBTFNFLCBpZm5vdGZvdW5kID0gY2hhcmFjdGVyKCkpCisgIHBhY2thZ2VzIDwtIGMoYXR0cihwcmV2aW91cywgInBhY2thZ2UiKSwgcGFja2FnZXMpCisgIGdnIDwtIGMocHJldmlvdXMsIGdlbmVyaWNzKQorICBpZiAobGVuZ3RoKGdnKSA+IDFMKSB7CisgICAga2VlcF9pZHggPC0gIWR1cGxpY2F0ZWQocGFzdGUocGFja2FnZXMsIGdnKSkKKyAgICBnZyA8LSBnZ1trZWVwX2lkeF0KKyAgICBwYWNrYWdlcyA8LSBwYWNrYWdlc1trZWVwX2lkeF0KICAgfQorICBhdHRyKGdnLCAicGFja2FnZSIpIDwtIHBhY2thZ2VzCisgIGFzc2lnbigiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIGdnLCB3aGVyZSkKIH0KIAogLnNldFMzTWV0aG9kc09uIDwtIGZ1bmN0aW9uKGNsYXNzRGVmKSB7Cg==",
+          "creator": "michaelchirico4",
+          "is_obsolete": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        },
+        {
+          "size": 5087,
+          "last_change_time": "2026-10-20T22:50:48Z",
+          "id": 3934,
+          "is_private": false,
+          "summary": "cacheMetadata and ..checkRequiredGenerics handle duplicates correctly",
+          "creation_time": "2026-10-20T22:50:48Z",
+          "bug_id": 19235,
+          "file_name": "file_19235.txt",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9NZXRob2RzTGlzdENsYXNzLlINCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NCi0tLSBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kc0xpc3RDbGFzcy5SICAgIChyZXZpc2lvbiA5MDcyOCkNCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvTWV0aG9kc0xpc3RDbGFzcy5SICAgICh3b3JraW5nIGNvcHkpDQpAQCAtMjkwLDE2ICsyOTAsMTIgQEANCiAgICAgIyMgZnVuY3Rpb25zIGluIHRoZSBncm91cCkgaWYgYSBjbGFzcyBpcyBsb2FkZWQgdGhhdCBleHRlbmRzDQogICAgICMjIG9uZSBvZiB0aGUgY2xhc3NlcyBpbiBgbmVlZGVkYCAob3RoZXIgY2xhc3NlcyB0aGFuICJzdHJ1Y3R1cmUiIG5vdw0KICAgICAjIyBhbHNvIHJlcXVpcmUgZ2VuZXJpY3MgZm9yIHNvbWUgcHJpbWl0aXZlcykuDQotICAgIGlmKCFleGlzdHMoIi5OZWVkUHJpbWl0aXZlTWV0aG9kcyIsIHdoZXJlKSkNCi0gICAgICBuZWVkZWQgPC0gbGlzdCgpDQotICAgIGVsc2UNCi0gICAgICBuZWVkZWQgPC0gZ2V0KCIuTmVlZFByaW1pdGl2ZU1ldGhvZHMiLCB3aGVyZSkNCi0gICAgbmVlZGVkIDwtIGMobmVlZGVkLCBsaXN0KHN0cnVjdHVyZSA9ICJPcHMiLCB2ZWN0b3IgPSAiT3BzIiwNCi0gICAgICAgICAgYXJyYXkgPSAiT3BzIiwgbm9uU3RydWN0dXJlID0gIk9wcyIpLA0KLSAgICAgICAgICBhcnJheSA9ICJbIiwgc3RydWN0dXJlID0gIlsiLCBub25TdHJ1Y3R1cmUgPSAiWyIsDQotICAgICAgICAgIHN0cnVjdHVyZSA9ICJNYXRoIiwgbm9uU3RydWN0dXJlID0gIk1hdGgiLA0KLSAgICAgICAgICByZWZDbGFzcyA9ICIkIiwgcmVmQ2xhc3MgPSAiJDwtIiwgZGF0YS5mcmFtZSA9ICIkPC0iDQotICAgICAgICAgICAgICAgICkNCisgICAgbmVlZGVkIDwtIGdldDAoIi5OZWVkUHJpbWl0aXZlTWV0aG9kcyIsIHdoZXJlLCBpZm5vdGZvdW5kID0gY2hhcmFjdGVyKCkpDQorICAgIG5lZWRlZCA8LSBjKG5lZWRlZCwNCisgICAgICAgICAgICAgICAgc3RydWN0dXJlID0gIk9wcyIsIHZlY3RvciA9ICJPcHMiLCBhcnJheSA9ICJPcHMiLCBub25TdHJ1Y3R1cmUgPSAiT3BzIiwNCisgICAgICAgICAgICAgICAgYXJyYXkgPSAiWyIsIHN0cnVjdHVyZSA9ICJbIiwgbm9uU3RydWN0dXJlID0gIlsiLA0KKyAgICAgICAgICAgICAgICBzdHJ1Y3R1cmUgPSAiTWF0aCIsIG5vblN0cnVjdHVyZSA9ICJNYXRoIiwNCisgICAgICAgICAgICAgICAgcmVmQ2xhc3MgPSAiJCIsIHJlZkNsYXNzID0gIiQ8LSIsIGRhdGEuZnJhbWUgPSAiJDwtIikNCiAgICAgYXNzaWduKCIuTmVlZFByaW1pdGl2ZU1ldGhvZHMiLCBuZWVkZWQsIHdoZXJlKQ0KICAgICBzZXRNZXRob2QoIk9wcyIsIGMoInN0cnVjdHVyZSIsICJ2ZWN0b3IiKSwgd2hlcmUgPSB3aGVyZSwNCiAgICAgICAgICAgICAgIGZ1bmN0aW9uKGUxLCBlMikgew0KSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JDbGFzc1V0aWxzLlIgKHJldmlzaW9uIDkwNzI4KQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SICh3b3JraW5nIGNvcHkpDQpAQCAtNTcwLDcgKzU3MCw3IEBADQogIyMgICAgYXNzaWduQ2xhc3NEZWYoImNsYXNzUmVwcmVzZW50YXRpb24iLCBvYmplY3QsIHdoZXJlKQ0KICAgICBhc3NpZ24oY2xhc3NNZXRhTmFtZSgiY2xhc3NSZXByZXNlbnRhdGlvbiIpLCBvYmplY3QsIHdoZXJlKQ0KICAgICAjIyB0aGUgbGlzdCBvZiBuZWVkZWQgZ2VuZXJpY3MsIGluaXRpYWxseSBlbXB0eSAoc2VlIC5Jbml0U3RydWN0dXJlTWV0aG9kcykNCi0gICAgYXNzaWduKCIuTmVlZFByaW1pdGl2ZU1ldGhvZHMiLCBsaXN0KCksIHdoZXJlKQ0KKyAgICBhc3NpZ24oIi5OZWVkUHJpbWl0aXZlTWV0aG9kcyIsIGNoYXJhY3RlcigpLCB3aGVyZSkNCiB9DQogDQogLmNsYXNzTmFtZUZyb21NZXRob2RzIDwtIGZ1bmN0aW9uKHdoYXQpIHsNCkluZGV4OiBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlINCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0NCi0tLSBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIgICAgICAgIChyZXZpc2lvbiA5MDcyOCkNCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvUk1ldGhvZFV0aWxzLlIgICAgICAgICh3b3JraW5nIGNvcHkpDQpAQCAtODQ5LDE0ICs4NDksMTYgQEANCiAgICAgcGFja2FnZXMgPC0gYXR0cihnZW5lcmljcywgInBhY2thZ2UiKQ0KICAgICBpZihsZW5ndGgocGFja2FnZXMpIDwgIGxlbmd0aChnZW5lcmljcykpDQogICAgICAgICBwYWNrYWdlcyA8LSByZXAocGFja2FnZXMsIGxlbmd0aC5vdXQgPSBsZW5ndGgoZ2VuZXJpY3MpKQ0KLSAgICBpZihhdHRhY2ggJiYgZXhpc3RzKCIucmVxdWlyZUNhY2hlZEdlbmVyaWNzIiwgd2hlcmUsIGluaGVyaXRzID0gRkFMU0UpKSB7DQotICAgICAgICBvdGhlcnMgPC0gZ2V0KCIucmVxdWlyZUNhY2hlZEdlbmVyaWNzIiwgd2hlcmUpDQorICAgIGlmKGF0dGFjaCAmJiAhaXMubnVsbChvdGhlcnMgPC0gZ2V0MCgiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIHdoZXJlLCBpbmhlcml0cyA9IEZBTFNFKSkpIHsNCiAgICAgICAgIGdlbmVyaWNzIDwtIGMoZ2VuZXJpY3MsIG90aGVycykNCiAgICAgICAgIHBhY2thZ2VzIDwtIGMocGFja2FnZXMsIGF0dHIob3RoZXJzLCAicGFja2FnZSIpKQ0KICAgICB9DQogICAgICMjIGNoZWNrIGZvciBkdXBsaWNhdGVzDQotICAgIGR1cHMgPC0gZHVwbGljYXRlZChnZW5lcmljcykgJiBkdXBsaWNhdGVkKHBhY2thZ2VzKQ0KLSAgICBnZW5lcmljcyA8LSBnZW5lcmljc1shZHVwc10NCisgICAgaWYgKGFueUR1cGxpY2F0ZWQoZ2VuZXJpY3MpKSB7DQorICAgICAgICBrZWVwX2lkeCA8LSAhZHVwbGljYXRlZChwYXN0ZShwYWNrYWdlcywgZ2VuZXJpY3MpKQ0KKyAgICAgICAgZ2VuZXJpY3MgPC0gZ2VuZXJpY3Nba2VlcF9pZHhdDQorICAgICAgICBwYWNrYWdlcyA8LSBwYWNrYWdlc1trZWVwX2lkeF0NCisgICAgfQ0KICAgICBmb3IoaSBpbiBzZXFfYWxvbmcoZ2VuZXJpY3MpKSB7DQogICAgICAgICBmIDwtIGdlbmVyaWNzW1tpXV0NCiAgICAgICAgIGZwa2cgPC0gcGFja2FnZXNbW2ldXQ0KSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1NDbGFzc2VzLlIgICAgKHJldmlzaW9uIDkwNzI4KQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SICAgICh3b3JraW5nIGNvcHkpDQpAQCAtODYxLDIxICs4NjEsMjYgQEANCiAgIGFsbE5lZWRlZCA8LSBnZXQoIi5OZWVkUHJpbWl0aXZlTWV0aG9kcyIsIGVudmlyID0gLm1ldGhvZHNOYW1lc3BhY2UpDQogICBzcGVjaWFscyA8LSBuYW1lcyhhbGxOZWVkZWQpDQogICBuZWVkZWQgPC0gbWF0Y2goc3BlY2lhbHMsIHN1cGVycywgMEwpID4gMEwNCi0gIGlmKGFueShuZWVkZWQpKSB7DQotICAgIGdlbmVyaWNzIDwtIHVuaXF1ZShhbGxOZWVkZWRbbmVlZGVkXSkNCi0gICAgcGFja2FnZXMgPC0gdmFwcGx5KGdlbmVyaWNzLCBmdW5jdGlvbihnKSB7DQotICAgICAgICBkZWYgPC0gZ2V0R2VuZXJpYyhnKQ0KLSAgICAgICAgcGtnIDwtIGRlZkBwYWNrYWdlICMgbXVzdCBiZSAibWV0aG9kcyIgPw0KLSAgICAgICAgY2FjaGVHZW5lcmljc01ldGFEYXRhKGcsIGRlZiwgVFJVRSwgd2hlcmUsIHBrZykNCi0gICAgICAgIHBrZw0KLSAgICB9LCBjaGFyYWN0ZXIoMSkpDQotICAgIHByZXZpb3VzIDwtIGlmKGV4aXN0cygiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIHdoZXJlLCBpbmhlcml0cyA9IEZBTFNFKSkNCi0gICAgICAgICAgICAgICAgICAgICBnZXQoIi5yZXF1aXJlQ2FjaGVkR2VuZXJpY3MiLCB3aGVyZSkgZWxzZSBjaGFyYWN0ZXIoKQ0KLSAgICBwYWNrYWdlcyA8LSBjKGF0dHIocHJldmlvdXMsICJwYWNrYWdlIiksIHBhY2thZ2VzKQ0KLSAgICBnZyA8LSBjKHByZXZpb3VzLCBnZW5lcmljcykNCi0gICAgYXR0cihnZywgInBhY2thZ2UiKSA8LSBwYWNrYWdlcw0KLSAgICBhc3NpZ24oIi5yZXF1aXJlQ2FjaGVkR2VuZXJpY3MiLCBnZywgd2hlcmUpDQorICBpZighYW55KG5lZWRlZCkpDQorICAgIHJldHVybihpbnZpc2libGUoKSkNCisNCisgIGdlbmVyaWNzIDwtIHVuaXF1ZShhbGxOZWVkZWRbbmVlZGVkXSkNCisgIHBhY2thZ2VzIDwtIHZhcHBseShnZW5lcmljcywgZnVuY3Rpb24oZykgew0KKyAgICAgIGRlZiA8LSBnZXRHZW5lcmljKGcpDQorICAgICAgcGtnIDwtIGRlZkBwYWNrYWdlICMgbXVzdCBiZSAibWV0aG9kcyIgPw0KKyAgICAgIGNhY2hlR2VuZXJpY3NNZXRhRGF0YShnLCBkZWYsIFRSVUUsIHdoZXJlLCBwa2cpDQorICAgICAgcGtnDQorICB9LCBjaGFyYWN0ZXIoMSksIFVTRS5OQU1FUyA9IEZBTFNFKQ0KKyAgcHJldmlvdXMgPC0gZ2V0MCgiLnJlcXVpcmVDYWNoZWRHZW5lcmljcyIsIHdoZXJlLCBpbmhlcml0cyA9IEZBTFNFLCBpZm5vdGZvdW5kID0gY2hhcmFjdGVyKCkpDQorICBwYWNrYWdlcyA8LSBjKGF0dHIocHJldmlvdXMsICJwYWNrYWdlIiksIHBhY2thZ2VzKQ0KKyAgZ2cgPC0gYyhwcmV2aW91cywgZ2VuZXJpY3MpDQorICBpZiAoYW55RHVwbGljYXRlZChnZykpIHsNCisgICAga2VlcF9pZHggPC0gIWR1cGxpY2F0ZWQocGFzdGUocGFja2FnZXMsIGdnKSkNCisgICAgZ2cgPC0gZ2dba2VlcF9pZHhdDQorICAgIHBhY2thZ2VzIDwtIHBhY2thZ2VzW2tlZXBfaWR4XQ0KICAgfQ0KKyAgYXR0cihnZywgInBhY2thZ2UiKSA8LSBwYWNrYWdlcw0KKyAgYXNzaWduKCIucmVxdWlyZUNhY2hlZEdlbmVyaWNzIiwgZ2csIHdoZXJlKQ0KIH0NCiANCiAuc2V0UzNNZXRob2RzT24gPC0gZnVuY3Rpb24oY2xhc3NEZWYpIHs=",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": []
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-20 22:50:48"
+}
