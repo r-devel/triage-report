@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P3",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-21T16:38:36Z",
+        "whiteboard": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19238,
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "I/O",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "load() segfaults or hangs on a save file whose pairlist chain holds a non-pairlist node",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-10-21T16:38:59Z",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19238": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103919,
+            "time": "2026-10-21T16:38:36Z",
+            "tags": [],
+            "attachment_id": {},
+            "count": 0,
+            "is_markdown": false,
+            "bug_id": 19238,
+            "text": "RestoreToEnv() in src/main/saveload.c only checks that the object a save\nfile unserializes to is headed by a pairlist node, then walks CDR() to\nthe end and takes TAG() and CAR() of every node as a symbol and its\nvalue. A malformed .RData file can put any object in CDR position, and\nits fields are then read as pairlist slots. An external pointer there\n(the fuzzer's input) has a NULL address in its CAR slot, which\ndefineVar() binds and R_seemsOldStyleS4Object() dereferences:\n\n    ==6788==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000000\n        #0 Rf_isObject               src/main/memory.c\n        #1 R_seemsOldStyleS4Object   src/main/objects.c\n        #2 RestoreToEnv              src/main/saveload.c\n        #3 R_LoadSavedData           src/main/saveload.c\n        #4 do_load                   src/main/saveload.c\n\nA vector in that position dereferences NULL through its length fields,\nand a fresh symbol loops forever: its SYMVALUE() is R_UnboundValue,\nwhose own SYMVALUE() is itself. Both load() entry points (loadFromConn2\nand the .Internal(load()) fallback) go through RestoreToEnv(), in\nreleased R as well as R-devel (r90729). Found by OSS-Fuzz (testcase\n4654451810697216).\n\nProposed patch: attached as load-pairlist-chain.diff. The count loop now\nrequires every node to be a LISTSXP with a symbol tag and otherwise\nraises the existing \"loaded data is not in pair list form\" error. A\nregression test in tests/reg-tests-1e.R covers the external pointer and\nthe symbol case.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/393,\nwhere CI results can be seen.",
+            "creation_time": "2026-10-21T16:38:36Z",
+            "creator": "kevinushey"
+          },
+          {
+            "count": 1,
+            "is_markdown": false,
+            "text": "Created attachment 3936\npatch: validate the pairlist chain in RestoreToEnv() + reg-test",
+            "bug_id": 19238,
+            "creator": "kevinushey",
+            "creation_time": "2026-10-21T16:38:59Z",
+            "is_private": false,
+            "time": "2026-10-21T16:38:59Z",
+            "id": 103920,
+            "attachment_id": 3936,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19238": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL3NhdmVsb2FkLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vc2F2ZWxvYWQuYwkocmV2aXNpb24gOTA3MjkpCisrKyBzcmMvbWFpbi9zYXZlbG9hZC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTMyLDcgKzIxMzIsMTMgQEAgc3RhdGljIFNFWFAgUmVzdG9yZVRvRW52KFNFWFAgYW5zLCBTRVhQIGFlbnYpCiAKICAgICBQUk9URUNUKGFucyk7CiAgICAgYSA9IGFuczsKLSAgICB3aGlsZSAoYSAhPSBSX05pbFZhbHVlKSB7YSA9IENEUihhKTsgY250Kys7fQorICAgIHdoaWxlIChhICE9IFJfTmlsVmFsdWUpIHsKKwkvKiBhIGhhbmQtY3JhZnRlZCBmaWxlIGNhbiBzcGxpY2UgYW55IG9iamVjdCBpbnRvIHRoZSBjaGFpbiAqLworCWlmIChUWVBFT0YoYSkgIT0gTElTVFNYUCB8fCBUWVBFT0YoVEFHKGEpKSAhPSBTWU1TWFApCisJICAgIGVycm9yKF8oImxvYWRlZCBkYXRhIGlzIG5vdCBpbiBwYWlyIGxpc3QgZm9ybSIpKTsKKwlhID0gQ0RSKGEpOworCWNudCsrOworICAgIH0KICAgICBQUk9URUNUKG5hbWVzID0gYWxsb2NWZWN0b3IoU1RSU1hQLCBjbnQpKTsKICAgICBjbnQgPSAwOwogICAgIGEgPSBhbnM7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA3MjkpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDA3Niw2ICs0MDc2LDM0IEBAIHN0b3BpZm5vdChpcy5uYW4oYlkpKQogCiAKIAorIyMgbG9hZCgpIG9mIGEgaGFuZC1jcmFmdGVkIFJEWDIgZmlsZSB3aG9zZSBwYWlybGlzdCBjaGFpbiBob2xkcyBhCisjIyBub24tcGFpcmxpc3Qgbm9kZQorbG9jYWwoeworICAgIGYgPC0gdGVtcGZpbGUoKQorICAgICMjIHZlcnNpb24gMiBoZWFkZXIsIHRoZW4gYSBMSVNUU1hQIG5vZGUgdGFnZ2VkIHdpdGggdGhlIHN5bWJvbCAieCIsCisgICAgIyMgd2l0aCBDQVIgPSBOVUxMCisgICAgbm9kZSA8LSBjKGNoYXJUb1JhdygiUkRYMlxuWFxuIiksCisgICAgICAgICAgICAgIHdyaXRlQmluKGMoMkwsIDB4MDAwNDA1MDBMLCAweDAwMDIwMzAwTCwgMHg0MDJMLCAxTCwgMHg0MDAwOUwpLAorICAgICAgICAgICAgICAgICAgICAgICByYXcoKSwgZW5kaWFuID0gImJpZyIpLAorICAgICAgICAgICAgICB3cml0ZUJpbigxTCwgcmF3KCksIGVuZGlhbiA9ICJiaWciKSwgY2hhclRvUmF3KCJ4IiksCisgICAgICAgICAgICAgIHdyaXRlQmluKDB4ZmVMLCByYXcoKSwgZW5kaWFuID0gImJpZyIpKQorICAgICMjIENEUjogYW4gRVhUUFRSU1hQIChwcm90ID0gTlVMTCwgdGFnID0gcmVmIHRvICJ4IikKKyAgICB3cml0ZUJpbihjKG5vZGUsIHdyaXRlQmluKGMoMHgxNkwsIDB4ZmVMLCAweDFmZkwpLCByYXcoKSwgZW5kaWFuID0gImJpZyIpKSwKKyAgICAgICAgICAgICBmKQorICAgIEUxIDwtIHRyeUNpZChsb2FkKGYsIG5ldy5lbnYoKSkpCisgICAgIyMgQ0RSOiBhIG5ldyBTWU1TWFAgInkiLCB3aG9zZSB2YWx1ZSBzbG90IGlzIFJfVW5ib3VuZFZhbHVlCisgICAgd3JpdGVCaW4oYyhub2RlLCB3cml0ZUJpbihjKDFMLCAweDQwMDA5TCwgMUwpLCByYXcoKSwgZW5kaWFuID0gImJpZyIpLAorICAgICAgICAgICAgICAgY2hhclRvUmF3KCJ5IikpLCBmKQorICAgIEUyIDwtIHRyeUNpZChsb2FkKGYsIG5ldy5lbnYoKSkpCisgICAgc3RvcGlmbm90KGluaGVyaXRzKEUxLCAiZXJyb3IiKSwgaW5oZXJpdHMoRTIsICJlcnJvciIpKQorICAgIGlmKGVuZ2xpc2hNc2dzKQorICAgICAgICBzdG9waWZub3QoZ3JlcGwoIm5vdCBpbiBwYWlyIGxpc3QgZm9ybSIsIGNvbmRpdGlvbk1lc3NhZ2UoRTEpKSwKKyAgICAgICAgICAgICAgICAgIGdyZXBsKCJub3QgaW4gcGFpciBsaXN0IGZvcm0iLCBjb25kaXRpb25NZXNzYWdlKEUyKSkpCisgICAgdW5saW5rKGYpCit9KQorIyMgc2VnZmF1bHRlZCAoRTEpIG9yIGxvb3BlZCBmb3JldmVyIChFMikgaW4gUiA8PSA0LjYuMQorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "creator": "kevinushey",
+          "id": 3936,
+          "is_private": false,
+          "size": 2175,
+          "last_change_time": "2026-10-21T16:38:59Z",
+          "bug_id": 19238,
+          "file_name": "load-pairlist-chain.diff",
+          "summary": "patch: validate the pairlist chain in RestoreToEnv() + reg-test",
+          "creation_time": "2026-10-21T16:38:59Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-21 16:38:59"
+}

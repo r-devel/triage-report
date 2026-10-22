@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "last_change_time": "2026-10-21T08:02:38Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": ".updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups)",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "cc": [],
+        "qa_contact": "",
+        "id": 19237,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2026-10-21T08:02:38Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "component": "S4methods",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19237": {
+        "comments": [
+          {
+            "attachment_id": 3935,
+            "time": "2026-10-21T08:02:38Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 103917,
+            "creation_time": "2026-10-21T08:02:38Z",
+            "count": 0,
+            "text": "Created attachment 3935\nAvoid redundancy in .updateMethodsInTable recursion\n\n`.updateMethodsInTable()` recursively checks levels of group generics have consistent signature lengths with `.checkGroupSigLength`, but `.checkGroupSigLength` itself recurses across the whole tree of its input, so this is redundant+inefficient.\n\nThis was uncovered as part of the bottleneck leading to slow `loadNamespace()` times for {RProtoBuf}. Gemini devised the following tracer (edited for readability) to show the problem:\n\n```\nn_update_methods <- 0L\nn_check_group_sig <- 0L\nn_get_generic <- 0L\n\ntrace(methods:::.updateMethodsInTable, tracer = quote({\n  n_update_methods <<- n_update_methods + 1L\n  cat(sprintf(\"[update #%02d] generic=%-12s isGroup=%-5s @group='%s'\\n\",\n              n_update_methods,\n              generic@generic,\n              is(generic, \"groupGenericFunction\"),\n              toString(unlist(generic@group))))\n}), print = FALSE)\n\ntrace(methods:::.checkGroupSigLength,\n      tracer = quote({\n        n_check_group_sig <<- n_check_group_sig + 1L\n        cat(sprintf(\"  -> [.checkGroupSigLength #%02d] gnames=(%s)\\n\",\n                    n_check_group_sig, toString(unlist(gnames))))\n        # nested trace() to exclude other getGeneric calls\n        suppressMessages(trace(\n          methods::getGeneric,\n          tracer = quote({ n_get_generic <<- n_get_generic + 1L }),\n          print = FALSE))\n      }),\n      exit = quote(suppressMessages(untrace(methods::getGeneric))),\n      print = FALSE)\n\n# 1. Cold Ops: Rcpp has \"Ops\" in .requireCachedGenerics (defines 0 Ops methods)\ninvisible(loadNamespace(\"Rcpp\"))\ncat(sprintf(\n  \"\\nloadNamespace('Rcpp'): .updateMethodsInTable=%d, .checkGroupSigLength=%d, getGeneric(in checkGroup)=%d\\n\\n\",\n  n_update_methods, n_check_group_sig, n_get_generic\n))\n\n# 2. Warm Ops: cli ALSO has \"Ops\" in .requireCachedGenerics (and defines 0 Ops methods)\nn_update_methods <- 0L; n_check_group_sig <- 0L; n_get_generic <- 0L\ninvisible(loadNamespace(\"cli\"))\ncat(sprintf(\n  \"\\nloadNamespace('cli'):  .updateMethodsInTable=%d, .checkGroupSigLength=%d, getGeneric(in checkGroup)=%d\\n\",\n  n_update_methods, n_check_group_sig, n_get_generic\n))\n```\n\nWhich generates:\n\n```\n[update #01] generic=.DollarNames isGroup=FALSE @group=''\n[update #02] generic=$            isGroup=FALSE @group=''\n[update #03] generic=complete     isGroup=FALSE @group=''\n[update #04] generic=formals<-    isGroup=FALSE @group=''\n[update #05] generic=functions    isGroup=FALSE @group=''\n[update #06] generic=initialize   isGroup=FALSE @group=''\n[update #07] generic=prompt       isGroup=FALSE @group=''\n[update #08] generic=show         isGroup=FALSE @group=''\n[update #09] generic=$<-          isGroup=FALSE @group=''\n[update #10] generic=Ops          isGroup=TRUE  @group=''\n  -> [.checkGroupSigLength #01] gnames=(Ops)\n[update #11] generic=Arith        isGroup=TRUE  @group='Ops'\n  -> [.checkGroupSigLength #02] gnames=(Ops)\n  -> [.checkGroupSigLength #03] gnames=(Arith)\n  -> [.checkGroupSigLength #04] gnames=(Ops)\n[update #12] generic=+            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #05] gnames=(Arith)\n  -> [.checkGroupSigLength #06] gnames=(Ops)\n[update #13] generic=-            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #07] gnames=(Arith)\n  -> [.checkGroupSigLength #08] gnames=(Ops)\n[update #14] generic=*            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #09] gnames=(Arith)\n  -> [.checkGroupSigLength #10] gnames=(Ops)\n[update #15] generic=^            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #11] gnames=(Arith)\n  -> [.checkGroupSigLength #12] gnames=(Ops)\n[update #16] generic=%%           isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #13] gnames=(Arith)\n  -> [.checkGroupSigLength #14] gnames=(Ops)\n[update #17] generic=%/%          isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #15] gnames=(Arith)\n  -> [.checkGroupSigLength #16] gnames=(Ops)\n[update #18] generic=/            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #17] gnames=(Arith)\n  -> [.checkGroupSigLength #18] gnames=(Ops)\n[update #19] generic=Compare      isGroup=TRUE  @group='Ops'\n  -> [.checkGroupSigLength #19] gnames=(Ops)\n  -> [.checkGroupSigLength #20] gnames=(Compare)\n  -> [.checkGroupSigLength #21] gnames=(Ops)\n[update #20] generic===           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #22] gnames=(Compare)\n  -> [.checkGroupSigLength #23] gnames=(Ops)\n[update #21] generic=>            isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #24] gnames=(Compare)\n  -> [.checkGroupSigLength #25] gnames=(Ops)\n[update #22] generic=<            isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #26] gnames=(Compare)\n  -> [.checkGroupSigLength #27] gnames=(Ops)\n[update #23] generic=!=           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #28] gnames=(Compare)\n  -> [.checkGroupSigLength #29] gnames=(Ops)\n[update #24] generic=<=           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #30] gnames=(Compare)\n  -> [.checkGroupSigLength #31] gnames=(Ops)\n[update #25] generic=>=           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #32] gnames=(Compare)\n  -> [.checkGroupSigLength #33] gnames=(Ops)\n[update #26] generic=Logic        isGroup=TRUE  @group='Ops'\n  -> [.checkGroupSigLength #34] gnames=(Ops)\n  -> [.checkGroupSigLength #35] gnames=(Logic)\n  -> [.checkGroupSigLength #36] gnames=(Ops)\n[update #27] generic=&            isGroup=FALSE @group='Logic'\n  -> [.checkGroupSigLength #37] gnames=(Logic)\n  -> [.checkGroupSigLength #38] gnames=(Ops)\n[update #28] generic=|            isGroup=FALSE @group='Logic'\n  -> [.checkGroupSigLength #39] gnames=(Logic)\n  -> [.checkGroupSigLength #40] gnames=(Ops)\n\nloadNamespace('Rcpp'): .updateMethodsInTable=28, .checkGroupSigLength=40, getGeneric(in checkGroup)=854\n\n[update #01] generic=Ops          isGroup=TRUE  @group=''\n  -> [.checkGroupSigLength #01] gnames=(Ops)\n[update #02] generic=Arith        isGroup=TRUE  @group='Ops'\n  -> [.checkGroupSigLength #02] gnames=(Ops)\n  -> [.checkGroupSigLength #03] gnames=(Arith)\n  -> [.checkGroupSigLength #04] gnames=(Ops)\n[update #03] generic=+            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #05] gnames=(Arith)\n  -> [.checkGroupSigLength #06] gnames=(Ops)\n[update #04] generic=-            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #07] gnames=(Arith)\n  -> [.checkGroupSigLength #08] gnames=(Ops)\n[update #05] generic=*            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #09] gnames=(Arith)\n  -> [.checkGroupSigLength #10] gnames=(Ops)\n[update #06] generic=^            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #11] gnames=(Arith)\n  -> [.checkGroupSigLength #12] gnames=(Ops)\n[update #07] generic=%%           isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #13] gnames=(Arith)\n  -> [.checkGroupSigLength #14] gnames=(Ops)\n[update #08] generic=%/%          isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #15] gnames=(Arith)\n  -> [.checkGroupSigLength #16] gnames=(Ops)\n[update #09] generic=/            isGroup=FALSE @group='Arith'\n  -> [.checkGroupSigLength #17] gnames=(Arith)\n  -> [.checkGroupSigLength #18] gnames=(Ops)\n[update #10] generic=Compare      isGroup=TRUE  @group='Ops'\n  -> [.checkGroupSigLength #19] gnames=(Ops)\n  -> [.checkGroupSigLength #20] gnames=(Compare)\n  -> [.checkGroupSigLength #21] gnames=(Ops)\n[update #11] generic===           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #22] gnames=(Compare)\n  -> [.checkGroupSigLength #23] gnames=(Ops)\n[update #12] generic=>            isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #24] gnames=(Compare)\n  -> [.checkGroupSigLength #25] gnames=(Ops)\n[update #13] generic=<            isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #26] gnames=(Compare)\n  -> [.checkGroupSigLength #27] gnames=(Ops)\n[update #14] generic=!=           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #28] gnames=(Compare)\n  -> [.checkGroupSigLength #29] gnames=(Ops)\n[update #15] generic=<=           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #30] gnames=(Compare)\n  -> [.checkGroupSigLength #31] gnames=(Ops)\n[update #16] generic=>=           isGroup=FALSE @group='Compare'\n  -> [.checkGroupSigLength #32] gnames=(Compare)\n  -> [.checkGroupSigLength #33] gnames=(Ops)\n[update #17] generic=Logic        isGroup=TRUE  @group='Ops'\n  -> [.checkGroupSigLength #34] gnames=(Ops)\n  -> [.checkGroupSigLength #35] gnames=(Logic)\n  -> [.checkGroupSigLength #36] gnames=(Ops)\n[update #18] generic=&            isGroup=FALSE @group='Logic'\n  -> [.checkGroupSigLength #37] gnames=(Logic)\n  -> [.checkGroupSigLength #38] gnames=(Ops)\n[update #19] generic=|            isGroup=FALSE @group='Logic'\n  -> [.checkGroupSigLength #39] gnames=(Logic)\n  -> [.checkGroupSigLength #40] gnames=(Ops)\n\nloadNamespace('cli'):  .updateMethodsInTable=19, .checkGroupSigLength=40, getGeneric(in checkGroup)=854\n```\n\nIn all, we get the following `loadNamespace()` timings in current r-devel:\n\n```\ntime for ii in {1..20};   do bin/Rscript -e 'for (pkg in c(\"rlang\", \"cli\", \"glue\", \"fs\", \"bench\", \"tibble\", \"dplyr\", \"readr\", \"vroom\", \"dbplyr\")) loadNamespace(pkg)'; done\n\n# real    0m17.326s\n# user    0m14.662s\n# sys     0m2.773s\n```\n\nwhich go down 25% with the proposed patch:\n\n```\n# real    0m13.033s\n# user    0m10.681s\n# sys     0m2.465s\n```\n\nThese packages were chosen intentionally as outliers -- the ineffiency for them is particularly noteworthy because none of them define `Ops` methods, `Ops` only shows up because of `setOldClass()` populating it to their `.requireCachedGenerics`.\n\nOther cases that actually use group generics for Ops benefit too, and the number of redundant cases can explode if `Math` is involved (e.g. a 90% reduction in `getGeneric` calls from >30,000 to <3,000):\n\n```\ntime for ii in {1..20};   do bin/Rscript -e 'for (pkg in c(\"kernlab\", \"Matrix\", \"lme4\", \"S4Vectors\")) loadNamespace(pkg)'; done\n\n# BEFORE\n# real    0m55.285s\n# user    0m49.618s\n# sys     0m5.775s\n\n# AFTER (40% reduction)\n# real    0m32.808s\n# user    0m28.308s\n# sys     0m4.612s\n```\n\nOther cases are more modest (e.g. as low as 10% for Rcpp+cli+RProtoBuf).\n\nTracking on GitHub: https://github.com/r-devel/r-svn/pull/392",
+            "bug_id": 19237
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19237": [
+        {
+          "file_name": "file_19237.txt",
+          "bug_id": 19237,
+          "creation_time": "2026-10-21T08:02:38Z",
+          "summary": "Avoid redundancy in .updateMethodsInTable recursion",
+          "is_private": false,
+          "id": 3935,
+          "last_change_time": "2026-10-21T08:02:38Z",
+          "size": 2179,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHJldmlzaW9uIDkwNzI4KQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHdvcmtpbmcgY29weSkNCkBAIC05ODIsMTIgKzk4MiwxNCBAQA0KICAgICBOVUxMDQogfQ0KIA0KLS51cGRhdGVNZXRob2RzSW5UYWJsZSA8LSBmdW5jdGlvbihnZW5lcmljLCB3aGVyZSwgYXR0YWNoKSB7DQorLnVwZGF0ZU1ldGhvZHNJblRhYmxlIDwtIGZ1bmN0aW9uKGdlbmVyaWMsIHdoZXJlLCBhdHRhY2gsIC5jaGVja0dyb3VwID0gVFJVRSkgew0KICAgZmVudiA8LSBlbnZpcm9ubWVudChnZW5lcmljKQ0KICAgcmVzZXQgPC0gaWRlbnRpY2FsKGF0dGFjaCwgInJlc2V0IikNCisgIGNoYW5nZWQgPC0gcmVzZXQNCiAgIGlmKGlzLm51bGwobXRhYmxlIDwtIGZlbnYkLk1UYWJsZSkpIHsNCiAgICAgICAuc2V0dXBNZXRob2RzVGFibGVzKGdlbmVyaWMpDQogICAgICAgbXRhYmxlIDwtIGdldCgiLk1UYWJsZSIsIGVudmlyID0gZmVudikNCisgICAgICBjaGFuZ2VkIDwtIGNoYW5nZWQgfHwgYXR0YWNoDQogICB9DQogICBpZighcmVzZXQpIHsNCiAgICAgZW52IDwtIGFzLmVudmlyb25tZW50KHdoZXJlKQ0KQEAgLTk5NCwyNCArOTk2LDI1IEBADQogICAgIHRuYW1lIDwtIC5UYWJsZU1ldGFOYW1lKGdlbmVyaWNAZ2VuZXJpYywgZ2VuZXJpY0BwYWNrYWdlKQ0KICAgICBpZighaXMubnVsbCh0dCA8LSBlbnZbW3RuYW1lXV0pKSB7DQogICAgICAgLm1lcmdlTWV0aG9kc1RhYmxlKGdlbmVyaWMsIG10YWJsZSwgdHQsIGF0dGFjaCkNCisgICAgICBjaGFuZ2VkIDwtIGNoYW5nZWQgfHwgYXR0YWNoDQogICAgIH0NCiAgICAgIyMgZWxzZSB1c2VkIHRvIHdhcm4sIGJ1dCB0aGUgZ2VuZXJpYyBtYXkgYmUgaW1wbGljaXRseSByZXF1aXJlZA0KICAgICAjIyBieSBjbGFzcyBpbmhlcml0YW5jZSwgd2l0aG91dCBhbnkgZXhwbGljaXQgbWV0aG9kcyBpbiB0aGlzIHBhY2thZ2UNCiAgIH0NCi0gIGlmKGxlbmd0aChnZW5lcmljQGdyb3VwKSkgew0KKyAgaWYoaXMoZ2VuZXJpYywgImdyb3VwR2VuZXJpY0Z1bmN0aW9uIikpIHsNCisgICAgICBmb3IoZyBpbiBnZXRHcm91cE1lbWJlcnMoZ2VuZXJpYykpDQorICAgICAgICAgIGNoYW5nZWQgPC0gLnVwZGF0ZU1ldGhvZHNJblRhYmxlKGdldEdlbmVyaWMoZyksIHdoZXJlLCBhdHRhY2gsIC5jaGVja0dyb3VwID0gRkFMU0UpIHx8IGNoYW5nZWQNCisgICAgICBpZiguY2hlY2tHcm91cCAmJiBjaGFuZ2VkKQ0KKyAgICAgICAgICAuY2hlY2tHcm91cFNpZ0xlbmd0aChsaXN0KGdlbmVyaWNAZ2VuZXJpYyksIGxpc3QoZ2VuZXJpYykpDQorICB9IGVsc2UgaWYoLmNoZWNrR3JvdXAgJiYgY2hhbmdlZCAmJiBsZW5ndGgoZ2VuZXJpY0Bncm91cCkpIHsNCiAgICAgICBncm91cHMgPC0gYXMubGlzdChnZW5lcmljQGdyb3VwKQ0KICAgICAgIGdlbmVyaWNzIDwtIHZlY3RvcigibGlzdCIsIGxlbmd0aChncm91cHMpKQ0KICAgICAgIGZvcihpIGluIHNlcV9hbG9uZyhncm91cHMpKQ0KICAgICAgICAgZ2VuZXJpY3NbW2ldXSA8LSBnZXRHZW5lcmljKGdyb3Vwc1tbaV1dKQ0KLSAgICAuY2hlY2tHcm91cFNpZ0xlbmd0aChncm91cHMsIGdlbmVyaWNzKQ0KKyAgICAgIC5jaGVja0dyb3VwU2lnTGVuZ3RoKGdyb3VwcywgZ2VuZXJpY3MpDQogICB9DQotICBpZihpcyhnZW5lcmljLCAiZ3JvdXBHZW5lcmljRnVuY3Rpb24iKSkgew0KLSAgICAgIC5jaGVja0dyb3VwU2lnTGVuZ3RoKGxpc3QoZ2VuZXJpY0BnZW5lcmljKSwgbGlzdChnZW5lcmljKSkNCi0gICAgICBmb3IoZyBpbiBnZXRHcm91cE1lbWJlcnMoZ2VuZXJpYykpDQotICAgICAgICAgIC51cGRhdGVNZXRob2RzSW5UYWJsZShnZXRHZW5lcmljKGcpLCB3aGVyZSwgYXR0YWNoKQ0KLSAgfQ0KICAgLnJlc2V0SW5oZXJpdGVkTWV0aG9kcyhmZW52LCBtdGFibGUpDQotICBtdGFibGUNCisgIGlmICguY2hlY2tHcm91cCkgbXRhYmxlIGVsc2UgY2hhbmdlZA0KIH0NCiANCiAucmVzZXRJbmhlcml0ZWRNZXRob2RzIDwtIGZ1bmN0aW9uKGZlbnYsIG10YWJsZSkgew==",
+          "is_patch": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-21 08:02:38"
+}

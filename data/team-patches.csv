@@ -4,8 +4,9 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19208,readLines() leaks its line buffer when an error unwinds mid-read,I/O,kevinushey,CONFIRMED,2026-10-09 03:26:44 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=19208
 19213,scan() reads past its field buffer when stripping a UTF-8 BOM from a buffer-filling first field,I/O,kevinushey,NEW,2026-10-13 17:46:14 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19213
 19233,"unzip(unzip = ""internal"") leaks the zip handle on error",I/O,kevinushey,NEW,2026-10-20 17:18:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19233
+19238,load() segfaults or hangs on a save file whose pairlist chain holds a non-pairlist node,I/O,kevinushey,NEW,2026-10-21 16:38:59 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19238
+19240,unserialize() in ascii format pads a truncated string with EOF bytes instead of erroring,I/O,kevinushey,NEW,2026-10-22 00:20:29 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19240
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18583
-19234,perl = TRUE regex compile errors leak the PCRE character tables,Language,kevinushey,NEW,2026-10-20 18:14:03 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19234
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18096
 18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18863
 18353,assigning to hashtab via $<- 'corrupts' table,Low-level,kevinushey,UNCONFIRMED,2025-09-12 13:39:57 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=18353
@@ -35,7 +36,8 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18833,methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments,S4methods,jaganmn2,UNCONFIRMED,2024-12-07 01:20:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18833
 19079,"S4 packages with group methods error with ""subscript out of bounds"" under unloadNamespace with Imports: methods",S4methods,michaelchirico4,NEW,2026-05-29 06:28:25 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19079
 19083,"setGeneric(""f"", \(x) { standardGeneric(""x"") }) makes generic with class 'nonstandardGenericFunction'",S4methods,michaelchirico4,CONFIRMED,2026-06-22 18:04:14 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19083
-19235,cacheMetaData() handles duplicates incorrectly,S4methods,michaelchirico4,NEW,2026-10-20 22:50:48 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19235
+19237,.updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups),S4methods,michaelchirico4,NEW,2026-10-21 08:02:38 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19237
+19239,Add fast paths for quadratic loop in .resetInheritedMethods,S4methods,michaelchirico4,NEW,2026-10-21 23:12:33 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19239
 18025,xgettext/xngettext miss messages when supplied with qualified namespace,Translations,michaelchirico4,UNCONFIRMED,2021-01-04 16:17:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18025
 17819,Translate untranslated char arrays in all library packages,Translations,michaelchirico4,UNCONFIRMED,2023-09-01 13:35:46 +0000,4,https://bugs.r-project.org/show_bug.cgi?id=17819
 17957,Missing translations of some messages,Translations,michaelchirico4,NEW,2023-09-10 19:07:05 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=17957

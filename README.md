@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-20._
+_Automatically generated from the R Bugzilla dump updated 2026-10-22._
 
 ## Triaged bugs
 
@@ -46,11 +46,12 @@ _Dates show when the patch was submitted._
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
 * [Bug 19213](https://bugs.r-project.org/show_bug.cgi?id=19213) — scan() reads past its field buffer when stripping a UTF-8 BOM from a buffer-filling first field (2026-10-13)
 * [Bug 19233](https://bugs.r-project.org/show_bug.cgi?id=19233) — unzip(unzip = "internal") leaks the zip handle on error (2026-10-20)
+* [Bug 19238](https://bugs.r-project.org/show_bug.cgi?id=19238) — load() segfaults or hangs on a save file whose pairlist chain holds a non-pairlist node (2026-10-21)
+* [Bug 19240](https://bugs.r-project.org/show_bug.cgi?id=19240) — unserialize() in ascii format pads a truncated string with EOF bytes instead of erroring (2026-10-22)
 
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
-* [Bug 19234](https://bugs.r-project.org/show_bug.cgi?id=19234) — perl = TRUE regex compile errors leak the PCRE character tables (2026-10-20)
 
 ### Low-level
 
@@ -92,7 +93,8 @@ _Dates show when the patch was submitted._
 * [Bug 18833](https://bugs.r-project.org/show_bug.cgi?id=18833) — methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments (2024-12-07)
 * [Bug 19079](https://bugs.r-project.org/show_bug.cgi?id=19079) — S4 packages with group methods error with "subscript out of bounds" under unloadNamespace with Imports: methods (2026-05-29)
 * [Bug 19083](https://bugs.r-project.org/show_bug.cgi?id=19083) — setGeneric("f", \(x) { standardGeneric("x") }) makes generic with class 'nonstandardGenericFunction' (2026-06-22)
-* [Bug 19235](https://bugs.r-project.org/show_bug.cgi?id=19235) — cacheMetaData() handles duplicates incorrectly (2026-10-20)
+* [Bug 19237](https://bugs.r-project.org/show_bug.cgi?id=19237) — .updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups) (2026-10-21)
+* [Bug 19239](https://bugs.r-project.org/show_bug.cgi?id=19239) — Add fast paths for quadratic loop in .resetInheritedMethods (2026-10-21)
 
 ### Translations
 

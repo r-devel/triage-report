@@ -1,0 +1,129 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "S4methods",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-10-21T18:36:32Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 19239,
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "summary": "Add fast paths for quadratic loop in .resetInheritedMethods",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-10-21T23:12:33Z",
+        "cc_detail": []
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19239": {
+        "comments": [
+          {
+            "time": "2026-10-21T18:36:32Z",
+            "attachment_id": 3937,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "id": 103921,
+            "is_private": false,
+            "tags": [],
+            "text": "Created attachment 3937\nAdd fast-path efficiencies to .resetInheritedMethods\n\nLike Bug #19237, this finding is borne out of trying to squeeze down the `loadNamespace()` time for S4 packages (and thereby, in packages depending on S4 packages recursively).\n\n`.resetInheritedMethods()`, called in `.updateMethodsInTable()` when new S4 methods are being registered, needs to reset the cached `MethodWithNext` class for existing methods, if found. The current loop is quadratic because each new package loaded re-checks all previous loaded packages. Mostly, this is not a problem since the N stays small, but for common generics, like `coerce()` / `show()`, this can produce measurable overhead.\n\nHowever, these `MethodWithNext` methods are pretty rare; in the common case that packages are loaded eagerly in an R session (e.g. all required packages are attached up-front with `library()`, and no/few packages are loaded later through `::`), there are none.\n\nTherefore, this patch includes a number of efficient escape valves that avoid running the relatively expensive `is(m, \"MethodWithNext\")`. `isS4()` and `.identC()` checks are much faster and these `next` branches are reached frequently.\n\nThe patch also leverages that methods are in environments, and therefore names are unique, to squeeze out a few extra ms of improvement around removing inherited methods/resetting direct methods.\n\nWe can demonstrate the effect in a particularly slow case with a stack of Bioconductor packages:\n\n```\ntime for ii in {1..20}; do bin/Rscript -e 'for (pkg in c(\"Gviz\", \"ShortRead\", \"raster\", \"timeSeries\", \"MatrixExtra\")) loadNamespace(pkg)'; done\n\n# BEFORE\n# real    6m33.513s\n# user    8m17.133s\n# sys     0m33.026s\n\n# AFTER\n# real    6m19.388s\n# user    8m1.710s\n# sys     0m34.102s\n```\n\nPerhaps more compellingly, we can show it within a single session like so:\n\n```\nlibrary(methods)\ncls <- paste0(\"C\", 1:400)\nsystem.time({\n  for (c_nm in cls) setClass(c_nm)\n  setGeneric(\"g\", function(x) standardGeneric(\"g\"))\n  for (c_nm in cls) setMethod(\"g\", c_nm, function(x) x)\n})\n\n# BEFORE\n#    user  system elapsed \n#   1.333   0.002   1.336\n\n# AFTER\n#    user  system elapsed \n#   0.671   0.000   0.671 \n```\n\nTracking on GitHub: https://github.com/r-devel/r-svn/pull/394",
+            "bug_id": 19239,
+            "count": 0,
+            "creation_time": "2026-10-21T18:36:32Z"
+          },
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-10-21T23:12:33Z",
+            "attachment_id": 3938,
+            "count": 1,
+            "text": "Created attachment 3938\nAdd fast-path efficiencies to .resetInheritedMethods\n\nI think I forgot to tick 'patch'; re-submitting for simplicity",
+            "bug_id": 19239,
+            "creation_time": "2026-10-21T23:12:33Z",
+            "is_private": false,
+            "id": 103922,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19239": [
+        {
+          "summary": "Add fast-path efficiencies to .resetInheritedMethods",
+          "creation_time": "2026-10-21T18:36:32Z",
+          "bug_id": 19239,
+          "file_name": "file_19239.txt",
+          "size": 1685,
+          "last_change_time": "2026-10-21T23:12:33Z",
+          "id": 3937,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHJldmlzaW9uIDkwNzMwKQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0xMDE1LDEzICsxMDE1LDE0IEBADQogfQ0KIA0KIC5yZXNldEluaGVyaXRlZE1ldGhvZHMgPC0gZnVuY3Rpb24oZmVudiwgbXRhYmxlKSB7DQotICAgIGFsbE9iamVjdHMgPC0gY2hhcmFjdGVyKCkNCiAgICAgZGlyZWN0IDwtIG5hbWVzKG10YWJsZSkNCiAgICAgaWYoIWlzLm51bGwoYWxsVGFibGUgPC0gZmVudiQuQWxsTVRhYmxlKSkgew0KICAgICAgICAgIyMgcmVtb3ZlIGFsbCBpbmhlcml0ZWQgbWV0aG9kcy4gIE5vdGUgdGhhdCBjb2RlIChlLmcuIHNldE1ldGhvZCkgdGhhdCBhc2lnbnMNCiAgICAgICAgICMjIGEgbmV3IG1ldGhvZCB0byBtdGFibGUgaXMgcmVzcG9uc2libGUgZm9yIGNvcHlpbmcgaXQgdG8gYWxsVGFibGUgYXMgd2VsbC4NCiAgICAgICAgIGFsbE9iamVjdHMgPC0gbmFtZXMoYWxsVGFibGUpDQotICAgICAgICByZW1vdmUobGlzdCA9IHNldGRpZmYoYWxsT2JqZWN0cywgZGlyZWN0KSwgZW52aXIgPSBhbGxUYWJsZSkNCisgICAgICAgIGlkeCA8LSBtYXRjaChhbGxPYmplY3RzLCBkaXJlY3QpDQorICAgICAgICBpZiAoYW55TkEoaWR4KSkNCisgICAgICAgICAgICByZW1vdmUobGlzdCA9IGFsbE9iamVjdHNbaXMubmEoaWR4KV0sIGVudmlyID0gYWxsVGFibGUpDQogICAgIH0NCiAgICAgZWxzZSB7DQogICAgICAgICBhbGxUYWJsZSA8LSBuZXcuZW52KFRSVUUsIGZlbnYpDQpAQCAtMTAyOCwxMyArMTAyOSwxNiBAQA0KICAgICAgICAgYXNzaWduKCIuQWxsTVRhYmxlIiwgYWxsVGFibGUsIGVudmlyID0gZmVudikNCiAgICAgfQ0KICAgICAjIyBjaGVjayBmb3IgbWlzc2luZyBkaXJlY3Qgb2JqZWN0czsgdXN1YWxseSBhIG5vbi1leGlzdGVudCBBbGxNVGFibGU/DQotICAgIGlmKGFueU5BKG1hdGNoKGRpcmVjdCwgYWxsT2JqZWN0cykpKSB7DQorICAgIGlmKGxlbmd0aChkaXJlY3QpID4gbGVuZ3RoKGFsbFRhYmxlKSkgew0KICAgICAgICAgbGlzdDJlbnYoYXMubGlzdChtdGFibGUsIGFsbC5uYW1lcz1UUlVFKSwgYWxsVGFibGUpDQogICAgIH0NCiAgICAgZm9yIChkIGluIGRpcmVjdCkgew0KICAgICAgICAgbSA8LSBhbGxUYWJsZVtbZF1dDQotICAgICAgICBpZiAoaXMobSwgIk1ldGhvZFdpdGhOZXh0IikpDQotICAgICAgICAgICAgYWxsVGFibGVbW2RdXSA8LSBhcyhtLCAiTWV0aG9kRGVmaW5pdGlvbiIpDQorICAgICAgICBpZiAoIWlzUzQobSkpIG5leHQNCisgICAgICAgIG1fY2xhc3MgPC0gY2xhc3MobSkNCisgICAgICAgIGlmICguaWRlbnRDKG1fY2xhc3MsICJNZXRob2REZWZpbml0aW9uIikgfHwgLmlkZW50QyhtX2NsYXNzLCAiZGVyaXZlZERlZmF1bHRNZXRob2QiKSkgbmV4dA0KKyAgICAgICAgaWYgKCFpcyhtLCAiTWV0aG9kV2l0aE5leHQiKSkgbmV4dA0KKyAgICAgICAgYWxsVGFibGVbW2RdXSA8LSBhcyhtLCAiTWV0aG9kRGVmaW5pdGlvbiIpDQogICAgIH0NCiAgICAgTlVMTA0KIH0=",
+          "creator": "michaelchirico4",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": false
+        },
+        {
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHJldmlzaW9uIDkwNzMwKQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0xMDE1LDEzICsxMDE1LDE0IEBADQogfQ0KIA0KIC5yZXNldEluaGVyaXRlZE1ldGhvZHMgPC0gZnVuY3Rpb24oZmVudiwgbXRhYmxlKSB7DQotICAgIGFsbE9iamVjdHMgPC0gY2hhcmFjdGVyKCkNCiAgICAgZGlyZWN0IDwtIG5hbWVzKG10YWJsZSkNCiAgICAgaWYoIWlzLm51bGwoYWxsVGFibGUgPC0gZmVudiQuQWxsTVRhYmxlKSkgew0KICAgICAgICAgIyMgcmVtb3ZlIGFsbCBpbmhlcml0ZWQgbWV0aG9kcy4gIE5vdGUgdGhhdCBjb2RlIChlLmcuIHNldE1ldGhvZCkgdGhhdCBhc2lnbnMNCiAgICAgICAgICMjIGEgbmV3IG1ldGhvZCB0byBtdGFibGUgaXMgcmVzcG9uc2libGUgZm9yIGNvcHlpbmcgaXQgdG8gYWxsVGFibGUgYXMgd2VsbC4NCiAgICAgICAgIGFsbE9iamVjdHMgPC0gbmFtZXMoYWxsVGFibGUpDQotICAgICAgICByZW1vdmUobGlzdCA9IHNldGRpZmYoYWxsT2JqZWN0cywgZGlyZWN0KSwgZW52aXIgPSBhbGxUYWJsZSkNCisgICAgICAgIGlkeCA8LSBtYXRjaChhbGxPYmplY3RzLCBkaXJlY3QpDQorICAgICAgICBpZiAoYW55TkEoaWR4KSkNCisgICAgICAgICAgICByZW1vdmUobGlzdCA9IGFsbE9iamVjdHNbaXMubmEoaWR4KV0sIGVudmlyID0gYWxsVGFibGUpDQogICAgIH0NCiAgICAgZWxzZSB7DQogICAgICAgICBhbGxUYWJsZSA8LSBuZXcuZW52KFRSVUUsIGZlbnYpDQpAQCAtMTAyOCwxMyArMTAyOSwxNiBAQA0KICAgICAgICAgYXNzaWduKCIuQWxsTVRhYmxlIiwgYWxsVGFibGUsIGVudmlyID0gZmVudikNCiAgICAgfQ0KICAgICAjIyBjaGVjayBmb3IgbWlzc2luZyBkaXJlY3Qgb2JqZWN0czsgdXN1YWxseSBhIG5vbi1leGlzdGVudCBBbGxNVGFibGU/DQotICAgIGlmKGFueU5BKG1hdGNoKGRpcmVjdCwgYWxsT2JqZWN0cykpKSB7DQorICAgIGlmKGxlbmd0aChkaXJlY3QpID4gbGVuZ3RoKGFsbFRhYmxlKSkgew0KICAgICAgICAgbGlzdDJlbnYoYXMubGlzdChtdGFibGUsIGFsbC5uYW1lcz1UUlVFKSwgYWxsVGFibGUpDQogICAgIH0NCiAgICAgZm9yIChkIGluIGRpcmVjdCkgew0KICAgICAgICAgbSA8LSBhbGxUYWJsZVtbZF1dDQotICAgICAgICBpZiAoaXMobSwgIk1ldGhvZFdpdGhOZXh0IikpDQotICAgICAgICAgICAgYWxsVGFibGVbW2RdXSA8LSBhcyhtLCAiTWV0aG9kRGVmaW5pdGlvbiIpDQorICAgICAgICBpZiAoIWlzUzQobSkpIG5leHQNCisgICAgICAgIG1fY2xhc3MgPC0gY2xhc3MobSkNCisgICAgICAgIGlmICguaWRlbnRDKG1fY2xhc3MsICJNZXRob2REZWZpbml0aW9uIikgfHwgLmlkZW50QyhtX2NsYXNzLCAiZGVyaXZlZERlZmF1bHRNZXRob2QiKSkgbmV4dA0KKyAgICAgICAgaWYgKCFpcyhtLCAiTWV0aG9kV2l0aE5leHQiKSkgbmV4dA0KKyAgICAgICAgYWxsVGFibGVbW2RdXSA8LSBhcyhtLCAiTWV0aG9kRGVmaW5pdGlvbiIpDQogICAgIH0NCiAgICAgTlVMTA0KIH0=",
+          "is_private": false,
+          "id": 3938,
+          "last_change_time": "2026-10-21T23:12:33Z",
+          "size": 1685,
+          "file_name": "file_19239.txt",
+          "bug_id": 19239,
+          "creation_time": "2026-10-21T23:12:33Z",
+          "summary": "Add fast-path efficiencies to .resetInheritedMethods"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-21 23:12:33"
+}
