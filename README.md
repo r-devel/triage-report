@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-22._
+_Automatically generated from the R Bugzilla dump updated 2026-10-23._
 
 ## Triaged bugs
 
@@ -44,10 +44,7 @@ _Dates show when the patch was submitted._
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
-* [Bug 19213](https://bugs.r-project.org/show_bug.cgi?id=19213) — scan() reads past its field buffer when stripping a UTF-8 BOM from a buffer-filling first field (2026-10-13)
-* [Bug 19233](https://bugs.r-project.org/show_bug.cgi?id=19233) — unzip(unzip = "internal") leaks the zip handle on error (2026-10-20)
-* [Bug 19238](https://bugs.r-project.org/show_bug.cgi?id=19238) — load() segfaults or hangs on a save file whose pairlist chain holds a non-pairlist node (2026-10-21)
-* [Bug 19240](https://bugs.r-project.org/show_bug.cgi?id=19240) — unserialize() in ascii format pads a truncated string with EOF bytes instead of erroring (2026-10-22)
+* [Bug 19233](https://bugs.r-project.org/show_bug.cgi?id=19233) — unzip(unzip = "internal") leaks the zip handle on error (2026-10-22)
 
 ### Language
 
@@ -86,7 +83,6 @@ _Dates show when the patch was submitted._
 
 * [Bug 18938](https://bugs.r-project.org/show_bug.cgi?id=18938) — seq.Date inconsistent on whether to= can be a string (2025-08-21)
 * [Bug 18958](https://bugs.r-project.org/show_bug.cgi?id=18958) — 'methods_message' component of 'check_packages_used' internal class should be character(), not "", when empty (2025-10-16)
-* [Bug 19156](https://bugs.r-project.org/show_bug.cgi?id=19156) — MASS, boot are Suggests for parallel (2026-09-03)
 
 ### S4methods
 
@@ -95,6 +91,7 @@ _Dates show when the patch was submitted._
 * [Bug 19083](https://bugs.r-project.org/show_bug.cgi?id=19083) — setGeneric("f", \(x) { standardGeneric("x") }) makes generic with class 'nonstandardGenericFunction' (2026-06-22)
 * [Bug 19237](https://bugs.r-project.org/show_bug.cgi?id=19237) — .updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups) (2026-10-21)
 * [Bug 19239](https://bugs.r-project.org/show_bug.cgi?id=19239) — Add fast paths for quadratic loop in .resetInheritedMethods (2026-10-21)
+* [Bug 19244](https://bugs.r-project.org/show_bug.cgi?id=19244) — setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method (2026-10-23)
 
 ### Translations
 
@@ -126,7 +123,6 @@ _Dates show when the patch was submitted._
 * [Bug 19105](https://bugs.r-project.org/show_bug.cgi?id=19105) — Provide a traceback when crashing on Windows (2026-07-19)
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
-* [Bug 19197](https://bugs.r-project.org/show_bug.cgi?id=19197) — available.packages() speedups: zstd-compressed cache and faster R_version, duplicates, CRAN and subarch filters (2026-10-01)
 
 ## About this report
 
