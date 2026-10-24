@@ -44,7 +44,10 @@ _Dates show when the patch was submitted._
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
-* [Bug 19233](https://bugs.r-project.org/show_bug.cgi?id=19233) — unzip(unzip = "internal") leaks the zip handle on error (2026-10-22)
+
+### Installation
+
+* [Bug 19245](https://bugs.r-project.org/show_bug.cgi?id=19245) — "CRAN" filter in available.packages() accepts repos where CRAN address is a prefix (2026-10-23)
 
 ### Language
 
