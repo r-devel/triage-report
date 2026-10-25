@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-23._
+_Automatically generated from the R Bugzilla dump updated 2026-10-24._
 
 ## Triaged bugs
 
@@ -95,6 +95,7 @@ _Dates show when the patch was submitted._
 * [Bug 19237](https://bugs.r-project.org/show_bug.cgi?id=19237) — .updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups) (2026-10-21)
 * [Bug 19239](https://bugs.r-project.org/show_bug.cgi?id=19239) — Add fast paths for quadratic loop in .resetInheritedMethods (2026-10-21)
 * [Bug 19244](https://bugs.r-project.org/show_bug.cgi?id=19244) — setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method (2026-10-23)
+* [Bug 19246](https://bugs.r-project.org/show_bug.cgi?id=19246) — typo in .recacheSubclasses -- wrong inheritance is checked in class unions (2026-10-24)
 
 ### Translations
 
