@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "whiteboard": "",
+        "creation_time": "2026-10-26T17:00:18Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19252,
+        "dupe_of": {},
+        "severity": "normal",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "compiler::compile() segfaults on break in complex assignment",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-10-26T17:00:40Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19252": {
+        "comments": [
+          {
+            "tags": [],
+            "id": 103961,
+            "is_private": false,
+            "creation_time": "2026-10-26T17:00:18Z",
+            "text": "Byte-compiling an expression with `break` in the right-hand side of a complex assignment can segfault R. I reproduced this on R 4.6.1; OSS-Fuzz also reproduced it with R-devel r90763. Evaluating the same expression without compilation returns normally.\n\nReproducible example:\n\n    e <- parse(text = \"1 - repeat x[1] <- break\")[[1L]]\n    eval(e)                     # numeric(0)\n    eval(compiler::compile(e))  # segfault\n\nThe compiled expression should return numeric(0), as the uncompiled expression does. Instead, R crashes with an invalid read in `Rf_protect()` called from `Rf_endcontext()`.\n\nAnalysis:\n\nIn `src/library/compiler/R/cmp.R`, `cmpComplexAssign()` emits `INCLNKSTK` before compiling the assignment value. Its non-tail-call context still allows an inlined `break` to compile as a direct `GOTO`, which skips the matching `DECLNKSTK`. The leftover link-stack offset is then read as loop-context storage by `ENDLOOPCNTXT`, causing the crash.\n\nProposed patch: attached as compiler-complex-assign-break.diff, based on trunk r90764. It compiles the assignment value in an argument context so `break` unwinds the loop context and the link-stack marker, and adds a regression test.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/409, where CI results can be seen.",
+            "bug_id": 19252,
+            "count": 0,
+            "attachment_id": {},
+            "time": "2026-10-26T17:00:18Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          },
+          {
+            "is_private": false,
+            "id": 103962,
+            "time": "2026-10-26T17:00:40Z",
+            "attachment_id": 3954,
+            "tags": [],
+            "is_markdown": false,
+            "count": 1,
+            "bug_id": 19252,
+            "text": "Created attachment 3954\npatch: unwind loop jumps in complex assignments",
+            "creation_time": "2026-10-26T17:00:40Z",
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19252": [
+        {
+          "size": 1211,
+          "last_change_time": "2026-10-26T17:00:40Z",
+          "id": 3954,
+          "is_private": false,
+          "summary": "patch: unwind loop jumps in complex assignments",
+          "creation_time": "2026-10-26T17:00:40Z",
+          "bug_id": 19252,
+          "file_name": "compiler-complex-assign-break.diff",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2NvbXBpbGVyL1IvY21wLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvY29tcGlsZXIvUi9jbXAuUgkocmV2aXNpb24gOTA3NjQpCisrKyBzcmMvbGlicmFyeS9jb21waWxlci9SL2NtcC5SCSh3b3JraW5nIGNvcHkpCkBAIC0xNzI3LDcgKzE3MjcsOCBAQCBjbXBDb21wbGV4QXNzaWduIDwtIGZ1bmN0aW9uKHN5bWJvbCwgbGhzLCB2YWx1ZSwgc3VwZXJBc3NpZ24sIGNiLCBjbnR4dCkgewogICAgICAgICBlbmRPUCA8LSBFTkRBU1NJR04uT1AKICAgICB9CiAgICAgaWYgKCEgY250eHQkdG9wbGV2ZWwpIGNiJHB1dGNvZGUoSU5DTE5LU1RLLk9QKQotICAgIG5jbnR4dCA8LSBtYWtlLm5vblRhaWxDYWxsQ29udGV4dChjbnR4dCkKKyAgICAjIyBBIGJyZWFrIG9yIG5leHQgaW4gdmFsdWUgbXVzdCB1bndpbmQgdGhlIGxpbmsgc3RhY2sgbWFya2VyIGFib3ZlLgorICAgIG5jbnR4dCA8LSBtYWtlLmFyZ0NvbnRleHQoY250eHQpCiAgICAgY21wKHZhbHVlLCBjYiwgbmNudHh0KQogICAgIGNzaSA8LSBjYiRwdXRjb25zdChzeW1ib2wpCiAgICAgY2IkcHV0Y29kZShzdGFydE9QLCBjc2kpCkluZGV4OiBzcmMvbGlicmFyeS9jb21waWxlci90ZXN0cy9sb29wLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvY29tcGlsZXIvdGVzdHMvbG9vcC5SCShyZXZpc2lvbiA5MDc2NCkKKysrIHNyYy9saWJyYXJ5L2NvbXBpbGVyL3Rlc3RzL2xvb3AuUgkod29ya2luZyBjb3B5KQpAQCAtMjQsMyArMjQsOSBAQCBmIDwtIGZ1bmN0aW9uKHgpIHsgZm9yICh5IGluIHgpIHsgeiA8LSB5OyBnKGJyZWFrKSB9IDsgeiB9CiBnIDwtIGZ1bmN0aW9uKHgpIHgKIGNtcGZ1bihmKShjKDEsMiwzKSkKIAorIyMgQSBicmVhayBpbiB0aGUgcmlnaHQtaGFuZCBzaWRlIG9mIGEgY29tcGxleCBhc3NpZ25tZW50IG11c3QgdW53aW5kCisjIyB0aGUgbGluayBzdGFjayBiZWZvcmUgbGVhdmluZyB0aGUgbG9vcC4KK2YgPC0gZnVuY3Rpb24oKSAxIC0gcmVwZWF0IHhbMV0gPC0gYnJlYWsKK2ZjIDwtIGNtcGZ1bihmKQorc3RvcGlmbm90KGlkZW50aWNhbChmKCksIG51bWVyaWMoMCkpLCBpZGVudGljYWwoZmMoKSwgZigpKSkKKwo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-26 17:00:40"
+}

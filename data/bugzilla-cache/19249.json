@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "S4methods",
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 19249,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-10-26T06:07:26Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-26T06:07:34Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Use getClassDef itself to avoid implicitly calling it twice isClass"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19249": {
+        "comments": [
+          {
+            "creation_time": "2026-10-26T06:07:26Z",
+            "creator": "michaelchirico4",
+            "bug_id": 19249,
+            "text": "Created attachment 3951\nUse direct getClassDef() over redundant isClass()+getClassDef()\n\n`isClass()` is a thin wrapper of `getClassDef()`:\n\n```\nisClass <- function (Class, formal = TRUE, where = topenv(parent.frame())) \n  !is.null(getClassDef(Class, where))\n```\n\nSo, especially in \"hot\" paths, avoiding constructs like\n\n```\nif (isClass(x)) getClassDef(x)\n```\n\nis calling the most expensive piece, `getClassDef()`, twice.\n\nThe attached patch switches to a single `getClassDef()` wherever possible; some \"taste\" might reduce the patch, though I do like the updated code more personally. One consideration is flipping the `if`/`else` branches (`if (is.null(...)) ... else ...`) for possible readability benefit.\n\nThis patch _also_ inherently fixes erroneous usage like `isClass(what, where=packageSlot(ext))` that are tracked separately in Bug #19248.\n\nIn Matrix/R/00_Class.R, which touches this patch >100 times, this patch makes sourcing it ~2-3% faster (end-to-end); timings from 100 times sourcing that file:\n\n```\n# BEFORE\n#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. \n#   1.339   1.362   1.371   1.391   1.397   1.550 \n\n# AFTER\n#    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. \n#   1.314   1.335   1.347   1.356   1.375   1.495 \n```\n\nThinner wrappers like `isVirtualClass()` see more speed-up (e.g. 17%), but I think the above end-to-end comparison is indicative that this is a nice low-hanging fruit to squeeze out a few % of performance moreso than a game changer.\n\nWe can also consider an alternative where `isClass()` is changed from being a `getClassDef()` wrapper e.g.\n\n```\nisClass <- function(Class, formal=TRUE, where = topenv(parent.frame())) {                                                                                                                                                                                                                 \n  if(!is.null(.getClassesFromCache(Class)))  return(TRUE)\n  cname <- classMetaName(if(length(Class) > 1L) Class[[1L]] else Class)\n  package <- if(is.character(where)) where else packageSlot(Class)\n  if(isTRUE(nzchar(package))) {\n    package <- .requirePackage(package)\n    if(is.environment(package) && exists(cname, package)) return(TRUE)\n  }\n  !is.character(where) && exists(cname, where)\n} \n```\n\nBy avoiding `get()`, this can keep some promises lazy, for example.\n\nThat would allow us to keep the `if (exists()) get()` idiom intact with less overhead, but given that `getClassDef()` is already equipped with a `get0()`-like mechanism to give a predictable return value in the `!exists` case, I think the current patch is most appropriate.\n\nGitHub: https://github.com/r-devel/r-svn/pull/403",
+            "count": 0,
+            "is_markdown": true,
+            "attachment_id": 3951,
+            "tags": [],
+            "id": 103956,
+            "time": "2026-10-26T06:07:26Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19249": [
+        {
+          "is_private": false,
+          "id": 3951,
+          "last_change_time": "2026-10-26T06:07:34Z",
+          "size": 6285,
+          "file_name": "file_19249.txt",
+          "bug_id": 19249,
+          "creation_time": "2026-10-26T06:07:26Z",
+          "summary": "Use direct getClassDef() over redundant isClass()+getClassDef()",
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JDbGFzc1V0aWxzLlIgKHJldmlzaW9uIDkwNzYxKQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SICh3b3JraW5nIGNvcHkpDQpAQCAtODQsOCArODQsNyBAQA0KICAgICAgICAgaWYoaWRlbnRpY2FsKHdoYXQsICJWSVJUVUFMIikpIHsNCiAgICAgICAgICAgICAjIyB0aGUgY2xhc3MgaXMgdmlydHVhbCwgYW5kIHRoZSBwcm90b3R5cGUgdXN1YWxseSBOVUxMDQogIyMgICAgICAgICAgICB2aXJ0dWFsIDwtIFRSVUUNCi0gICAgICAgIH0gZWxzZSBpZihpc0NsYXNzKHdoYXQsIHdoZXJlPXBhY2thZ2VTbG90KGV4dGkpKSkgew0KLSAgICAgICAgICAgIGNsaSA8LSBnZXRDbGFzc0RlZih3aGF0LCBwYWNrYWdlPXBhY2thZ2VTbG90KGV4dGkpKQ0KKyAgICAgICAgfSBlbHNlIGlmKCFpcy5udWxsKGNsaSA8LSBnZXRDbGFzc0RlZih3aGF0LCBwYWNrYWdlPXBhY2thZ2VTbG90KGV4dGkpKSkpIHsNCiAgICAgICAgICAgICBzbG90c2kgPC0gbmFtZXMoY2xpQHNsb3RzKQ0KICAgICAgICAgICAgIHByaSA8LSBjbGlAcHJvdG90eXBlDQogICAgICAgICAgICAgIyMgb25jZSBpbiBhIHdoaWxlDQpAQCAtMTI3LDggKzEyNiw4IEBADQogICAgIHBzbG90cyA8LQ0KICAgICAgICAgaWYoLmlkZW50QyhjbGFzcyhwcm90b3R5cGUpLCBjbGFzc05hbWUpKQ0KICAgICAgICAgICAgIG5hbWVzKGF0dHJpYnV0ZXModW5jbGFzcyhwcm90b3R5cGUpKSkNCi0gICAgICAgIGVsc2UgaWYoaXNDbGFzcyhjbGFzcyhwcm90b3R5cGUpKSkNCi0gICAgICAgICAgICBuYW1lcyhnZXRTbG90cyhnZXRDbGFzcyhjbGFzcyhwcm90b3R5cGUpKSkpDQorICAgICAgICBlbHNlIGlmKCFpcy5udWxsKGRlZiA8LSBnZXRDbGFzc0RlZihjbGFzcyhwcm90b3R5cGUpKSkpDQorICAgICAgICAgICAgbmFtZXMoZ2V0U2xvdHMoZGVmKSkNCiAgICAgICAgICMjIGVsc2UgTlVMTA0KIA0KICAgICAjIyBub3cgY2hlY2sgdGhhdCBhbGwgdGhlIGRpcmVjdGx5IHNwZWNpZmllZCBzbG90cyBoYXZlIGNvcnJlc3BvbmRpbmcgZWxlbWVudHMNCkBAIC0xMzgsOCArMTM3LDcgQEANCiANCiAgICAgICAgICMjIGNoZWNrIHRoZSBkYXRhIHBhcnQNCiAgICAgICAgIGlmKCEoaXNWaXJ0dWFsQ2xhc3MoZGF0YVBhcnRDbGFzcykpKSB7DQotICAgICAgICAgICAgaWYoaXNDbGFzcyhjbGFzcyhwcm90b3R5cGUpLCB3aGVyZSA9IHdoZXJlKSkgew0KLSAgICAgICAgICAgICAgICBwcm90b3R5cGVDbGFzcyA8LSBnZXRDbGFzcyhjbGFzcyhwcm90b3R5cGUpLCB3aGVyZSA9IHdoZXJlKQ0KKyAgICAgICAgICAgIGlmKCFpcy5udWxsKHByb3RvdHlwZUNsYXNzIDwtIGdldENsYXNzRGVmKGNsYXNzKHByb3RvdHlwZSksIHdoZXJlID0gd2hlcmUpKSkgew0KICAgICAgICAgICAgICAgICBPSyA8LSBleHRlbmRzKHByb3RvdHlwZUNsYXNzLCBkYXRhUGFydENsYXNzKQ0KICAgICAgICAgICAgIH0NCiAgICAgICAgICAgICBlbHNlDQpAQCAtMjY3LDggKzI2NSw4IEBADQogICAgICAgICAgICAgc3VwZXJQcm9wc1tbMUxdXSA8LSBwcm9wZXJ0aWVzDQogICAgICAgICAgICAgZm9yKGkgaW4gc2VxX2Fsb25nKGV4dCkpIHsNCiAgICAgICAgICAgICAgICAgZUNsYXNzIDwtIGV4dFtbaV1dDQotICAgICAgICAgICAgICAgIGlmKGlzQ2xhc3MoZUNsYXNzLCB3aGVyZSA9IHdoZXJlKSkNCi0gICAgICAgICAgICAgICAgICAgIHN1cGVyUHJvcHNbW2krMUxdXSA8LSBnZXRDbGFzc0RlZihlQ2xhc3MsIHdoZXJlID0gd2hlcmUpQHNsb3RzDQorICAgICAgICAgICAgICAgIGlmKCFpcy5udWxsKGVEZWYgPC0gZ2V0Q2xhc3NEZWYoZUNsYXNzLCB3aGVyZSA9IHdoZXJlKSkpDQorICAgICAgICAgICAgICAgICAgICBzdXBlclByb3BzW1tpKzFMXV0gPC0gZURlZkBzbG90cw0KICAgICAgICAgICAgIH0NCiAgICAgICAgICAgICBwcm9wZXJ0aWVzIDwtIHVubGlzdChzdXBlclByb3BzLCByZWN1cnNpdmUgPSBGQUxTRSkNCiAgICAgICAgICAgICAjIyBjaGVjayBmb3IgY29uZmxpY3Rpbmcgc2xvdCBuYW1lcw0KQEAgLTQ0NCw4ICs0NDIsOCBAQA0KIHsNCiAgICAgZXh0IDwtIGlmKGlzQ2xhc3NEZWYoQ2xhc3MpKQ0KICAgICAgICAgQ2xhc3NAY29udGFpbnMNCi0gICAgZWxzZSBpZihpc0NsYXNzKENsYXNzLCB3aGVyZSA9IHdoZXJlKSkNCi0gICAgICAgIGdldENsYXNzKENsYXNzLCB3aGVyZSA9IHdoZXJlKUBjb250YWlucw0KKyAgICBlbHNlIGlmKCFpcy5udWxsKGRlZiA8LSBnZXRDbGFzc0RlZihDbGFzcywgd2hlcmUgPSB3aGVyZSkpKQ0KKyAgICAgICAgZGVmQGNvbnRhaW5zDQogICAgIGVsc2Ugc3RvcCgiJ0NsYXNzJyBtdXN0IGJlIGEgdmFsaWQgY2xhc3MgZGVmaW5pdGlvbiBvciBjbGFzcyIpDQogDQogICAgIC5zZWxlY3RTdXBlckNsYXNzZXMoZXh0LCBkcm9wVmlydHVhbCA9IGRyb3BWaXJ0dWFsLCBuYW1lc09ubHkgPSBuYW1lc09ubHksDQpAQCAtNDc2LDggKzQ3NCw4IEBADQogew0KICAgICBleHQgPC0gaWYoaXNDbGFzc0RlZihDbGFzcykpDQogICAgICAgICBDbGFzc0Bjb250YWlucw0KLSAgICBlbHNlIGlmKGlzQ2xhc3MoQ2xhc3MsIHdoZXJlID0gd2hlcmUpKQ0KLSAgICAgICAgZ2V0Q2xhc3MoQ2xhc3MsIHdoZXJlID0gd2hlcmUpQGNvbnRhaW5zDQorICAgIGVsc2UgaWYoIWlzLm51bGwoZGVmIDwtIGdldENsYXNzRGVmKENsYXNzLCB3aGVyZSA9IHdoZXJlKSkpDQorICAgICAgICBkZWZAY29udGFpbnMNCiAgICAgc3VwY2wgPC0gLnNlbGVjdFN1cGVyQ2xhc3NlcyhleHQsIG5hbWVzT25seT1GQUxTRSkgIyMgbWF5YmUgIHNpbXBsZU9ubHkgPSBGQUxTRSBvciB1c2UgYXMgYXJndW1lbnQ/DQogICAgIHN1cGRlZnMgPC0gbGFwcGx5KHN1cGNsLCBmdW5jdGlvbihzKSB7DQogICAgICAgICBnZXRDbGFzc0RlZihzQHN1cGVyQ2xhc3MsIHBhY2thZ2U9cGFja2FnZVNsb3QocykpDQpAQCAtNDk0LDggKzQ5Miw4IEBADQogICBmdW5jdGlvbihDbGFzcywgd2hlcmUgPSB0b3BlbnYocGFyZW50LmZyYW1lKCkpKSB7DQogICAgICAgaWYoaXNDbGFzc0RlZihDbGFzcykpDQogICAgICAgICAgIENsYXNzQHZpcnR1YWwNCi0gICAgICBlbHNlIGlmKGlzQ2xhc3MoQ2xhc3MsIHdoZXJlID0gd2hlcmUpKQ0KLSAgICAgICAgICBnZXRDbGFzcyhDbGFzcywgd2hlcmUgPSB3aGVyZSlAdmlydHVhbA0KKyAgICAgIGVsc2UgaWYoIWlzLm51bGwoZGVmIDwtIGdldENsYXNzRGVmKENsYXNzLCB3aGVyZSA9IHdoZXJlKSkpDQorICAgICAgICAgIGRlZkB2aXJ0dWFsDQogICAgICAgZWxzZQ0KICAgICAgICAgICBUUlVFDQogICB9DQpAQCAtMTExNyw4ICsxMTE1LDcgQEANCiAgICAgd2hhdCA8LSBuYW1lcyhleHQpDQogICAgIGZvcihpIGluIHNlcV9hbG9uZyhleHQpKSB7ICMgbm90ZSB0aGF0IHRoaXMgbG9vcHMgb25seSBvdmVyIHRoZSBvcmlnaW5hbCBleHQNCiAgICAgICAgIGJ5IDwtIHdoYXRbW2ldXQ0KLSAgICAgICAgaWYoaXNDbGFzcyhieSwgd2hlcmUgPSBwYWNrYWdlU2xvdChleHRbW2ldXSkpKSB7DQotICAgICAgICAgICAgYnlEZWYgPC0gZ2V0Q2xhc3NEZWYoYnksIHBhY2thZ2U9cGFja2FnZVNsb3QoZXh0W1tpXV0pKQ0KKyAgICAgICAgaWYoIWlzLm51bGwoYnlEZWYgPC0gZ2V0Q2xhc3NEZWYoYnksIHBhY2thZ2U9cGFja2FnZVNsb3QoZXh0W1tpXV0pKSkpIHsNCiAgICAgICAgICAgICBleHRpIDwtICBzbG90KGJ5RGVmLCBzbG90TmFtZSkNCiAgICAgICAgICAgICBjb25pIDwtIGF0dHIoZXh0aSwgImNvbmZsaWN0cyIpICMgLnJlc29sdmVTdXBlcmNsYXNzZXMgbWFrZXMgdGhpcw0KICAgICAgICAgICAgIGlmKHN1cGVyQ2xhc3NDYXNlICYmIGxlbmd0aChjb25pKSA+IDApIHsNCkBAIC0xMTg0LDggKzExODEsNyBAQA0KICAgICAgICAgYnkgPC0gd2hhdFtbaV1dDQogICAgICAgICAjIyByZXBvcnQgb25seSB0aGUgZGlyZWN0IHN1cGVyY2xhc3MgZnJvbSB3aGljaCBpbmNvbnNpc3RlbmNpZXMgYXJlIGluaGVyaXRlZA0KICAgICAgICAgd2hlcmVpIDwtIHBhY2thZ2VTbG90KGV4dFtbaV1dKQ0KLSAgICAgICAgaWYoaWRlbnRpY2FsKGV4dFtbaV1dQGRpc3RhbmNlLCAxKSAmJiBpc0NsYXNzKGJ5LCB3aGVyZSA9IHdoZXJlaSkpIHsNCi0gICAgICAgICAgICBieURlZiA8LSBnZXRDbGFzc0RlZihieSwgcGFja2FnZT13aGVyZWkpDQorICAgICAgICBpZihpZGVudGljYWwoZXh0W1tpXV1AZGlzdGFuY2UsIDEpICYmICFpcy5udWxsKGJ5RGVmIDwtIGdldENsYXNzRGVmKGJ5LCBwYWNrYWdlPXdoZXJlaSkpKSB7DQogICAgICAgICAgICAgZXh0aSA8LSAgYnlEZWZAY29udGFpbnMNCiAgICAgICAgICAgICBjb25pIDwtIGF0dHIoZXh0aSwgImNvbmZsaWN0cyIpICMgLnJlc29sdmVTdXBlcmNsYXNzZXMgbWFrZXMgdGhpcw0KICAgICAgICAgICAgIGlmKCBsZW5ndGgoY29uaSkgPiAwKSB7DQpAQCAtMTIxMiw4ICsxMjA4LDggQEANCiAgIC5jb25kRXh0cyA8LSBmdW5jdGlvbihjb250YWlucykNCiAgICAgICB2YXBwbHkoY29udGFpbnMsIGZ1bmN0aW9uKHgpIGlzKHgsICJjb25kaXRpb25hbEV4dGVuc2lvbiIgKSwgTkEpDQogICAubm9uY29uZEV4dHNDbGFzcyA8LSBmdW5jdGlvbihjbCkgew0KLSAgICBpZihpc0NsYXNzKGNsLCB3aGVyZSA9IHdoZXJlKSApIHsNCi0gICAgICBjb250YWlucyA8LSBnZXRDbGFzcyhjbCwgd2hlcmUgPSB3aGVyZSlAY29udGFpbnMNCisgICAgaWYoIWlzLm51bGwoY2xEZWYgPC0gZ2V0Q2xhc3NEZWYoY2wsIHdoZXJlID0gd2hlcmUpKSkgew0KKyAgICAgIGNvbnRhaW5zIDwtIGNsRGVmQGNvbnRhaW5zDQogICAgICAgbmFtZXMoY29udGFpbnMpWyEuY29uZEV4dHMoY29udGFpbnMpXQ0KICAgICB9DQogICAgIGVsc2UgY2wNCkluZGV4OiBzcmMvbGlicmFyeS9tZXRob2RzL1IvZml4UHJldmlvdXMuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9maXhQcmV2aW91cy5SIChyZXZpc2lvbiA5MDc2MSkNCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvZml4UHJldmlvdXMuUiAod29ya2luZyBjb3B5KQ0KQEAgLTQxLDggKzQxLDcgQEANCiAgICAgICAgICAgICBuZXh0DQogICAgICAgICBDbGFzcyA8LSBjbGFzcyhvYmopDQogICAgICAgICBpZihpcy5udWxsKGF0dHIoQ2xhc3MsICJwYWNrYWdlIikpKSB7DQotICAgICAgICAgICAgaWYoaXNDbGFzcyhDbGFzcywgd2hlcmUgPSB3aGVyZSkpIHsNCi0gICAgICAgICAgICAgICAgQ2xhc3NEZWYgPC0gZ2V0Q2xhc3MoQ2xhc3MsIHdoZXJlID0gd2hlcmUpDQorICAgICAgICAgICAgaWYoIWlzLm51bGwoQ2xhc3NEZWYgPC0gZ2V0Q2xhc3NEZWYoQ2xhc3MsIHdoZXJlID0gd2hlcmUpKSkgew0KICAgICAgICAgICAgICAgICBvayA8LSAhKGlzVmlydHVhbENsYXNzKENsYXNzRGVmKSB8fA0KICAgICAgICAgICAgICAgICAgICAgICAgIWlzVFJVRSh2YWxpZE9iamVjdChvYmosIHRlc3Q9VFJVRSkpKQ0KICAgICAgICAgICAgICAgICBpZihvaykgew0KSW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9vbGRDbGFzcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL29sZENsYXNzLlIgICAgKHJldmlzaW9uIDkwNzYxKQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9vbGRDbGFzcy5SICAgICh3b3JraW5nIGNvcHkpDQpAQCAtNjcsOCArNjcsNyBAQA0KICAgICBkYXRhUGFydENsYXNzIDwtIE5VTEwNCiAgICAgZm9yKGNsIGluIHJldihDbGFzc2VzKSkgew0KICAgICAgICBTM0NsYXNzIDwtIGMoY2wsIFMzQ2xhc3MpDQotICAgICAgICBpZihpc0NsYXNzKGNsLCB3aGVyZSkpIHsNCi0gICAgICAgICAgICBkZWYgPC0gZ2V0Q2xhc3MoY2wsIHdoZXJlKQ0KKyAgICAgICAgaWYoIWlzLm51bGwoZGVmIDwtIGdldENsYXNzRGVmKGNsLCB3aGVyZSkpKSB7DQogICAgICAgICAgICAgaWYoIWV4dGVuZHMoZGVmLCBwcmV2Q2xhc3MpKSB7DQogICAgICAgICAgICAgICAgICMjIG1heWJlIGFuIG9iamVjdCB0eXBlIG9yIG90aGVyIHZhbGlkIGRhdGEgcGFydA0KICAgICAgICAgICAgICAgICBjbDEgPC0gLnZhbGlkRGF0YVBhcnRDbGFzcyhjbCwgd2hlcmUsIGRhdGFQYXJ0Q2xhc3Mp"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-26 06:07:34"
+}

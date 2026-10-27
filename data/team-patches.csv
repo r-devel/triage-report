@@ -2,8 +2,10 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18705
 19129,Rf_EncodeString sometimes over-counts double quotes,I/O,ikrylov,NEW,2026-08-07 15:16:40 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19129
 19208,readLines() leaks its line buffer when an error unwinds mid-read,I/O,kevinushey,CONFIRMED,2026-10-09 03:26:44 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=19208
+19253,unserialize() can allocate a huge stack buffer for malformed primitive names,I/O,kevinushey,NEW,2026-10-26 17:35:45 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19253
 19245,"""CRAN"" filter in available.packages() accepts repos where CRAN address is a prefix",Installation,ikrylov,NEW,2026-10-23 11:42:03 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19245
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18583
+19255,str2expression() can use an unprotected #line filename on parse error,Language,kevinushey,NEW,2026-10-26 20:43:06 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19255
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18096
 18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18863
 18353,assigning to hashtab via $<- 'corrupts' table,Low-level,kevinushey,UNCONFIRMED,2025-09-12 13:39:57 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=18353
@@ -26,6 +28,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19158
 19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19209
 19227,"Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC",Low-level,kevinushey,NEW,2026-10-16 20:45:34 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19227
+19252,compiler::compile() segfaults on break in complex assignment,Low-level,kevinushey,NEW,2026-10-26 17:00:40 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19252
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19092
 18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18938
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18958
@@ -36,6 +39,9 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19239,Add fast paths for quadratic loop in .resetInheritedMethods,S4methods,michaelchirico4,NEW,2026-10-21 23:12:33 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19239
 19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19244
 19246,typo in .recacheSubclasses -- wrong inheritance is checked in class unions,S4methods,michaelchirico4,NEW,2026-10-24 16:54:10 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19246
+19248,getClassDef(where=<character>) stopped working,S4methods,michaelchirico4,NEW,2026-10-26 05:55:03 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19248
+19249,Use getClassDef itself to avoid implicitly calling it twice isClass,S4methods,michaelchirico4,NEW,2026-10-26 06:07:26 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19249
+19254,Add fast paths for early exit from is(),S4methods,michaelchirico4,NEW,2026-10-26 19:08:45 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19254
 18025,xgettext/xngettext miss messages when supplied with qualified namespace,Translations,michaelchirico4,UNCONFIRMED,2021-01-04 16:17:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18025
 17819,Translate untranslated char arrays in all library packages,Translations,michaelchirico4,UNCONFIRMED,2023-09-01 13:35:46 +0000,4,https://bugs.r-project.org/show_bug.cgi?id=17819
 17957,Missing translations of some messages,Translations,michaelchirico4,NEW,2023-09-10 19:07:05 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=17957
@@ -58,3 +64,4 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
 19105,Provide a traceback when crashing on Windows,Wishlist,ikrylov,NEW,2026-07-19 20:25:09 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19105
 19141,`is.na()` and the `as.*()` coercions read their argument one element at a time,Wishlist,kevinushey,NEW,2026-09-03 18:54:12 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19141
 19159,"hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash",Wishlist,kevinushey,NEW,2026-09-04 00:20:58 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19159
+19256,R CMD check: note packages repeated within one DESCRIPTION dependency field,Wishlist,kevinushey,NEW,2026-10-27 04:04:06 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19256

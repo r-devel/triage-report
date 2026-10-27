@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "summary": "unserialize() can allocate a huge stack buffer for malformed primitive names",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-10-26T17:35:45Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "whiteboard": "",
+        "creation_time": "2026-10-26T17:35:37Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19253,
+        "severity": "normal",
+        "dupe_of": {},
+        "assigned_to": "R-core",
+        "component": "I/O",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19253": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103963,
+            "time": "2026-10-26T17:35:37Z",
+            "attachment_id": {},
+            "tags": [],
+            "count": 0,
+            "is_markdown": false,
+            "bug_id": 19253,
+            "text": "Malformed serialized primitive-function records can make unserialize() allocate a very large variable-length buffer on the C stack. OSS-Fuzz testcase 5160037442715648 (afl_r_unserialize) declares a 117,901,063-byte primitive name in a 67-byte stream and reports an AddressSanitizer dynamic-stack-buffer-overflow during error unwinding. The testcase is at https://oss-fuzz.com/testcase-detail/5160037442715648.\n\nReproducible example (R-devel trunk, revision 90764):\n\n    x <- serialize(get(\"sum\", baseenv()), NULL, version = 2L)\n    i <- seq.int(length(x) - nchar(\"sum\") - 3L, length.out = 4L)\n    x[i] <- writeBin(117901063L, raw(), size = 4L, endian = \"big\")\n    tryCatch(unserialize(x), error = function(e) cat(conditionMessage(e), \"\\n\"))\n\nOn a normal R stack this prints \"C stack usage ... is too close to the limit\". With the fuzzer's 1 GiB R thread stack, the stack check permits the allocation; the truncated read then errors, and ASan reports a write in its stack-unpoisoning path as R unwinds. The malformed length should instead be rejected before any large stack allocation (the proposed patch reports \"invalid length\").\n\nAnalysis:\n\nIn src/main/serialize.c, ReadItem_Recursive reads a stream-supplied length for SPECIALSXP and BUILTINSXP names. It checks only for a negative length, then calls R_CheckStack2(length + 1) and declares char cbuf[length + 1]. These names come from R_FunTab; the longest current name is 25 bytes. The proposed bound of 255 bytes rejects implausible lengths before the arithmetic and allocation. The patch also adds regression cases for special and builtin primitives at declared lengths of 256 and 117,901,063 bytes.\n\nProposed patch: attached as unserialize-primitive-name-length.diff. It applies with patch -p0 to trunk revision 90764. I built R with AddressSanitizer, ran the regression cases, and confirmed that the OSS-Fuzz input now raises \"invalid length\".\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/410, where CI results can be seen.",
+            "creation_time": "2026-10-26T17:35:37Z",
+            "creator": "kevinushey"
+          },
+          {
+            "bug_id": 19253,
+            "text": "Created attachment 3955\nBound serialized primitive-function name lengths before stack allocation.",
+            "is_markdown": false,
+            "count": 1,
+            "creation_time": "2026-10-26T17:35:45Z",
+            "creator": "kevinushey",
+            "id": 103964,
+            "time": "2026-10-26T17:35:45Z",
+            "is_private": false,
+            "attachment_id": 3955,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19253": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL3NlcmlhbGl6ZS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3NlcmlhbGl6ZS5jCShyZXZpc2lvbiA5MDc2NCkKKysrIHNyYy9tYWluL3NlcmlhbGl6ZS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMDA5LDcgKzIwMDksOSBAQCBzdGF0aWMgU0VYUCBSZWFkSXRlbV9SZWN1cnNpdmUgKGludCBmbGFncywgU0VYUCByZWZfdGFibGUsIFJfaW5wc3RyZWFtX3Qgc3RyZWFtKQogCSAgICB7CiAJCS8qIFRoZXNlIGFyZSBhbGwgc2hvcnQgc3RyaW5ncyAqLwogCQlsZW5ndGggPSBJbkludGVnZXIoc3RyZWFtKTsKLQkJaWYgKGxlbmd0aCA8IDApCisJCS8qIFByaW1pdGl2ZSBuYW1lcyBjb21lIGZyb20gUl9GdW5UYWIuICBBbiBpbXBsYXVzaWJsZSBsZW5ndGggZnJvbQorCQkgICB0aGUgc3RyZWFtIG11c3Qgbm90IGJlY29tZSBhIGxhcmdlIHN0YWNrIGFsbG9jYXRpb24uICovCisJCWlmIChsZW5ndGggPCAwIHx8IGxlbmd0aCA+IDI1NSkKIAkJICAgIGVycm9yKF8oImludmFsaWQgbGVuZ3RoIikpOwogCQlSX0NoZWNrU3RhY2syKGxlbmd0aCsxKTsKIAkJY2hhciBjYnVmW2xlbmd0aCsxXTsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDc2NCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00MjIzLDYgKzQyMjMsMjMgQEAgdW5saW5rKHppcGZpbGUpCiAjIyBuMiAtIG4xIHdhcyA1MCBpbiBSIDw9IDQuNi4yCiAKIAorIyMgUmVqZWN0IG92ZXJzaXplZCBuYW1lcyBvZiBzZXJpYWxpemVkIHByaW1pdGl2ZSBmdW5jdGlvbnMgYmVmb3JlCisjIyBhbGxvY2F0aW5nIGEgYnVmZmVyIG9uIHRoZSBDIHN0YWNrLgorZm9yIChuYW1lIGluIGMoImlmIiwgInN1bSIpKSB7CisgICAgZnVuIDwtIGdldChuYW1lLCBiYXNlZW52KCkpCisgICAgYmxvYiA8LSBzZXJpYWxpemUoZnVuLCBOVUxMLCB2ZXJzaW9uID0gMkwpCisgICAgc3RvcGlmbm90KGlkZW50aWNhbCh1bnNlcmlhbGl6ZShibG9iKSwgZnVuKSkKKyAgICBwb3MgPC0gc2VxLmludChsZW5ndGgoYmxvYikgLSBuY2hhcihuYW1lKSAtIDNMLCBsZW5ndGgub3V0ID0gNEwpCisgICAgZm9yIChuIGluIGMoMjU2TCwgMTE3OTAxMDYzTCkpIHsKKyAgICAgICAgaW52YWxpZCA8LSBibG9iCisgICAgICAgIGludmFsaWRbcG9zXSA8LSB3cml0ZUJpbihuLCByYXcoKSwgc2l6ZSA9IDRMLCBlbmRpYW4gPSAiYmlnIikKKyAgICAgICAgZXJyIDwtIHRyeUNhdGNoKHVuc2VyaWFsaXplKGludmFsaWQpLCBlcnJvciA9IGlkZW50aXR5KQorICAgICAgICBzdG9waWZub3QoaW5oZXJpdHMoZXJyLCAiZXJyb3IiKSkKKyAgICAgICAgaWYgKGVuZ2xpc2hNc2dzKQorICAgICAgICAgICAgc3RvcGlmbm90KGdyZXBsKCJpbnZhbGlkIGxlbmd0aCIsIGNvbmRpdGlvbk1lc3NhZ2UoZXJyKSwgZml4ZWQgPSBUUlVFKSkKKyAgICB9Cit9CisKIAogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCg==",
+          "creator": "kevinushey",
+          "id": 3955,
+          "is_private": false,
+          "size": 1642,
+          "last_change_time": "2026-10-26T17:35:45Z",
+          "bug_id": 19253,
+          "file_name": "unserialize-primitive-name-length.diff",
+          "summary": "Bound serialized primitive-function name lengths before stack allocation.",
+          "creation_time": "2026-10-26T17:35:45Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-26 17:35:45"
+}

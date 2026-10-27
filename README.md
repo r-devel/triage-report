@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-24._
+_Automatically generated from the R Bugzilla dump updated 2026-10-27._
 
 ## Triaged bugs
 
@@ -44,6 +44,7 @@ _Dates show when the patch was submitted._
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
+* [Bug 19253](https://bugs.r-project.org/show_bug.cgi?id=19253) — unserialize() can allocate a huge stack buffer for malformed primitive names (2026-10-26)
 
 ### Installation
 
@@ -52,6 +53,7 @@ _Dates show when the patch was submitted._
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
+* [Bug 19255](https://bugs.r-project.org/show_bug.cgi?id=19255) — str2expression() can use an unprotected #line filename on parse error (2026-10-26)
 
 ### Low-level
 
@@ -77,6 +79,7 @@ _Dates show when the patch was submitted._
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
+* [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-26)
 
 ### Mac GUI / Mac specific
 
@@ -96,6 +99,9 @@ _Dates show when the patch was submitted._
 * [Bug 19239](https://bugs.r-project.org/show_bug.cgi?id=19239) — Add fast paths for quadratic loop in .resetInheritedMethods (2026-10-21)
 * [Bug 19244](https://bugs.r-project.org/show_bug.cgi?id=19244) — setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method (2026-10-23)
 * [Bug 19246](https://bugs.r-project.org/show_bug.cgi?id=19246) — typo in .recacheSubclasses -- wrong inheritance is checked in class unions (2026-10-24)
+* [Bug 19248](https://bugs.r-project.org/show_bug.cgi?id=19248) — getClassDef(where=<character>) stopped working (2026-10-26)
+* [Bug 19249](https://bugs.r-project.org/show_bug.cgi?id=19249) — Use getClassDef itself to avoid implicitly calling it twice isClass (2026-10-26)
+* [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
 
 ### Translations
 
@@ -127,6 +133,7 @@ _Dates show when the patch was submitted._
 * [Bug 19105](https://bugs.r-project.org/show_bug.cgi?id=19105) — Provide a traceback when crashing on Windows (2026-07-19)
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
+* [Bug 19256](https://bugs.r-project.org/show_bug.cgi?id=19256) — R CMD check: note packages repeated within one DESCRIPTION dependency field (2026-10-27)
 
 ## About this report
 

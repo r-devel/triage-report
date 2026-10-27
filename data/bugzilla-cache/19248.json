@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "getClassDef(where=<character>) stopped working",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-10-26T05:55:25Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "status": "NEW",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-26T05:55:03Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "minor",
+        "id": 19248,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "S4methods"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19248": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": 3950,
+            "is_private": false,
+            "id": 103955,
+            "time": "2026-10-26T05:55:03Z",
+            "creation_time": "2026-10-26T05:55:03Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19248,
+            "text": "Created attachment 3950\nAvoid get0() of character environment name\n\nOne subtle difference of `exists()`+`get()` vs. `get0()` is the latter doesn't accept character environments:\n\n```\nx = 1\nget(\"x\", \".GlobalEnv\")\n# [1] 1\nexists(\"x\", \".GlobalEnv\")\n# [1] TRUE\nget0(\"x\", \".GlobalEnv\")\n# Error in get0(\"x\", \".GlobalEnv\") : invalid 'envir' argument\n```\n\nThat means r68579 to change `getClassDef()` to use `get0()` had a subtle back-compatibility problem, in particular with its wrapper `isClass()`:\n\n```\nsetClass(\"A\", slots=c(x=\"numeric\"))\nsetClass(\"B\", contains=\"A\")\nb_def <- getClassDef(\"B\")\nremoveClass(\"A\")                                                                                                                                                  \n\ncompleteExtends(b_def)\n# Error in get0(cname, where, inherits = inherits) : \n#   invalid 'envir' argument\n\ntraceback()\n# 5: get0(cname, where, inherits = inherits)\n# 4: getClassDef(Class, where)\n# 3: isClass(by, where = packageSlot(ext[[i]]))\n# 2: .walkClassGraph(ClassDef, \"contains\", where, attr(ext, \"conflicts\"))\n# 1: completeExtends(b_def)\n```\n\nThe problem is, `isClass()` is passing a character string _via_ `packageSlot()`, which used to work."
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19248": [
+        {
+          "last_change_time": "2026-10-26T05:55:25Z",
+          "size": 1558,
+          "is_private": false,
+          "id": 3950,
+          "creation_time": "2026-10-26T05:55:03Z",
+          "summary": "Avoid get0() of character environment name",
+          "file_name": "file_19248.txt",
+          "bug_id": 19248,
+          "is_patch": true,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1NDbGFzc2VzLlIgICAgKHJldmlzaW9uIDkwNzYzKQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9TQ2xhc3Nlcy5SICAgICh3b3JraW5nIGNvcHkpDQpAQCAtMjYwLDcgKzI2MCw3IEBADQogICAgICAgICBpZiAoaXMuZW52aXJvbm1lbnQocGFja2FnZSkpIHsNCiAgICAgICAgICAgICB2YWx1ZSA8LSBnZXQwKGNuYW1lLCBwYWNrYWdlLCBpbmhlcml0cyA9IGluaGVyaXRzKQ0KICAgICAgICAgfQ0KLSAgICAgICBpZihpcy5udWxsKHZhbHVlKSkNCisgICAgICAgaWYoaXMubnVsbCh2YWx1ZSkgJiYgaXMuZW52aXJvbm1lbnQod2hlcmUpKQ0KICAgICAgICAgICAgdmFsdWUgPC0gZ2V0MChjbmFtZSwgd2hlcmUsIGluaGVyaXRzID0gaW5oZXJpdHMpICMgTlVMTCBpZiBub3QgZXhpc3RpbmcNCiAgICAgfQ0KICAgICB2YWx1ZQ0KSW5kZXg6IHRlc3RzL2NsYXNzZXMtbWV0aG9kcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gdGVzdHMvY2xhc3Nlcy1tZXRob2RzLlIgICAgIChyZXZpc2lvbiA5MDc2MykNCisrKyB0ZXN0cy9jbGFzc2VzLW1ldGhvZHMuUiAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0zODIsNCArMzgyLDE3IEBADQogICAgICAgICAgIGlkZW50aWNhbChhdHRyKGgsICJsYWJlbCIpLCAia2VwdCIpLA0KICAgICAgICAgICBpZGVudGljYWwoaCgyKSwgMiksIGlkZW50aWNhbChuLCAxKSkgIyBoIG5vIGxvbmdlciB0cmFjZWQNCiANCisjIyBnZXRDbGFzc0RlZigpIC8gaXNDbGFzcygpIHdpdGggY2hhcmFjdGVyICd3aGVyZScgZm9yIGFuIHVuZGVmaW5lZCBjbGFzcw0KK3N0b3BpZm5vdChpcy5udWxsKGdldENsYXNzRGVmKCJub1N1Y2hDbGFzcyIsIHdoZXJlID0gIi5HbG9iYWxFbnYiKSksDQorICAgICAgICAgIGlzLm51bGwoZ2V0Q2xhc3NEZWYoIm5vU3VjaENsYXNzIiwgd2hlcmUgPSAibWV0aG9kcyIpKSwNCisgICAgICAgICAgIWlzQ2xhc3MoIm5vU3VjaENsYXNzIiwgd2hlcmUgPSAiLkdsb2JhbEVudiIpLA0KKyAgICAgICAgICAhaXNDbGFzcygibm9TdWNoQ2xhc3MiLCB3aGVyZSA9ICJtZXRob2RzIikpDQorc2V0Q2xhc3MoIkEiLCBzbG90cyA9IGMoeCA9ICJudW1lcmljIikpDQorc2V0Q2xhc3MoIkIiLCBjb250YWlucyA9ICJBIikNCitiX2RlZiA8LSBnZXRDbGFzc0RlZigiQiIpDQorcmVtb3ZlQ2xhc3MoIkEiKQ0KK2VyciA8LSB0cnlDYXRjaChzdXBwcmVzc1dhcm5pbmdzKGNvbXBsZXRlRXh0ZW5kcyhiX2RlZikpLCBlcnJvciA9IGNvbmRpdGlvbk1lc3NhZ2UpDQorc3RvcGlmbm90KGdyZXBsKCJpbmNsdWRlcyBhbiB1bmRlZmluZWQgY2xhc3MiLCBlcnIpLA0KKyAgICAgICAgICByZW1vdmVDbGFzcygiQiIpKQ0KKw0KIGNhdCgnVGltZSBlbGFwc2VkOiAnLCBwcm9jLnRpbWUoKSwnXG4nKQ==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-26 05:55:25"
+}

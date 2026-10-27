@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "S4methods",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "whiteboard": "",
+        "creation_time": "2026-10-26T19:08:45Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [],
+        "id": 19254,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "Add fast paths for early exit from is()",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-10-26T19:08:53Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19254": {
+        "comments": [
+          {
+            "time": "2026-10-26T19:08:45Z",
+            "attachment_id": 3956,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "id": 103965,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19254,
+            "text": "Created attachment 3956\nFast-path exits for is() in common cases\n\n`methods::is()` is on an extremely hot path for loading S4 packages; for the set of 5 S4-heavy packages reported in Bug #19239, just loading the packages runs `is()` 358,000 times:\n\n```\nis_count <- 0\ntrace(methods::is, quote(is_count <<- is_count + 1L))\ninvisible(capture.output({\n  for (pkg in c(\"Gviz\", \"ShortRead\", \"raster\", \"timeSeries\", \"MatrixExtra\"))\n    loadNamespace(pkg)\n}))\nuntrace(methods::is)\n\nis_count\n# [1] 358085\n```\n\nThat alone consumes 4s of wall time (per `Rprof`). This patch shaves off half of that time. End-to-end, I see the `loadNamespace()` time for the 5 packages go down by over a second (19.7s -> 18.4s, about 6%).\n\nThis would also affect the proposed patch for Bug #19239, where we could switch to `is(m_class, \"MethodDefinition\") || is(m_class, \"derivedDefaultMethod\")`, which is more natural for the reader not to get caught up in `.identC()`, without much performance impact.\n\nGitHub: https://github.com/r-devel/r-svn/pull/405",
+            "count": 0,
+            "creation_time": "2026-10-26T19:08:45Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19254": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9pcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL2lzLlIgIChyZXZpc2lvbiA5MDc2MykNCisrKyBzcmMvbGlicmFyeS9tZXRob2RzL1IvaXMuUiAgKHdvcmtpbmcgY29weSkNCkBAIC0yOCwxNSArMjgsMjEgQEANCiAgICAgICAgIGNsYXNzMSA8LSBjbGFzczFbWzFMXV0NCiAgICAgaWYobWlzc2luZyhjbGFzczIpKQ0KICAgICAgICAgcmV0dXJuKGV4dGVuZHMoY2xhc3MxKSkNCi0gICAgc3RvcGlmbm90KGxlbmd0aChjbGFzczIpID09IDFMKQ0KLSAgICBjbGFzczFEZWYgPC0gZ2V0Q2xhc3NEZWYoY2xhc3MxKQ0KKyAgICBpZihsZW5ndGgoY2xhc3MyKSAhPSAxTCkNCisgICAgICAgIHN0b3AoImNsYXNzMiBtdXN0IGhhdmUgbGVuZ3RoIDEiKQ0KICAgICBjbGFzczJEZWYgPC0gTlVMTA0KICAgICBpZighaXMuY2hhcmFjdGVyKGNsYXNzMikpIHsNCiAgICAgICAgIGNsYXNzMkRlZiA8LSBjbGFzczINCiAgICAgICAgIGNsYXNzMiA8LSBjbGFzczJEZWZAY2xhc3NOYW1lDQogICAgIH0NCisgICAgUzNDYXNlIDwtIFMzQ2FzZSB8fCAoaXMub2JqZWN0KG9iamVjdCkgJiYgIWlzUzQob2JqZWN0KSkNCisgICAgaWYoLmlkZW50QyhjbGFzczEsIGNsYXNzMikgfHwgKCFTM0Nhc2UgJiYgLmlkZW50QyhjbGFzczIsICJBTlkiKSkpDQorICAgICAgICByZXR1cm4oVFJVRSkNCisgICAgY2xhc3MxRGVmIDwtIGdldENsYXNzRGVmKGNsYXNzMSkNCiAgICAgaWYoaXMubnVsbChjbGFzczFEZWYpKSAjIGFuIHVucmVnaXN0ZXJlZCBTMyBjbGFzcw0KICAgICAgICAgcmV0dXJuKGluaGVyaXRzKG9iamVjdCwgY2xhc3MyKSkNCisgICAgaWYoIVMzQ2FzZSAmJiAhaXMubnVsbChjb250YWluZWQgPC0gY2xhc3MxRGVmQGNvbnRhaW5zW1tjbGFzczJdXSkpDQorICAgICAgICByZXR1cm4oY29udGFpbmVkQHNpbXBsZSB8fCBjb250YWluZWRAdGVzdChvYmplY3QpKQ0KICAgICBpZihpcy5udWxsKGNsYXNzMkRlZikpIHsNCiAgICAgICAgIGNsYXNzMkRlZiA8LSBnZXRDbGFzc0RlZihjbGFzczIsIC5jbGFzc0RlZkVudihjbGFzczFEZWYpLA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhY2thZ2VTbG90KGNsYXNzMikgJXx8JSBnZXRQYWNrYWdlTmFtZSh0b3BlbnYocGFyZW50LmZyYW1lKCkpKSkNCkBAIC00MywyNiArNDksMjAgQEANCiAgICAgfQ0KICAgICAjIyBTMyBpbmhlcml0YW5jZSBpcyBhcHBsaWVkIGlmIHRoZSBvYmplY3QgaXMgbm90IFM0IGFuZCBjbGFzczIgaXMgZWl0aGVyDQogICAgICMjIGEgYmFzaWMgY2xhc3Mgb3IgYW4gUzMgY2xhc3MgKHJlZ2lzdGVyZWQgb3Igbm90KQ0KLSAgICBTM0Nhc2UgPC0gUzNDYXNlIHx8IChpcy5vYmplY3Qob2JqZWN0KSAmJiAhaXNTNChvYmplY3QpKQ0KLSAgICBTM0Nhc2UgPC0gUzNDYXNlICYmIChpcy5udWxsKGNsYXNzMkRlZikgfHwgY2xhc3MyICVpbiUgLkJhc2ljQ2xhc3NlcyB8fA0KLSAgICAgICAgICAgICAgICAgICAgICAgICBleHRlbmRzKGNsYXNzMkRlZiwgIm9sZENsYXNzIikpDQotICAgIGlmKFMzQ2FzZSkNCisgICAgaWYoUzNDYXNlICYmIChpcy5udWxsKGNsYXNzMkRlZikgfHwgY2xhc3MyICVpbiUgLkJhc2ljQ2xhc3NlcyB8fA0KKyAgICAgICAgICAgICAgICAgIGV4dGVuZHMoY2xhc3MyRGVmLCAib2xkQ2xhc3MiKSkpDQogICAgICAgICBpbmhlcml0cyhvYmplY3QsIGNsYXNzMikNCi0gICAgZWxzZSBpZiguaWRlbnRDKGNsYXNzMSwgY2xhc3MyKSB8fCAuaWRlbnRDKGNsYXNzMiwgIkFOWSIpKQ0KLSAgICAgICAgVFJVRQ0KLSAgICBlbHNlIHsgIyMgbG9vayBmb3IgY2xhc3MxIGluIHRoZSBrbm93biBzdWJjbGFzc2VzIG9mIGNsYXNzMg0KLSAgICAgICAgaWYoIWlzLm51bGwoY29udGFpbmVkIDwtIGNsYXNzMURlZkBjb250YWluc1tbY2xhc3MyXV0pKQ0KLSAgICAgICAgICAgIGNvbnRhaW5lZEBzaW1wbGUgfHwgY29udGFpbmVkQHRlc3Qob2JqZWN0KQ0KLSAgICAgICAgZWxzZSBpZiAoaXMubnVsbChjbGFzczJEZWYpKQ0KLSAgICAgICAgICAgIEZBTFNFDQotICAgICAgICBlbHNlIGlmKCEuaWRlbnRDKGNsYXNzKGNsYXNzMkRlZiksICJjbGFzc1JlcHJlc2VudGF0aW9uIikgJiYNCi0gICAgICAgICAgICAgICAgaXNDbGFzc1VuaW9uKGNsYXNzMkRlZikpDQotICAgICAgICAgICAgYW55KGMoY2xhc3MxLCBuYW1lcyhjbGFzczFEZWZAY29udGFpbnMpKSAlaW4lDQotICAgICAgICAgICAgICAgIG5hbWVzKGNsYXNzMkRlZkBzdWJjbGFzc2VzKSkNCi0gICAgICAgIGVsc2Ugew0KLSAgICAgICAgICAgIGV4dCA8LSBjbGFzczJEZWZAc3ViY2xhc3Nlc1tbY2xhc3MxXV0NCi0gICAgICAgICAgICAhaXMubnVsbChleHQpICYmIChleHRAc2ltcGxlIHx8IGV4dEB0ZXN0KG9iamVjdCkpDQotICAgICAgICB9DQorICAgIGVsc2UgaWYoUzNDYXNlICYmICFpcy5udWxsKGNvbnRhaW5lZCA8LSBjbGFzczFEZWZAY29udGFpbnNbW2NsYXNzMl1dKSkNCisgICAgICAgIGNvbnRhaW5lZEBzaW1wbGUgfHwgY29udGFpbmVkQHRlc3Qob2JqZWN0KQ0KKyAgICBlbHNlIGlmIChpcy5udWxsKGNsYXNzMkRlZikpDQorICAgICAgICBGQUxTRQ0KKyAgICBlbHNlIGlmKCEuaWRlbnRDKGNsYXNzKGNsYXNzMkRlZiksICJjbGFzc1JlcHJlc2VudGF0aW9uIikgJiYNCisgICAgICAgICAgICBpc0NsYXNzVW5pb24oY2xhc3MyRGVmKSkNCisgICAgICAgIGFueShjKGNsYXNzMSwgbmFtZXMoY2xhc3MxRGVmQGNvbnRhaW5zKSkgJWluJQ0KKyAgICAgICAgICAgIG5hbWVzKGNsYXNzMkRlZkBzdWJjbGFzc2VzKSkNCisgICAgZWxzZSB7DQorICAgICAgICBleHQgPC0gY2xhc3MyRGVmQHN1YmNsYXNzZXNbW2NsYXNzMV1dDQorICAgICAgICAhaXMubnVsbChleHQpICYmIChleHRAc2ltcGxlIHx8IGV4dEB0ZXN0KG9iamVjdCkpDQogICAgIH0NCiB9DQogDQpAQCAtMTAyLDkgKzEwMiw5IEBADQogICAgICAgICMjIHRoZSBbWzFMXV0gYmVsb3cgaGFuZGxlcyBvbGQtc3R5bGUgY2xhc3NlcyAmIHRocm93cyBhd2F5IHBhY2thZ2UgYXR0cmlidXRlcw0KICAgICAgICBpZiguaWRlbnRDKGNsYXNzMVtbMUxdXSwgY2xhc3MyKSB8fCAuaWRlbnRDKGNsYXNzMiwgIkFOWSIpKQ0KICAgICAgICAgICByZXR1cm4oVFJVRSkNCi0gICAgICAgIGlmKCFpcy5udWxsKGNsYXNzRGVmMSkgJiYgY2xhc3MyICVpbiUgbmFtZXMoY2xhc3NEZWYxQGNvbnRhaW5zKSkNCisgICAgICAgIGlmKCFpcy5udWxsKGNsYXNzRGVmMSkpDQogICAgICAgICAgICB2YWx1ZSA8LSBjbGFzc0RlZjFAY29udGFpbnNbW2NsYXNzMl1dDQotICAgICAgICBlbHNlDQorICAgICAgICBpZihpcy5udWxsKHZhbHVlKSkNCiAgICAgICAgICAgY2xhc3NEZWYyIDwtIGdldENsYXNzRGVmKGNsYXNzMikNCiAgICAgfQ0KICAgICBlbHNlIGlmKGlzKGNsYXNzMiwgImNsYXNzUmVwcmVzZW50YXRpb24iKSkgew0KSW5kZXg6IHRlc3RzL2NsYXNzZXMtbWV0aG9kcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gdGVzdHMvY2xhc3Nlcy1tZXRob2RzLlIgICAgIChyZXZpc2lvbiA5MDc2MykNCisrKyB0ZXN0cy9jbGFzc2VzLW1ldGhvZHMuUiAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0zODIsNCArMzgyLDQ1IEBADQogICAgICAgICAgIGlkZW50aWNhbChhdHRyKGgsICJsYWJlbCIpLCAia2VwdCIpLA0KICAgICAgICAgICBpZGVudGljYWwoaCgyKSwgMiksIGlkZW50aWNhbChuLCAxKSkgIyBoIG5vIGxvbmdlciB0cmFjZWQNCiANCisjIyBpcygpIGZhc3QgcGF0aHMgJiByZWdpc3RlcmVkIFMzIGNsYXNzZXMgZXh0ZW5kaW5nIFM0IGNsYXNzZXMgLyBjbGFzcyB1bmlvbnM6DQorc2V0T2xkQ2xhc3MoYygibXlTM0ZvcklzIiwgIm51bWVyaWMiKSkNCitzZXRDbGFzcygiRm9vRm9ySXMiLCByZXByZXNlbnRhdGlvbigiVklSVFVBTCIpKQ0KK3NldElzKCJteVMzRm9ySXMiLCAiRm9vRm9ySXMiKQ0KK2VGb3JJcyA8LSBuZXcuZW52KCkNCitzZXRDbGFzcygiRm9vRm9ySXMiLCByZXByZXNlbnRhdGlvbih6ID0gIm51bWVyaWMiKSwgd2hlcmUgPSBlRm9ySXMpDQoreFMzRm9ySXMgPC0gc3RydWN0dXJlKDEsIGNsYXNzID0gIm15UzNGb3JJcyIpDQorelM0Rm9ySXMgPC0gbmV3KGdldENsYXNzRGVmKCJGb29Gb3JJcyIsIGVGb3JJcyksIHogPSAxKQ0KK3NldENsYXNzVW5pb24oIlVuaW9uRm9yUzNJcyIsICJteVMzRm9ySXMiKQ0KK3NldENsYXNzVW5pb24oIkNvbmRVbmlvbkZvclMzSXMiLCAibnVtZXJpYyIpDQorc3VwcHJlc3NXYXJuaW5ncyhzZXRJcygibXlTM0ZvcklzIiwgIkNvbmRVbmlvbkZvclMzSXMiLA0KKyAgICAgICAgICAgICAgICAgICAgICAgdGVzdCA9IFwob2JqZWN0KSBvYmplY3QgPiAwKSkNCitzdG9waWZub3QoDQorICAgIGlzKHhTM0ZvcklzLCAiRm9vRm9ySXMiKSwNCisgICAgaXMoeFMzRm9ySXMsIGdldENsYXNzRGVmKCJGb29Gb3JJcyIsIGVGb3JJcykpLA0KKyAgICBpcyh4UzNGb3JJcywgZ2V0Q2xhc3NEZWYoIm15UzNGb3JJcyIpKSwNCisgICAgaXMoelM0Rm9ySXMsIGdldENsYXNzRGVmKCJGb29Gb3JJcyIsIGVGb3JJcykpLA0KKyAgICBpcyh6UzRGb3JJcywgIkFOWSIpLA0KKyAgICBpcygxTCwgIkFOWSIpLA0KKyAgICAhaXMoeFMzRm9ySXMsICJBTlkiKSwNCisgICAgaXMoeFMzRm9ySXMsICJVbmlvbkZvclMzSXMiKSwNCisgICAgaXMoeFMzRm9ySXMsICJDb25kVW5pb25Gb3JTM0lzIiksDQorICAgICFpcyhzdHJ1Y3R1cmUoLTEsIGNsYXNzID0gIm15UzNGb3JJcyIpLCAiQ29uZFVuaW9uRm9yUzNJcyIpDQorKQ0KK3NldENsYXNzKCJGb29Gb3JJcyIsIHJlcHJlc2VudGF0aW9uKCJWSVJUVUFMIikpICMgcmVzZXRzIEZvb0ZvcklzQHN1YmNsYXNzZXMNCitzdG9waWZub3QoZXh0ZW5kcygibXlTM0ZvcklzIiwgIkZvb0ZvcklzIiksIGlzKHhTM0ZvcklzLCAiRm9vRm9ySXMiKSkNCityZW1vdmVDbGFzcygiRm9vRm9ySXMiLCB3aGVyZSA9IGVGb3JJcykNCitmb3IoY2wgaW4gYygiQ29uZFVuaW9uRm9yUzNJcyIsICJVbmlvbkZvclMzSXMiLCAibXlTM0ZvcklzIiwgIkZvb0ZvcklzIikpDQorICAgIHJlbW92ZUNsYXNzKGNsKQ0KKw0KK3NldENsYXNzKCJWaXJ0VmVjUzRGb3JJcyIsIGNvbnRhaW5zID0gYygibnVtZXJpYyIsICJWSVJUVUFMIikpDQorc2V0Q2xhc3MoInMzV2l0aFZpcnRTNEZvcklzIiwgY29udGFpbnMgPSAiVmlydFZlY1M0Rm9ySXMiLA0KKyAgICAgICAgIHNsb3RzID0gYyh3ID0gImNoYXJhY3RlciIpKQ0KK3NldE9sZENsYXNzKGMoInMzV2l0aFZpcnRTNEZvcklzIiwgIlZpcnRWZWNTNEZvcklzIiksDQorICAgICAgICAgICAgUzRDbGFzcyA9ICJzM1dpdGhWaXJ0UzRGb3JJcyIpDQoreFZpcnRGb3JJcyA8LSBzdHJ1Y3R1cmUoMTozLCBjbGFzcyA9ICJzM1dpdGhWaXJ0UzRGb3JJcyIpDQorc3RvcGlmbm90KGV4dGVuZHMoInMzV2l0aFZpcnRTNEZvcklzIiwgIlZpcnRWZWNTNEZvcklzIiksDQorICAgICAgICAgIGlzKHhWaXJ0Rm9ySXMsICJWaXJ0VmVjUzRGb3JJcyIpKQ0KK3JlbW92ZUNsYXNzKCJzM1dpdGhWaXJ0UzRGb3JJcyIpDQorcmVtb3ZlQ2xhc3MoIlZpcnRWZWNTNEZvcklzIikNCisNCiBjYXQoJ1RpbWUgZWxhcHNlZDogJywgcHJvYy50aW1lKCksJ1xuJyk=",
+          "creator": "michaelchirico4",
+          "id": 3956,
+          "is_private": false,
+          "size": 5711,
+          "last_change_time": "2026-10-26T19:08:53Z",
+          "bug_id": 19254,
+          "file_name": "file_19254.txt",
+          "summary": "Fast-path exits for is() in common cases",
+          "creation_time": "2026-10-26T19:08:45Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-26 19:08:53"
+}
