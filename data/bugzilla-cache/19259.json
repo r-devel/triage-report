@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs)",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-27T19:23:34Z",
+        "cc_detail": [],
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-27T18:35:28Z",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19259,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19259": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103976,
+            "time": "2026-10-27T18:35:28Z",
+            "tags": [],
+            "attachment_id": 3963,
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19259,
+            "text": "Created attachment 3963\nIncrease the cache size from 100 to 256\n\nR has a limit of 100 slots in the .rdb cache since 2005.\n\nThis cache is first-come-first-serve, only freed from `unloadNamespace()`, and causes slowdown for packages loaded after the limit is reached which can't take advantage of cacheing.\n\nThis is routinely spilled by large dependency graphs -- for example, `library(GenomicInteractions)` alone attempts 149 slots:\n\n```\ninvisible(loadNamespace(\"GenomicInteractions\"))\npaths <- vapply(loadedNamespaces(), find.package, character(1L))\nrdbs <- Sys.glob(c(file.path(paths, \"R/*.rdb\"), file.path(paths, \"data/*.rdb\")))\ncat(sprintf(\n  \"Loaded namespaces: %d | .rdb files: %d | Total size: %.2f MiB\\n\",\n  length(paths), length(rdbs), sum(file.size(rdbs)) / 1024^2))\n# Loaded namespaces: 130 | .rdb files: 149 | Total size: 49.71 MiB\n\ntypes = rep(\"R/<pkg>.rdb\", length(rdbs))\ntypes[grepl(\"/data/\", rdbs)] = \"data/Rdata.rdb\"\ntypes[endsWith(rdbs, \"/sysdata.rdb\")] = \"R/sysdata.rdb\"\nprint(table(types))\n# types\n# data/Rdata.rdb    R/<pkg>.rdb  R/sysdata.rdb \n#             11            129              9\n```\n\nThe same for the 5-package suite of Bug #19239:\n\n```\n# Loaded namespaces: 138 | .rdb files: 160 | Total size: 54.07 MiB\n# types\n# data/Rdata.rdb    R/<pkg>.rdb  R/sysdata.rdb \n#             13            137             10 \n```\n\nThis explains some of the `loadNamespace()` sluggishness observed in Bug #19239.\n\nFor DLLs, R increased its limit in r73545 (2017) to 614 from 100, but did not touch this cache size.\n\nThis patch represents the trivial improvement of increasing the cache size. Other considerations:\n\n - Should we add a configuration _a la_ `R_MAX_NUM_DLLS`?\n - Should we revisit the cache strategy, e.g. LRU or round-robin?",
+            "creation_time": "2026-10-27T18:35:28Z",
+            "creator": "michaelchirico4"
+          },
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2026-10-27T19:23:34Z",
+            "text": "BTW, `unloadNamespace()` does not successfully flush all of the .rdb files from this cache that are populated by `loadNamespace()`:\n\n```\nstrace -e trace=openat Rscript --vanilla -e '\ninvisible(tools::Rd_db(\"base\")) # warm up tools once\ncycle <- function(label) {\n  message(\"=== \", label, \" ===\"))\n  ns <- loadNamespace(\"snowfall\")\n    invisible(ns$sfInit)                             # 1. R/snowfall.rdb\n    invisible(ns$sfOption)                           # 2. R/sysdata.rdb\n    invisible(getNamespaceInfo(ns, \"lazydata\")$f1)   # 3. data/Rdata.rdb\n    invisible(tools::Rd_db(\"snowfall\"))              # 4. help/snowfall.rdb\n    unloadNamespace(\"snowfall\")                                                                                                                                                                                     \n  }                                                                                                                                                                                                                 \ncycle(\"LOAD 1 + UNLOAD\")                                                                                                                                                                                          \ncycle(\"LOAD 2 + UNLOAD (after unloadNamespace)\")                                                                                                                                                                  \n' 2>&1 | grep -E \"===|snowfall/.*\\.rdb\"                                                                                                                                                                           \n```\n\n```                                                                                                                                                                                                                      \n=== LOAD 1 + UNLOAD ===\nopenat(AT_FDCWD, \".../library/snowfall/R/snowfall.rdb\", O_RDONLY) = 5                                                                                                     \nopenat(AT_FDCWD, \".../library/snowfall/R/sysdata.rdb\", O_RDONLY) = 5                                                                                                      \nopenat(AT_FDCWD, \".../library/snowfall/data/Rdata.rdb\", O_RDONLY) = 5                                                                                                     \nopenat(AT_FDCWD, \".../library/snowfall/help/snowfall.rdb\", O_RDONLY) = 5                                                                                                  \n=== LOAD 2 + UNLOAD (after unloadNamespace) ===                                                                                                                                                                   \nopenat(AT_FDCWD, \".../library/snowfall/R/snowfall.rdb\", O_RDONLY) = 5\n```\n\nThat is, R/sysdata.rdb, data/Rdata.rdb, and help/snowfall.rdb remain in the cache after `unloadNamespace()`. It would be pretty trivial to add some `lazyLoadDBflush()` for these to `unloadNamespace()`, but perhaps I'm missing something.",
+            "bug_id": 19259,
+            "count": 1,
+            "is_markdown": true,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-10-27T19:23:34Z",
+            "id": 103978,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19259": [
+        {
+          "summary": "Increase the cache size from 100 to 256",
+          "creation_time": "2026-10-27T18:35:28Z",
+          "bug_id": 19259,
+          "file_name": "file_19259.txt",
+          "size": 368,
+          "last_change_time": "2026-10-27T18:36:49Z",
+          "id": 3963,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL3NlcmlhbGl6ZS5jDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL21haW4vc2VyaWFsaXplLmMgICAgICAgIChyZXZpc2lvbiA5MDc2NikNCisrKyBzcmMvbWFpbi9zZXJpYWxpemUuYyAgICAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0zMTIyLDcgKzMxMjIsNyBAQA0KICAgICBkb3VibGUgc2l6ZSwgbXRpbWUsIGlubywgZGV2Ow0KIH07DQogDQotI2RlZmluZSBOQyAxMDANCisjZGVmaW5lIE5DIDI1Ng0KIHN0YXRpYyBpbnQgdXNlZCA9IDA7DQogc3RhdGljIGNoYXIgKm5hbWVzW05DXTsNCiBzdGF0aWMgY2hhciAqcHRyW05DXTs=",
+          "creator": "michaelchirico4",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-27 19:23:34"
+}

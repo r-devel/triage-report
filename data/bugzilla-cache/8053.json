@@ -1,0 +1,130 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "real_name": "Mikael Jagan",
+            "id": 3462,
+            "name": "jaganmn2"
+          }
+        ],
+        "last_change_time": "2026-10-27T19:38:31Z",
+        "blocks": [],
+        "url": "",
+        "summary": "S4 setClass with prototypes \" issues\"",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "name": "jitterbug-import",
+          "id": 2,
+          "real_name": "Jitterbug compatibility account"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "creator": "jitterbug-import",
+        "is_creator_accessible": true,
+        "alias": [],
+        "deadline": {},
+        "id": 8053,
+        "dupe_of": {},
+        "severity": "normal",
+        "qa_contact": "",
+        "cc": [
+          "jaganmn2"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2005-08-05T22:06:47Z",
+        "version": "old",
+        "component": "S4methods",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "8053": {
+        "comments": [
+          {
+            "creation_time": "2005-08-05T22:06:47Z",
+            "count": 0,
+            "text": "From: Berton Gunter <gunter.berton@gene.com>\nTo R-Developers:\n\nI wish to report what I believe are inconsistencies between Green Book\ndescriptions and R methods behaviors. I **realize** that R does not\nguarantee total consistency with the Green Book; therefore I leave it to you\nto decide whether any of this is a bug, design choice, or a need for\nadditional documentation -- or whether I have simply misread or overlooked\nexisting explanations. If the latter, I apologize for the error, but it was\nnot for a want of effort.\n\nThe issues all revolve around the setClass('xxx',prototype=...) without any\nslots construction. All references are to the Green Book. R 2.1.1 (on\nWindows)\n\n1. Classes so defined (with protype, no slots) are not instantiated as\ndescribed on the bottom of p.289. In particular, the following example from\nthe book fails:\n\n> setClass('sequence',prototype=numeric(3))\n[1] \"sequence\"\n> new('sequence',c(1,51,10))\nError in initialize(value, ...) : cannot use object of class \"numeric\" in\nnew():  class \"sequence\" does not extend that class\n \n2. I have been unable to find any Help documentation about the proper method\nto instantiate classes defined by prototypes without slots. Experimentation\nshowed that only one of the two approaches on the bottom of p.289 worked:\n\n> setClass('foo',prototype=numeric())\n[1] \"foo\"\n> z<-new('foo')\n## new() works as it should\n> z\nAn object of class \"foo\"\nnumeric(0)\n\n## But now try this ...\n> z<-1:3\n> is(z,'numeric')\n[1] TRUE\n## Hence, if R followed the book's statement that \"For this to work,\n'object' must either be suitable as a prototype for 'myClass or belong to a\nclass that can be coerced to 'myClass.'\" (Note, I interpret this to mean\nthat either of these conditions are sufficient for either of the approaches\nshown).\n\n> as(z,'foo')\nError in as(z, \"foo\") : no method or default for coercing \"integer\" to \"foo\"\n\n## But\n> class(z)<-'foo'\n> z\nAn object of class \"foo\"\n[1] 1 2 3\n\nI was unable to find documentation for this behavior in R, assuming that\nthis is not a bug. If it's a bug, it should be fixed, of course; if not, I\nthink the behavior should be documented, perhaps in setClass.\n\n3. Finally, and most disconcertingly, The Green Book says (p.288):\n\n\"... We do NOT want a 'sequence' object to be interpreted as a numeric\nvector ... Doing arbitrary arithmetic on the object, for example would be\ndisastrous...\n\nThe use of prototypes without representations allows the class designer to\nlimit the legal computations on objects made up of numeric data...\"\n\nAs I read this, this should mean that the following should fail, but it\ndoesn't (continuing the above example):\n\n> z+1\nAn object of class \"foo\"\n[1] 2 3 4\n\nAgain, if this is not a bug, I think that this lack of adherence to the\nGreen book should be documented in R. May I say, however, that I wish R had\nimplemented the book's prescription.\n\n\n-- Bert Gunter\nGenentech Non-Clinical Statistics\nSouth San Francisco, CA\n \n\"The business of the statistician is to catalyze the scientific learning\nprocess.\"  - George E. P. Box\n ",
+            "bug_id": 8053,
+            "tags": [],
+            "is_private": false,
+            "id": 80403,
+            "creator": "jitterbug-import",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2005-08-05T22:06:47Z"
+          },
+          {
+            "count": 1,
+            "is_markdown": false,
+            "bug_id": 8053,
+            "text": "From: John Chambers <jmc@R-project.org>\nWell, let's say R is currently picky when only a prototype is supplied.\n\nThe following is either a workaround or a revised, fussier requirement \nfor the example mentioned, depending on your interpretation.\n\nR> setClass(\"sequence\", representation(.Data=\"numeric\"), \nprototype=numeric(3))\n[1] \"sequence\"\nR> xx <- new('sequence',c(1,51,10))\nR> xx\nAn object of class â€œsequenceâ€\n[1]  1 51 10\nR> is(xx, \"numeric\")\n[1] FALSE\n\nSo far, so good.  But there are a couple of catches.\n\nThe resolution of prototype and representation is currently somewhat of \na mess in the R implementation.  There's been some discussion of \ncleaning it up, hopefully moving ahead from the Green Book description \nto a more coherent definition.  So whether eventually one could (or \nshould) omit the representation() part remains to be seen.\n\nThe other relevant flaw currently is that S4 objects have no special \ninternal representation in R, so there's effectively no way to keep \nprimitive operations from working on them. (The general & notorious \nexample is that xx[] always returns something on an S4 object, even when \nit shouldn't.)  In the current case, the problem is that, in spite of \nnot extending \"numeric\", low-level arithmetic is still done.\n\nR> xx+1\nAn object of class â€œsequenceâ€\n[1]  2 52 11\n\nSomething basic is needed here, in the code for primitives, but so far \nobjections re efficiency have prevented doing anything.\n\nMeanwhile, those more interested in getting something done than \ndiscussing, would need to implement explicit methods for the new class \nthat either re-interpret or block the primitives that shouldn't happen \nin the standard way.\n\n\ngunter.berton@gene.com wrote:\n\n> To R-Developers:\n> \n> I wish to report what I believe are inconsistencies between Green Book\n> descriptions and R methods behaviors. I **realize** that R does not\n> guarantee total consistency with the Green Book; therefore I leave it to you\n> to decide whether any of this is a bug, design choice, or a need for\n> additional documentation -- or whether I have simply misread or overlooked\n> existing explanations. If the latter, I apologize for the error, but it was\n> not for a want of effort.\n> \n> The issues all revolve around the setClass('xxx',prototype=...) without any\n> slots construction. All references are to the Green Book. R 2.1.1 (on\n> Windows)\n> \n> 1. Classes so defined (with protype, no slots) are not instantiated as\n> described on the bottom of p.289. In particular, the following example from\n> the book fails:\n> \n> \n>>setClass('sequence',prototype=numeric(3))\n> \n> [1] \"sequence\"\n> \n>>new('sequence',c(1,51,10))\n> \n> Error in initialize(value, ...) : cannot use object of class \"numeric\" in\n> new():  class \"sequence\" does not extend that class\n>  \n> 2. I have been unable to find any Help documentation about the proper method\n> to instantiate classes defined by prototypes without slots. Experimentation\n> showed that only one of the two approaches on the bottom of p.289 worked:\n> \n> \n>>setClass('foo',prototype=numeric())\n> \n> [1] \"foo\"\n> \n>>z<-new('foo')\n> \n> ## new() works as it should\n> \n>>z\n> \n> An object of class \"foo\"\n> numeric(0)\n> \n> ## But now try this ...\n> \n>>z<-1:3\n>>is(z,'numeric')\n> \n> [1] TRUE\n> ## Hence, if R followed the book's statement that \"For this to work,\n> 'object' must either be suitable as a prototype for 'myClass or belong to a\n> class that can be coerced to 'myClass.'\" (Note, I interpret this to mean\n> that either of these conditions are sufficient for either of the approaches\n> shown).\n> \n> \n>>as(z,'foo')\n> \n> Error in as(z, \"foo\") : no method or default for coercing \"integer\" to \"foo\"\n> \n> ## But\n> \n>>class(z)<-'foo'\n>>z\n> \n> An object of class \"foo\"\n> [1] 1 2 3\n> \n> I was unable to find documentation for this behavior in R, assuming that\n> this is not a bug. If it's a bug, it should be fixed, of course; if not, I\n> think the behavior should be documented, perhaps in setClass.\n> \n> 3. Finally, and most disconcertingly, The Green Book says (p.288):\n> \n> \"... We do NOT want a 'sequence' object to be interpreted as a numeric\n> vector ... Doing arbitrary arithmetic on the object, for example would be\n> disastrous...\n> \n> The use of prototypes without representations allows the class designer to\n> limit the legal computations on objects made up of numeric data...\"\n> \n> As I read this, this should mean that the following should fail, but it\n> doesn't (continuing the above example):\n> \n> \n>>z+1\n> \n> An object of class \"foo\"\n> [1] 2 3 4\n> \n> Again, if this is not a bug, I think that this lack of adherence to the\n> Green book should be documented in R. May I say, however, that I wish R had\n> implemented the book's prescription.\n> \n> \n> -- Bert Gunter\n> Genentech Non-Clinical Statistics\n> South San Francisco, CA\n>  \n> \"The business of the statistician is to catalyze the scientific learning\n> process.\"  - George E. P. Box\n> \n> ______________________________________________\n> R-devel@r-project.org mailing list\n> https://stat.ethz.ch/mailman/listinfo/r-devel\n> ",
+            "creation_time": "2005-08-06T00:06:55Z",
+            "creator": "jitterbug-import",
+            "is_private": false,
+            "id": 80405,
+            "time": "2005-08-06T00:06:55Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "time": "2005-08-16T16:55:00Z",
+            "attachment_id": {},
+            "is_markdown": false,
+            "creator": "jitterbug-import",
+            "is_private": false,
+            "id": 80404,
+            "tags": [],
+            "count": 2,
+            "text": "Audit (from Jitterbug):\nTue Aug 16 11:55:00 2005\tripley\tmoved from incoming to S4methods",
+            "bug_id": 8053,
+            "creation_time": "2005-08-16T16:55:00Z"
+          },
+          {
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-10-27T19:38:31Z",
+            "creation_time": "2026-10-27T19:38:31Z",
+            "text": "Too much code already assumes that `isS4(x) && typeof(x) != \"S4\"` implies that `x` has a data part and that `class(x)` extends `class(getDataPart(x))`.  Indeed, since r47935, `help(\"setClass\")` says:\n\n> For an object from any class that does *not* contain one of these types or classes, `typeof(x)` will be `\"S4\"`.\n\nSo it actually contradicts the documentation (since 2009-02-16), that `setClass` is able to define a class violating the above stated assumption.\n\nI propose that such usage of `setClass` becomes deprecated and eventually signals an error, with a recommendation to define a class with slots instead.  I'll wait for comment from other R-core and in the mean time confirm the bug, so as to commit to doing *something* here.\n\nFWIW, *Extending R*, the more recent reference for S4 in R, has no examples of `setClass` usage without at least one of `contains=` and `slots=`.",
+            "bug_id": 8053,
+            "count": 3,
+            "tags": [],
+            "id": 103979,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "8053": []
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-27 19:38:31"
+}

@@ -1,0 +1,123 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "S4methods",
+        "creation_time": "2010-06-25T15:18:59Z",
+        "version": "R 2.11.1",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "qa_contact": "",
+        "cc": [
+          "jaganmn2",
+          "seb.meyer"
+        ],
+        "id": 14323,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "enhancement",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "chiefmurphy",
+        "platform": "ix86 (32-bit)",
+        "flags": [],
+        "op_sys": "Windows 32-bit",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Dan Murphy",
+          "id": 91,
+          "name": "chiefmurphy"
+        },
+        "status": "ASSIGNED",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "methods::new(): information not inserted from dots when contains=\"matrix\"",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-10-28T03:53:48Z",
+        "cc_detail": [
+          {
+            "real_name": "Mikael Jagan",
+            "name": "jaganmn2",
+            "id": 3462
+          },
+          {
+            "real_name": "Sebastian Meyer",
+            "name": "seb.meyer",
+            "id": 274
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "14323": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 84544,
+            "time": "2010-06-25T15:18:59Z",
+            "tags": [],
+            "attachment_id": {},
+            "count": 0,
+            "is_markdown": false,
+            "bug_id": 14323,
+            "text": "The help page for \"new\" says:\n\nThe function new begins by copying the prototype object from the class definition. Then information is inserted according to the ... arguments, if any. \n\nThis does not seem to hold when class extends \"matrix\":\n\n> setClass(\"A.matrix\", contains=\"matrix\", representation(label=\"character\"))\n[1] \"A.matrix\"\n> A<-new(\"A.matrix\", matrix(\"A\",1,1), label=\"A\")\n> new(\"A.matrix\", A, label=\"B\")\nAn object of class \"A.matrix\"\n     [,1]\n[1,] \"A\" \nSlot \"label\":\n[1] \"A\"\n\nIt does work when class extends \"character\":\n> setClass(\"A.character\", contains=\"character\",\n> representation(label=\"character\"))\n[1] \"A.character\"\n> A<-new(\"A.character\", \"A\", label=\"A\")\n> new(\"A.character\", A, label=\"B\")\nAn object of class \"A.character\"\n[1] \"A\"\nSlot \"label\":\n[1] \"B\"\n\nSincerely,\nDan Murphy",
+            "creation_time": "2010-06-25T15:18:59Z",
+            "creator": "chiefmurphy"
+          },
+          {
+            "text": "This is because (from help(\"new\"))\n\n> The interpretation of the ... arguments in a call to a generator\n> function or to new() can be specialized to particular classes,\n> by defining an appropriate method for \"initialize\".\n\nand the toy class \"A.matrix\" inherits the non-default initialize-method for class \"matrix\".\n\nThe exemplified behaviour is intentional as per r45653 with corresponding NEWS item (for R 2.8.0, from doc/NEWS.2):\n\n> The treatment of special pseudo-classes \"matrix\", \"array\", and\n> \"ts\" as S4 classes has also been modified to be more\n> consistent and, within limitations imposed by special\n> treatment of these objects in the base code, to allow other\n> classes to contain them.\n\nSee methods:::.InitBasicClassMethods for the definition of the special initialize method for S4 matrix. The code comment says:\n\n> Tradeoff between intuition of users that\n> new(\"matrix\", ...) should be like matrix(...) vs consistency of new().\n> Relevant when new class has basic class as its data part.\n\nHere is an example of such an initialization from the regression tests in tests/reg-S4.R:\n\nsetClass(\"moo\", representation(\"matrix\"))\nnew(\"moo\", 1:6, ncol=2)\n\nThe bottom line is: this special treatment of \"matrix\" and \"array\" initialization should probably be documented in help(\"initialize-methods\").",
+            "bug_id": 14323,
+            "is_markdown": false,
+            "count": 1,
+            "creator": "seb.meyer",
+            "creation_time": "2020-01-09T21:31:48Z",
+            "time": "2020-01-09T21:31:48Z",
+            "id": 95128,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "count": 2,
+            "bug_id": 14323,
+            "text": "Yes, the methods for `initialize` with signature `.Object=\"array\"`, `\"matrix\"`, or `\"ts\"` test for named components of `...` whose names match those of the formal arguments of `base::matrix`, `base::array`, and `stats::ts`.  In that usage, the corresponding function is called to construct an object to be used as an initializer, as if that object had been passed unnamed in the original call.\n\nBeyond that, it seems intended that initialization happens as if by the default method with signature `.Object=\"ANY\"`.  In particular, named components of `...` should take precedence over slots of any unnamed component.  Hence the example of comment 0 showing lower precedence would seem to indicate a bug.\n\nThe cause seems to be that `methods:::.mergeAttrs(value, object, explicit)` merges `explicit` into `attributes(object)` rather than into `attributes(value)`, before `attributes(value)` is merged into `attributes(object)`.  This usage of `methods:::.mergeAttrs` occurs \"only\" in the aforementioned methods for `initialize`, so a patch like\n\n```\nIndex: src/library/methods/R/RClassUtils.R\n===================================================================\n--- src/library/methods/R/RClassUtils.R\t(revision 90766)\n+++ src/library/methods/R/RClassUtils.R\t(working copy)\n@@ -1491,9 +1491,9 @@\n \n .mergeAttrs <- function(value, object, explicit = NULL) {\n     supplied <- attributes(object)\n+    valueAttrs <- attributes(value)\n     if(length(explicit))\n-        supplied[names(explicit)] <- explicit\n-    valueAttrs <- attributes(value)\n+        valueAttrs[names(explicit)] <- explicit\n     ## names are special.\n     if(length(supplied$names) && length(valueAttrs$names) == 0L) {\n         if(length(value) != length(object))\n```\n\nwould hopefully not break too much.  I'll spend some time testing ...",
+            "creation_time": "2026-10-28T03:53:48Z",
+            "is_private": false,
+            "id": 103980,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "jaganmn2",
+            "time": "2026-10-28T03:53:48Z",
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "14323": []
+    }
+  },
+  "source_changed": "2026-10-28 03:53:48"
+}

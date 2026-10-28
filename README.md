@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-27._
+_Automatically generated from the R Bugzilla dump updated 2026-10-28._
 
 ## Triaged bugs
 
@@ -80,6 +80,7 @@ _Dates show when the patch was submitted._
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
 * [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-26)
+* [Bug 19259](https://bugs.r-project.org/show_bug.cgi?id=19259) — Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs) (2026-10-27)
 
 ### Mac GUI / Mac specific
 
@@ -102,6 +103,7 @@ _Dates show when the patch was submitted._
 * [Bug 19248](https://bugs.r-project.org/show_bug.cgi?id=19248) — getClassDef(where=<character>) stopped working (2026-10-26)
 * [Bug 19249](https://bugs.r-project.org/show_bug.cgi?id=19249) — Use getClassDef itself to avoid implicitly calling it twice isClass (2026-10-26)
 * [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
+* [Bug 19257](https://bugs.r-project.org/show_bug.cgi?id=19257) — Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs (2026-10-27)
 
 ### Translations
 
