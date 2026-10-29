@@ -20,23 +20,22 @@ TEAM_LOGINS <- c(
 )
 
 CORE_LOGINS <- c(
-  "deepayan.sarkar",
-  "ht",
-  "jaganmn2",
-  "jmc",
-  "Kurt.Hornik",
-  "lawremi",
-  "ligges",
-  "luke",
-  "maechler",
-  "martyn.plummer",
-  "paul",
-  "pd.mes",
-  "ripley",
-  "seb.meyer",
-  "simon.urbanek",
-  "thomas.lumley",
-  "seb.meyer"
+  "sarkar" = "deepayan.sarkar",
+  "turner" = "ht",
+  "jagan" = "jaganmn2",
+  "chambers" = "jmc",
+  "hornik" = "Kurt.Hornik",
+  "lawrence" = "lawremi",
+  "ligges" = "ligges",
+  "tierney" = "luke",
+  "maechler" = "maechler",
+  "plummer" = "martyn.plummer",
+  "murrell" = "paul",
+  "dalgaard" = "pd.mes",
+  "ripley" = "ripley",
+  "meyer" = "seb.meyer",
+  "urbanek" = "simon.urbanek",
+  "lumley" = "thomas.lumley"
 )
 
 TRIAGE_CATEGORIES <- c(
@@ -244,6 +243,7 @@ parse_bug <- function(path) {
     status = node_text(bug, "./bug_status"),
     resolution = node_text(bug, "./resolution"),
     reporter = node_text(bug, "./reporter"),
+    cc = xml2::xml_text(xml_find_all(bug, "./cc"), trim = TRUE),
     changed = node_text(bug, "./delta_ts"),
     comments = comments,
     attachments = attachments
@@ -340,6 +340,7 @@ parse_api_bug <- function(x, bug_id) {
     status = bug$status,
     resolution = bug$resolution,
     reporter = bug$creator,
+    cc = unlist(bug$cc %||% character(), use.names = FALSE),
     changed = format_bugzilla_date(bug$last_change_time),
     comments = parse_api_comments(x, bug_id),
     attachments = parse_api_attachments(x, bug_id)
@@ -732,6 +733,7 @@ classify_triaged <- function(bugs, cache_path, prompt_path) {
       reporter = bug$reporter,
       status = bug$status,
       last_triager_comment = last_triager_comment_date(bug),
+      core_cc = core_cc_text(bug),
       category = result$category[[1]],
       reason = result$reason[[1]],
       confidence = result$confidence[[1]],
@@ -743,6 +745,22 @@ classify_triaged <- function(bugs, cache_path, prompt_path) {
   
   write_csv(cache |> arrange(bug_id), cache_path)
   bind_rows(output)
+}
+
+core_cc <- function(bug) {
+  cc <- unique(as.character(bug$cc %||% character()))
+  patches <- team_patch_info(bug)
+  proposers <- if (nrow(patches)) {
+    unique(patches$attacher)
+  } else {
+    character()
+  }
+  sort(setdiff(intersect(cc, CORE_LOGINS), proposers))
+}
+
+core_cc_text <- function(bug) {
+  in_cc <- CORE_LOGINS %in% core_cc(bug)
+  paste(sort(names(CORE_LOGINS)[in_cc]), collapse = ", ")
 }
 
 reviewed_by_core <- function(bug, patches) {
@@ -778,15 +796,21 @@ additional_team_patches <- function(bugs) {
       status = bug$status,
       patch_date = max(patches$date),
       patch_count = nrow(patches),
+      core_cc = core_cc_text(bug),
       bugzilla_url = paste0(BUGZILLA_URL, bug$bug_id)
     )
   })
 }
 
-markdown_bug <- function(id, summary, date) {
+format_bug_details <- function(date, cc = "") {
+  date <- substr(date, 1, 10)
+  cc[is.na(cc)] <- ""
+  paste0(" (", date, ifelse(nzchar(cc), paste0(", in CC: ", cc), ""), ")")
+}
+
+markdown_bug <- function(id, summary, date, cc = "") {
   link <- paste0("[Bug ", id, "](", BUGZILLA_URL, id, ")")
-  date <- format(as.POSIXct(date, tz = "UTC"), "%Y-%m-%d")
-  paste0("* ", link, " — ", summary, " (", date, ")")
+  paste0("* ", link, " — ", summary, format_bug_details(date, cc))
 }
 
 write_readme <- function(triaged, patches, dump_date, path = "README.md") {
@@ -807,6 +831,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     "## Triaged bugs",
     "",
     "_Dates show the most recent triager comment on the bug._",
+    "_Core developers in CC should not be assumed responsible for action._",
     ""
   )
   
@@ -822,7 +847,8 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
       next
     }
     
-    lines <- markdown_bug(x$bug_id, x$summary, x$last_triager_comment)
+    lines <- markdown_bug(x$bug_id, x$summary, x$last_triager_comment,
+                          x$core_cc)
     write(lines, "")
   }
   
@@ -830,6 +856,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     "## Additional Triage Team patches awaiting review",
     "",
     "_Dates show when the patch was submitted._",
+    "_Core developers in CC should not be assumed responsible for action._",
     ""
   )
   
@@ -846,7 +873,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
       write(
         paste0("### ", component),
         "",
-        markdown_bug(x$bug_id, x$summary, x$patch_date),
+        markdown_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
         ""
       )
     }
@@ -871,9 +898,8 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
   )
 }
 
-plain_bug <- function(id, summary, date) {
-  date <- format(as.POSIXct(date, tz = "UTC"), "%Y-%m-%d")
-  paste0("* Bug ", id, " — ", summary, " (", date, ")")
+plain_bug <- function(id, summary, date, cc = "") {
+  paste0("* Bug ", id, " — ", summary, format_bug_details(date, cc))
 }
 
 write_plain_text_report <- function(
@@ -908,7 +934,8 @@ write_plain_text_report <- function(
     write(
       paste0(category, " (", nrow(x), ")"),
       "",
-      plain_bug(x$bug_id, x$summary, x$last_triager_comment),
+      plain_bug(x$bug_id, x$summary, x$last_triager_comment,
+                x$core_cc),
       ""
     )
   }
@@ -934,7 +961,7 @@ write_plain_text_report <- function(
       write(
         paste0(component, " (", nrow(x), ")"),
         "",
-        plain_bug(x$bug_id, x$summary, x$patch_date),
+        plain_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
         ""
       )
     }
