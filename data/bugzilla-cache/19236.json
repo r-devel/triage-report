@@ -1,0 +1,97 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "component": "Translations",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "cc": [
+          "Heather.Turner",
+          "jaganmn2"
+        ],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19236,
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-21T05:36:04Z",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "last_change_time": "2026-10-21T05:36:24Z",
+        "cc_detail": [
+          {
+            "real_name": "Heather Turner",
+            "id": 230,
+            "name": "Heather.Turner"
+          },
+          {
+            "real_name": "Mikael Jagan",
+            "name": "jaganmn2",
+            "id": 3462
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "trace() messaging is untranslated",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "blocks": [],
+        "url": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19236": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "time": "2026-10-21T05:36:04Z",
+            "attachment_id": {},
+            "count": 0,
+            "bug_id": 19236,
+            "text": "I happened across this in `methods:::.TraceWithMethods`:\n\n```\n        action <- if(untrace)\"Untracing\" else \"Tracing\"\n        nameSpaceCase <- FALSE\n        location <- if(.identC(fromPackage, \"\")) {\n            if(length(pname)==0  && !is.null(whereF))\n                pname <- getPackageName(whereF)\n            nameSpaceCase <- isNamespace(whereF) &&\n            !is.na(match(pname, loadedNamespaces())) &&\n            identical(whereF, getNamespace(pname))\n            if(length(pname)==0)  # but not possible from getPackagename ?\n                \"\"\n            else {\n                if(nameSpaceCase)\n                    paste0(\" in environment <namespace:\",  pname, \">\")\n                else\n                    paste0(\" \", tracingWhere, \" \\\"\",  pname, \"\\\"\")\n            }\n        }\n        else paste0(\" as seen from package \\\"\", fromPackage, \"\\\"\")\n\tobject <- if(refCase) \"reference method\"\n\t\t  else if(is.null(signature)) \"function\"\n\t\t  else \"specified method for function\"\n        object <- paste0(\" \", object, \" \\\"\", what, \"\\\" \")\n        .message(action, object, location)\n        ## tracing methods (signature not null) works without setting where\n        if(nameSpaceCase && !untrace && is.null(signature) && exists(what, envir = .GlobalEnv)) {\n\t    untcall <- paste0(\"untrace(\\\"\", what,\n\t\t\t      \"\\\", where = getNamespace(\\\"\", pname, \"\\\"))\")\n            .message(\"Warning: Tracing only in the namespace; to untrace you will need:\\n    \",\n                     untcall, \"\\n\")\n```\n\nBasically, to construct the `message` condition emitted here:\n\n```\ninvisible(trace(stats::lm, quote(browser())))\n# Tracing function \"lm\" in package \"stats\"\n```\n\n`trace()` is concatenating various sentence fragments together to make the final English message.\n\nThis is not amenable to internationalization -- different grammars generate different natural word orderings.\n\nSo we need to refactor the code so that it can be properly templated -- full-sentence strings with `%s` reserved for non-language fragments (e.g. code like `getNamespace()`).\n\nI don't have any patch yet, so I'm filing this as it seems a suitable task for a future R dev day/sprint for translation teams to tackle.\n\nI know Mikael mentioned he is actively working near this code so CC.",
+            "creation_time": "2026-10-21T05:36:04Z",
+            "is_private": false,
+            "id": 103916,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19236": []
+    }
+  },
+  "source_changed": "2026-10-21 05:36:24"
+}

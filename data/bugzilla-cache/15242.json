@@ -1,0 +1,150 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 15242,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [
+          "jaganmn2"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 2.15.x",
+        "creation_time": "2013-03-23T19:12:11Z",
+        "component": "S4methods",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-28T19:38:41Z",
+        "cc_detail": [
+          {
+            "id": 3462,
+            "name": "jaganmn2",
+            "real_name": "Mikael Jagan"
+          }
+        ],
+        "blocks": [],
+        "url": "",
+        "summary": "insertSource doesn't work against S4 methods",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "real_name": "ARABIKI Takeshi",
+          "name": "takeshi.arabiki",
+          "id": 1006
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "takeshi.arabiki"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "15242": {
+        "comments": [
+          {
+            "is_markdown": false,
+            "creator": "takeshi.arabiki",
+            "time": "2013-03-23T19:12:11Z",
+            "attachment_id": 1420,
+            "count": 0,
+            "text": "Created attachment 1420\nmake insertSource support S4 methods\n\nThere are three issues on insertSource as below:\n1. `differs` function in `.copyMethods` is wrong\n2. `setMethod` does nothing if `cacheOnAssign(where)` is FALSE\n3. the result of `allMethodTables()` is substituted to `methods` when evaluate `length(methods)` and `length(methods)` can be greater than 0\n\n\nI don't know much about S4, but I think the attached patch is useful to fix these issues.\n\nnote:\n`missing(functions) & missing(methods)` will be always `FALSE` by applying the patch when evaluating `force`, because `missing(methods)` is always `TRUE`.\nI think using both of default argument and `missing` function is very confusing.",
+            "bug_id": 15242,
+            "creation_time": "2013-03-23T19:12:11Z",
+            "is_private": false,
+            "id": 87402,
+            "tags": []
+          },
+          {
+            "creation_time": "2013-03-24T07:17:42Z",
+            "bug_id": 15242,
+            "text": "Created attachment 1421\nsupport multiple signatures and methods without setGeneric call\n\nI have modified the patch slightly to support multiple signatures and methods without setGeneric call.",
+            "count": 1,
+            "tags": [],
+            "id": 87403,
+            "is_private": false,
+            "creator": "takeshi.arabiki",
+            "is_markdown": false,
+            "attachment_id": 1421,
+            "time": "2013-03-24T07:17:42Z"
+          },
+          {
+            "creator": "jaganmn2",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-10-28T19:38:41Z",
+            "creation_time": "2026-10-28T19:38:41Z",
+            "text": "Thanks, by just reading I can confirm all of the problems that you mentioned and a few others.  I guess that `evalSource` and `insertSource` are not widely used nor much tested.  (1) and (3) are easy fixes.  (2) warrants more care as it touches `setMethod`, but, right, as we would be conditioning changes on `!cacheOnAssign(where)` (more or less implying `is(where, \"sourceEnvironment\")`, though we could test that, too), the risk of breaking something does seem low.  I am reviewing your patch.",
+            "bug_id": 15242,
+            "count": 2,
+            "tags": [],
+            "id": 103987,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "15242": [
+        {
+          "data": "ZGlmZiAtcnUgbWV0aG9kcy5vcmlnL1IvTWV0aG9kcy5SIG1ldGhvZHMvUi9NZXRob2RzLlIKLS0tIG1ldGhvZHMub3JpZy9SL01ldGhvZHMuUgkyMDEzLTAzLTI0IDAyOjE2OjQ1LjAwMDAwMDAwMCArMDkwMAorKysgbWV0aG9kcy9SL01ldGhvZHMuUgkyMDEzLTAzLTI0IDAyOjA5OjExLjAwMDAwMDAwMCArMDkwMApAQCAtNjIyLDYgKzYyMiwxNCBAQAogICAgICAgICBpZihpcy5ub3QuYmFzZSkKICAgICAgICAgICAgIC5hZGRUb01ldGFUYWJsZShmZGVmLCBzaWduYXR1cmUsIGRlZmluaXRpb24sIHdoZXJlLCBuU2lnKQogICAgICAgICByZXNldEdlbmVyaWMoZiwgZmRlZiwgbXRhYmxlLCBnd2hlcmUsIGRlZmx0KSAjIE5vdGU6IGd3aGVyZSBub3QgdXNlZCBieSByZXNldEdlbmVyaWMKKyAgICB9IGVsc2UgeworICAgICAgICBtZXRhTmFtZSA8LSBwYXN0ZTAobWV0aG9kc1BhY2thZ2VNZXRhTmFtZSgiVCIsIGYpLCAiOiIpCisgICAgICAgIGFsbE9iamVjdHMgPC0gb2JqZWN0cyh3aGVyZSwgYWxsID0gVFJVRSkKKyAgICAgICAgdGFyZ2V0IDwtIGFsbE9iamVjdHNbZ3JlcGwobWV0YU5hbWUsIGFsbE9iamVjdHMpXQorICAgICAgICB0YWJsZSA8LSBnZXQodGFyZ2V0LCB3aGVyZSkKKyAgICAgICAgc2lnIDwtIC5tYXRjaFNpZ0xlbmd0aChzaWduYXR1cmUsIGZkZWYsIGZlbnYsIEZBTFNFKQorICAgICAgICBsYWJlbCA8LSAuc2lnTGFiZWwoc2lnKQorICAgICAgICBhc3NpZ24obGFiZWwsIGRlZmluaXRpb24sIGVudmlyID0gdGFibGUpCiAgICAgfQogICAgICMjIGFzc2lnbnMgdGhlIG1ldGhvZHNsaXN0IG9iamVjdAogICAgICMjIGFuZCBkZWFscyB3aXRoIGZsYWdzIGZvciBwcmltaXRpdmVzICYgZm9yIHVwZGF0aW5nIGdyb3VwIG1lbWJlcnMKZGlmZiAtcnUgbWV0aG9kcy5vcmlnL1IvdHJhY2UuUiBtZXRob2RzL1IvdHJhY2UuUgotLS0gbWV0aG9kcy5vcmlnL1IvdHJhY2UuUgkyMDEzLTAzLTI0IDAyOjE2OjQ1LjAwMDAwMDAwMCArMDkwMAorKysgbWV0aG9kcy9SL3RyYWNlLlIJMjAxMy0wMy0yNCAwMjo1MjozMy4wMDAwMDAwMDAgKzA5MDAKQEAgLTc1Nyw3ICs3NTcsNyBAQAogICAgICAgICB9CiAgICAgfQogICAgIC5tbmFtZXMgPC0gYWxsTWV0aG9kVGFibGVzKCkKLSAgICBpZihsZW5ndGgobWV0aG9kcykgPiAwKSB7CisgICAgaWYoIW1pc3NpbmcobWV0aG9kcykpIHsKICAgICAgICAgbm90VGhlcmUgPC0gc2FwcGx5KG1ldGhvZHMsCiAgICAgICAgICBmdW5jdGlvbihmbmFtZSkgKGxlbmd0aChncmVwKGZuYW1lLCAubW5hbWVzLCBmaXhlZCA9IFRSVUUpKSA9PSAwKQogICAgICAgICApCkBAIC04NDcsNyArODQ3LDcgQEAKIC5jb3B5TWV0aG9kcyA8LSBmdW5jdGlvbihmLCB0YWJsZU5hbWUsIGVudiwgZW52d2hlcmUpIHsKICAgICBkaWZmZXJzIDwtIGZ1bmN0aW9uKG8xLCBvMikKICAgICAgICAgIShpcy5mdW5jdGlvbihvMikgJiYgIyBvMiBjYW4gYmUgTlVMTAotICAgICAgICAgIGlkZW50aWNhbChib2R5KG8yKSwgYm9keShvMikpICYmIGlkZW50aWNhbChhcmdzKG8xKSwgYXJncyhvMikpKQorICAgICAgICAgIGlkZW50aWNhbChib2R5KG8xKSwgYm9keShvMikpICYmIGlkZW50aWNhbChhcmdzKG8xKSwgYXJncyhvMikpKQogICAgIHRhYmxlIDwtIGdldCh0YWJsZU5hbWUsIGVudmlyPWVudikKICAgICBmZGVmIDwtIGdldEdlbmVyaWMoZiwgd2hlcmUgPSBlbnZ3aGVyZSkKICAgICBpZighaXMoZmRlZiwgImdlbmVyaWNGdW5jdGlvbiIpKSB7Cg==",
+          "creator": "takeshi.arabiki",
+          "is_obsolete": true,
+          "flags": [],
+          "content_type": "application/octet-stream",
+          "is_patch": false,
+          "summary": "make insertSource support S4 methods",
+          "creation_time": "2013-03-23T19:12:11Z",
+          "bug_id": 15242,
+          "file_name": "methods.patch",
+          "size": 1738,
+          "last_change_time": "2013-03-24T07:17:42Z",
+          "id": 1420,
+          "is_private": false
+        },
+        {
+          "size": 2689,
+          "last_change_time": "2013-03-24T07:17:42Z",
+          "id": 1421,
+          "is_private": false,
+          "summary": "support multiple signatures and methods without setGeneric call",
+          "creation_time": "2013-03-24T07:17:42Z",
+          "bug_id": 15242,
+          "file_name": "methods_rev1.patch",
+          "is_patch": true,
+          "data": "ZGlmZiAtcnUgbWV0aG9kcy5vcmlnL1IvTWV0aG9kcy5SIG1ldGhvZHMvUi9NZXRob2RzLlIKLS0tIG1ldGhvZHMub3JpZy9SL01ldGhvZHMuUgkyMDEzLTAzLTI0IDAyOjE2OjQ1LjAwMDAwMDAwMCArMDkwMAorKysgbWV0aG9kcy9SL01ldGhvZHMuUgkyMDEzLTAzLTI0IDE1OjA2OjA1LjAwMDAwMDAwMCArMDkwMApAQCAtNjIyLDYgKzYyMiwxOSBAQAogICAgICAgICBpZihpcy5ub3QuYmFzZSkKICAgICAgICAgICAgIC5hZGRUb01ldGFUYWJsZShmZGVmLCBzaWduYXR1cmUsIGRlZmluaXRpb24sIHdoZXJlLCBuU2lnKQogICAgICAgICByZXNldEdlbmVyaWMoZiwgZmRlZiwgbXRhYmxlLCBnd2hlcmUsIGRlZmx0KSAjIE5vdGU6IGd3aGVyZSBub3QgdXNlZCBieSByZXNldEdlbmVyaWMKKyAgICB9IGVsc2UgeworICAgICAgICBtZXRhTmFtZSA8LSBwYXN0ZTAobWV0aG9kc1BhY2thZ2VNZXRhTmFtZSgiVCIsIGYpLCAiOiIpCisgICAgICAgIGFsbE9iamVjdHMgPC0gb2JqZWN0cyh3aGVyZSwgYWxsID0gVFJVRSkKKyAgICAgICAgdGFyZ2V0IDwtIGFsbE9iamVjdHNbZ3JlcGwobWV0YU5hbWUsIGFsbE9iamVjdHMsIGZpeGVkID0gVFJVRSldCisgICAgICAgIGlmIChsZW5ndGgodGFyZ2V0KSA+IDApIHsKKyAgICAgICAgICAgIHRhYmxlIDwtIGdldCh0YXJnZXQsIHdoZXJlKQorICAgICAgICB9IGVsc2UgeworICAgICAgICAgICAgdGFibGUgPC0gbmV3LmVudigpCisgICAgICAgICAgICBhc3NpZ24obWV0YU5hbWUsIHRhYmxlLCBlbnZpciA9IHdoZXJlKQorICAgICAgICB9CisgICAgICAgIHNpZyA8LSAubWF0Y2hTaWdMZW5ndGgoc2lnbmF0dXJlLCBmZGVmLCBmZW52LCBGQUxTRSkKKyAgICAgICAgbGFiZWwgPC0gLnNpZ0xhYmVsKHNpZykKKyAgICAgICAgYXNzaWduKGxhYmVsLCBkZWZpbml0aW9uLCBlbnZpciA9IHRhYmxlKQogICAgIH0KICAgICAjIyBhc3NpZ25zIHRoZSBtZXRob2RzbGlzdCBvYmplY3QKICAgICAjIyBhbmQgZGVhbHMgd2l0aCBmbGFncyBmb3IgcHJpbWl0aXZlcyAmIGZvciB1cGRhdGluZyBncm91cCBtZW1iZXJzCmRpZmYgLXJ1IG1ldGhvZHMub3JpZy9SL3RyYWNlLlIgbWV0aG9kcy9SL3RyYWNlLlIKLS0tIG1ldGhvZHMub3JpZy9SL3RyYWNlLlIJMjAxMy0wMy0yNCAwMjoxNjo0NS4wMDAwMDAwMDAgKzA5MDAKKysrIG1ldGhvZHMvUi90cmFjZS5SCTIwMTMtMDMtMjQgMTU6MDA6MzYuMDAwMDAwMDAwICswOTAwCkBAIC0xNjAsNyArMTYwLDcgQEAKICAgICAgICAgZGVmIDwtIC51bnRyYWNlZEZ1bmN0aW9uKGRlZikKICAgICBpZighaXMubnVsbChzaWduYXR1cmUpKSB7CiAgICAgICAgIGZkZWYgPC0gaWYoaXMucHJpbWl0aXZlKGRlZikpICBnZXRHZW5lcmljKHdoYXQsIFRSVUUsIHdoZXJlKSBlbHNlIGRlZgotICAgICAgICBkZWYgPC0gc2VsZWN0TWV0aG9kKHdoYXQsIHNpZ25hdHVyZSwgZmRlZiA9IGZkZWYsIG9wdGlvbmFsID0gVFJVRSkKKyAgICAgICAgZGVmIDwtIHNlbGVjdE1ldGhvZCh3aGF0LCBzdHJzcGxpdChzaWduYXR1cmUsICIjIilbWzFdXSwgZmRlZiA9IGZkZWYsIG9wdGlvbmFsID0gVFJVRSkKICAgICAgICAgaWYoaXMubnVsbChkZWYpKSB7CiAgICAgICAgICAgICB3YXJuaW5nKGdldHRleHRmKCJDYW4ndCB1bnRyYWNlIG1ldGhvZCBmb3IgJXM7IG5vIG1ldGhvZCBkZWZpbmVkIGZvciB0aGlzIHNpZ25hdHVyZTogJXMiLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzUXVvdGUod2hhdCksCkBAIC0xNjksNyArMTY5LDcgQEAKICAgICAgICAgICAgIHJldHVybihkZWYpCiAgICAgICAgIH0KICAgICAgICAgIyMgcGljayB1cCBzaWduYXR1cmUgd2l0aCBwYWNrYWdlIHNsb3QgZnJvbSBzZWxlY3RNZXRob2QKLSAgICAgICAgc2lnbmF0dXJlIDwtIGRlZkB0YXJnZXQKKyAgICAgICAgc2lnbmF0dXJlIDwtIHBhc3RlKGRlZkB0YXJnZXQsIGNvbGxhcHNlID0gIiMiKQogICAgIH0KICAgICBpZih1bnRyYWNlKSB7CiAgICAgICAgIGlmKC50cmFjZVRyYWNlU3RhdGUpIHsKQEAgLTc1Nyw3ICs3NTcsNyBAQAogICAgICAgICB9CiAgICAgfQogICAgIC5tbmFtZXMgPC0gYWxsTWV0aG9kVGFibGVzKCkKLSAgICBpZihsZW5ndGgobWV0aG9kcykgPiAwKSB7CisgICAgaWYoIW1pc3NpbmcobWV0aG9kcykpIHsKICAgICAgICAgbm90VGhlcmUgPC0gc2FwcGx5KG1ldGhvZHMsCiAgICAgICAgICBmdW5jdGlvbihmbmFtZSkgKGxlbmd0aChncmVwKGZuYW1lLCAubW5hbWVzLCBmaXhlZCA9IFRSVUUpKSA9PSAwKQogICAgICAgICApCkBAIC04NDcsNyArODQ3LDcgQEAKIC5jb3B5TWV0aG9kcyA8LSBmdW5jdGlvbihmLCB0YWJsZU5hbWUsIGVudiwgZW52d2hlcmUpIHsKICAgICBkaWZmZXJzIDwtIGZ1bmN0aW9uKG8xLCBvMikKICAgICAgICAgIShpcy5mdW5jdGlvbihvMikgJiYgIyBvMiBjYW4gYmUgTlVMTAotICAgICAgICAgIGlkZW50aWNhbChib2R5KG8yKSwgYm9keShvMikpICYmIGlkZW50aWNhbChhcmdzKG8xKSwgYXJncyhvMikpKQorICAgICAgICAgIGlkZW50aWNhbChib2R5KG8xKSwgYm9keShvMikpICYmIGlkZW50aWNhbChhcmdzKG8xKSwgYXJncyhvMikpKQogICAgIHRhYmxlIDwtIGdldCh0YWJsZU5hbWUsIGVudmlyPWVudikKICAgICBmZGVmIDwtIGdldEdlbmVyaWMoZiwgd2hlcmUgPSBlbnZ3aGVyZSkKICAgICBpZighaXMoZmRlZiwgImdlbmVyaWNGdW5jdGlvbiIpKSB7Cg==",
+          "creator": "takeshi.arabiki",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": []
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-28 19:38:41"
+}

@@ -1,0 +1,96 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "try() errors when parsing an invalid pipe statement",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-10-06T06:17:28Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-06T05:46:44Z",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "minor",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19202
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19202": {
+        "comments": [
+          {
+            "bug_id": 19202,
+            "text": "```\ntry(parse(text = \"f |> g\"))\n# Error in call[[1L]] : object of type 'symbol' is not subsettable\n```\n\nAs reported to {lintr}: https://github.com/r-lib/lintr/issues/3038",
+            "count": 0,
+            "is_markdown": true,
+            "creation_time": "2026-10-06T05:46:44Z",
+            "creator": "michaelchirico4",
+            "id": 103792,
+            "time": "2026-10-06T05:46:44Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "bug_id": 19202,
+            "text": "This works:\n\n```\nIndex: src/library/base/R/New-Internal.R\n===================================================================\n--- src/library/base/R/New-Internal.R   (revision 90558)\n+++ src/library/base/R/New-Internal.R   (working copy)\n@@ -27,7 +27,7 @@\n             ## try(stop(...)).  This will need adjusting if the\n             ## implementation of tryCatch changes.\n             ## Use identical() since call[[1L]] can be non-atomic.\n-            if (identical(call[[1L]], quote(doTryCatch)))\n+            if (!is.symbol(call) && identical(call[[1L]], quote(doTryCatch)))\n                 call <- sys.call(-4L)\n             dcall <- deparse(call, nlines = 1L)\n             prefix <- paste(\"Error in\", dcall, \": \")\n```\n\nwith updated behavior:\n\n```\ntry(parse(text='f|>g'))\n# Error in g : \n#   The pipe operator requires a function call as RHS (<text>:1:4)\n```\n\nThere's a bit of a gray area here, though, as `conditionCall()` in general expects the `$call` component of the error object to be, well, a call.\n\n`raiseParseError()` is passing `g` to the call slot here:\n\nhttps://github.com/r-devel/r-svn/blob/036fc467d199bfa10fb8ba6c37a930fe9fa9991a/src/main/gram.y#L1269-L1270\n\n`g` is appearing where syntactically there _should_ be a call, but the parser should assume it's just a symbol -- so an approach of coercing `rhs` to a call for the error object feels off.\n\nAnother possibility is this:\n\n```\nIndex: src/library/base/R/New-Internal.R\n===================================================================\n--- src/library/base/R/New-Internal.R   (revision 90558)\n+++ src/library/base/R/New-Internal.R   (working copy)\n@@ -26,8 +26,10 @@\n             ## Patch up the call to produce nicer result for testing as\n             ## try(stop(...)).  This will need adjusting if the\n             ## implementation of tryCatch changes.\n+            if (inherits(e, \"RHSnotFnCall\"))\n+                call <- \"|>\"\n             ## Use identical() since call[[1L]] can be non-atomic.\n-            if (identical(call[[1L]], quote(doTryCatch)))\n+            else if (identical(call[[1L]], quote(doTryCatch)))\n                 call <- sys.call(-4L)\n             dcall <- deparse(call, nlines = 1L)\n             prefix <- paste(\"Error in\", dcall, \": \")\n```\n\nWith behavior:\n\n```\ntry(parse(text='f|>g'))\n# Error in \"|>\" : \n#   The pipe operator requires a function call as RHS (<text>:1:4)\n```\n\nWe could consider handling other parseErrors, e.g. `unsupportedInPipe` is also currently pretty unpalatable:\n\n```\ntry(parse(text = 'f |> `+`(2)'))\n# Error in +2 : \n#   function '+' not supported in RHS call of a pipe (<text>:1:6)\n```\n\nFor now, I'm pausing to keep this thread narrowly focused on the case where `try()` currently errors out before returning, as opposed to returning something odd.",
+            "count": 1,
+            "is_markdown": true,
+            "creation_time": "2026-10-06T06:17:28Z",
+            "creator": "michaelchirico4",
+            "id": 103793,
+            "time": "2026-10-06T06:17:28Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19202": []
+    }
+  },
+  "source_changed": "2026-10-06 06:17:28"
+}

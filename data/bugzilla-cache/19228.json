@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "summary": "Use of freed STRSXP in output textConnection: `this->data` is only kept alive by the user-visible variable binding",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "last_change_time": "2026-10-23T17:11:06Z",
+        "cc_detail": [
+          {
+            "name": "ht",
+            "id": 2824,
+            "real_name": "Heather Turner"
+          },
+          {
+            "real_name": "Kurt Hornik",
+            "id": 308,
+            "name": "Kurt.Hornik"
+          }
+        ],
+        "see_also": [],
+        "target_milestone": "---",
+        "creator": "0599jiangyc",
+        "is_creator_accessible": true,
+        "alias": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Yuancheng Jiang",
+          "id": 3797,
+          "name": "0599jiangyc"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "whiteboard": "",
+        "creation_time": "2026-10-17T05:55:31Z",
+        "version": "R 4.6.x",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "ht",
+          "Kurt.Hornik"
+        ],
+        "deadline": {},
+        "id": 19228,
+        "severity": "normal",
+        "dupe_of": {},
+        "assigned_to": "R-core",
+        "component": "Language",
+        "classification": "Unclassified",
+        "keywords": [
+          "HELPWANTED"
+        ],
+        "is_open": true,
+        "depends_on": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19228": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-10-17T05:55:31Z",
+            "id": 103883,
+            "creator": "0599jiangyc",
+            "creation_time": "2026-10-17T05:55:31Z",
+            "count": 0,
+            "is_markdown": true,
+            "text": "The following code:\n\n```\ncon1 <- textConnection(\"out\", \"w\")\ncat(\"a\", file = con1)                # incomplete line: kept in C buffer, 'out' not yet locked\ncon2 <- textConnection(\"out\", \"w\")   # rebinds 'out'; con1's character vector is now unreferenced\ngc()                                 # frees it, but con1 still points to it\nclose(con1)                          # outtext_close() uses the freed STRSXP\n```\n\nResulted in this output (R-devel built with `--enable-strict-barrier`):\n\n```\nError in close.connection(con1) :\n  unprotected object (0x52500261ba70) encountered (was STRSXP)\nCalls: close -> close.connection\nExecution halted\n```\n\nOn a stock R 4.6.1 (Docker `r-base:latest`) the freed node gets reused, and the same code (with some allocation between `gc()` and `close()`) gives errors such as\n\n```\nError in close.connection(con1) :\n  SET_STRING_ELT() can only be applied to a 'character vector', not a 'pairlist'\n```\n\nor, under `gctorture(TRUE)`, `cannot set length of non-(vector or list)`.\n\nFor an output text connection with a named `object`, `Routtextconn->data` (connections.c) is protected only by the binding of that name in the target environment. `R_PreserveObject()` is used only when `object = NULL`. Anything that drops the binding leaves `data` dangling. `outtext_close()` and `text_vfprintf()` then call `xlengthgets(this->data, ...)` on a freed node. The same happens when `close()` is never called and the connection's finalizer runs `outtext_close()` during `gc()`. Other ways to trigger it:\n\n```\ncon <- textConnection(\"out\", \"w\"); rm(out); gc(); cat(\"x\\n\", file = con)\n```\n\nThis one fails even after a complete line has been written, so the binding is locked (`bindingIsLocked(\"out\", globalenv())` is `TRUE`), because `rm()` still removes it. Also, in `\"w\"` mode `outtext_init()` does not lock the binding at creation, although `?textConnection` says the binding is locked until `close`. It is only locked after the first complete line in `text_vfprintf()`, which is what lets a second `textConnection(\"out\", \"w\")` silently replace it.\n\nA possible fix is to preserve `this->data` (`R_PreserveObject`/`R_ReleaseObject`) whether or not `namesymbol` is set, as is already done for `object = NULL`.\n\nTo reproduce:\n\n```\nRscript --vanilla ./min.R\n```\n\nCommit:\n```\ncf22bdfad2161aa9b2f8e79b786b68588936d722 (R-devel r90659, 2026-10-10); outtext_init() is unchanged in trunk as of r90686 (2026-10-16)\n```\n\nBuild configuration:\n```\n../configure CC=\"clang-18 -fsanitize=address -fno-omit-frame-pointer\" CXX=\"clang++-18 -fsanitize=address -fno-omit-frame-pointer\" \\\n  FC=gfortran F77=gfortran CFLAGS=\"-O1 -g\" CXXFLAGS=\"-O1 -g\" \\\n  --enable-strict-barrier --with-recommended-packages=no \\\n  --with-x=no --with-tcltk=no --with-cairo=no --with-aqua=no \\\n  --disable-java --disable-nls --disable-openmp\n```\n\nOperating System:\n```\nUbuntu 24.04.4 LTS (Docker), x86_64; also observed on Docker r-base:latest (R 4.6.1)\n```",
+            "bug_id": 19228
+          },
+          {
+            "bug_id": 19228,
+            "text": "Patches welcome ...?",
+            "is_markdown": true,
+            "count": 1,
+            "creation_time": "2026-10-22T13:23:39Z",
+            "creator": "Kurt.Hornik",
+            "id": 103931,
+            "time": "2026-10-22T13:23:39Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "id": 103948,
+            "is_private": false,
+            "creation_time": "2026-10-23T17:11:06Z",
+            "bug_id": 19228,
+            "text": "Created attachment 3947\npatch: anchor the vector behind an output textConnection in OutTextData, lock \"w\" binding at creation\n\nPatch attached (against r90759). Rather than adding R_PreserveObject()\ncalls, it anchors the current vector in OutTextData, the preserved\nper-connection root that already holds the target environment, as\nlist(env, data). That also drops the per-line R_PreserveObject() /\nR_ReleaseObject() the object = NULL path (capture.output) has always\ndone. It also locks the binding at creation in \"w\" mode, as \"a\" mode\ndoes and ?textConnection describes, so a second \"w\" connection on an\nopen name is an error rather than orphaning the first; base R's own\nuses are unaffected. That part can be dropped if unwanted.\n\nIncludes a regression test that fails on unpatched trunk with the\nSET_STRING_ELT() error from the report. Checked on an\n--enable-strict-barrier build.\n\nAlso at https://github.com/r-devel/r-svn/pull/401 with CI results.",
+            "count": 2,
+            "attachment_id": 3947,
+            "time": "2026-10-23T17:11:06Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19228": [
+        {
+          "size": 5862,
+          "last_change_time": "2026-10-23T17:11:06Z",
+          "id": 3947,
+          "is_private": false,
+          "summary": "patch: anchor the vector behind an output textConnection in OutTextData, lock \"w\" binding at creation",
+          "creation_time": "2026-10-23T17:11:06Z",
+          "bug_id": 19228,
+          "file_name": "textconnection-preserve-data.diff",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA3NTkpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC0zNjQ4LDExICszNjQ4LDI2IEBAIHN0YXRpYyBTRVhQIG1rQ2hhckxvY2FsKGNvbnN0IGNoYXIgKnMpCiAgICAgcmV0dXJuIG1rQ2hhckNFKHMsIGllbmMpOwogfQogCisvKiBPdXRUZXh0RGF0YVtpZHhdIGlzIGxpc3QoZW52LCBkYXRhKTogdGhlIGVudmlyb25tZW50IGhvbGRpbmcgdGhlCisgICB0YXJnZXQgYmluZGluZywgYW5kIHRoZSBjdXJyZW50IGNoYXJhY3RlciB2ZWN0b3IuICBUaGUgdmVjdG9yIGlzCisgICBhbmNob3JlZCBoZXJlIGJlY2F1c2UgdGhlIGJpbmRpbmcgYWxvbmUgY2Fubm90IGtlZXAgaXQgYWxpdmU6IHJtKCkKKyAgIG9yIGEgcmViaW5kaW5nIG9mIHRoZSBuYW1lIHdvdWxkIGxlYXZlIHRoaXMtPmRhdGEgZGFuZ2xpbmcKKyAgIChQUiMxOTIyOCkuICovCitzdGF0aWMgU0VYUCBvdXR0ZXh0X2VudihpbnQgaWR4KQoreworICAgIHJldHVybiBWRUNUT1JfRUxUKFZFQ1RPUl9FTFQoT3V0VGV4dERhdGEsIGlkeCksIDApOworfQorCitzdGF0aWMgdm9pZCBvdXR0ZXh0X3NldF9kYXRhKGludCBpZHgsIFNFWFAgZGF0YSkKK3sKKyAgICBTRVRfVkVDVE9SX0VMVChWRUNUT1JfRUxUKE91dFRleHREYXRhLCBpZHgpLCAxLCBkYXRhKTsKK30KKwogc3RhdGljIHZvaWQgb3V0dGV4dF9jbG9zZShSY29ubmVjdGlvbiBjb24pCiB7CiAgICAgUm91dHRleHRjb25uIHRoaXMgPSBjb24tPnByaXZhdGU7CiAgICAgaW50IGlkeCA9IENvbm5JbmRleChjb24pOwotICAgIFNFWFAgdG1wLCBlbnYgPSBWRUNUT1JfRUxUKE91dFRleHREYXRhLCBpZHgpOworICAgIFNFWFAgdG1wLCBlbnYgPSBvdXR0ZXh0X2VudihpZHgpOwogCiAgICAgaWYodGhpcy0+bmFtZXN5bWJvbCAmJiBSX2V4aXN0c1ZhckluRnJhbWUoZW52LCB0aGlzLT5uYW1lc3ltYm9sKSkKIAlSX3VuTG9ja0JpbmRpbmcodGhpcy0+bmFtZXN5bWJvbCwgZW52KTsKQEAgLTM2NjEsNiArMzY3Niw3IEBAIHN0YXRpYyB2b2lkIG91dHRleHRfY2xvc2UoUmNvbm5lY3Rpb24gY29uKQogCVNFVF9TVFJJTkdfRUxUKHRtcCwgdGhpcy0+bGVuIC0gMSwgbWtDaGFyTG9jYWwodGhpcy0+bGFzdGxpbmUpKTsKIAlpZih0aGlzLT5uYW1lc3ltYm9sKSBkZWZpbmVWYXIodGhpcy0+bmFtZXN5bWJvbCwgdG1wLCBlbnYpOwogCUVOU1VSRV9OQU1FRE1BWCh0bXApOworCW91dHRleHRfc2V0X2RhdGEoaWR4LCB0bXApOwogCXRoaXMtPmRhdGEgPSB0bXA7CiAJVU5QUk9URUNUKDEpOwogICAgIH0KQEAgLTM2NzAsMTIgKzM2ODYsNyBAQCBzdGF0aWMgdm9pZCBvdXR0ZXh0X2Rlc3Ryb3koUmNvbm5lY3Rpb24gY29uKQogewogICAgIFJvdXR0ZXh0Y29ubiB0aGlzID0gY29uLT5wcml2YXRlOwogICAgIGludCBpZHggPSBDb25uSW5kZXgoY29uKTsKLSAgICAvKiBPdXRUZXh0RGF0YSBpcyBwcmVzZXJ2ZWQsIGFuZCB0aGF0IGltcGxpZXMgdGhhdCB0aGUgZW52aXJvbm1lbnQKLSAgICAgICB3ZSBhcmUgd3JpdGluZyBpdCBhbmQgaGVuY2UgdGhlIGNoYXJhY3RlciB2ZWN0b3IgaXMgcHJvdGVjdGVkLgotICAgICAgIEhvd2V2ZXIsIHRoaXMgY291bGQgYmUgcXVpdGUgZXhwZW5zaXZlLgotICAgICovCiAgICAgU0VUX1ZFQ1RPUl9FTFQoT3V0VGV4dERhdGEsIGlkeCwgUl9OaWxWYWx1ZSk7Ci0gICAgaWYoIXRoaXMtPm5hbWVzeW1ib2wpIFJfUmVsZWFzZU9iamVjdCh0aGlzLT5kYXRhKTsKICAgICBmcmVlKHRoaXMtPmxhc3RsaW5lKTsgZnJlZSh0aGlzKTsKIH0KIApAQCAtMzczMCw3ICszNzQxLDcgQEAgc3RhdGljIGludCB0ZXh0X3ZmcHJpbnRmKFJjb25uZWN0aW9uIGNvbiwgY29uc3QgY2hhciAqZm9ybWF0LCB2YV9saXN0IGFwKQogCXEgPSBSZl9zdHJjaHIocCwgJ1xuJyk7CiAJaWYocSkgewogCSAgICBpbnQgaWR4ID0gQ29ubkluZGV4KGNvbik7Ci0JICAgIFNFWFAgZW52ID0gVkVDVE9SX0VMVChPdXRUZXh0RGF0YSwgaWR4KTsKKwkgICAgU0VYUCBlbnYgPSBvdXR0ZXh0X2VudihpZHgpOwogCSAgICAqcSA9ICdcMCc7CiAJICAgIFBST1RFQ1QodG1wID0geGxlbmd0aGdldHModGhpcy0+ZGF0YSwgKyt0aGlzLT5sZW4pKTsKIAkgICAgU0VUX1NUUklOR19FTFQodG1wLCB0aGlzLT5sZW4gLSAxLCBta0NoYXJMb2NhbChwKSk7CkBAIC0zNzM5LDEwICszNzUwLDggQEAgc3RhdGljIGludCB0ZXh0X3ZmcHJpbnRmKFJjb25uZWN0aW9uIGNvbiwgY29uc3QgY2hhciAqZm9ybWF0LCB2YV9saXN0IGFwKQogCQkgICAgUl91bkxvY2tCaW5kaW5nKHRoaXMtPm5hbWVzeW1ib2wsIGVudik7CiAJCWRlZmluZVZhcih0aGlzLT5uYW1lc3ltYm9sLCB0bXAsIGVudik7CiAJCVJfTG9ja0JpbmRpbmcodGhpcy0+bmFtZXN5bWJvbCwgZW52KTsKLQkgICAgfSBlbHNlIHsKLQkJUl9SZWxlYXNlT2JqZWN0KHRoaXMtPmRhdGEpOwotCQlSX1ByZXNlcnZlT2JqZWN0KHRtcCk7CiAJICAgIH0KKwkgICAgb3V0dGV4dF9zZXRfZGF0YShpZHgsIHRtcCk7CiAJICAgIHRoaXMtPmRhdGEgPSB0bXA7CiAJICAgIEVOU1VSRV9OQU1FRE1BWCh0bXApOwogCSAgICBVTlBST1RFQ1QoMSk7CkBAIC0zNzc0LDM4ICszNzgzLDM3IEBAIHN0YXRpYyBpbnQgdGV4dF92ZnByaW50ZihSY29ubmVjdGlvbiBjb24sIGNvbnN0IGNoYXIgKmZvcm1hdCwgdmFfbGlzdCBhcCkKIHN0YXRpYyB2b2lkIG91dHRleHRfaW5pdChSY29ubmVjdGlvbiBjb24sIFNFWFAgc3RleHQsIGNvbnN0IGNoYXIgKm1vZGUsIGludCBpZHgpCiB7CiAgICAgUm91dHRleHRjb25uIHRoaXMgPSBjb24tPnByaXZhdGU7Ci0gICAgU0VYUCB2YWw7CisgICAgU0VYUCB2YWwsIGVudiA9IG91dHRleHRfZW52KGlkeCk7CiAKICAgICBpZihzdGV4dCA9PSBSX05pbFZhbHVlKSB7CiAJdGhpcy0+bmFtZXN5bWJvbCA9IE5VTEw7Ci0JICAgIC8qIGNyZWF0ZSB2YXJpYWJsZSBwb2ludGVkIHRvIGJ5IGNvbi0+ZGVzY3JpcHRpb24gKi8KIAl2YWwgPSBhbGxvY1ZlY3RvcihTVFJTWFAsIDApOwotCVJfUHJlc2VydmVPYmplY3QodmFsKTsKICAgICB9IGVsc2UgewogCXRoaXMtPm5hbWVzeW1ib2wgPSBpbnN0YWxsKGNvbi0+ZGVzY3JpcHRpb24pOwogCWlmKHN0cmNtcChtb2RlLCAidyIpID09IDApIHsKIAkgICAgLyogY3JlYXRlIHZhcmlhYmxlIHBvaW50ZWQgdG8gYnkgY29uLT5kZXNjcmlwdGlvbiAqLwogCSAgICBQUk9URUNUKHZhbCA9IGFsbG9jVmVjdG9yKFNUUlNYUCwgMCkpOwotCSAgICBkZWZpbmVWYXIodGhpcy0+bmFtZXN5bWJvbCwgdmFsLCBWRUNUT1JfRUxUKE91dFRleHREYXRhLCBpZHgpKTsKKwkgICAgZGVmaW5lVmFyKHRoaXMtPm5hbWVzeW1ib2wsIHZhbCwgZW52KTsKIAkgICAgLyogTm90IGNsZWFyIGlmIHRoaXMgaXMgbmVlZGVkLCBidXQgYmUgY29uc2VydmF0aXZlICovCiAJICAgIEVOU1VSRV9OQU1FRE1BWCh2YWwpOworCSAgICBSX0xvY2tCaW5kaW5nKHRoaXMtPm5hbWVzeW1ib2wsIGVudik7CiAJICAgIFVOUFJPVEVDVCgxKTsKIAl9IGVsc2UgewogCSAgICAvKiB0YWtlIG92ZXIgZXhpc3RpbmcgdmFyaWFibGUgKi8KLQkgICAgdmFsID0gZmluZFZhcjEodGhpcy0+bmFtZXN5bWJvbCwgVkVDVE9SX0VMVChPdXRUZXh0RGF0YSwgaWR4KSwKLQkJCSAgIFNUUlNYUCwgRkFMU0UpOworCSAgICB2YWwgPSBmaW5kVmFyMSh0aGlzLT5uYW1lc3ltYm9sLCBlbnYsIFNUUlNYUCwgRkFMU0UpOwogCSAgICBpZih2YWwgPT0gUl9VbmJvdW5kVmFsdWUpIHsKIAkJd2FybmluZyhfKCJ0ZXh0IGNvbm5lY3Rpb246IGFwcGVuZGluZyB0byBhIG5vbi1leGlzdGVudCBjaGFyIHZlY3RvciIpKTsKIAkJUFJPVEVDVCh2YWwgPSBhbGxvY1ZlY3RvcihTVFJTWFAsIDApKTsKLQkJZGVmaW5lVmFyKHRoaXMtPm5hbWVzeW1ib2wsIHZhbCwgVkVDVE9SX0VMVChPdXRUZXh0RGF0YSwgaWR4KSk7CisJCWRlZmluZVZhcih0aGlzLT5uYW1lc3ltYm9sLCB2YWwsIGVudik7CiAJCUVOU1VSRV9OQU1FRE1BWCh2YWwpOwogCQlVTlBST1RFQ1QoMSk7CiAJICAgIH0KIAkgICAgUFJPVEVDVCh2YWwpOwotCSAgICBSX0xvY2tCaW5kaW5nKHRoaXMtPm5hbWVzeW1ib2wsIFZFQ1RPUl9FTFQoT3V0VGV4dERhdGEsIGlkeCkpOworCSAgICBSX0xvY2tCaW5kaW5nKHRoaXMtPm5hbWVzeW1ib2wsIGVudik7CiAJICAgIFVOUFJPVEVDVCgxKTsKIAl9CiAgICAgfQorICAgIG91dHRleHRfc2V0X2RhdGEoaWR4LCB2YWwpOwogICAgIHRoaXMtPmxlbiA9IExFTkdUSCh2YWwpOwogICAgIHRoaXMtPmRhdGEgPSB2YWw7CiAgICAgdGhpcy0+bGFzdGxpbmVbMF0gPSAnXDAnOwpAQCAtMzg5Niw3ICszOTA0LDEwIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb190ZXh0Y29ubmVjdGlvbihTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJICAgIE91dFRleHREYXRhID0gYWxsb2NWZWN0b3IoVkVDU1hQLCBOQ09OTkVDVElPTlMpOwogCSAgICBSX1ByZXNlcnZlT2JqZWN0KE91dFRleHREYXRhKTsKIAl9Ci0JU0VUX1ZFQ1RPUl9FTFQoT3V0VGV4dERhdGEsIG5jb24sIHZlbnYpOworCVNFWFAgc2xvdCA9IFBST1RFQ1QoYWxsb2NWZWN0b3IoVkVDU1hQLCAyKSk7CisJU0VUX1ZFQ1RPUl9FTFQoc2xvdCwgMCwgdmVudik7CisJU0VUX1ZFQ1RPUl9FTFQoT3V0VGV4dERhdGEsIG5jb24sIHNsb3QpOworCVVOUFJPVEVDVCgxKTsKIAlpZihzdGV4dCA9PSBSX05pbFZhbHVlKQogCSAgICBjb24gPSBDb25uZWN0aW9uc1tuY29uXSA9IG5ld291dHRleHQoIk5VTEwiLCBzdGV4dCwgb3BlbiwgbmNvbik7CiAJZWxzZSBpZihpc1N0cmluZyhzdGV4dCkgJiYgTEVOR1RIKHN0ZXh0KSA9PSAxKQpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwNzU5KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQyMjMsNiArNDIyMywyMyBAQCB1bmxpbmsoemlwZmlsZSkKICMjIG4yIC0gbjEgd2FzIDUwIGluIFIgPD0gNC42LjIKIAogCisjIyBhbiBvdXRwdXQgdGV4dENvbm5lY3Rpb24oKSBrZXB0IGl0cyBjaGFyYWN0ZXIgdmVjdG9yIGFsaXZlIG9ubHkgdGhyb3VnaAorIyMgdGhlIGJpbmRpbmcgb2YgdGhlIHRhcmdldCBuYW1lIC0tIFBSIzE5MjI4Citjb24gPC0gdGV4dENvbm5lY3Rpb24oIm91dCIsICJ3IikKK2NhdCgiYSIsIGZpbGUgPSBjb24pCitybShvdXQpOyBpbnZpc2libGUoZ2MoKSkKK2p1bmsgPC0gbGFwcGx5KDE6MjAwMCwgZnVuY3Rpb24oaSkgcGFpcmxpc3QoaSkpICMgcmV1c2UgdGhlIGZyZWVkIG5vZGUKK2NhdCgiYlxuIiwgZmlsZSA9IGNvbikKK2Nsb3NlKGNvbikKK3N0b3BpZm5vdChpZGVudGljYWwob3V0LCAiYWIiKSkKK2NvbiA8LSB0ZXh0Q29ubmVjdGlvbigib3V0IiwgInciKQordG9vbHM6OmFzc2VydEVycm9yKHRleHRDb25uZWN0aW9uKCJvdXQiLCAidyIpKSAjIGxvY2tlZCB3aGlsc3Qgb3BlbiwgYXMgZG9jdW1lbnRlZAorY2xvc2UoY29uKQorc3RvcGlmbm90KCFiaW5kaW5nSXNMb2NrZWQoIm91dCIsIGVudmlyb25tZW50KCkpKQorIyMgdXNlZCBhIGZyZWVkIFNUUlNYUCBpbiBSIDw9IDQuNi4yOyBzZWNvbmQgdGV4dENvbm5lY3Rpb24oKSBzaWxlbnRseQorIyMgcmVwbGFjZWQgdGhlIGZpcnN0CisKKwogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-23 17:11:06"
+}

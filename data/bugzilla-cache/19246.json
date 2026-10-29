@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "S4methods",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19246,
+        "deadline": {},
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-24T16:54:10Z",
+        "priority": "P5",
+        "product": "R",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "cc_detail": [],
+        "last_change_time": "2026-10-24T16:54:21Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "typo in .recacheSubclasses -- wrong inheritance is checked in class unions",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19246": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103952,
+            "time": "2026-10-24T16:54:10Z",
+            "tags": [],
+            "attachment_id": 3948,
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19246,
+            "text": "Created attachment 3948\nFix .resetSubclasses to check the correct class union\n\n`.recacheSubclasses()` has:\n\n```\nelse if(is.na(match(what, names(subDef@contains)))) {\n```\n\nBut `what` is also derived from a subclass, so it's _always_ `TRUE`. This has the following observable defects:\n\n```\nsetClassUnion(\"U1\", c(\"factor\", \"numeric\"))\nsetClassUnion(\"U2\", c(\"numeric\", \"factor\"))\nsetGeneric(\"fU\", function(x) standardGeneric(\"fU\"))\nsetMethod(\"fU\", \"U1\", function(x) \"U1\")\nsetMethod(\"fU\", \"numeric\", function(x) \"numeric\")\n\ngetClassDef(\"ordered\")@contains[[\"U1\"]]@distance\n# 4; should be 2. ditto for \"U2\"\n\nfU(ordered(\"a\"))\n# numeric; should be U1, at lower @distance\n```\n\nActual package bugs discovered:\n\n```\nlibrary(kernlab)\nkm <- as.kernelMatrix(matrix(1:4, 2, 2))\nclass(as(km, \"listI\"))\n# [1] integer\n```\n\nBUT kernlab defines (kernlab/R/aobjects.R)\n\n```\nsetClassUnion(\"listI\", c(\"list\", \"numeric\", \"vector\", \"integer\", \"matrix\"))\n```\n\nSo the correct output here is to pick up the matrix->listI path (not matrix->array->structure->vector->listI)\n\nA different one from Matrix:\n\n```\nlibrary(Matrix)\nM <- as(Matrix(c(1, 0.5, 0.5, 1), 2, 2), \"corMatrix\")\nM@sd <- c(2, 3)\nV <- Matrix(c(1, 0.2, 0.2, 1), 2, 2)\n\nsetClassUnion(\"dMatrixOrMatrix\", members = c(\"dMatrix\", \"matrix\"))\nas(M, \"dMatrix\") <- V\nM@sd\n# [1] 1 1\n```\n\nHere, the wrong `@replace` method got picked up, and `@sd` got recomputed instead of copied over.\n\n---\n\nThis was again picked up while trying to improve package load efficiency. The loop always evaluating to `TRUE` causes unnecessary work. c.f.\n\n```\ne <- new.env(parent = .GlobalEnv)\nmembers <- paste0(\"Base_\", 1:40)\nfor (m in members) {\n  setClass(m, where = e)\n  for (s in 1:10) setClass(paste0(m, \"_sub_\", s), contains = m, where = e)\n}\n\nsystem.time(setClassUnion(\"BigUnion\", members, where = e))\n\nu_def <- getClassDef(\"BigUnion\", where = e)\nsystem.time(for (i in 1:100) methods:::.recacheSubclasses(\"BigUnion\", u_def, e))\n\n# BEFORE patch\n#    user  system elapsed \n#   1.501   0.008   1.509 \n#    user  system elapsed \n#   2.216   0.000   2.217\n\n# AFTER patch\n#    user  system elapsed \n#   0.966   0.000   0.966 \n#    user  system elapsed \n#   0.153   0.000   0.153 \n```",
+            "creation_time": "2026-10-24T16:54:10Z",
+            "creator": "michaelchirico4"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19246": [
+        {
+          "is_private": false,
+          "id": 3948,
+          "last_change_time": "2026-10-24T16:54:21Z",
+          "size": 5519,
+          "file_name": "file_19246.txt",
+          "bug_id": 19246,
+          "creation_time": "2026-10-24T16:54:10Z",
+          "summary": "Fix .resetSubclasses to check the correct class union",
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gc3JjL2xpYnJhcnkvbWV0aG9kcy9SL1JDbGFzc1V0aWxzLlIgKHJldmlzaW9uIDkwNzYwKQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9SQ2xhc3NVdGlscy5SICh3b3JraW5nIGNvcHkpDQpAQCAtMjA5NCw2ICsyMDk0LDEzIEBADQogICAgIHZhbHVlDQogfQ0KIA0KKy5pc1VwZGF0ZWRTdXBlcmNsYXNzIDwtIGZ1bmN0aW9uKGNvbnRhaW5zLCBuZXdfY2xhc3MsIGV4dGVuc2lvbikgew0KKyAgICBpZHggPC0gbWF0Y2gobmV3X2NsYXNzLCBuYW1lcyhjb250YWlucykpDQorICAgIGlmIChpcy5uYShpZHgpKQ0KKyAgICAgIHJldHVybihUUlVFKQ0KKyAgICBleHRlbnNpb25AZGlzdGFuY2UgPCBjb250YWluc1tbaWR4XV1AZGlzdGFuY2UNCit9DQorDQogIyMnIEluc2VydCBzdXBlcmNsYXNzIGluZm9ybWF0aW9uIGludG8gYWxsIHRoZSBzdWJjbGFzc2VzIG9mIHRoaXMgY2xhc3MuDQogIyMgVXNlZCAoaW4gMSBwbGFjZSBvbmx5KSB0byBpbmNvcnBvcmF0ZSBpbmhlcml0YW5jZSBpbmZvcm1hdGlvbiBmcm9tIGNsYXNzVW5pb25zDQogLnJlY2FjaGVTdWJjbGFzc2VzIDwtIGZ1bmN0aW9uKGNsYXNzLCBkZWYsIGVudikgew0KQEAgLTIxMDYsOCArMjExMyw4IEBADQogICAgICAgICAgICAgc3ViRGVmIDwtIGdldENsYXNzRGVmKHdoYXQsIGVudikgIyBtYXkgYmUgdGhlIGNhc2UgZm9yIG1lbWJlcnMgb2YgYSBjbGFzc1VuaW9uDQogICAgICAgICBpZihpcy5udWxsKHN1YkRlZikpDQogICAgICAgICAgICAgd2FybmluZyhnZXR0ZXh0ZigidW5kZWZpbmVkIHN1YmNsYXNzICVzIG9mIGNsYXNzICVzOyBkZWZpbml0aW9uIG5vdCB1cGRhdGVkIiwNCi0gICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5kUSh3aGF0KSwgLmRRKGRlZkBjbGFzc05hbWUpKSkNCi0gICAgICAgIGVsc2UgaWYoaXMubmEobWF0Y2god2hhdCwgbmFtZXMoc3ViRGVmQGNvbnRhaW5zKSkpKSB7DQorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuZFEod2hhdCksIC5kUShkZWZAY2xhc3NOYW1lKSksIGRvbWFpbiA9IE5BKQ0KKyAgICAgICAgZWxzZSBpZiguaXNVcGRhdGVkU3VwZXJjbGFzcyhzdWJEZWZAY29udGFpbnMsIGNsYXNzLCBzdWJzW1tpXV0pKSB7DQogICAgICAgICAgICAgIyMgaW5zZXJ0IHRoZSBuZXcgc3VwZXJjbGFzcyB0byBtYWludGFpbiBvcmRlciBieSBkaXN0YW5jZQ0KICAgICAgICAgICAgIGNudG5zIDwtIHN1YkRlZkBjb250YWlucw0KICAgICAgICAgICAgIGNudG5zW1tjbGFzc11dIDwtIHN1YnNbW2ldXQ0KQEAgLTIxNDEsNyArMjE0OCw3IEBADQogICAgICAgICBpZiAoIXN1YmNsYXNzSXNMb2NhbCkgew0KICAgICAgICAgICAgIGlmIChpcyhkZWYyLCAiQ2xhc3NVbmlvblJlcHJlc2VudGF0aW9uIikpDQogICAgICAgICAgICAgICAgIG5leHQNCi0gICAgICAgICAgICB3YXJuaW5nKGdldHRleHRmKHBhc3RlKCJGcm9tIC5jaGVja1N1YmNsYXNzZXMoKTogc3ViY2xhc3MgJXMgKG9mIHBhY2thZ2UgJXMpIGlzIG5vdCBsb2NhbCB0byBzdXBlcmNsYXNzICVzIChvZiBwYWNrYWdlICVzKSwgd2hpY2ggaXMgbm90IGEgY2xhc3MgdW5pb24sIHNvIGluaGVyaXRhbmNlIGluZm9ybWF0aW9uIHdpbGwgYmUgbG9zdC4iKSwNCisgICAgICAgICAgICB3YXJuaW5nKGdldHRleHRmKCJGcm9tIC5jaGVja1N1YmNsYXNzZXMoKTogc3ViY2xhc3MgJXMgKG9mIHBhY2thZ2UgJXMpIGlzIG5vdCBsb2NhbCB0byBzdXBlcmNsYXNzICVzIChvZiBwYWNrYWdlICVzKSwgd2hpY2ggaXMgbm90IGEgY2xhc3MgdW5pb24sIHNvIGluaGVyaXRhbmNlIGluZm9ybWF0aW9uIHdpbGwgYmUgbG9zdC4iLA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLmRRKHdoYXQpLCAuZFEoY3BrZyksIC5kUShjbGFzczIpLA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLmRRKHBhY2thZ2VTbG90KGRlZikpLA0KICAgICAgICAgICAgICAgICAgICAgZG9tYWluID0gTkEpKQ0KQEAgLTIxNTUsMTMgKzIxNjIsMTYgQEANCiAgICAgICAgICAgd2FybmluZyhnZXR0ZXh0Zigibm8gZGVmaW5pdGlvbiBvZiBpbmhlcml0YW5jZSBmcm9tICVzIHRvICVzLCB0aG91Z2ggdGhlIHJlbGF0aW9uIHdhcyBpbXBsaWVkIGJ5IHRoZSBzZXRJcygpIGZyb20gJXMiLA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5kUSh3aGF0KSwgLmRRKGRlZjJAY2xhc3NOYW1lKSwgLmRRKGNsYXNzKSksDQogICAgICAgICAgICAgICAgICAgY2FsbC4gPSBGQUxTRSwgZG9tYWluID0gTkEpDQotICAgICAgICBlbHNlIGlmKGlzLm5hKG1hdGNoKGNsYXNzMiwgbmFtZXMoc3ViRGVmQGNvbnRhaW5zKSkpKSB7DQorICAgICAgICBlbHNlIGlmKC5pc1VwZGF0ZWRTdXBlcmNsYXNzKHN1YkRlZkBjb250YWlucywgY2xhc3MyLCBleHRlbnNpb24pKSB7DQogICAgICAgICAgICAgaWYoaXNUUlVFKGFzLmxvZ2ljYWwoU3lzLmdldGVudigiX1JfTUVUSE9EU19TSE9XX0NIRUNLU1VCQ0xBU1NFUyIsICJmYWxzZSIpKSkpDQogICAgICAgICAgICAgbWVzc2FnZShzcHJpbnRmKHBhc3RlKCAjIGN1cnJlbnRseSBvbmx5IHNlZW4gZnJvbSBzZXRDbGFzc1VuaW9uKCkgLT4gc2V0SXMoKSAtPg0KICAgICAgICAgICAgICAgICAiRGVidWdnaW5nIC5jaGVja1N1YmNsYXNzZXMoKTogYXNzaWduQ2xhc3NEZWYod2hhdD1cIiVzXCIsICosIHdoZXJlPSVzLCBmb3JjZT1UUlVFKTtcbiIsDQogICAgICAgICAgICAgICAgICJFIDo9IGVudmlyb25tZW50KCk6ICVzOyBwYXJlbnQuZW52KEUpOiAlcyIpLCB3aGF0LCBmb3JtYXQoY3doZXJlKSwNCi0gICAgICAgICAgICAgICAgZm9ybWF0KEUgPC0gZW52aXJvbm1lbnQoKSksIGZvcm1hdChwYXJlbnQuZW52KEUpKSkpDQotICAgICAgICAgICAgc3ViRGVmQGNvbnRhaW5zW1tjbGFzczJdXSA8LSBleHRlbnNpb24NCisgICAgICAgICAgICAgICAgZm9ybWF0KEUgPC0gZW52aXJvbm1lbnQoKSksIGZvcm1hdChwYXJlbnQuZW52KEUpKSksIGRvbWFpbiA9IE5BKQ0KKyAgICAgICAgICAgIGNudG5zIDwtIHN1YkRlZkBjb250YWlucw0KKyAgICAgICAgICAgIGNudG5zW1tjbGFzczJdXSA8LSBleHRlbnNpb24NCisgICAgICAgICAgICBjbnRucyA8LSBjbnRuc1tzb3J0Lmxpc3QodmFwcGx5KGNudG5zLCBmdW5jdGlvbih4KSB4QGRpc3RhbmNlLCAxKSldDQorICAgICAgICAgICAgc3ViRGVmQGNvbnRhaW5zIDwtIGNudG5zDQogICAgICAgICAgICAgYXNzaWduQ2xhc3NEZWYod2hhdCwgc3ViRGVmLCBjd2hlcmUsIFRSVUUpDQogICAgICAgICB9ICMgZWxzZSAgbm8gYWN0aW9uIChpbmNsIG5vIHdhcm5pbmchKSBhdCBhbGwNCiAgICAgfQ0KSW5kZXg6IHRlc3RzL2NsYXNzZXMtbWV0aG9kcy5SDQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09DQotLS0gdGVzdHMvY2xhc3Nlcy1tZXRob2RzLlIgICAgIChyZXZpc2lvbiA5MDc2MCkNCisrKyB0ZXN0cy9jbGFzc2VzLW1ldGhvZHMuUiAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0zODIsNCArMzgyLDI5IEBADQogICAgICAgICAgIGlkZW50aWNhbChhdHRyKGgsICJsYWJlbCIpLCAia2VwdCIpLA0KICAgICAgICAgICBpZGVudGljYWwoaCgyKSwgMiksIGlkZW50aWNhbChuLCAxKSkgIyBoIG5vIGxvbmdlciB0cmFjZWQNCiANCisjIyAucmVjYWNoZVN1YmNsYXNzZXMoKSAmIC5jaGVja1N1YmNsYXNzZXMoKSBwcmVzZXJ2ZSBzaG9ydGVzdCBAZGlzdGFuY2UgYW5kIEBjb250YWlucyBvcmRlcjoNCitzZXRDbGFzc1VuaW9uKCJVMSIsIGMoImZhY3RvciIsICJudW1lcmljIikpDQorc2V0Q2xhc3NVbmlvbigiVTIiLCBjKCJudW1lcmljIiwgImZhY3RvciIpKQ0KK3NldEdlbmVyaWMoImZVIiwgXCh4KSBzdGFuZGFyZEdlbmVyaWMoImZVIikpDQorc2V0TWV0aG9kKCJmVSIsICJVMSIsIFwoeCkgIlUxIikNCitzZXRNZXRob2QoImZVIiwgIm51bWVyaWMiLCBcKHgpICJudW1lcmljIikNCitzdG9waWZub3QoaWRlbnRpY2FsKGdldENsYXNzRGVmKCJvcmRlcmVkIilAY29udGFpbnNbWyJVMSJdXUBkaXN0YW5jZSwgMiksDQorICAgICAgICAgIGlkZW50aWNhbChnZXRDbGFzc0RlZigib3JkZXJlZCIpQGNvbnRhaW5zW1siVTIiXV1AZGlzdGFuY2UsIDIpLA0KKyAgICAgICAgICBpZGVudGljYWwoZlUob3JkZXJlZCgiYSIpKSwgIlUxIiksDQorICAgICAgICAgIHJlbW92ZUdlbmVyaWMoImZVIiksIHJlbW92ZUNsYXNzKCJVMSIpLCByZW1vdmVDbGFzcygiVTIiKSkNCisNCitzZXRDbGFzcygiUzAiLCBjb250YWlucyA9ICJWSVJUVUFMIikNCitzZXRDbGFzcygiUzEiLCBjb250YWlucyA9IGMoIlMwIiwgIlZJUlRVQUwiKSkNCitzZXRDbGFzcygiQiIsIGNvbnRhaW5zID0gIlMxIikNCitzZXRDbGFzcygiQyIsIGNvbnRhaW5zID0gIkIiKQ0KK3NldENsYXNzKCJYIikNCitzZXRDbGFzc1VuaW9uKCJVIiwgYygiQiIsICJYIikpDQorc2V0R2VuZXJpYygiZlBpY2siLCBcKHgpIHN0YW5kYXJkR2VuZXJpYygiZlBpY2siKSkNCitzZXRNZXRob2QoImZQaWNrIiwgIlMwIiwgXCh4KSAiUzAiKQ0KK3NldE1ldGhvZCgiZlBpY2siLCAiVSIsIFwoeCkgIlUiKQ0KK3N0b3BpZm5vdCghaXMudW5zb3J0ZWQodmFwcGx5KGdldENsYXNzRGVmKCJDIilAY29udGFpbnMsIFwoY2wpIGNsQGRpc3RhbmNlLCAxKSksDQorICAgICAgICAgIGlkZW50aWNhbChmUGljayhuZXcoIkMiKSksICJVIiksDQorICAgICAgICAgIHJlbW92ZUdlbmVyaWMoImZQaWNrIikpDQorZm9yKGNsIGluIGMoIlUiLCAiWCIsICJDIiwgIkIiLCAiUzEiLCAiUzAiKSkgcmVtb3ZlQ2xhc3MoY2wpDQorDQogY2F0KCdUaW1lIGVsYXBzZWQ6ICcsIHByb2MudGltZSgpLCdcbicpDQpJbmRleDogdGVzdHMvcmVnLVM0LlJvdXQuc2F2ZQ0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHRlc3RzL3JlZy1TNC5Sb3V0LnNhdmUgICAgICAocmV2aXNpb24gOTA3NjApDQorKysgdGVzdHMvcmVnLVM0LlJvdXQuc2F2ZSAgICAgICh3b3JraW5nIGNvcHkpDQpAQCAtNDYsNyArNDYsNyBAQA0KIEV4dGVuZHM6IA0KIENsYXNzICJnZW5lcmljRnVuY3Rpb24iLCBkaXJlY3RseQ0KIENsYXNzICJmdW5jdGlvbiIsIGJ5IGNsYXNzICJnZW5lcmljRnVuY3Rpb24iLCBkaXN0YW5jZSAyDQotQ2xhc3MgIk9wdGlvbmFsRnVuY3Rpb24iLCBieSBjbGFzcyAiZnVuY3Rpb24iLCBkaXN0YW5jZSAzDQorQ2xhc3MgIk9wdGlvbmFsRnVuY3Rpb24iLCBieSBjbGFzcyAiZ2VuZXJpY0Z1bmN0aW9uIiwgZGlzdGFuY2UgMw0KIENsYXNzICJQb3NzaWJsZU1ldGhvZCIsIGJ5IGNsYXNzICJnZW5lcmljRnVuY3Rpb24iLCBkaXN0YW5jZSAzDQogQ2xhc3MgIm9wdGlvbmFsTWV0aG9kIiwgYnkgY2xhc3MgImdlbmVyaWNGdW5jdGlvbiIsIGRpc3RhbmNlIDQ="
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-24 16:54:21"
+}

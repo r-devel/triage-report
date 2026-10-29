@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-09-29._
+_Automatically generated from the R Bugzilla dump updated 2026-10-29._
 
 ## Triaged bugs
 
@@ -15,14 +15,13 @@ _Dates show the most recent triager comment on the bug._
 * [Bug 18258](https://bugs.r-project.org/show_bug.cgi?id=18258) — 'trace' only half-works for generated functions in packages (2025-09-02)
 * [Bug 16135](https://bugs.r-project.org/show_bug.cgi?id=16135) — error in: convolve( 1:5, 1, type='filter') (2026-02-20)
 * [Bug 19074](https://bugs.r-project.org/show_bug.cgi?id=19074) — parallel::makeCluster(<cluster>, type = "PSOCK") does not give an error (2026-05-19)
-* [Bug 19150](https://bugs.r-project.org/show_bug.cgi?id=19150) — scan() crashes interactive R when opening an unz() connection for a missing member (2026-09-03)
 * [Bug 19163](https://bugs.r-project.org/show_bug.cgi?id=19163) — axis() throws error and plot() runs out of memory when repeated many times (> 1000 plots) (2026-09-12)
 * [Bug 18911](https://bugs.r-project.org/show_bug.cgi?id=18911) — cleanup tcltk (2026-09-19)
 * [Bug 19098](https://bugs.r-project.org/show_bug.cgi?id=19098) — Ctrl-D does not exit R console on Windows (2026-09-22)
 
 ### Recommended closures
 
-* [Bug 18330](https://bugs.r-project.org/show_bug.cgi?id=18330) — type argument documentation in install.packages (2026-09-19)
+_None._
 
 ### Needs more information
 
@@ -30,10 +29,8 @@ _None._
 
 ### Needs core developer discussion
 
-* [Bug 10455](https://bugs.r-project.org/show_bug.cgi?id=10455) — Bug in pacf -- Proposed patch (2026-03-06)
 * [Bug 17928](https://bugs.r-project.org/show_bug.cgi?id=17928) — NextMethod does not appear to dispatch to group generic methods from specific methods. (2026-04-08)
 * [Bug 17702](https://bugs.r-project.org/show_bug.cgi?id=17702) — Assignment to data.frame column (`$<-` or `[[<-`) should convert POSIXlt to POSIXct (2026-04-13)
-* [Bug 16615](https://bugs.r-project.org/show_bug.cgi?id=16615) — Allow multi-character separator in scan() (2026-05-18)
 
 ## Additional Triage Team patches awaiting review
 
@@ -46,10 +43,16 @@ _Dates show when the patch was submitted._
 ### I/O
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
+* [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
+
+### Installation
+
+* [Bug 19245](https://bugs.r-project.org/show_bug.cgi?id=19245) — "CRAN" filter in available.packages() accepts repos where CRAN address is a prefix (2026-10-23)
 
 ### Language
 
 * [Bug 18583](https://bugs.r-project.org/show_bug.cgi?id=18583) — cbind.ts does not respect 'deparse.level' (2024-02-08)
+* [Bug 19255](https://bugs.r-project.org/show_bug.cgi?id=19255) — str2expression() can use an unprotected #line filename on parse error (2026-10-26)
 
 ### Low-level
 
@@ -67,18 +70,17 @@ _Dates show when the patch was submitted._
 * [Bug 19066](https://bugs.r-project.org/show_bug.cgi?id=19066) — Provide a more explicit error message for array(dim = NA) (2026-04-29)
 * [Bug 19096](https://bugs.r-project.org/show_bug.cgi?id=19096) — Update handling of overflow in integer operations (2026-06-30)
 * [Bug 19114](https://bugs.r-project.org/show_bug.cgi?id=19114) — poison free small-node data to catch use of collected objects (2026-08-01)
-* [Bug 19116](https://bugs.r-project.org/show_bug.cgi?id=19116) — <matrix>[[i, j]]: stochastic error with negative i (2026-08-02)
 * [Bug 19119](https://bugs.r-project.org/show_bug.cgi?id=19119) — `writeChar()` on Windows counts supplementary characters twice (2026-08-03)
 * [Bug 19123](https://bugs.r-project.org/show_bug.cgi?id=19123) — Memory leak in `scan()` when a field fails type conversion (2026-08-04)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
-* [Bug 19161](https://bugs.r-project.org/show_bug.cgi?id=19161) — unserialize() leaks its iconv conversion descriptors when an error unwinds mid-stream (2026-09-06)
-* [Bug 19165](https://bugs.r-project.org/show_bug.cgi?id=19165) — as.complex()/as.numeric() on an invalid multibyte string reads past the end (Mbrtowc) (2026-09-10)
-* [Bug 19182](https://bugs.r-project.org/show_bug.cgi?id=19182) — make.names() leaks its name buffer when a name is invalid in a multibyte locale (2026-09-26)
-* [Bug 19183](https://bugs.r-project.org/show_bug.cgi?id=19183) — read.dcf() leaks its line buffer and compiled regexps when it signals an error on malformed input (2026-09-26)
-* [Bug 19184](https://bugs.r-project.org/show_bug.cgi?id=19184) — parse_Rd() leaks the parser stack and macro pushback buffer when an error is raised while parsing (2026-09-26)
+* [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
+* [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
+* [Bug 19259](https://bugs.r-project.org/show_bug.cgi?id=19259) — Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs) (2026-10-27)
+* [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-28)
+* [Bug 19263](https://bugs.r-project.org/show_bug.cgi?id=19263) — byte-compiled [<- error can access a collected call during error reporting (2026-10-29)
 
 ### Mac GUI / Mac specific
 
@@ -88,13 +90,20 @@ _Dates show when the patch was submitted._
 
 * [Bug 18938](https://bugs.r-project.org/show_bug.cgi?id=18938) — seq.Date inconsistent on whether to= can be a string (2025-08-21)
 * [Bug 18958](https://bugs.r-project.org/show_bug.cgi?id=18958) — 'methods_message' component of 'check_packages_used' internal class should be character(), not "", when empty (2025-10-16)
-* [Bug 19156](https://bugs.r-project.org/show_bug.cgi?id=19156) — MASS, boot are Suggests for parallel (2026-09-03)
 
 ### S4methods
 
 * [Bug 18833](https://bugs.r-project.org/show_bug.cgi?id=18833) — methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments (2024-12-07)
 * [Bug 19079](https://bugs.r-project.org/show_bug.cgi?id=19079) — S4 packages with group methods error with "subscript out of bounds" under unloadNamespace with Imports: methods (2026-05-29)
 * [Bug 19083](https://bugs.r-project.org/show_bug.cgi?id=19083) — setGeneric("f", \(x) { standardGeneric("x") }) makes generic with class 'nonstandardGenericFunction' (2026-06-22)
+* [Bug 19237](https://bugs.r-project.org/show_bug.cgi?id=19237) — .updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups) (2026-10-21)
+* [Bug 19239](https://bugs.r-project.org/show_bug.cgi?id=19239) — Add fast paths for quadratic loop in .resetInheritedMethods (2026-10-21)
+* [Bug 19244](https://bugs.r-project.org/show_bug.cgi?id=19244) — setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method (2026-10-23)
+* [Bug 19246](https://bugs.r-project.org/show_bug.cgi?id=19246) — typo in .recacheSubclasses -- wrong inheritance is checked in class unions (2026-10-24)
+* [Bug 19248](https://bugs.r-project.org/show_bug.cgi?id=19248) — getClassDef(where=<character>) stopped working (2026-10-26)
+* [Bug 19249](https://bugs.r-project.org/show_bug.cgi?id=19249) — Use getClassDef itself to avoid implicitly calling it twice isClass (2026-10-26)
+* [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
+* [Bug 19257](https://bugs.r-project.org/show_bug.cgi?id=19257) — Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs (2026-10-27)
 
 ### Translations
 
@@ -107,6 +116,7 @@ _Dates show when the patch was submitted._
 ### Windows GUI / Window specific
 
 * [Bug 19143](https://bugs.r-project.org/show_bug.cgi?id=19143) — `Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8 (2026-08-28)
+* [Bug 19198](https://bugs.r-project.org/show_bug.cgi?id=19198) — Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing (2026-10-01)
 
 ### Wishlist
 
@@ -125,6 +135,7 @@ _Dates show when the patch was submitted._
 * [Bug 19105](https://bugs.r-project.org/show_bug.cgi?id=19105) — Provide a traceback when crashing on Windows (2026-07-19)
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
+* [Bug 19256](https://bugs.r-project.org/show_bug.cgi?id=19256) — R CMD check: note packages repeated within one DESCRIPTION dependency field (2026-10-27)
 
 ## About this report
 

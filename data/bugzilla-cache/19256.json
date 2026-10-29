@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-10-27T04:04:07Z",
+        "blocks": [],
+        "url": "",
+        "summary": "R CMD check: note packages repeated within one DESCRIPTION dependency field",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 19256,
+        "severity": "enhancement",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P4",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-10-27T04:03:59Z",
+        "version": "R-devel (trunk)"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19256": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-10-27T04:03:59Z",
+            "count": 0,
+            "is_markdown": false,
+            "text": "R CMD check notes a package listed in more than one of Depends, Imports, Suggests and Enhances, but not one repeated within a single field; partykit, for example, lists utils twice in Imports. The attached patch adds that NOTE to tools:::.check_package_description2():\n\n  Package listed more than once in Imports: 'utils'\n  Package dependency requirements should not be duplicated.\n\nRepeats that give a version range stay allowed (PR#18735), e.g. \"Matrix (>= 1.6-0), Matrix (< 1.8-0)\": a package is only flagged when one of its repeated entries is unversioned or two are identical. Depends, Imports, LinkingTo, Suggests and Enhances are checked.\n\n20 of 25561 CRAN packages (as of 2026-10-26) would get the NOTE:\n\nImports:\n  BsplineQuantRegGui: duplicates png\n  cpop: duplicates ggplot2, methods\n  crane: duplicates scales\n  landpred: duplicates quantreg\n  LLMing: duplicates quanteda, stopwords, stringi\n  NBDCtools: duplicates utils\n  parasiteR: duplicates readr\n  partykit: duplicates utils\n  PDXpower: duplicates ggplot2\n  R2sample: duplicates stats\n  RHclust: duplicates utils\n  semFromKeys: duplicates stringr\n  toscca: duplicates utils\n  webexercises: duplicates utils\n\nSuggests:\n  echarts4r: duplicates data.tree, leaflet\n  fgdiR: duplicates knitr, rmarkdown\n  httkexamples: duplicates ggforce, ggpubr\n  treestats: duplicates Matrix\n\nLinkingTo:\n  bmgarch: duplicates RcppParallel\n  ctsem: duplicates RcppParallel\n\nThe attached repeated-dependencies-cran.R regenerates this list on a patched R; its output is included at the end of the file.\n\nProposed patch: attached as check-repeated-dependencies.diff, against r90766. It also adds a NEWS entry and a regression test in reg-tests-1e.R; make test-Reg passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/413, where CI results can be seen.",
+            "bug_id": 19256,
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-10-27T04:03:59Z",
+            "id": 103971
+          },
+          {
+            "id": 103972,
+            "time": "2026-10-27T04:04:06Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3959,
+            "bug_id": 19256,
+            "text": "Created attachment 3959\nR CMD check: note packages repeated within a dependency field",
+            "is_markdown": false,
+            "count": 1,
+            "creation_time": "2026-10-27T04:04:06Z",
+            "creator": "kevinushey"
+          },
+          {
+            "tags": [],
+            "id": 103973,
+            "is_private": false,
+            "creation_time": "2026-10-27T04:04:07Z",
+            "text": "Created attachment 3960\nScript listing the CRAN packages the new NOTE flags",
+            "bug_id": 19256,
+            "count": 2,
+            "attachment_id": 3960,
+            "time": "2026-10-27T04:04:07Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19256": [
+        {
+          "last_change_time": "2026-10-27T04:04:06Z",
+          "size": 4023,
+          "is_private": false,
+          "id": 3959,
+          "creation_time": "2026-10-27T04:04:06Z",
+          "summary": "R CMD check: note packages repeated within a dependency field",
+          "file_name": "check-repeated-dependencies.diff",
+          "bug_id": 19256,
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IGRvYy9ORVdTLlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIGRvYy9ORVdTLlJkCShyZXZpc2lvbiA5MDc2NikKKysrIGRvYy9ORVdTLlJkCSh3b3JraW5nIGNvcHkpCkBAIC0xNTksNiArMTU5LDEwIEBACiAgICAgICBpcyBub3cgZG9jdW1lbnRlZCBpbiB0aGUgUiBJbnRlcm5hbHMgbWFudWFsLiAgVGhpcyBpcyBzdXBwbGVtZW50ZWQgYnkKICAgICAgIFxlbnZ7UEtHX0JVSUxEX0RJUl9CQVJFfSB0byB1c2UgXGVudntQS0dfQlVJTERfRElSfSBhcyB0aGUKICAgICAgIHVucGFja2luZyBkaXJlY3Rvcnkgd2l0aG91dCBhZGRpbmcgYSByYW5kb20gcGF0aCBjb21wb25lbnQuCisKKyAgICAgIFxpdGVtIFxjb21tYW5ke1IgQ01EIGNoZWNrfSBub3cgXHNhbXB7Tk9URX1zIHBhY2thZ2VzIGxpc3RlZCBtb3JlCisgICAgICB0aGFuIG9uY2UgaW4gYSBkZXBlbmRlbmN5IGZpZWxkIG90aGVyIHRoYW4gdG8gZ2l2ZSBhIHZlcnNpb24KKyAgICAgIHJhbmdlLCBlLmcuLCBcc2FtcHtJbXBvcnRzOiB1dGlscywgc3RhdHMsIHV0aWxzfS4KICAgICB9CiAgIH0KIApJbmRleDogc3JjL2xpYnJhcnkvdG9vbHMvUi9RQy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3Rvb2xzL1IvUUMuUgkocmV2aXNpb24gOTA3NjYpCisrKyBzcmMvbGlicmFyeS90b29scy9SL1FDLlIJKHdvcmtpbmcgY29weSkKQEAgLTM4NzAsNiArMzg3MCwyMCBAQCBmdW5jdGlvbihkZmlsZSkKICAgICBhbGxwa2dzIDwtIGModW5pcXVlKGRlcGVuZHMpLCB1bmlxdWUoaW1wb3J0cyksCiAgICAgICAgICAgICAgICAgIHVuaXF1ZShzdWdnZXN0cyksIHVuaXF1ZShlbmhhbmNlcykpCiAgICAgb3V0IDwtIHVuaXF1ZShhbGxwa2dzW2R1cGxpY2F0ZWQoYWxscGtncyldKQorICAgICMjIFdpdGhpbiBhIGZpZWxkLCBhbiB1bnZlcnNpb25lZCBvciBpZGVudGljYWwgcmVwZWF0ZWQgZW50cnkKKyAgICAjIyBjYW5ub3QgYmUgcGFydCBvZiBzdWNoIGEgcmFuZ2UsIHNvIGlzIHJlZHVuZGFudC4KKyAgICByZXBlYXRlZCA8LSBsaXN0KCkKKyAgICBmb3IoZmllbGQgaW4gYygiRGVwZW5kcyIsICJJbXBvcnRzIiwgIkxpbmtpbmdUbyIsICJTdWdnZXN0cyIsICJFbmhhbmNlcyIpKSB7CisgICAgICAgIGlmKGlzLm5hKGVudHJpZXMgPC0gZGJbZmllbGRdKSkKKyAgICAgICAgICAgIG5leHQKKyAgICAgICAgZW50cmllcyA8LSBnc3ViKCJbWzpzcGFjZTpdXSsiLCAiIiwgdW5saXN0KHN0cnNwbGl0KGVudHJpZXMsICIsIikpKQorICAgICAgICBlbnRyaWVzIDwtIGVudHJpZXNbbnpjaGFyKGVudHJpZXMpXQorICAgICAgICBwa2dzIDwtIHN1YigiXihbWzphbG51bTpdLl0rKS4qJCIsICJcXDEiLCBlbnRyaWVzKQorICAgICAgICBiYWQgPC0gKHBrZ3MgJWluJSBwa2dzW2R1cGxpY2F0ZWQocGtncyldKSAmCisgICAgICAgICAgICAoIWdyZXBsKCIoIiwgZW50cmllcywgZml4ZWQgPSBUUlVFKSB8IGR1cGxpY2F0ZWQoZW50cmllcykpCisgICAgICAgIGlmKGFueShiYWQpKQorICAgICAgICAgICAgcmVwZWF0ZWRbW2ZpZWxkXV0gPC0gdW5pcXVlKHBrZ3NbYmFkXSkKKyAgICB9CiAgICAgbGlua3MgPC0gbWlzc2luZ19pbmNzIDwtIGNoYXJhY3RlcigpCiAgICAgbGxpbmtzIDwtICAuZ2V0X3JlcXVpcmVzX3dpdGhfdmVyc2lvbl9mcm9tX3BhY2thZ2VfZGIoZGIsICJMaW5raW5nVG8iKQogICAgIGhhdmVfc3JjIDwtIFRSVUUgIyBkdW1teQpAQCAtMzkwNCw2ICszOTE4LDcgQEAgZnVuY3Rpb24oZGZpbGUpCiAgICAgICAgIG1pc3NpbmdfaW5jcyA8LSBhcy52ZWN0b3IobGxpbmtzWyFuemNoYXIoaW5jcyldKQogICAgIH0KICAgICBvdXQgPC0gbGlzdChkdXBsaWNhdGVzID0gdW5pcXVlKGFsbHBrZ3NbZHVwbGljYXRlZChhbGxwa2dzKV0pLAorICAgICAgICAgICAgICAgIHJlcGVhdGVkID0gcmVwZWF0ZWQsCiAgICAgICAgICAgICAgICAgYmFkX2xpbmtzID0gbGlua3MsIG1pc3NpbmdfaW5jcyA9IG1pc3NpbmdfaW5jcywKICAgICAgICAgICAgICAgICBoYXZlX3NyYyA9IGhhdmVfc3JjKQogICAgIGNsYXNzKG91dCkgPC0gImNoZWNrX3BhY2thZ2VfZGVzY3JpcHRpb24yIgpAQCAtMzkyMCw2ICszOTM1LDE2IEBAIGZ1bmN0aW9uKHgsIC4uLikKICAgICAgICAgICBwYXN0ZShjKCIgIiwgc1F1b3RlKHh4KSksIGNvbGxhcHNlID0gIiAiKSwKICAgICAgICAgICAiQSBwYWNrYWdlIHNob3VsZCBiZSBsaXN0ZWQgaW4gb25seSBvbmUgb2YgdGhlc2UgZmllbGRzLiIpCiAgICAgICB9LAorICAgICAgaWYobGVuZ3RoKHh4IDwtIHgkcmVwZWF0ZWQpKSB7CisgICAgICAgICAgYyh1bmxpc3QoTWFwKGZ1bmN0aW9uKGZpZWxkLCBwa2dzKQorICAgICAgICAgICAgICAgICAgICAgICAgICAgc3ByaW50ZihuZ2V0dGV4dChsZW5ndGgocGtncyksCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICJQYWNrYWdlIGxpc3RlZCBtb3JlIHRoYW4gb25jZSBpbiAlczogJXMiLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiUGFja2FnZXMgbGlzdGVkIG1vcmUgdGhhbiBvbmNlIGluICVzOiAlcyIpLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmaWVsZCwgcGFzdGUoc1F1b3RlKHBrZ3MpLCBjb2xsYXBzZSA9ICIgIikpLAorICAgICAgICAgICAgICAgICAgICAgICBuYW1lcyh4eCksIHh4KSwKKyAgICAgICAgICAgICAgICAgICB1c2UubmFtZXMgPSBGQUxTRSksCisgICAgICAgICAgICAiUGFja2FnZSBkZXBlbmRlbmN5IHJlcXVpcmVtZW50cyBzaG91bGQgbm90IGJlIGR1cGxpY2F0ZWQuIikKKyAgICAgIH0sCiAgICAgICBpZigheCRoYXZlX3NyYykKICAgICAgICAgICAiJ0xpbmtpbmdUbycgZmllbGQgaXMgdW51c2VkOiBwYWNrYWdlIGhhcyBubyAnc3JjJyBkaXJlY3RvcnkiLAogICAgICAgaWYobGVuZ3RoKHh4IDwtIHgkYmFkX2xpbmtzKSkgewpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwNzY2KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQyNzAsNiArNDI3MCwyMCBAQCBzdG9waWZub3QoaWRlbnRpY2FsKGxhcHBseShzbm1zLCBzbG90LCBvYmplY3QgPSB4KSwgZG90cyksCiAjIyBpbiBSIDw9IDQuNi4yCiAKIAorIyMgUiBDTUQgY2hlY2sgbm90ZXMgcmVwZWF0ZWQgZW50cmllcyBpbiBvbmUgZGVwZW5kZW5jeSBmaWVsZAordGQgPC0gdGVtcGZpbGUoInBrZyIpOyBkaXIuY3JlYXRlKHRkKQord3JpdGVMaW5lcyhjKCJQYWNrYWdlOiBwa2ciLCAiVmVyc2lvbjogMS4wIiwKKyAgICAgICAgICAgICAiSW1wb3J0czogdXRpbHMsIHN0YXRzLCB1dGlscywiLAorICAgICAgICAgICAgICIgIE1hdHJpeCAoPj0gMS42LTApLCBNYXRyaXgoPCAxLjgtMCkiLAorICAgICAgICAgICAgICJTdWdnZXN0czogZm9vLCBmb28gKD49IDEuMCksIGJhciAoPj0gMi4wKSwgYmFyICg+PSAyLjApIiksCisgICAgICAgICAgIGZpbGUucGF0aCh0ZCwgIkRFU0NSSVBUSU9OIikpCityIDwtIHRvb2xzOjo6LmNoZWNrX3BhY2thZ2VfZGVzY3JpcHRpb24yKGZpbGUucGF0aCh0ZCwgIkRFU0NSSVBUSU9OIikpCitzdG9waWZub3QoaWRlbnRpY2FsKHIkcmVwZWF0ZWQsIGxpc3QoSW1wb3J0cyA9ICJ1dGlscyIsCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgU3VnZ2VzdHMgPSBjKCJmb28iLCAiYmFyIikpKSkKK3VubGluayh0ZCwgcmVjdXJzaXZlID0gVFJVRSkKKyMjIG5vIE5PVEUgaW4gUiA8PSA0LjYuMgorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        },
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgTGlzdCBDUkFOIHBhY2thZ2VzIHRoYXQgdGhlIHBhdGNoJ3MgbmV3IE5PVEUgd291bGQgZmxhZzogYSBwYWNrYWdlCiMjIHJlcGVhdGVkIHdpdGhpbiBvbmUgZGVwZW5kZW5jeSBmaWVsZCBvdGhlciB0aGFuIHRvIGdpdmUgYSB2ZXJzaW9uIHJhbmdlLgojIyBOZWVkcyBSIHdpdGggdGhlIHBhdGNoIGFwcGxpZWQgKHRvb2xzOjo6LmNoZWNrX3BhY2thZ2VfZGVzY3JpcHRpb24yKCkKIyMgcmV0dXJuaW5nIGEgJ3JlcGVhdGVkJyBjb21wb25lbnQpIGFuZCBuZXR3b3JrIGFjY2Vzcy4KCmZpZWxkcyA8LSBjKCJEZXBlbmRzIiwgIkltcG9ydHMiLCAiTGlua2luZ1RvIiwgIlN1Z2dlc3RzIiwgIkVuaGFuY2VzIikKZGIgPC0gdG9vbHM6OkNSQU5fcGFja2FnZV9kYigpCmRmaWxlIDwtIGZpbGUucGF0aCh0ZW1wZGlyKCksICJERVNDUklQVElPTiIpCmhpdHMgPC0gTlVMTApmb3IoaSBpbiBzZXFfbGVuKG5yb3coZGIpKSkgewogICAgeCA8LSB1bmxpc3QoZGJbaSwgYygiUGFja2FnZSIsICJWZXJzaW9uIiwgZmllbGRzKV0pCiAgICB4IDwtIHhbIWlzLm5hKHgpXQogICAgd3JpdGUuZGNmKHJiaW5kKHgpLCBkZmlsZSkKICAgIHIgPC0gdG9vbHM6OjouY2hlY2tfcGFja2FnZV9kZXNjcmlwdGlvbjIoZGZpbGUpCiAgICBmb3IoZmllbGQgaW4gbmFtZXMociRyZXBlYXRlZCkpCiAgICAgICAgaGl0cyA8LSByYmluZChoaXRzLAogICAgICAgICAgICAgICAgICAgICAgZGF0YS5mcmFtZShQYWNrYWdlID0geFtbIlBhY2thZ2UiXV0sIEZpZWxkID0gZmllbGQsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFJlcGVhdGVkID0gcGFzdGUociRyZXBlYXRlZFtbZmllbGRdXSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjb2xsYXBzZSA9ICIsICIpKSkKfQpjYXQoc3ByaW50ZigiJWQgb2YgJWQgcGFja2FnZXMgZmxhZ2dlZFxuIiwKICAgICAgICAgICAgbGVuZ3RoKHVuaXF1ZShoaXRzJFBhY2thZ2UpKSwgbnJvdyhkYikpKQpwcmludChoaXRzLCByb3cubmFtZXMgPSBGQUxTRSkKCiMjIE91dHB1dCBvbiB0cnVuayByOTA3NjYgKyBwYXRjaCwgQ1JBTiBhcyBvZiAyMDI2LTEwLTI2OgojIyAyMCBvZiAyNTU2MSBwYWNrYWdlcyBmbGFnZ2VkCiMjICAgICAgICAgICAgIFBhY2thZ2UgICAgIEZpZWxkICAgICAgICAgICAgICAgICAgICAgUmVwZWF0ZWQKIyMgICAgICAgICAgICAgYm1nYXJjaCBMaW5raW5nVG8gICAgICAgICAgICAgICAgIFJjcHBQYXJhbGxlbAojIyAgQnNwbGluZVF1YW50UmVnR3VpICAgSW1wb3J0cyAgICAgICAgICAgICAgICAgICAgICAgICAgcG5nCiMjICAgICAgICAgICAgICAgIGNwb3AgICBJbXBvcnRzICAgICAgICAgICAgIGdncGxvdDIsIG1ldGhvZHMKIyMgICAgICAgICAgICAgICBjcmFuZSAgIEltcG9ydHMgICAgICAgICAgICAgICAgICAgICAgIHNjYWxlcwojIyAgICAgICAgICAgICAgIGN0c2VtIExpbmtpbmdUbyAgICAgICAgICAgICAgICAgUmNwcFBhcmFsbGVsCiMjICAgICAgICAgICBlY2hhcnRzNHIgIFN1Z2dlc3RzICAgICAgICAgICBkYXRhLnRyZWUsIGxlYWZsZXQKIyMgICAgICAgICAgICAgICBmZ2RpUiAgU3VnZ2VzdHMgICAgICAgICAgICAga25pdHIsIHJtYXJrZG93bgojIyAgICAgICAgaHR0a2V4YW1wbGVzICBTdWdnZXN0cyAgICAgICAgICAgICAgZ2dmb3JjZSwgZ2dwdWJyCiMjICAgICAgICAgICAgbGFuZHByZWQgICBJbXBvcnRzICAgICAgICAgICAgICAgICAgICAgcXVhbnRyZWcKIyMgICAgICAgICAgICAgIExMTWluZyAgIEltcG9ydHMgcXVhbnRlZGEsIHN0b3B3b3Jkcywgc3RyaW5naQojIyAgICAgICAgICAgTkJEQ3Rvb2xzICAgSW1wb3J0cyAgICAgICAgICAgICAgICAgICAgICAgIHV0aWxzCiMjICAgICAgICAgICBwYXJhc2l0ZVIgICBJbXBvcnRzICAgICAgICAgICAgICAgICAgICAgICAgcmVhZHIKIyMgICAgICAgICAgICBwYXJ0eWtpdCAgIEltcG9ydHMgICAgICAgICAgICAgICAgICAgICAgICB1dGlscwojIyAgICAgICAgICAgIFBEWHBvd2VyICAgSW1wb3J0cyAgICAgICAgICAgICAgICAgICAgICBnZ3Bsb3QyCiMjICAgICAgICAgICAgUjJzYW1wbGUgICBJbXBvcnRzICAgICAgICAgICAgICAgICAgICAgICAgc3RhdHMKIyMgICAgICAgICAgICAgUkhjbHVzdCAgIEltcG9ydHMgICAgICAgICAgICAgICAgICAgICAgICB1dGlscwojIyAgICAgICAgIHNlbUZyb21LZXlzICAgSW1wb3J0cyAgICAgICAgICAgICAgICAgICAgICBzdHJpbmdyCiMjICAgICAgICAgICAgICB0b3NjY2EgICBJbXBvcnRzICAgICAgICAgICAgICAgICAgICAgICAgdXRpbHMKIyMgICAgICAgICAgIHRyZWVzdGF0cyAgU3VnZ2VzdHMgICAgICAgICAgICAgICAgICAgICAgIE1hdHJpeAojIyAgICAgICAgd2ViZXhlcmNpc2VzICAgSW1wb3J0cyAgICAgICAgICAgICAgICAgICAgICAgIHV0aWxzCg==",
+          "creator": "kevinushey",
+          "is_patch": false,
+          "bug_id": 19256,
+          "file_name": "repeated-dependencies-cran.R",
+          "summary": "Script listing the CRAN packages the new NOTE flags",
+          "creation_time": "2026-10-27T04:04:07Z",
+          "id": 3960,
+          "is_private": false,
+          "size": 2428,
+          "last_change_time": "2026-10-27T04:04:07Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-27 04:04:07"
+}

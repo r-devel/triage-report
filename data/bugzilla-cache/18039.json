@@ -2,89 +2,89 @@
   "bug": {
     "bugs": [
       {
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "is_open": true,
         "keywords": [],
         "depends_on": [],
-        "is_open": true,
-        "classification": "Unclassified",
-        "component": "Wishlist",
         "assigned_to": "R-core",
-        "cc": [],
-        "qa_contact": "",
+        "id": 18039,
+        "deadline": {},
         "dupe_of": {},
         "severity": "enhancement",
-        "deadline": {},
-        "id": 18039,
-        "version": "R 4.0.x",
-        "creation_time": "2021-01-27T05:47:58Z",
-        "whiteboard": "",
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P4",
         "product": "R",
-        "priority": "P5",
-        "resolution": "",
+        "whiteboard": "",
+        "creation_time": "2021-01-27T05:47:58Z",
+        "version": "R 4.0.x",
+        "status": "UNCONFIRMED",
         "creator_detail": {
           "real_name": "Kevin Ushey",
-          "name": "kevinushey",
-          "id": 1044
+          "id": 1044,
+          "name": "kevinushey"
         },
-        "status": "UNCONFIRMED",
-        "is_creator_accessible": true,
-        "creator": "kevinushey",
-        "alias": [],
-        "flags": [],
-        "platform": "Other",
-        "op_sys": "Other",
+        "resolution": "",
         "is_confirmed": false,
-        "cc_detail": [],
-        "last_change_time": "2021-01-27T05:50:20Z",
+        "op_sys": "Other",
+        "platform": "Other",
+        "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
         "target_milestone": "---",
         "see_also": [],
-        "is_cc_accessible": true,
+        "last_change_time": "2026-10-27T16:29:58Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "Wishlist: allow Sys.setenv() to accept named vector",
         "groups": [],
         "assigned_to_detail": {
           "name": "R-core",
           "id": 16,
           "real_name": "R-core"
         },
-        "summary": "Wishlist: allow Sys.setenv() to accept named vector",
-        "url": "",
-        "blocks": []
+        "is_cc_accessible": true
       }
     ],
     "faults": []
   },
   "comments": {
+    "comments": {},
     "bugs": {
       "18039": {
         "comments": [
           {
-            "bug_id": 18039,
-            "text": "For example, to allow the usage:\n\n    keys <- c(\"A\", \"B\")\n    vals <- c(\"1\", \"2\")\n    names(vals) <- keys\n    Sys.setenv(vals)\n\nThis would make Sys.setenv() a bit easier to use when the environment variable names are determined programmatically. The alternative is to use:\n\n    do.call(Sys.setenv, as.list(vals))\n\nwhich is IMHO more verbose.",
-            "count": 0,
-            "creation_time": "2021-01-27T05:47:58Z",
+            "time": "2021-01-27T05:47:58Z",
             "id": 97022,
             "is_private": false,
             "tags": [],
+            "attachment_id": {},
+            "text": "For example, to allow the usage:\n\n    keys <- c(\"A\", \"B\")\n    vals <- c(\"1\", \"2\")\n    names(vals) <- keys\n    Sys.setenv(vals)\n\nThis would make Sys.setenv() a bit easier to use when the environment variable names are determined programmatically. The alternative is to use:\n\n    do.call(Sys.setenv, as.list(vals))\n\nwhich is IMHO more verbose.",
+            "bug_id": 18039,
             "is_markdown": true,
+            "count": 0,
             "creator": "kevinushey",
-            "time": "2021-01-27T05:47:58Z",
-            "attachment_id": {}
+            "creation_time": "2021-01-27T05:47:58Z"
           },
           {
-            "is_markdown": true,
-            "count": 1,
+            "creation_time": "2021-01-27T05:50:20Z",
             "text": "Created attachment 2794\nPotential patch (move unlist call earlier)",
             "bug_id": 18039,
-            "creator": "kevinushey",
-            "creation_time": "2021-01-27T05:50:20Z",
-            "is_private": false,
-            "time": "2021-01-27T05:50:20Z",
+            "count": 1,
+            "tags": [],
             "id": 97023,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": true,
             "attachment_id": 2794,
-            "tags": []
+            "time": "2021-01-27T05:50:20Z"
           }
         ]
       }
-    },
-    "comments": {}
+    }
   },
   "attachments": {
     "attachments": {},
@@ -109,5 +109,5 @@
       ]
     }
   },
-  "source_changed": "2021-01-27 05:50:20"
+  "source_changed": "2026-10-27 16:29:58"
 }

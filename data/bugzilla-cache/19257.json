@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-10-27T08:05:07Z",
+        "blocks": [],
+        "url": "",
+        "summary": "Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "component": "S4methods",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19257,
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-27T08:04:54Z"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19257": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": 3961,
+            "is_private": false,
+            "id": 103974,
+            "time": "2026-10-27T08:04:54Z",
+            "creation_time": "2026-10-27T08:04:54Z",
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19257,
+            "text": "Created attachment 3961\nset parent of internal environments to baseenv()\n\nCurrently, a number of environments associated with S4 methods are given assigned parents imprudently. This generates a _very_ substantial overhead on lazy-load and very noticeable .rdb file size bloat because serializing environments in general requires walking all parents.\n\nFor example, Bug #19239 found that `loadNamespace()` for these 5 packages takes about 18s:\n\n```\nfor (pkg in c(\"Gviz\", \"ShortRead\", \"raster\", \"timeSeries\", \"MatrixExtra\")) loadNamespace(pkg)\n```\n\nThe patch here reduces that by >30% to 11s, and reduces the total .rdb size of the 50 loaded S4 packages by 20MiB (45%).\n\nThe change is safe (as tested against several 100 packages) because the parent of these environments is never read in the first place -- `inherits=FALSE` is always used (or it's accesses by `names()`/`as.list()`/other accessors that don't walk the parents):\n\n- methods/R/methodsTable.R:261-285:\n   + Line 268: `exists(label, envir = table, inherits = FALSE)`\n   + Line 303: `get(label, envir = table)` (guarded by line 268).\n- methods/R/methodsTable.R:1318-1324:\n   + Removes the `.__T__` binding from `where`: `if (exists(tname, where, inherits = FALSE)) rm(list = tname, pos = where)`.\n- methods/R/methodsTable.R:1337-1369:\n   + Line 1342: `get(.TableMetaName(...), envir = as.environment(where), inherits = FALSE)`.\n   + Line 1352: `get(.TableMetaName(...), envir = as.environment(where), inherits = FALSE)`.\n- methods/R/methodsTable.R:1379-1402:\n   + Line 1397: `if (exists(label, envir = table, inherits = FALSE)).\n- methods/R/methodsTable.R:1460-1474:\n   + `get0(what, envir = where, inherits = FALSE)`.\n\nThe approach of setting `baseenv()` as parent is also used elsewhere in {methods} already, e.g. in `.classTable`, `.genericTable`, and `.implicitTable`.\n\nNB: This change requires rebuilding each package to re-generate the .rdb and get the benefits, so it makes sense to target it for the next major R release (e.g. R 4.7.0)."
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19257": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUg0KPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQ0KLS0tIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHJldmlzaW9uIDkwNzY0KQ0KKysrIHNyYy9saWJyYXJ5L21ldGhvZHMvUi9tZXRob2RzVGFibGUuUiAgICAgICAgKHdvcmtpbmcgY29weSkNCkBAIC0xODcsNyArMTg3LDcgQEANCiAgICAgICAgICAgICAgICBpZGVudGljYWwoY3VyUGtnLCBvYmpQa2cpKQ0KICAgICAgICAgICAgICAgICByZXR1cm4ob2JqKQ0KICAgICAgICAgICAgIGVsc2Ugew0KLSAgICAgICAgICAgICAgICBtZXJnZSA8LSBuZXcuZW52KCkNCisgICAgICAgICAgICAgICAgbWVyZ2UgPC0gbmV3LmVudihUUlVFLCBiYXNlZW52KCkpDQogICAgICAgICAgICAgICAgIHZhciA8LSAucGtnTWV0aG9kTGFiZWwob2JqKQ0KICAgICAgICAgICAgICAgICBpZihuemNoYXIodmFyKSkgYXNzaWduKHZhciwgb2JqLCBlbnZpciA9IG1lcmdlKQ0KICAgICAgICAgICAgICAgICB2YXIgPC0gLnBrZ01ldGhvZExhYmVsKGN1cnJlbnQpDQpAQCAtMTk2LDcgKzE5Niw3IEBADQogICAgICAgICAgICAgfQ0KICAgICAgICAgfQ0KICAgICAgICAgZWxzZSBpZihpcy5lbnZpcm9ubWVudChvYmopKSB7DQotICAgICAgICAgICAgbWVyZ2UgPC0gbmV3LmVudigpDQorICAgICAgICAgICAgbWVyZ2UgPC0gbmV3LmVudihUUlVFLCBiYXNlZW52KCkpDQogICAgICAgICAgICAgYXNzaWduKC5wa2dNZXRob2RMYWJlbChjdXJyZW50KSwgY3VycmVudCwgZW52aXIgPSBtZXJnZSkNCiAgICAgICAgICAgICBsaXN0MmVudihhcy5saXN0KG9iaiwgYWxsLm5hbWVzPVRSVUUpLCBtZXJnZSkNCiAgICAgICAgICAgICByZXR1cm4obWVyZ2UpDQpAQCAtMzA5LDcgKzMwOSw3IEBADQogICAgICAgICAgICAgICAgICAgICBwa2cgPC0gYXR0cihjdXJyZW50QHRhcmdldCwgInBhY2thZ2UiKQ0KICAgICAgICAgICAgICAgICAgICAgaWYobGVuZ3RoKHBrZykgPT0gMCkNCiAgICAgICAgICAgICAgICAgICAgICAgICBjdXJyZW50IDwtIC5maXhQYWNrYWdlU2xvdChjdXJyZW50LCBjdXJyZW50QHRhcmdldCkNCi0gICAgICAgICAgICAgICAgICAgIGVudiA8LSBuZXcuZW52KCkNCisgICAgICAgICAgICAgICAgICAgIGVudiA8LSBuZXcuZW52KFRSVUUsIGJhc2VlbnYoKSkNCiAgICAgICAgICAgICAgICAgICAgICMjIHplcm8tbGVuZ3RoIHNlZW4gMjAxMS0wNy0yOQ0KICAgICAgICAgICAgICAgICAgICAgdmFyIDwtIC5wa2dNZXRob2RMYWJlbChjdXJyZW50KQ0KICAgICAgICAgICAgICAgICAgICAgaWYobnpjaGFyKHZhcikpIGFzc2lnbih2YXIsIGN1cnJlbnQsIGVudmlyID0gZW52KQ0KQEAgLTMyMyw3ICszMjMsNyBAQA0KICAgICAgICAgICAgICAgICAgICAgICAgICBkb21haW4gPSBOQSkNCiAgICAgICAgICAgICB9DQogICAgICAgICAgICAgZWxzZQ0KLSAgICAgICAgICAgICAgICBlbnYgPC0gbmV3LmVudigpDQorICAgICAgICAgICAgICAgIGVudiA8LSBuZXcuZW52KFRSVUUsIGJhc2VlbnYoKSkNCiAgICAgICAgICAgICBhc3NpZ24oLnBrZ01ldGhvZExhYmVsKGRlZiksIGRlZiwgZW52aXIgPSBlbnYpDQogICAgICAgICAgICAgZW52DQogICAgICAgICB9DQpAQCAtMTMwOSw3ICsxMzA5LDcgQEANCiAgICAgICAucmVzZXRUYWJsZSh0YWJsZSwgbGVuZ3RoKHNpZ25hdHVyZSksIGZkZWZAc2lnbmF0dXJlW3NlcV9hbG9uZyhzaWduYXR1cmUpXSkNCiAgIH0NCiAgIGVsc2Ugew0KLSAgICB0YWJsZSA8LSBuZXcuZW52KFRSVUUsIGVudmlyb25tZW50KGZkZWYpKQ0KKyAgICB0YWJsZSA8LSBuZXcuZW52KFRSVUUsIGJhc2VlbnYoKSkNCiAgICAgYXNzaWduKHRuYW1lLCB0YWJsZSwgZW52aXIgPSB3aGVyZSkNCiAgIH0NCiAgIC5jYWNoZU1ldGhvZEluVGFibGUoZmRlZiwgc2lnbmF0dXJlLCBkZWZpbml0aW9uLCB0YWJsZSkNCkBAIC0xNDUwLDggKzE0NTAsMTAgQEANCiAjIyBmcm9tIHRoZSBnZW5lcmljIGZ1bmN0aW9uIHdpdGggdGhlIGluaXRpYWwgbWV0aG9kcywgaWYgYW55Lg0KIC5hc3NpZ25NZXRob2RzVGFibGVNZXRhRGF0YSA8LSBmdW5jdGlvbihuYW1lLCBnZW5lcmljLCB3aGVyZSwgdGFibGUpIHsNCiAgICAgd2hhdCA8LSAgLlRhYmxlTWV0YU5hbWUoZ2VuZXJpY0BnZW5lcmljLCBnZW5lcmljQHBhY2thZ2UpDQotICAgIGlmKG1pc3NpbmcodGFibGUpKQ0KKyAgICBpZihtaXNzaW5nKHRhYmxlKSkgew0KICAgICAgICB0YWJsZSA8LSAuY29weUVudiguZ2V0TWV0aG9kc1RhYmxlKGdlbmVyaWMpKQ0KKyAgICAgICBwYXJlbnQuZW52KHRhYmxlKSA8LSBiYXNlZW52KCkNCisgICAgfQ0KICAgICBhc3NpZ24od2hhdCwgdGFibGUsIGVudmlyID0gYXMuZW52aXJvbm1lbnQod2hlcmUpKQ0KIH0=",
+          "creator": "michaelchirico4",
+          "is_patch": true,
+          "bug_id": 19257,
+          "file_name": "file_19257.txt",
+          "summary": "set parent of internal environments to baseenv()",
+          "creation_time": "2026-10-27T08:04:54Z",
+          "id": 3961,
+          "is_private": false,
+          "size": 2447,
+          "last_change_time": "2026-10-27T08:05:07Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-10-27 08:05:07"
+}
