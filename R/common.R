@@ -46,6 +46,18 @@ TRIAGE_CATEGORIES <- c(
   "Needs core developer discussion"
 )
 
+PATCH_PRIORITIES <- paste0("P", 1:5)
+
+PATCH_PRIORITY_DESCRIPTIONS <- c(
+  P1 = paste("These patches address critical issues and require attention",
+             "from R Core as soon as possible, ahead of other R project work."),
+  P2 = paste("These are the most important or urgent regular patches from",
+             "the Triage Team and should be prioritised before others below."),
+  P3 = "These Triage Team patches should be looked at next.",
+  P4 = "These Triage Team patches can wait their turn.",
+  P5 = "These patches have not yet been prioritised."
+)
+
 BUGZILLA_URL <- "https://bugs.r-project.org/show_bug.cgi?id="
 
 BUGZILLA_API <- "https://bugs.r-project.org/rest/"
@@ -243,6 +255,7 @@ parse_bug <- function(path) {
     status = node_text(bug, "./bug_status"),
     resolution = node_text(bug, "./resolution"),
     reporter = node_text(bug, "./reporter"),
+    importance = node_text(bug, "./priority"),
     cc = xml2::xml_text(xml_find_all(bug, "./cc"), trim = TRUE),
     changed = node_text(bug, "./delta_ts"),
     comments = comments,
@@ -340,6 +353,7 @@ parse_api_bug <- function(x, bug_id) {
     status = bug$status,
     resolution = bug$resolution,
     reporter = bug$creator,
+    importance = bug$priority %||% "P5",
     cc = unlist(bug$cc %||% character(), use.names = FALSE),
     changed = format_bugzilla_date(bug$last_change_time),
     comments = parse_api_comments(x, bug_id),
@@ -778,6 +792,16 @@ reviewed_by_core <- function(bug, patches) {
   )
 }
 
+report_patch_priority <- function(importance) {
+  importance <- toupper(trimws(importance %||% "P5"))
+  if (!nzchar(importance)) importance <- "P5"
+  if (!importance %in% c(PATCH_PRIORITIES, "P5")) {
+    warning("Unexpected Bugzilla importance: ", importance)
+    return(NA_character_)
+  }
+  importance
+}
+
 additional_team_patches <- function(bugs) {
   map_dfr(bugs, function(bug) {
     if (!bug$reporter %in% TEAM_LOGINS) return(tibble())
@@ -796,6 +820,8 @@ additional_team_patches <- function(bugs) {
       status = bug$status,
       patch_date = max(patches$date),
       patch_count = nrow(patches),
+      importance = bug$importance %||% "P5",
+      priority = report_patch_priority(bug$importance),
       core_cc = core_cc_text(bug),
       bugzilla_url = paste0(BUGZILLA_URL, bug$bug_id)
     )
@@ -848,7 +874,7 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     }
     
     lines <- markdown_bug(x$bug_id, x$summary, x$last_triager_comment,
-                          x$core_cc)
+                         x$core_cc)
     write(lines, "")
   }
   
@@ -860,33 +886,33 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     ""
   )
   
-  components <- sort(unique(patches$component))
-  
-  if (length(components) == 0) {
-    write("_None._", "")
-  } else {
-    for (component in components) {
-      x <- patches |>
+  for (priority in PATCH_PRIORITIES) {
+    group <- patches |> filter(.data$priority == .env$priority)
+    write(paste0("### ", priority), "",
+          PATCH_PRIORITY_DESCRIPTIONS[[priority]], "")
+    if (nrow(group) == 0) {
+      write("_None._", "")
+      next
+    }
+    for (component in sort(unique(group$component))) {
+      x <- group |>
         filter(.data$component == .env$component) |>
         arrange(patch_date, bug_id)
-      
-      write(
-        paste0("### ", component),
-        "",
-        markdown_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
-        ""
-      )
+      write(paste0("#### ", component), "",
+            markdown_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
+            "")
     }
   }
-  
+
   write(
     "## About this report",
     "",
     paste(
       "This report is generated automatically from R Bugzilla data.",
-      "The classification of TRIAGED bugs is generated with the",
-      "assistance of generative AI and should be treated as a summary",
-      "to support, rather than replace, human review."
+      "The classification of TRIAGED bugs is generated with",
+      "assistance from generative AI to support human review.",
+      "Priorities for additional patches are based on Bugzilla",
+      "Importance, assigned by triagers."
     ),
     "",
     paste(
@@ -948,24 +974,23 @@ write_plain_text_report <- function(
     ""
   )
   
-  components <- sort(unique(patches$component))
-  
-  if (length(components) == 0) {
-    write("None.", "")
-  } else {
-    for (component in components) {
-      x <- patches |>
+  for (priority in PATCH_PRIORITIES) {
+    group <- patches |> filter(.data$priority == .env$priority)
+    write(paste0(priority, " (", nrow(group), ")"),
+          PATCH_PRIORITY_DESCRIPTIONS[[priority]], "")
+    if (nrow(group) == 0) {
+      write("None.", "")
+      next
+    }
+    for (component in sort(unique(group$component))) {
+      x <- group |>
         filter(.data$component == .env$component) |>
         arrange(patch_date, bug_id)
-      
-      write(
-        paste0(component, " (", nrow(x), ")"),
-        "",
-        plain_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
-        ""
-      )
+      write(paste0("  ", component, " (", nrow(x), ")"), "",
+            plain_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
+            "")
     }
   }
-  
+
   write("Full current report (updated daily):", readme_url, "")
 }

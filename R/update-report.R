@@ -40,7 +40,8 @@ triaged <- classify_triaged(
   )
 
 patches <- additional_team_patches(bugs) |>
-  arrange(component, patch_date, bug_id)
+  arrange(factor(priority, levels = PATCH_PRIORITIES),
+          component, patch_date, bug_id)
 
 write_csv(triaged, "data/triaged-bugs.csv")
 write_csv(patches, "data/team-patches.csv")
