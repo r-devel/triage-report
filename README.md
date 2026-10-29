@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-28._
+_Automatically generated from the R Bugzilla dump updated 2026-10-29._
 
 ## Triaged bugs
 
@@ -44,7 +44,6 @@ _Dates show when the patch was submitted._
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
 * [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09)
-* [Bug 19253](https://bugs.r-project.org/show_bug.cgi?id=19253) — unserialize() can allocate a huge stack buffer for malformed primitive names (2026-10-26)
 
 ### Installation
 
@@ -79,8 +78,9 @@ _Dates show when the patch was submitted._
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
-* [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-26)
 * [Bug 19259](https://bugs.r-project.org/show_bug.cgi?id=19259) — Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs) (2026-10-27)
+* [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-28)
+* [Bug 19263](https://bugs.r-project.org/show_bug.cgi?id=19263) — byte-compiled [<- error can access a collected call during error reporting (2026-10-29)
 
 ### Mac GUI / Mac specific
 
