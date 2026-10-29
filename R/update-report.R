@@ -40,9 +40,20 @@ triaged <- classify_triaged(
   )
 
 patches <- additional_team_patches(bugs) |>
-  arrange(component, patch_date, bug_id)
+  classify_team_patches(
+    bugs,
+    cache_path = "data/patch-ai-cache.csv",
+    prompt_path = "prompts/classify-team-patch.md"
+  ) |>
+  arrange(factor(category, levels = PATCH_CATEGORIES),
+          component, patch_date, bug_id)
 
 write_csv(triaged, "data/triaged-bugs.csv")
 write_csv(patches, "data/team-patches.csv")
 
 write_readme(triaged, patches, dump_date)
+
+# Only compact after the entire report was generated successfully.
+# New Gemini results were already appended as each call completed.
+clean_ai_cache("data/ai-cache.csv", triaged$bug_id)
+clean_ai_cache("data/patch-ai-cache.csv", patches$bug_id)

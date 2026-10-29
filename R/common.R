@@ -39,6 +39,8 @@ CORE_LOGINS <- c(
   "seb.meyer"
 )
 
+PATCH_CATEGORIES <- c("Major patches", "Minor patches")
+
 TRIAGE_CATEGORIES <- c(
   "Major patches",
   "Minor patches",
@@ -244,6 +246,7 @@ parse_bug <- function(path) {
     status = node_text(bug, "./bug_status"),
     resolution = node_text(bug, "./resolution"),
     reporter = node_text(bug, "./reporter"),
+    cc = xml_text(xml_find_all(bug, "./cc")),
     changed = node_text(bug, "./delta_ts"),
     comments = comments,
     attachments = attachments
@@ -340,6 +343,7 @@ parse_api_bug <- function(x, bug_id) {
     status = bug$status,
     resolution = bug$resolution,
     reporter = bug$creator,
+    cc = unlist(bug$cc, use.names = FALSE),
     changed = format_bugzilla_date(bug$last_change_time),
     comments = parse_api_comments(x, bug_id),
     attachments = parse_api_attachments(x, bug_id)
@@ -607,11 +611,12 @@ hash_text <- function(x) {
   unname(tools::md5sum(path))
 }
 
-gemini_classify <- function(dossier, prompt, api_key, model) {
+gemini_classify <- function(dossier, prompt, api_key, model,
+                            categories = TRIAGE_CATEGORIES) {
   schema <- list(
     type = "object",
     properties = list(
-      category = list(type = "string", enum = TRIAGE_CATEGORIES),
+      category = list(type = "string", enum = categories),
       reason = list(
         type = "string",
         description = paste(
@@ -650,79 +655,117 @@ gemini_classify <- function(dossier, prompt, api_key, model) {
   response <- request(url) |>
     req_headers("x-goog-api-key" = api_key) |>
     req_body_json(body, auto_unbox = TRUE) |>
-    req_retry(max_tries = 3) |>
-    req_error(is_error = function(resp) FALSE) |>
+    req_retry(
+      max_tries = 5,
+      is_transient = function(resp) {
+        resp_status(resp) %in% c(429, 500, 502, 503, 504)
+      }
+    ) |>
     req_perform()
-  
-  if (resp_status(response) >= 400) {
-    stop(resp_body_string(response))
-  }
   
   parsed <- resp_body_json(response, simplifyVector = FALSE)
   text <- parsed$candidates[[1]]$content$parts[[1]]$text
   result <- fromJSON(text, simplifyVector = TRUE)
   
-  if (!result$category %in% TRIAGE_CATEGORIES) {
+  if (!result$category %in% categories) {
     stop("Unexpected AI category: ", result$category)
   }
   
   result
 }
 
+# Cache rows are appended as soon as a Gemini response succeeds.
+# Compaction happens only after the report has been written successfully.
+empty_ai_cache <- function() {
+  tibble(
+    bug_id = integer(), input_hash = character(),
+    category = character(), reason = character(),
+    confidence = character(), model = character(),
+    reviewed_at = character()
+  )
+}
+
 read_cache <- function(path) {
-  if (!file.exists(path)) {
-    return(tibble(
-      bug_id = integer(),
-      input_hash = character(),
-      category = character(),
-      reason = character(),
-      confidence = character(),
-      model = character(),
-      reviewed_at = character()
-    ))
+  if (!file.exists(path) || file.info(path)$size == 0) {
+    return(empty_ai_cache())
   }
-  
-  read_csv(path, show_col_types = FALSE)
+  read_csv(path, col_types = cols(
+    bug_id = col_integer(),
+    input_hash = col_character(),
+    category = col_character(),
+    reason = col_character(),
+    confidence = col_character(),
+    model = col_character(),
+    reviewed_at = col_character()
+  ))
+}
+
+open_ai_cache <- function(path) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  has_header <- file.exists(path) && file.info(path)$size > 0
+  con <- file(path, open = if (has_header) "ab" else "wb")
+  if (!has_header) {
+    write_csv(empty_ai_cache(), con)
+    flush(con)
+  }
+  con
+}
+
+append_ai_cache <- function(result, con) {
+  write_csv(result, con, col_names = FALSE)
+  flush(con)
+}
+
+# Keep the latest row for each active bug. Write to a temporary file first,
+# so an unsuccessful rewrite leaves the existing cache untouched.
+clean_ai_cache <- function(path, active_ids) {
+  if (!file.exists(path)) return(invisible(NULL))
+  cache <- read_cache(path) |>
+    filter(.data$bug_id %in% active_ids) |>
+    group_by(.data$bug_id) |>
+    slice_tail(n = 1) |>
+    ungroup() |>
+    arrange(.data$bug_id)
+  tmp <- tempfile(pattern = ".ai-cache-", tmpdir = dirname(path))
+  on.exit(unlink(tmp), add = TRUE)
+  write_csv(cache, tmp)
+  if (!file.rename(tmp, path)) {
+    stop("Could not replace AI cache: ", path)
+  }
+  invisible(cache)
 }
 
 classify_triaged <- function(bugs, cache_path, prompt_path) {
-  api_key <- Sys.getenv("GEMINI_API_KEY")
   model <- Sys.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-  
-  if (!nzchar(api_key)) stop("GEMINI_API_KEY is not set.")
-  
   prompt <- paste(readLines(prompt_path, warn = FALSE), collapse = "\n")
   cache <- read_cache(cache_path)
   output <- vector("list", length(bugs))
+  cache_con <- NULL
+  on.exit(if (!is.null(cache_con)) close(cache_con), add = TRUE)
   
   for (i in seq_along(bugs)) {
     bug <- bugs[[i]]
     dossier <- bug_dossier(bug)
     input_hash <- hash_text(dossier)
-    
     cached <- cache |>
-      filter(bug_id == bug$bug_id, .data$input_hash == input_hash)
+      filter(.data$bug_id == bug$bug_id,
+             .data$input_hash == .env$input_hash)
     
-    if (nrow(cached) > 0) {
-      result <- cached[1, ]
+    if (nrow(cached)) {
+      result <- cached[nrow(cached), ]
     } else {
+      api_key <- Sys.getenv("GEMINI_API_KEY")
+      if (!nzchar(api_key)) stop("GEMINI_API_KEY is not set.")
       message("Classifying Bug ", bug$bug_id, " with ", model)
       ai <- gemini_classify(dossier, prompt, api_key, model)
-      
       result <- tibble(
-        bug_id = bug$bug_id,
-        input_hash = input_hash,
-        category = ai$category,
-        reason = ai$reason,
-        confidence = ai$confidence,
-        model = model,
+        bug_id = bug$bug_id, input_hash = input_hash,
+        category = ai$category, reason = ai$reason,
+        confidence = ai$confidence, model = model,
         reviewed_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
       )
-      
-      cache <- bind_rows(
-        cache |> filter(bug_id != bug$bug_id),
-        result
-      )
+      if (is.null(cache_con)) cache_con <- open_ai_cache(cache_path)
+      append_ai_cache(result, cache_con)
     }
     
     output[[i]] <- tibble(
@@ -732,6 +775,7 @@ classify_triaged <- function(bugs, cache_path, prompt_path) {
       reporter = bug$reporter,
       status = bug$status,
       last_triager_comment = last_triager_comment_date(bug),
+      core_cc = core_cc_text(bug),
       category = result$category[[1]],
       reason = result$reason[[1]],
       confidence = result$confidence[[1]],
@@ -741,8 +785,85 @@ classify_triaged <- function(bugs, cache_path, prompt_path) {
     )
   }
   
-  write_csv(cache |> arrange(bug_id), cache_path)
   bind_rows(output)
+}
+
+core_cc <- function(bug) {
+  cc <- bug$cc %||% character()
+  cc <- unique(as.character(cc))
+  patches <- team_patch_info(bug)
+  proposers <- if (nrow(patches)) unique(patches$attacher) else character()
+  sort(setdiff(intersect(cc, CORE_LOGINS), proposers))
+}
+
+core_cc_text <- function(bug) paste(core_cc(bug), collapse = ", ")
+
+latest_patch_dossier <- function(bug) {
+  latest <- team_patch_info(bug) |>
+    arrange(desc(date), desc(attachment_id)) |>
+    slice(1)
+  if (nrow(latest) == 0) stop("No team patch for Bug ", bug$bug_id)
+  # Focus the decision on the latest patch; discussion provides context.
+  paste(
+    "Classify ONLY this latest patch, not earlier proposals:",
+    paste0("Attachment ", latest$attachment_id, " by ", latest$attacher,
+           " on ", latest$date, ": ", latest$description),
+    paste0("Filename: ", latest$filename),
+    latest$content,
+    "BACKGROUND DISCUSSION AND EARLIER PATCHES:",
+    bug_dossier(bug), sep = "\n\n"
+  )
+}
+
+classify_team_patches <- function(patches, bugs,
+                                  cache_path, prompt_path) {
+  if (nrow(patches) == 0) {
+    patches$category <- character()
+    patches$reason <- character()
+    patches$confidence <- character()
+    patches$reviewed_at <- character()
+    patches$model <- character()
+    return(patches)
+  }
+  model <- Sys.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+  prompt <- paste(readLines(prompt_path, warn = FALSE), collapse = "\n")
+  cache <- read_cache(cache_path)
+  output <- vector("list", nrow(patches))
+  bug_ids <- vapply(bugs, `[[`, integer(1), "bug_id")
+  cache_con <- NULL
+  on.exit(if (!is.null(cache_con)) close(cache_con), add = TRUE)
+  
+  for (i in seq_len(nrow(patches))) {
+    pos <- match(patches$bug_id[[i]], bug_ids)
+    if (is.na(pos)) stop("Missing bug data for ", patches$bug_id[[i]])
+    bug <- bugs[[pos]]
+    dossier <- latest_patch_dossier(bug)
+    input_hash <- hash_text(paste(prompt, model, dossier, sep = "\n"))
+    cached <- cache |>
+      filter(.data$bug_id == bug$bug_id,
+             .data$input_hash == .env$input_hash,
+             .data$model == .env$model)
+    if (nrow(cached)) {
+      result <- cached[nrow(cached), ]
+    } else {
+      api_key <- Sys.getenv("GEMINI_API_KEY")
+      if (!nzchar(api_key)) stop("GEMINI_API_KEY is not set.")
+      message("Classifying latest patch for Bug ", bug$bug_id)
+      ai <- gemini_classify(dossier, prompt, api_key, model,
+                            PATCH_CATEGORIES)
+      result <- tibble(
+        bug_id = bug$bug_id, input_hash = input_hash,
+        category = ai$category, reason = ai$reason,
+        confidence = ai$confidence, model = model,
+        reviewed_at = format(Sys.time(), tz = "UTC", usetz = TRUE)
+      )
+      if (is.null(cache_con)) cache_con <- open_ai_cache(cache_path)
+      append_ai_cache(result, cache_con)
+    }
+    output[[i]] <- result |>
+      select(category, reason, confidence, reviewed_at, model)
+  }
+  bind_cols(patches, bind_rows(output))
 }
 
 reviewed_by_core <- function(bug, patches) {
@@ -778,15 +899,21 @@ additional_team_patches <- function(bugs) {
       status = bug$status,
       patch_date = max(patches$date),
       patch_count = nrow(patches),
+      core_cc = core_cc_text(bug),
       bugzilla_url = paste0(BUGZILLA_URL, bug$bug_id)
     )
   })
 }
 
-markdown_bug <- function(id, summary, date) {
+format_bug_details <- function(date, cc = "") {
+  date <- substr(date, 1, 10)
+  cc[is.na(cc)] <- ""
+  paste0(" (", date, ifelse(nzchar(cc), paste0(", CC: ", cc), ""), ")")
+}
+
+markdown_bug <- function(id, summary, date, cc = "") {
   link <- paste0("[Bug ", id, "](", BUGZILLA_URL, id, ")")
-  date <- format(as.POSIXct(date, tz = "UTC"), "%Y-%m-%d")
-  paste0("* ", link, " — ", summary, " (", date, ")")
+  paste0("* ", link, " — ", summary, format_bug_details(date, cc))
 }
 
 write_readme <- function(triaged, patches, dump_date, path = "README.md") {
@@ -822,7 +949,8 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
       next
     }
     
-    lines <- markdown_bug(x$bug_id, x$summary, x$last_triager_comment)
+    lines <- markdown_bug(x$bug_id, x$summary, x$last_triager_comment,
+                          x$core_cc)
     write(lines, "")
   }
   
@@ -833,22 +961,18 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     ""
   )
   
-  components <- sort(unique(patches$component))
-  
-  if (length(components) == 0) {
-    write("_None._", "")
-  } else {
-    for (component in components) {
-      x <- patches |>
+  if (nrow(patches) == 0) write("_None._", "")
+  for (category in PATCH_CATEGORIES) {
+    group <- patches |> filter(.data$category == .env$category)
+    if (nrow(group) == 0) next
+    write(paste0("### ", category), "")
+    for (component in sort(unique(group$component))) {
+      x <- group |>
         filter(.data$component == .env$component) |>
         arrange(patch_date, bug_id)
-      
-      write(
-        paste0("### ", component),
-        "",
-        markdown_bug(x$bug_id, x$summary, x$patch_date),
-        ""
-      )
+      write(paste0("#### ", component), "",
+            markdown_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
+            "")
     }
   }
   
@@ -857,8 +981,8 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     "",
     paste(
       "This report is generated automatically from R Bugzilla data.",
-      "The classification of TRIAGED bugs is generated with the",
-      "assistance of generative AI and should be treated as a summary",
+      "The classifications of TRIAGED bugs and proposed patches are",
+      "generated with assistance from generative AI and are intended",
       "to support, rather than replace, human review."
     ),
     "",
@@ -871,9 +995,8 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
   )
 }
 
-plain_bug <- function(id, summary, date) {
-  date <- format(as.POSIXct(date, tz = "UTC"), "%Y-%m-%d")
-  paste0("* Bug ", id, " — ", summary, " (", date, ")")
+plain_bug <- function(id, summary, date, cc = "") {
+  paste0("* Bug ", id, " — ", summary, format_bug_details(date, cc))
 }
 
 write_plain_text_report <- function(
@@ -908,7 +1031,8 @@ write_plain_text_report <- function(
     write(
       paste0(category, " (", nrow(x), ")"),
       "",
-      plain_bug(x$bug_id, x$summary, x$last_triager_comment),
+      plain_bug(x$bug_id, x$summary, x$last_triager_comment,
+                x$core_cc),
       ""
     )
   }
@@ -921,22 +1045,18 @@ write_plain_text_report <- function(
     ""
   )
   
-  components <- sort(unique(patches$component))
-  
-  if (length(components) == 0) {
-    write("None.", "")
-  } else {
-    for (component in components) {
-      x <- patches |>
+  if (nrow(patches) == 0) write("None.", "")
+  for (category in PATCH_CATEGORIES) {
+    group <- patches |> filter(.data$category == .env$category)
+    if (nrow(group) == 0) next
+    write(paste0(category, " (", nrow(group), ")"), "")
+    for (component in sort(unique(group$component))) {
+      x <- group |>
         filter(.data$component == .env$component) |>
         arrange(patch_date, bug_id)
-      
-      write(
-        paste0(component, " (", nrow(x), ")"),
-        "",
-        plain_bug(x$bug_id, x$summary, x$patch_date),
-        ""
-      )
+      write(paste0("  ", component, " (", nrow(x), ")"), "",
+            plain_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
+            "")
     }
   }
   
