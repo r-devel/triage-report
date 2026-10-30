@@ -2,82 +2,112 @@
   "bug": {
     "bugs": [
       {
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-10-29T23:37:05Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "`EnlargeVector()` allocates while the freshly coerced LHS is unprotected (`options(check.bounds = TRUE)`)",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "status": "NEW",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "Other",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19111,
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P2",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-07-30T20:22:59Z",
         "component": "Low-level",
         "depends_on": [],
         "keywords": [],
         "is_open": true,
         "classification": "Unclassified",
-        "assigned_to": "R-core",
-        "qa_contact": "",
-        "cc": [],
-        "severity": "normal",
-        "dupe_of": {},
-        "deadline": {},
-        "id": 19111,
-        "whiteboard": "",
-        "version": "R-devel (trunk)",
-        "creation_time": "2026-07-30T20:22:59Z",
-        "priority": "P5",
-        "product": "R",
-        "creator_detail": {
-          "real_name": "Kevin Ushey",
-          "id": 1044,
-          "name": "kevinushey"
-        },
-        "resolution": "",
-        "status": "NEW",
-        "creator": "kevinushey",
-        "is_creator_accessible": true,
-        "alias": [],
-        "op_sys": "Other",
-        "is_confirmed": true,
-        "flags": [],
-        "platform": "Other",
-        "cc_detail": [],
-        "last_change_time": "2026-07-30T20:22:59Z",
-        "see_also": [],
-        "target_milestone": "---",
-        "summary": "`EnlargeVector()` allocates while the freshly coerced LHS is unprotected (`options(check.bounds = TRUE)`)",
-        "is_cc_accessible": true,
-        "assigned_to_detail": {
-          "real_name": "R-core",
-          "id": 16,
-          "name": "R-core"
-        },
-        "groups": [],
-        "blocks": [],
-        "url": ""
+        "assigned_to": "R-core"
       }
     ],
     "faults": []
   },
   "comments": {
+    "comments": {},
     "bugs": {
       "19111": {
         "comments": [
           {
             "creation_time": "2026-07-30T20:22:59Z",
             "creator": "kevinushey",
+            "count": 0,
+            "is_markdown": true,
             "bug_id": 19111,
             "text": "## Summary\n\nWhen a subassignment both coerces the left-hand side and extends it,\n`EnlargeVector()` is called with an `x` that is a brand-new vector reachable\nfrom nothing.  With `options(check.bounds = TRUE)` it then calls `warning()`,\nwhich allocates (and may run calling handlers), so `x` can be collected and\nreused before it is read a few lines later.\n\n## Reproducible example\n\n```\noptions(check.bounds = TRUE)\nx <- c(TRUE, FALSE)     # logical LHS, so assigning an integer coerces it\ngctorture(TRUE)\nx[5] <- 1L\n## Error in x[5] <- 1L :\n##   Value of SET_STRING_ELT() must be a 'CHARSXP' not a 'expression'\n```\n\nControl matrix -- the failure needs all three ingredients, which pins the\ndiagnosis:\n\n| LHS | `check.bounds` | `gctorture` | result |\n|---|---|---|---|\n| `c(TRUE, FALSE)` | `TRUE` | `TRUE` | **error / corruption** |\n| `c(TRUE, FALSE)` | `FALSE` | `TRUE` | ok (no `warning()` call) |\n| `c(TRUE, FALSE)` | `TRUE` | `FALSE` | ok (no GC in the window) |\n| `c(1L, 2L)` | `TRUE` | `TRUE` | ok (no LHS coercion, so `x` is the caller's protected vector) |\n\n## Analysis\n\nIn `SubassignTypeFix()` the LHS is replaced by a coerced copy, e.g.\n`*x = coerceVector(*x, INTSXP)` (`src/main/subassign.c:366`).  The caller's\n`PROTECT(x)` in `do_subassign_dflt()` still pins the *pre-coercion* vector.\n`SubassignTypeFix()` then calls (`subassign.c:499-503`):\n\n```\n    if (stretch) {\n\tPROTECT(*y);                       /* protects y, NOT x */\n\t*x = EnlargeVector(*x, stretch);\n\tUNPROTECT(1);\n    }\n```\n\nand `EnlargeVector()` (`subassign.c:140-163`) does:\n\n```\n    if (R_CheckBoundsSymbol == NULL)\n\tR_CheckBoundsSymbol = install(\"check.bounds\");   /* can allocate */\n    ...\n    len = xlength(x);\n    if (LOGICAL(GetOption1(R_CheckBoundsSymbol))[0])\n\twarning(_(\"assignment outside vector/list limits (extending from %lld to %lld)\"),\n\t\t(long long)len, (long long)newlen);         /* allocates */\n\n    if (! MAYBE_SHARED(x) && IS_GROWABLE(x) && XTRUELENGTH(x) >= newlen) {\n\tSET_STDVEC_LENGTH(x, newlen);                       /* uses collected x */\n```\n\n`x` is first protected only at `subassign.c:214`, well after these uses.\n\n## Candidate patch\n\nThe `warning()` is not the only exposure: the \"growable\" branch at\n`subassign.c:161-178` also allocates with `x` live, via `EnlargeNames()` and\n`setAttrib()`, before returning `x` directly.  So rather than protecting just\nthe warning window, the patch protects `x` for the whole function.\n\nThe existing `PROTECT(x)` at `subassign.c:214` then becomes redundant and is\nremoved, which keeps the closing `UNPROTECT(2)` at `:273` balanced (it now\ncovers the function-level `x` plus `newx`).  The early return in the growable\nbranch gets its own `UNPROTECT(1)`.\n\n```\n@@ -143,6 +143,11 @@\n     SEXP newx, names;\n     static SEXP R_CheckBoundsSymbol = NULL;\n \n+    /* x may be a freshly coerced vector that the caller has not protected\n+       (see SubassignTypeFix), so protect it for the duration: install(),\n+       warning() and the attribute handling below can all allocate. */\n+    PROTECT(x);\n+\n     if (R_CheckBoundsSymbol == NULL)\n \tR_CheckBoundsSymbol = install(\"check.bounds\");\n@@ -174,6 +179,7 @@\n \t    if (getAttrib(x, R_DimNamesSymbol) != R_NilValue)\n \t\tsetAttrib(x, R_DimNamesSymbol, R_NilValue);\n \t}\n+\tUNPROTECT(1); /* x */\n \treturn x;\n     }\n@@ -211,7 +217,6 @@\n     if (newtruelen > R_LEN_T_MAX) newtruelen = newlen;\n */\n-    PROTECT(x);\n     PROTECT(newx = allocVector(TYPEOF(x), newtruelen));\n```",
-            "is_markdown": true,
-            "count": 0,
             "tags": [],
             "attachment_id": {},
+            "is_private": false,
             "id": 103339,
-            "time": "2026-07-30T20:22:59Z",
-            "is_private": false
+            "time": "2026-07-30T20:22:59Z"
+          },
+          {
+            "id": 104013,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19111,
+            "text": "Created attachment 3973\npatch: protect x for all of EnlargeVector()\n\nPatch attached. EnlargeVector() protected x only just before allocating the new vector, so the check.bounds warning() (and EnlargeNames() on the growable path) ran with a freshly coerced x unprotected. The patch moves that PROTECT(x) to the top of EnlargeVector(), which covers every caller, instead of adding another PROTECT in SubassignTypeFix().\n\nIt adds a gctorture() regression test to reg-tests-1e.R that segfaults without the fix; make check passes with it.\n\nPatch also at https://github.com/r-devel/r-svn/pull/437, where CI results can be seen.",
+            "count": 1,
+            "creation_time": "2026-10-29T23:37:03Z",
+            "time": "2026-10-29T23:37:03Z",
+            "attachment_id": 3973,
+            "is_markdown": false,
+            "creator": "kevinushey"
           }
         ]
       }
-    },
-    "comments": {}
+    }
   },
   "attachments": {
     "bugs": {
-      "19111": []
+      "19111": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL3N1YmFzc2lnbi5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3N1YmFzc2lnbi5jCShyZXZpc2lvbiA5MDc5NCkKKysrIHNyYy9tYWluL3N1YmFzc2lnbi5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNTIsNiArMTUyLDkgQEAgc3RhdGljIFNFWFAgRW5sYXJnZVZlY3RvcihTRVhQIHgsIFJfeGxlbl90IG5ld2xlbikKIAogICAgIC8qIEVubGFyZ2UgdGhlIHZlY3RvciBpdHNlbGYuICovCiAgICAgbGVuID0geGxlbmd0aCh4KTsKKyAgICAvKiB4IGNhbiBiZSBhIGZyZXNoIGNvZXJjaW9uIHRoYXQgbm90aGluZyBlbHNlIGtlZXBzIGFsaXZlIChmcm9tCisgICAgICAgU3ViYXNzaWduVHlwZUZpeCgpKSwgYW5kIHdhcm5pbmcoKSBhbmQgRW5sYXJnZU5hbWVzKCkgYWxsb2NhdGUuICovCisgICAgUFJPVEVDVCh4KTsKICAgICBpZiAoTE9HSUNBTChHZXRPcHRpb24xKFJfQ2hlY2tCb3VuZHNTeW1ib2wpKVswXSkKIAl3YXJuaW5nKF8oImFzc2lnbm1lbnQgb3V0c2lkZSB2ZWN0b3IvbGlzdCBsaW1pdHMgKGV4dGVuZGluZyBmcm9tICVsbGQgdG8gJWxsZCkiKSwKIAkJKGxvbmcgbG9uZylsZW4sIChsb25nIGxvbmcpbmV3bGVuKTsKQEAgLTE3NCw2ICsxNzcsNyBAQCBzdGF0aWMgU0VYUCBFbmxhcmdlVmVjdG9yKFNFWFAgeCwgUl94bGVuX3QgbmV3bGVuKQogCSAgICBpZiAoZ2V0QXR0cmliKHgsIFJfRGltTmFtZXNTeW1ib2wpICE9IFJfTmlsVmFsdWUpCiAJCXNldEF0dHJpYih4LCBSX0RpbU5hbWVzU3ltYm9sLCBSX05pbFZhbHVlKTsKIAl9CisJVU5QUk9URUNUKDEpOyAvKiB4ICovCiAJcmV0dXJuIHg7CiAgICAgfQogCkBAIC0yMTEsNyArMjE1LDYgQEAgc3RhdGljIFNFWFAgRW5sYXJnZVZlY3RvcihTRVhQIHgsIFJfeGxlbl90IG5ld2xlbikKIAogICAgIGlmIChuZXd0cnVlbGVuID4gUl9MRU5fVF9NQVgpIG5ld3RydWVsZW4gPSBuZXdsZW47CiAqLwotICAgIFBST1RFQ1QoeCk7CiAgICAgUFJPVEVDVChuZXd4ID0gYWxsb2NWZWN0b3IoVFlQRU9GKHgpLCBuZXd0cnVlbGVuKSk7CiAKICAgICAvKiBDb3B5IHRoZSBlbGVtZW50cyBpbnRvIHBsYWNlLiAqLwpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwNzk0KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQzNTMsNiArNDM1MywxOSBAQCB1bmxpbmsodGQsIHJlY3Vyc2l2ZSA9IFRSVUUpCiAjIyBubyBOT1RFIGluIFIgPD0gNC42LjIKIAogCisjIyB4W2ldIDwtIHYgY29lcmNpbmcgYW5kIGV4dGVuZGluZyB4IHdpdGggY2hlY2suYm91bmRzIG9uIC0tIFBSIzE5MTExCitsb2NhbCh7CisgICAgb3AgPC0gb3B0aW9ucyhjaGVjay5ib3VuZHMgPSBUUlVFKQorICAgIG9uLmV4aXQob3B0aW9ucyhvcCkpCisgICAgeCA8LSBjKFRSVUUsIEZBTFNFKQorICAgIGdjdG9ydHVyZShUUlVFKQorICAgIHN1cHByZXNzV2FybmluZ3MoeFs1XSA8LSAxTCkKKyAgICBnY3RvcnR1cmUoRkFMU0UpCisgICAgc3RvcGlmbm90KGlkZW50aWNhbCh4LCBjKDFMLCAwTCwgTkEsIE5BLCAxTCkpKQorfSkKKyMjIGdhdmUgZ2FyYmFnZSwgYW4gZXJyb3Igb3IgYSBzZWdmYXVsdCBpbiBSIDw9IDQuNi4yCisKKwogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCiAgICAgICB0b3RhbCA9IHByb2MudGltZSgpKQo=",
+          "creator": "kevinushey",
+          "id": 3973,
+          "is_private": false,
+          "size": 1826,
+          "last_change_time": "2026-10-29T23:37:03Z",
+          "bug_id": 19111,
+          "file_name": "enlargevector-protect.diff",
+          "summary": "patch: protect x for all of EnlargeVector()",
+          "creation_time": "2026-10-29T23:37:03Z"
+        }
+      ]
     },
     "attachments": {}
   },
-  "source_changed": "2026-07-30 20:22:59"
+  "source_changed": "2026-10-29 23:37:05"
 }

@@ -3,51 +3,51 @@
     "faults": [],
     "bugs": [
       {
-        "cc_detail": [],
-        "last_change_time": "2026-10-27T16:29:43Z",
-        "target_milestone": "---",
-        "see_also": [],
-        "summary": "tre-parse.c has a variety of out-of-bounds reads",
-        "is_cc_accessible": true,
-        "groups": [],
-        "assigned_to_detail": {
-          "real_name": "R-core",
-          "id": 16,
-          "name": "R-core"
-        },
-        "blocks": [],
-        "url": "",
+        "platform": "Other",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "Linux",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "status": "UNCONFIRMED",
+        "resolution": "",
         "creator_detail": {
           "name": "kevinushey",
           "id": 1044,
           "real_name": "Kevin Ushey"
         },
-        "resolution": "",
-        "status": "UNCONFIRMED",
-        "is_creator_accessible": true,
-        "alias": [],
-        "creator": "kevinushey",
-        "is_confirmed": false,
-        "op_sys": "Linux",
-        "flags": [],
-        "platform": "Other",
-        "cc": [],
-        "qa_contact": "",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "tre-parse.c has a variety of out-of-bounds reads",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-30T01:32:22Z",
+        "cc_detail": [],
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Wishlist",
+        "product": "R",
+        "priority": "P2",
+        "creation_time": "2026-01-26T17:32:18Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "id": 18995,
+        "deadline": {},
         "severity": "normal",
         "dupe_of": {},
-        "deadline": {},
-        "id": 18995,
-        "whiteboard": "",
-        "version": "R-devel (trunk)",
-        "creation_time": "2026-01-26T17:32:18Z",
-        "priority": "P2",
-        "product": "R",
-        "component": "Wishlist",
-        "depends_on": [],
-        "keywords": [],
-        "is_open": true,
-        "classification": "Unclassified",
-        "assigned_to": "R-core"
+        "cc": [],
+        "qa_contact": ""
       }
     ]
   },
@@ -56,17 +56,30 @@
       "18995": {
         "comments": [
           {
-            "attachment_id": 3601,
-            "time": "2026-01-26T17:32:18Z",
-            "creator": "kevinushey",
-            "is_markdown": true,
             "tags": [],
             "is_private": false,
             "id": 102589,
             "creation_time": "2026-01-26T17:32:18Z",
             "count": 0,
             "text": "Created attachment 3601\nCandidate patch.\n\nThese can usually be triggered using `grepRaw()` with invalid or incomplete patterns with R build with ASAN. For example:\n\n```\n> grepRaw(\"(\", \"abc\")\n=================================================================\n==1871632==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x7b30fd9f99b4 at pc 0x7f1102f9db0e bp 0x7fffca3dab30 sp 0x7fffca3dab28\nREAD of size 4 at 0x7b30fd9f99b4 thread T0\n    #0 0x7f1102f9db0d in tre_parse /home/kevin/r-devel/trunk/src/extra/tre/tre-parse.c:1227\n    #1 0x7f1102f738d7 in tre_compile /home/kevin/r-devel/trunk/src/extra/tre/tre-compile.c:1920\n    #2 0x7f1102f60680 in tre_regncompb /home/kevin/r-devel/trunk/src/extra/tre/regcomp.c:118\n    #3 0x7f1102b04e3f in do_grepraw /home/kevin/r-devel/trunk/src/main/grep.c:1736\n    #4 0x7f1102a1a483 in bcEval_loop /home/kevin/r-devel/trunk/src/main/eval.c:8132\n    #5 0x7f1102a6d064 in bcEval /home/kevin/r-devel/trunk/src/main/eval.c:7515\n    #6 0x7f1102a6db85 in Rf_eval /home/kevin/r-devel/trunk/src/main/eval.c:1167\n    #7 0x7f1102a7b90b in R_execClosure /home/kevin/r-devel/trunk/src/main/eval.c:2389\n    #8 0x7f1102a7bc84 in applyClosure_core /home/kevin/r-devel/trunk/src/main/eval.c:2302\n    #9 0x7f1102a7f46c in Rf_applyClosure /home/kevin/r-devel/trunk/src/main/eval.c:2324\n    #10 0x7f1102a6fafd in Rf_eval /home/kevin/r-devel/trunk/src/main/eval.c:1280\n    #11 0x7f1102b61c45 in Rf_ReplIteration /home/kevin/r-devel/trunk/src/main/main.c:264\n    #12 0x7f1102b621f3 in R_ReplConsole /home/kevin/r-devel/trunk/src/main/main.c:317\n    #13 0x7f1102b6237f in run_Rmainloop /home/kevin/r-devel/trunk/src/main/main.c:1235\n    #14 0x7f1102b623cc in Rf_mainloop /home/kevin/r-devel/trunk/src/main/main.c:1242\n    #15 0x0000004004f3 in main /home/kevin/r-devel/trunk/src/main/Rmain.c:29\n    #16 0x7f11018105b4 in __libc_start_call_main (/lib64/libc.so.6+0x35b4) (BuildId: 57f6900d44d37352280570abdffc4f01a1803226)\n    #17 0x7f1101810667 in __libc_start_main@@GLIBC_2.34 (/lib64/libc.so.6+0x3667) (BuildId: 57f6900d44d37352280570abdffc4f01a1803226)\n    #18 0x0000004003e4 in _start (/home/kevin/r/r-devel-sanitizers/lib64/R/bin/exec/R+0x4003e4) (BuildId: a96b5b8788e93e4b9d0462028242bff17a2aceb1)\n```\n\nI've attached a patch for some of the specific access issues I've found.\n\n```\n> sessionInfo()\nR Under development (unstable) (2026-01-25 r89330)\nPlatform: x86_64-pc-linux-gnu\nRunning under: Fedora Linux 43 (Workstation Edition)\n```",
-            "bug_id": 18995
+            "bug_id": 18995,
+            "attachment_id": 3601,
+            "time": "2026-01-26T17:32:18Z",
+            "creator": "kevinushey",
+            "is_markdown": true
+          },
+          {
+            "attachment_id": 3975,
+            "time": "2026-10-30T01:32:10Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 104015,
+            "is_private": false,
+            "creation_time": "2026-10-30T01:32:10Z",
+            "text": "Created attachment 3975\npatch: bound tre_parse() reads to the end of the pattern (clean copy of 3601, with test)\n\nAttachment 3601 was pasted into the web form, which mangled its whitespace, so it only applies with patch -l. Attached is the same change as a proper SVN diff against r90794 (tre-parse.c is unchanged since r89330), plus a regression test.\n\nTo check it I ran every prefix of a set of bracket, brace, (?...) and escape patterns through grepRaw() on an ASan build: 14 of 91 read past the end of the pattern before the patch, in tre_parse_bracket(), tre_parse_bracket_items() and tre_parse(), and none after. make check passes.\n\nPatch also at https://github.com/r-devel/r-svn/pull/439, where CI results can be seen.",
+            "bug_id": 18995,
+            "count": 1
           }
         ]
       }
@@ -74,27 +87,43 @@
     "comments": {}
   },
   "attachments": {
-    "attachments": {},
     "bugs": {
       "18995": [
         {
+          "file_name": "file_18995.txt",
+          "bug_id": 18995,
+          "creation_time": "2026-01-26T17:32:18Z",
+          "summary": "Candidate patch.",
+          "is_private": false,
+          "id": 3601,
+          "last_change_time": "2026-10-30T01:32:22Z",
+          "size": 5962,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true,
           "creator": "kevinushey",
           "data": "LS0tIHNyYy9leHRyYS90cmUvdHJlLXBhcnNlLmMgICAocmV2aXNpb24gODkzMzApDQorKysgc3JjL2V4dHJhL3RyZS90cmUtcGFyc2UuYyAgICh3b3JraW5nIGNvcHkpDQpAQCAtMjc1LDcgKzI3NSw3IEBADQogICB3aGlsZSAoc3RhdHVzID09IFJFR19PSykNCiAgICAgew0KICAgICAgIHNraXAgPSAwOw0KLSAgICAgIGlmIChyZSA9PSBjdHgtPnJlX2VuZCkNCisgICAgICBpZiAocmUgPj0gY3R4LT5yZV9lbmQpDQogICAgICAgIHsNCiAgICAgICAgICBzdGF0dXMgPSBSRUdfRUJSQUNLOw0KICAgICAgICB9DQpAQCAtMzYyLDggKzM2Miw4IEBADQogICAgICAgICAgZWxzZQ0KICAgICAgICAgICAgew0KICAgICAgICAgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2VfYnJhY2tldDogICBjaGFyOiAnJS4qIiBTVFJGICInXG4iLCBSRVNUKHJlKSkpOw0KLSAgICAgICAgICAgICBpZiAoKnJlID09IENIQVJfTUlOVVMgJiYgKihyZSArIDEpICE9IENIQVJfUkJSQUNLRVQNCi0gICAgICAgICAgICAgICAgICYmIGN0eC0+cmUgIT0gcmUpDQorICAgICAgICAgICAgIGlmICgqcmUgPT0gQ0hBUl9NSU5VUyAmJiByZSArIDEgPCBjdHgtPnJlX2VuZA0KKyAgICAgICAgICAgICAgICAgJiYgKihyZSArIDEpICE9IENIQVJfUkJSQUNLRVQgJiYgY3R4LT5yZSAhPSByZSkNCiAgICAgICAgICAgICAgICAvKiBUd28gcmFuZ2VzIGFyZSBub3QgYWxsb3dlZCB0byBzaGFyZSBhbmQgZW5kcG9pbnQuICovDQogICAgICAgICAgICAgICAgc3RhdHVzID0gUkVHX0VSQU5HRTsNCiAgICAgICAgICAgICAgbWluID0gbWF4ID0gKnJlKys7DQpAQCAtNDQzLDYgKzQ0MywxMiBAQA0KICAgaWYgKGl0ZW1zID09IE5VTEwpDQogICAgIHJldHVybiBSRUdfRVNQQUNFOw0KDQorICBpZiAoY3R4LT5yZSA+PSBjdHgtPnJlX2VuZCkNCisgICAgew0KKyAgICAgIHhmcmVlKGl0ZW1zKTsNCisgICAgICByZXR1cm4gUkVHX0VCUkFDSzsNCisgICAgfQ0KKw0KICAgaWYgKCpjdHgtPnJlID09IENIQVJfQ0FSRVQpDQogICAgIHsNCiAgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2VfYnJhY2tldDogbmVnYXRlOiAnJS4qIiBTVFJGICInXG4iLCBSRVNUKGN0eC0+cmUpKSk7DQpAQCAtNzUwLDcgKzc1Niw3IEBADQogICAgICAgICAgICBjYXNlIEwnPCc6DQogICAgICAgICAgICAgIERQUklOVCgoInRyZV9wYXJzZTogICAgbWF4IGNvc3Q6ICclLioiIFNUUkYgIidcbiIsIFJFU1QocikpKTsNCiAgICAgICAgICAgICAgcisrOw0KLSAgICAgICAgICAgICB3aGlsZSAoKnIgPT0gTCcgJykNCisgICAgICAgICAgICAgd2hpbGUgKHIgPCBjdHgtPnJlX2VuZCAmJiAqciA9PSBMJyAnKQ0KICAgICAgICAgICAgICAgIHIrKzsNCiAgICAgICAgICAgICAgY29zdF9tYXggPSB0cmVfcGFyc2VfaW50KCZyLCBjdHgtPnJlX2VuZCk7DQogICAgICAgICAgICAgIGlmIChjb3N0X21heCA8IDApDQpAQCAtNzcwLDcgKzc3Niw5IEBADQogICAgICAgICAgICAgICAgICBjb25zdCB0cmVfY2hhcl90ICpzciA9IHI7DQogI2VuZGlmIC8qIFRSRV9ERUJVRyAqLw0KICAgICAgICAgICAgICAgICAgaW50IGNvc3QgPSB0cmVfcGFyc2VfaW50KCZyLCBjdHgtPnJlX2VuZCk7DQotICAgICAgICAgICAgICAgICAvKiBYWFggLSBtYWtlIHN1cmUgciBpcyBub3QgcGFzdCBlbmQuICovDQorICAgICAgICAgICAgICAgICAvKiBNYWtlIHN1cmUgciBpcyBub3QgcGFzdCBlbmQuICovDQorICAgICAgICAgICAgICAgICBpZiAociA+PSBjdHgtPnJlX2VuZCkNCisgICAgICAgICAgICAgICAgICAgcmV0dXJuIFJFR19FQlJBQ0U7DQogICAgICAgICAgICAgICAgICBzd2l0Y2ggKCpyKQ0KICAgICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgIGNhc2UgTCdpJzogIC8qIEluc2VydCBjb3N0ICovDQpAQCAtMTAyNyw2ICsxMDM1LDcgQEANCiAgICAgICAgICAgICAgICAgICAgICYmIGMgPT0gQ0hBUl9SUEFSRU4gJiYgZGVwdGggPiAwKQ0KICAgICAgICAgICAgICAgICAgICB8fCAoIShjdHgtPmNmbGFncyAmIFJFR19FWFRFTkRFRCkNCiAgICAgICAgICAgICAgICAgICAgICAgICYmIChjID09IENIQVJfQkFDS1NMQVNIDQorICAgICAgICAgICAgICAgICAgICAgICAgICAgJiYgY3R4LT5yZSArIDEgPCBjdHgtPnJlX2VuZA0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICYmICooY3R4LT5yZSArIDEpID09IENIQVJfUlBBUkVOKSkpDQogICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgIGlmICghKGN0eC0+Y2ZsYWdzICYgUkVHX0VYVEVOREVEKSAmJiBkZXB0aCA9PSAwKQ0KQEAgLTEyMjQsNiArMTIzMyw3IEBADQogICAgICAgICAgICAgIC8qIEhhbmRsZSAiKD8uLi4pIiBleHRlbnNpb25zLiAgVGhleSB3b3JrIGluIGEgd2F5IHNpbWlsYXINCiAgICAgICAgICAgICAgICAgdG8gUGVybHMgY29ycmVzcG9uZGluZyBleHRlbnNpb25zLiAqLw0KICAgICAgICAgICAgICBpZiAoY3R4LT5jZmxhZ3MgJiBSRUdfRVhURU5ERUQNCisgICAgICAgICAgICAgICAgICYmIGN0eC0+cmUgKyAxIDwgY3R4LT5yZV9lbmQNCiAgICAgICAgICAgICAgICAgICYmICooY3R4LT5yZSArIDEpID09IENIQVJfUVVFU1RJT05NQVJLKQ0KICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgIGludCBuZXdfY2ZsYWdzID0gY3R4LT5jZmxhZ3M7DQpAQCAtMTIzMyw2ICsxMjQzLDggQEANCiAgICAgICAgICAgICAgICAgIGN0eC0+cmUgKz0gMjsNCiAgICAgICAgICAgICAgICAgIHdoaWxlICgvKkNPTlNUQ09ORCovKHZvaWQpMSwxKQ0KICAgICAgICAgICAgICAgICAgICB7DQorICAgICAgICAgICAgICAgICAgICAgaWYgKGN0eC0+cmUgPj0gY3R4LT5yZV9lbmQpDQorICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gUkVHX0JBRFBBVDsNCiAgICAgICAgICAgICAgICAgICAgICBpZiAoKmN0eC0+cmUgPT0gTCdpJykNCiAgICAgICAgICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgRFBSSU5UKCgidHJlX3BhcnNlOiAgICAgICBpY2FzZTogJyUuKiIgU1RSRiAiXG4iLA0KQEAgLTEyOTgsMTAgKzEzMTAsMTAgQEANCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBSRVNUKGN0eC0+cmUpKSk7DQogICAgICAgICAgICAgICAgICAgICAgICAgIC8qIEEgY29tbWVudCBjYW4gY29udGFpbiBhbnkgY2hhcmFjdGVyIGV4Y2VwdCBhDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgIHJpZ2h0IHBhcmVudGhlc2lzICovDQotICAgICAgICAgICAgICAgICAgICAgICAgIHdoaWxlICgqY3R4LT5yZSAhPSBDSEFSX1JQQVJFTg0KLSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgJiYgY3R4LT5yZSA8IGN0eC0+cmVfZW5kKQ0KKyAgICAgICAgICAgICAgICAgICAgICAgICB3aGlsZSAoY3R4LT5yZSA8IGN0eC0+cmVfZW5kDQorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAmJiAqY3R4LT5yZSAhPSBDSEFSX1JQQVJFTikNCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdHgtPnJlKys7DQotICAgICAgICAgICAgICAgICAgICAgICAgIGlmICgqY3R4LT5yZSA9PSBDSEFSX1JQQVJFTiAmJiBjdHgtPnJlIDwgY3R4LT5yZV9lbmQpDQorICAgICAgICAgICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlIDwgY3R4LT5yZV9lbmQgJiYgKmN0eC0+cmUgPT0gQ0hBUl9SUEFSRU4pDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgew0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3R4LT5yZSsrOw0KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYnJlYWs7DQpAQCAtMTQ2OCw3ICsxNDgwLDcgQEANCiAgICAgICAgICAgICAgICAgIGJyZWFrOw0KICAgICAgICAgICAgICAgIGNhc2UgTCd4JzoNCiAgICAgICAgICAgICAgICAgIGN0eC0+cmUrKzsNCi0gICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlWzBdICE9IENIQVJfTEJSQUNFICYmIGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkNCisgICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlIDwgY3R4LT5yZV9lbmQgJiYgY3R4LT5yZVswXSAhPSBDSEFSX0xCUkFDRSkNCiAgICAgICAgICAgICAgICAgICAgew0KICAgICAgICAgICAgICAgICAgICAgIC8qIDggYml0IGhleCBjaGFyLiAqLw0KICAgICAgICAgICAgICAgICAgICAgIGNoYXIgdG1wWzNdID0gezAsIDAsIDB9Ow0KQEAgLTE0NzYsMTIgKzE0ODgsMTIgQEANCiAgICAgICAgICAgICAgICAgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2U6ICA4IGJpdCBoZXg6ICclLioiIFNUUkYgIidcbiIsDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICBSRVNUKGN0eC0+cmUgLSAyKSkpOw0KDQotICAgICAgICAgICAgICAgICAgICAgaWYgKHRyZV9pc3hkaWdpdChjdHgtPnJlWzBdKSAmJiBjdHgtPnJlIDwgY3R4LT5yZV9lbmQpDQorICAgICAgICAgICAgICAgICAgICAgaWYgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCAmJiB0cmVfaXN4ZGlnaXQoY3R4LT5yZVswXSkpDQogICAgICAgICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgICAgICAgIHRtcFswXSA9IChjaGFyKWN0eC0+cmVbMF07DQogICAgICAgICAgICAgICAgICAgICAgICAgIGN0eC0+cmUrKzsNCiAgICAgICAgICAgICAgICAgICAgICAgIH0NCi0gICAgICAgICAgICAgICAgICAgICBpZiAodHJlX2lzeGRpZ2l0KGN0eC0+cmVbMF0pICYmIGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkNCisgICAgICAgICAgICAgICAgICAgICBpZiAoY3R4LT5yZSA8IGN0eC0+cmVfZW5kICYmIHRyZV9pc3hkaWdpdChjdHgtPnJlWzBdKSkNCiAgICAgICAgICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgdG1wWzFdID0gKGNoYXIpY3R4LT5yZVswXTsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgY3R4LT5yZSsrOw0KQEAgLTE0OTksNyArMTUxMSw3IEBADQogICAgICAgICAgICAgICAgICAgICAgbG9uZyB2YWw7DQogICAgICAgICAgICAgICAgICAgICAgaW50IGkgPSAwOw0KICAgICAgICAgICAgICAgICAgICAgIGN0eC0+cmUrKzsNCi0gICAgICAgICAgICAgICAgICAgICB3aGlsZSAoY3R4LT5yZV9lbmQgLSBjdHgtPnJlID49IDApDQorICAgICAgICAgICAgICAgICAgICAgd2hpbGUgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkNCiAgICAgICAgICAgICAgICAgICAgICAgIHsNCiAgICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGN0eC0+cmVbMF0gPT0gQ0hBUl9SQlJBQ0UpDQogICAgICAgICAgICAgICAgICAgICAgICAgICAgYnJlYWs7DQpAQCAtMTUyMyw2ICsxNTM1LDggQEANCiAgICAgICAgICAgICAgICAgIC8qRkFMTFRIUk9VR0gqLw0KDQogICAgICAgICAgICAgICAgZGVmYXVsdDoNCisgICAgICAgICAgICAgICAgIGlmIChjdHgtPnJlID49IGN0eC0+cmVfZW5kKQ0KKyAgICAgICAgICAgICAgICAgICByZXR1cm4gUkVHX0VFU0NBUEU7DQogICAgICAgICAgICAgICAgICBpZiAodHJlX2lzZGlnaXQoKmN0eC0+cmUpKQ0KICAgICAgICAgICAgICAgICAgICB7DQogICAgICAgICAgICAgICAgICAgICAgLyogQmFjayByZWZlcmVuY2UuICovDQpAQCAtMTY3MSw3ICsxNjg1LDggQEANCiAgICAgICAgICAgICAgICB9DQoNCiAvKiBSIGNoYW5nZSAqLw0KLSAgICAgICAgICAgICBpZiAoKGN0eC0+Y2ZsYWdzICYgUkVHX0xJVEVSQUwpICYmICFjdHgtPnJlWzBdKSB7DQorICAgICAgICAgICAgIGlmICgoY3R4LT5jZmxhZ3MgJiBSRUdfTElURVJBTCkNCisgICAgICAgICAgICAgICAgICYmIChjdHgtPnJlID49IGN0eC0+cmVfZW5kIHx8ICFjdHgtPnJlWzBdKSkgew0KICAgICAgICAgICAgICAgICAgRFBSSU5UKCgidHJlX3BhcnNlOiAgICAgICBsaXRlcmFsIGVtcHR5OiAnJS4qIiBTVFJGICInXG4iLA0KICAgICAgICAgICAgICAgICAgICAgICAgICBSRVNUKGN0eC0+cmUpKSk7DQogICAgICAgICAgICAgICAgICByZXN1bHQgPSB0cmVfYXN0X25ld19saXRlcmFsKGN0eC0+bWVtLCBFTVBUWSwgLTEsIC0xKTsNCg==",
+          "is_patch": false
+        },
+        {
+          "file_name": "tre-parse-oob-reads.diff",
+          "bug_id": 18995,
+          "creation_time": "2026-10-30T01:32:10Z",
+          "summary": "patch: bound tre_parse() reads to the end of the pattern (clean copy of 3601, with test)",
+          "is_private": false,
+          "id": 3975,
+          "last_change_time": "2026-10-30T01:32:10Z",
+          "size": 5613,
           "content_type": "text/plain",
           "flags": [],
           "is_obsolete": false,
-          "is_patch": false,
-          "creation_time": "2026-01-26T17:32:18Z",
-          "summary": "Candidate patch.",
-          "file_name": "file_18995.txt",
-          "bug_id": 18995,
-          "last_change_time": "2026-01-26T17:32:18Z",
-          "size": 5962,
-          "is_private": false,
-          "id": 3601
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9leHRyYS90cmUvdHJlLXBhcnNlLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2V4dHJhL3RyZS90cmUtcGFyc2UuYwkocmV2aXNpb24gOTA3OTQpCisrKyBzcmMvZXh0cmEvdHJlL3RyZS1wYXJzZS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yNzUsNyArMjc1LDcgQEAgdHJlX3BhcnNlX2JyYWNrZXRfaXRlbXModHJlX3BhcnNlX2N0eF90ICpjdHgsIGludCBuZWdhdGUsCiAgIHdoaWxlIChzdGF0dXMgPT0gUkVHX09LKQogICAgIHsKICAgICAgIHNraXAgPSAwOwotICAgICAgaWYgKHJlID09IGN0eC0+cmVfZW5kKQorICAgICAgaWYgKHJlID49IGN0eC0+cmVfZW5kKQogCXsKIAkgIHN0YXR1cyA9IFJFR19FQlJBQ0s7CiAJfQpAQCAtMzYyLDggKzM2Miw4IEBAIHRyZV9wYXJzZV9icmFja2V0X2l0ZW1zKHRyZV9wYXJzZV9jdHhfdCAqY3R4LCBpbnQgbmVnYXRlLAogCSAgZWxzZQogCSAgICB7CiAJICAgICAgRFBSSU5UKCgidHJlX3BhcnNlX2JyYWNrZXQ6ICAgY2hhcjogJyUuKiIgU1RSRiAiJ1xuIiwgUkVTVChyZSkpKTsKLQkgICAgICBpZiAoKnJlID09IENIQVJfTUlOVVMgJiYgKihyZSArIDEpICE9IENIQVJfUkJSQUNLRVQKLQkJICAmJiBjdHgtPnJlICE9IHJlKQorCSAgICAgIGlmICgqcmUgPT0gQ0hBUl9NSU5VUyAmJiByZSArIDEgPCBjdHgtPnJlX2VuZAorCQkgICYmICoocmUgKyAxKSAhPSBDSEFSX1JCUkFDS0VUICYmIGN0eC0+cmUgIT0gcmUpCiAJCS8qIFR3byByYW5nZXMgYXJlIG5vdCBhbGxvd2VkIHRvIHNoYXJlIGFuZCBlbmRwb2ludC4gKi8KIAkJc3RhdHVzID0gUkVHX0VSQU5HRTsKIAkgICAgICBtaW4gPSBtYXggPSAqcmUrKzsKQEAgLTQ0Myw2ICs0NDMsMTIgQEAgdHJlX3BhcnNlX2JyYWNrZXQodHJlX3BhcnNlX2N0eF90ICpjdHgsIHRyZV9hc3Rfbm9kZV90ICoqcmVzdWx0KQogICBpZiAoaXRlbXMgPT0gTlVMTCkKICAgICByZXR1cm4gUkVHX0VTUEFDRTsKIAorICBpZiAoY3R4LT5yZSA+PSBjdHgtPnJlX2VuZCkKKyAgICB7CisgICAgICB4ZnJlZShpdGVtcyk7CisgICAgICByZXR1cm4gUkVHX0VCUkFDSzsKKyAgICB9CisKICAgaWYgKCpjdHgtPnJlID09IENIQVJfQ0FSRVQpCiAgICAgewogICAgICAgRFBSSU5UKCgidHJlX3BhcnNlX2JyYWNrZXQ6IG5lZ2F0ZTogJyUuKiIgU1RSRiAiJ1xuIiwgUkVTVChjdHgtPnJlKSkpOwpAQCAtNzUwLDcgKzc1Niw3IEBAIHRyZV9wYXJzZV9ib3VuZCh0cmVfcGFyc2VfY3R4X3QgKmN0eCwgdHJlX2FzdF9ub2RlX3QgKipyZXN1bHQpCiAJICAgIGNhc2UgTCc8JzoKIAkgICAgICBEUFJJTlQoKCJ0cmVfcGFyc2U6ICAgIG1heCBjb3N0OiAnJS4qIiBTVFJGICInXG4iLCBSRVNUKHIpKSk7CiAJICAgICAgcisrOwotCSAgICAgIHdoaWxlICgqciA9PSBMJyAnKQorCSAgICAgIHdoaWxlIChyIDwgY3R4LT5yZV9lbmQgJiYgKnIgPT0gTCcgJykKIAkJcisrOwogCSAgICAgIGNvc3RfbWF4ID0gdHJlX3BhcnNlX2ludCgmciwgY3R4LT5yZV9lbmQpOwogCSAgICAgIGlmIChjb3N0X21heCA8IDApCkBAIC03NzAsNyArNzc2LDkgQEAgdHJlX3BhcnNlX2JvdW5kKHRyZV9wYXJzZV9jdHhfdCAqY3R4LCB0cmVfYXN0X25vZGVfdCAqKnJlc3VsdCkKIAkJICBjb25zdCB0cmVfY2hhcl90ICpzciA9IHI7CiAjZW5kaWYgLyogVFJFX0RFQlVHICovCiAJCSAgaW50IGNvc3QgPSB0cmVfcGFyc2VfaW50KCZyLCBjdHgtPnJlX2VuZCk7Ci0JCSAgLyogWFhYIC0gbWFrZSBzdXJlIHIgaXMgbm90IHBhc3QgZW5kLiAqLworCQkgIC8qIE1ha2Ugc3VyZSByIGlzIG5vdCBwYXN0IGVuZC4gKi8KKwkJICBpZiAociA+PSBjdHgtPnJlX2VuZCkKKwkJICAgIHJldHVybiBSRUdfRUJSQUNFOwogCQkgIHN3aXRjaCAoKnIpCiAJCSAgICB7CiAJCSAgICBjYXNlIEwnaSc6CS8qIEluc2VydCBjb3N0ICovCkBAIC0xMDI3LDYgKzEwMzUsNyBAQCB0cmVfcGFyc2UodHJlX3BhcnNlX2N0eF90ICpjdHgpCiAJCSAgICAgJiYgYyA9PSBDSEFSX1JQQVJFTiAmJiBkZXB0aCA+IDApCiAJCSAgICB8fCAoIShjdHgtPmNmbGFncyAmIFJFR19FWFRFTkRFRCkKIAkJCSYmIChjID09IENIQVJfQkFDS1NMQVNICisJCQkgICAgJiYgY3R4LT5yZSArIDEgPCBjdHgtPnJlX2VuZAogCQkJICAgICYmICooY3R4LT5yZSArIDEpID09IENIQVJfUlBBUkVOKSkpCiAJCSAgewogCQkgICAgaWYgKCEoY3R4LT5jZmxhZ3MgJiBSRUdfRVhURU5ERUQpICYmIGRlcHRoID09IDApCkBAIC0xMjI0LDYgKzEyMzMsNyBAQCB0cmVfcGFyc2UodHJlX3BhcnNlX2N0eF90ICpjdHgpCiAJICAgICAgLyogSGFuZGxlICIoPy4uLikiIGV4dGVuc2lvbnMuICBUaGV5IHdvcmsgaW4gYSB3YXkgc2ltaWxhcgogCQkgdG8gUGVybHMgY29ycmVzcG9uZGluZyBleHRlbnNpb25zLiAqLwogCSAgICAgIGlmIChjdHgtPmNmbGFncyAmIFJFR19FWFRFTkRFRAorCQkgICYmIGN0eC0+cmUgKyAxIDwgY3R4LT5yZV9lbmQKIAkJICAmJiAqKGN0eC0+cmUgKyAxKSA9PSBDSEFSX1FVRVNUSU9OTUFSSykKIAkJewogCQkgIGludCBuZXdfY2ZsYWdzID0gY3R4LT5jZmxhZ3M7CkBAIC0xMjMzLDYgKzEyNDMsOCBAQCB0cmVfcGFyc2UodHJlX3BhcnNlX2N0eF90ICpjdHgpCiAJCSAgY3R4LT5yZSArPSAyOwogCQkgIHdoaWxlICgvKkNPTlNUQ09ORCovKHZvaWQpMSwxKQogCQkgICAgeworCQkgICAgICBpZiAoY3R4LT5yZSA+PSBjdHgtPnJlX2VuZCkKKwkJCXJldHVybiBSRUdfQkFEUEFUOwogCQkgICAgICBpZiAoKmN0eC0+cmUgPT0gTCdpJykKIAkJCXsKIAkJCSAgRFBSSU5UKCgidHJlX3BhcnNlOgkgICAgaWNhc2U6ICclLioiIFNUUkYgIlxuIiwKQEAgLTEyOTgsMTAgKzEzMTAsMTAgQEAgdHJlX3BhcnNlKHRyZV9wYXJzZV9jdHhfdCAqY3R4KQogCQkJCSAgUkVTVChjdHgtPnJlKSkpOwogCQkJICAvKiBBIGNvbW1lbnQgY2FuIGNvbnRhaW4gYW55IGNoYXJhY3RlciBleGNlcHQgYQogCQkJICAgICByaWdodCBwYXJlbnRoZXNpcyAqLwotCQkJICB3aGlsZSAoKmN0eC0+cmUgIT0gQ0hBUl9SUEFSRU4KLQkJCQkgJiYgY3R4LT5yZSA8IGN0eC0+cmVfZW5kKQorCQkJICB3aGlsZSAoY3R4LT5yZSA8IGN0eC0+cmVfZW5kCisJCQkJICYmICpjdHgtPnJlICE9IENIQVJfUlBBUkVOKQogCQkJICAgIGN0eC0+cmUrKzsKLQkJCSAgaWYgKCpjdHgtPnJlID09IENIQVJfUlBBUkVOICYmIGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkKKwkJCSAgaWYgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCAmJiAqY3R4LT5yZSA9PSBDSEFSX1JQQVJFTikKIAkJCSAgICB7CiAJCQkgICAgICBjdHgtPnJlKys7CiAJCQkgICAgICBicmVhazsKQEAgLTE0NjgsNyArMTQ4MCw3IEBAIHRyZV9wYXJzZSh0cmVfcGFyc2VfY3R4X3QgKmN0eCkKIAkJICBicmVhazsKIAkJY2FzZSBMJ3gnOgogCQkgIGN0eC0+cmUrKzsKLQkJICBpZiAoY3R4LT5yZVswXSAhPSBDSEFSX0xCUkFDRSAmJiBjdHgtPnJlIDwgY3R4LT5yZV9lbmQpCisJCSAgaWYgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCAmJiBjdHgtPnJlWzBdICE9IENIQVJfTEJSQUNFKQogCQkgICAgewogCQkgICAgICAvKiA4IGJpdCBoZXggY2hhci4gKi8KIAkJICAgICAgY2hhciB0bXBbM10gPSB7MCwgMCwgMH07CkBAIC0xNDc2LDEyICsxNDg4LDEyIEBAIHRyZV9wYXJzZSh0cmVfcGFyc2VfY3R4X3QgKmN0eCkKIAkJICAgICAgRFBSSU5UKCgidHJlX3BhcnNlOiAgOCBiaXQgaGV4OiAnJS4qIiBTVFJGICInXG4iLAogCQkJICAgICAgUkVTVChjdHgtPnJlIC0gMikpKTsKIAotCQkgICAgICBpZiAodHJlX2lzeGRpZ2l0KGN0eC0+cmVbMF0pICYmIGN0eC0+cmUgPCBjdHgtPnJlX2VuZCkKKwkJICAgICAgaWYgKGN0eC0+cmUgPCBjdHgtPnJlX2VuZCAmJiB0cmVfaXN4ZGlnaXQoY3R4LT5yZVswXSkpCiAJCQl7CiAJCQkgIHRtcFswXSA9IChjaGFyKWN0eC0+cmVbMF07CiAJCQkgIGN0eC0+cmUrKzsKIAkJCX0KLQkJICAgICAgaWYgKHRyZV9pc3hkaWdpdChjdHgtPnJlWzBdKSAmJiBjdHgtPnJlIDwgY3R4LT5yZV9lbmQpCisJCSAgICAgIGlmIChjdHgtPnJlIDwgY3R4LT5yZV9lbmQgJiYgdHJlX2lzeGRpZ2l0KGN0eC0+cmVbMF0pKQogCQkJewogCQkJICB0bXBbMV0gPSAoY2hhciljdHgtPnJlWzBdOwogCQkJICBjdHgtPnJlKys7CkBAIC0xNDk5LDcgKzE1MTEsNyBAQCB0cmVfcGFyc2UodHJlX3BhcnNlX2N0eF90ICpjdHgpCiAJCSAgICAgIGxvbmcgdmFsOwogCQkgICAgICBpbnQgaSA9IDA7CiAJCSAgICAgIGN0eC0+cmUrKzsKLQkJICAgICAgd2hpbGUgKGN0eC0+cmVfZW5kIC0gY3R4LT5yZSA+PSAwKQorCQkgICAgICB3aGlsZSAoY3R4LT5yZSA8IGN0eC0+cmVfZW5kKQogCQkJewogCQkJICBpZiAoY3R4LT5yZVswXSA9PSBDSEFSX1JCUkFDRSkKIAkJCSAgICBicmVhazsKQEAgLTE1MjMsNiArMTUzNSw4IEBAIHRyZV9wYXJzZSh0cmVfcGFyc2VfY3R4X3QgKmN0eCkKIAkJICAvKkZBTExUSFJPVUdIKi8KIAogCQlkZWZhdWx0OgorCQkgIGlmIChjdHgtPnJlID49IGN0eC0+cmVfZW5kKQorCQkgICAgcmV0dXJuIFJFR19FRVNDQVBFOwogCQkgIGlmICh0cmVfaXNkaWdpdCgqY3R4LT5yZSkpCiAJCSAgICB7CiAJCSAgICAgIC8qIEJhY2sgcmVmZXJlbmNlLiAqLwpAQCAtMTY3MSw3ICsxNjg1LDggQEAgdHJlX3BhcnNlKHRyZV9wYXJzZV9jdHhfdCAqY3R4KQogCQl9CiAKIC8qIFIgY2hhbmdlICovCi0JICAgICAgaWYgKChjdHgtPmNmbGFncyAmIFJFR19MSVRFUkFMKSAmJiAhY3R4LT5yZVswXSkgeworCSAgICAgIGlmICgoY3R4LT5jZmxhZ3MgJiBSRUdfTElURVJBTCkKKwkJICAmJiAoY3R4LT5yZSA+PSBjdHgtPnJlX2VuZCB8fCAhY3R4LT5yZVswXSkpIHsKIAkJICBEUFJJTlQoKCJ0cmVfcGFyc2U6CSAgICBsaXRlcmFsIGVtcHR5OiAnJS4qIiBTVFJGICInXG4iLAogCQkJICBSRVNUKGN0eC0+cmUpKSk7CiAJCSAgcmVzdWx0ID0gdHJlX2FzdF9uZXdfbGl0ZXJhbChjdHgtPm1lbSwgRU1QVFksIC0xLCAtMSk7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA3OTQpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDM1Myw2ICs0MzUzLDEyIEBAIHVubGluayh0ZCwgcmVjdXJzaXZlID0gVFJVRSkKICMjIG5vIE5PVEUgaW4gUiA8PSA0LjYuMgogCiAKKyMjIGdyZXBSYXcoKSB3aXRoIHRydW5jYXRlZCBUUkUgcGF0dGVybnMgLS0gUFIjMTg5OTUKK2ZvciAocCBpbiBjKCJbIiwgIltbOmFscGhhOiIsICJbYS0iLCAiKCIsICIoPyIsICIoPyMiLCAiXFx4IiwgIlxceDQiLCAiXFx4ezQiKSkKKyAgICB0cnlDYXRjaChncmVwUmF3KHAsICJhYmMiKSwgZXJyb3IgPSBmdW5jdGlvbihlKSBOVUxMKQorIyMgcmVhZCBwYXN0IHRoZSBlbmQgb2YgdGhlIHBhdHRlcm4gaW4gUiA8PSA0LjYuMiAodmlzaWJsZSB1bmRlciBBU2FuKQorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "is_patch": true
         }
       ]
-    }
+    },
+    "attachments": {}
   },
-  "source_changed": "2026-10-27 16:29:43"
+  "source_changed": "2026-10-30 01:32:22"
 }

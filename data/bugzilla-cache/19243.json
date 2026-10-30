@@ -3,51 +3,59 @@
     "faults": [],
     "bugs": [
       {
-        "component": "S4methods",
-        "depends_on": [],
-        "keywords": [],
-        "is_open": true,
-        "classification": "Unclassified",
-        "assigned_to": "R-core",
-        "cc": [],
-        "qa_contact": "",
-        "dupe_of": {},
-        "severity": "minor",
-        "id": 19243,
-        "deadline": {},
-        "whiteboard": "",
-        "version": "R-devel (trunk)",
-        "creation_time": "2026-10-22T17:36:17Z",
         "priority": "P5",
         "product": "R",
-        "creator_detail": {
-          "real_name": "Michael Chirico",
-          "name": "michaelchirico4",
-          "id": 3256
-        },
-        "resolution": "",
-        "status": "NEW",
-        "is_creator_accessible": true,
-        "alias": [],
-        "creator": "michaelchirico4",
-        "op_sys": "All",
-        "is_confirmed": true,
-        "flags": [],
-        "platform": "All",
-        "cc_detail": [],
-        "last_change_time": "2026-10-22T17:36:45Z",
-        "target_milestone": "---",
-        "see_also": [],
+        "whiteboard": "",
+        "creation_time": "2026-10-22T17:36:17Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 19243,
+        "dupe_of": {},
+        "severity": "minor",
+        "cc": [
+          "Kurt.Hornik"
+        ],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "component": "S4methods",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "blocks": [],
+        "url": "",
         "summary": "R CMD check should flag incorrect S4 metadata when a plain function overwrites a generic",
-        "is_cc_accessible": true,
         "assigned_to_detail": {
           "real_name": "R-core",
-          "id": 16,
-          "name": "R-core"
+          "name": "R-core",
+          "id": 16
         },
         "groups": [],
-        "blocks": [],
-        "url": ""
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-29T10:59:35Z",
+        "cc_detail": [
+          {
+            "id": 308,
+            "name": "Kurt.Hornik",
+            "real_name": "Kurt Hornik"
+          }
+        ],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "id": 3256,
+          "name": "michaelchirico4"
+        },
+        "resolution": ""
       }
     ]
   },
@@ -57,27 +65,40 @@
       "19243": {
         "comments": [
           {
-            "attachment_id": {},
             "time": "2026-10-22T17:36:17Z",
-            "creator": "michaelchirico4",
+            "attachment_id": {},
             "is_markdown": true,
-            "tags": [],
-            "id": 103938,
+            "creator": "michaelchirico4",
             "is_private": false,
-            "creation_time": "2026-10-22T17:36:17Z",
-            "text": "I happened upon two packages, {raster} and {GenomicRanges}, where an S4 generic was accidentally overwritten by a plain function:\n\n```\n# in package PKG\nsetGeneric(\"foo\", \\(x) standardGeneric(\"foo\"))\nfoo <- function(x) x\n```\n\nThis creates a package whose S4 metadata is broken:\n\n```\nns = getNamespace(\"PKG\")\n\n\"foo\" %in% getGenerics(ns)\n#> [1] TRUE   (because .__T__foo:PKG exists)\n\nisGeneric(\"foo\", where=ns)\n#> [1] FALSE  (because ns$foo is a plain closure)\n\ngetGeneric(\"foo\", where=ns)\n#> NULL\n\nshowMethods(\"foo\", where=ns)\n#> Function \"foo\":\n#>  <not an S4 generic function>\n\nfindMethodSignatures(\"foo\", where=ns)\n# Error in methods@arguments : \n#   no applicable method for `@` applied to an object of class \"list\"\n# In addition: Warning message:\n# In findMethods(...) : non-generic function 'foo' given to findMethods()\n```\n\nThere are numerous other weird behaviors we can generate cascading from here, many of which would be smoked out quickly, but others can be subtle. I think it's unlikely that an _exported_ method with this problem would survive very long, so I would guess this is mainly restricted to internal generics.\n\nI'm not sure the best place in `R CMD check` to place such a consistency check (maybe `checking R code for possible problems`?), but it does seem like a good candidate to be flagged.\n\n[1] https://github.com/rspatial/raster/issues/342\n[2] https://github.com/Bioconductor/GenomicRanges/issues/101",
+            "id": 103938,
+            "tags": [],
+            "count": 0,
             "bug_id": 19243,
-            "count": 0
+            "text": "I happened upon two packages, {raster} and {GenomicRanges}, where an S4 generic was accidentally overwritten by a plain function:\n\n```\n# in package PKG\nsetGeneric(\"foo\", \\(x) standardGeneric(\"foo\"))\nfoo <- function(x) x\n```\n\nThis creates a package whose S4 metadata is broken:\n\n```\nns = getNamespace(\"PKG\")\n\n\"foo\" %in% getGenerics(ns)\n#> [1] TRUE   (because .__T__foo:PKG exists)\n\nisGeneric(\"foo\", where=ns)\n#> [1] FALSE  (because ns$foo is a plain closure)\n\ngetGeneric(\"foo\", where=ns)\n#> NULL\n\nshowMethods(\"foo\", where=ns)\n#> Function \"foo\":\n#>  <not an S4 generic function>\n\nfindMethodSignatures(\"foo\", where=ns)\n# Error in methods@arguments : \n#   no applicable method for `@` applied to an object of class \"list\"\n# In addition: Warning message:\n# In findMethods(...) : non-generic function 'foo' given to findMethods()\n```\n\nThere are numerous other weird behaviors we can generate cascading from here, many of which would be smoked out quickly, but others can be subtle. I think it's unlikely that an _exported_ method with this problem would survive very long, so I would guess this is mainly restricted to internal generics.\n\nI'm not sure the best place in `R CMD check` to place such a consistency check (maybe `checking R code for possible problems`?), but it does seem like a good candidate to be flagged.\n\n[1] https://github.com/rspatial/raster/issues/342\n[2] https://github.com/Bioconductor/GenomicRanges/issues/101",
+            "creation_time": "2026-10-22T17:36:17Z"
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 103997,
+            "creation_time": "2026-10-29T10:59:35Z",
+            "count": 1,
+            "text": "I do not see an obvious way for adding such a check.\nPerhaps easiest to do in .check_code_usage_in_package().\nThis has\n\n    checkMethodUsageEnv <- function(env, ...) {\n        for(g in .get_S4_generics(env))\n            for(m in .get_S4_methods_list(g, env)) {\n\nand the last could get a length zero check before iterating etc?",
+            "bug_id": 19243,
+            "attachment_id": {},
+            "time": "2026-10-29T10:59:35Z",
+            "creator": "Kurt.Hornik",
+            "is_markdown": true
           }
         ]
       }
     }
   },
   "attachments": {
+    "attachments": {},
     "bugs": {
       "19243": []
-    },
-    "attachments": {}
+    }
   },
-  "source_changed": "2026-10-22 17:36:45"
+  "source_changed": "2026-10-29 10:59:35"
 }

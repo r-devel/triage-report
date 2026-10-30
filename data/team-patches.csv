@@ -1,69 +1,66 @@
-bug_id,summary,component,reporter,status,patch_date,patch_count,bugzilla_url
-18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18705
-19129,Rf_EncodeString sometimes over-counts double quotes,I/O,ikrylov,NEW,2026-08-07 15:16:40 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19129
-19208,readLines() leaks its line buffer when an error unwinds mid-read,I/O,kevinushey,CONFIRMED,2026-10-09 03:26:44 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=19208
-19245,"""CRAN"" filter in available.packages() accepts repos where CRAN address is a prefix",Installation,ikrylov,NEW,2026-10-23 11:42:03 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19245
-18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18583
-19255,str2expression() can use an unprotected #line filename on parse error,Language,kevinushey,NEW,2026-10-26 20:43:06 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19255
-18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18096
-18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18863
-18353,assigning to hashtab via $<- 'corrupts' table,Low-level,kevinushey,UNCONFIRMED,2025-09-12 13:39:57 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=18353
-19025,Provide tool for manipulating order of objects on search path,Low-level,kevinushey,NEW,2026-03-23 21:04:42 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19025
-19026,Proposal for embedding API managing debugger state,Low-level,kevinushey,NEW,2026-03-23 21:34:12 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19026
-19031,"patch: implement fast path for |, & in byte code evaluator",Low-level,kevinushey,NEW,2026-03-27 00:00:40 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19031
-19032,SETVAR does not prime the smallcache binding cache,Low-level,kevinushey,NEW,2026-03-27 07:15:23 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19032
-19024,Add R_mapEnv as internal C helper for iterating over environment values,Low-level,kevinushey,NEW,2026-03-31 05:56:58 +0000,4,https://bugs.r-project.org/show_bug.cgi?id=19024
-19050,float-to-int overflow in R parser,Low-level,kevinushey,NEW,2026-04-13 07:35:54 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19050
-19051,casts from double to R_xlen_t can trigger undefined behaviour,Low-level,kevinushey,NEW,2026-04-14 21:41:26 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19051
-19063,truncate overly-long paths in dir.create(),Low-level,kevinushey,NEW,2026-04-27 16:32:53 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19063
-19066,Provide a more explicit error message for array(dim = NA),Low-level,kevinushey,NEW,2026-04-29 20:47:55 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19066
-19096,Update handling of overflow in integer operations,Low-level,michaelchirico4,NEW,2026-06-30 17:39:29 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19096
-19114,poison free small-node data to catch use of collected objects,Low-level,kevinushey,NEW,2026-08-01 21:07:10 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19114
-19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19119
-19123,Memory leak in `scan()` when a field fails type conversion,Low-level,kevinushey,NEW,2026-08-04 14:45:42 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19123
-19125,Integer arithmetic means '%z' for minute-level offsets is incorrect,Low-level,michaelchirico4,NEW,2026-08-04 17:34:22 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19125
-19145,MSan issue in context.c reading uninitialized state,Low-level,michaelchirico4,NEW,2026-09-01 05:37:00 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19145
-19157,unserialize() leaks the CHARSXP read buffer when the stream errors mid-string,Low-level,kevinushey,NEW,2026-09-03 21:10:43 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19157
-19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19158
-19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19209
-19227,"Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC",Low-level,kevinushey,NEW,2026-10-16 20:45:34 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19227
-19259,Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs),Low-level,michaelchirico4,NEW,2026-10-27 18:35:28 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19259
-19252,compiler::compile() segfaults on break in complex assignment,Low-level,kevinushey,CONFIRMED,2026-10-28 22:15:52 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19252
-19263,byte-compiled [<- error can access a collected call during error reporting,Low-level,kevinushey,NEW,2026-10-29 02:29:27 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19263
-19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19092
-18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=18938
-18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18958
-18833,methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments,S4methods,jaganmn2,UNCONFIRMED,2024-12-07 01:20:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18833
-19079,"S4 packages with group methods error with ""subscript out of bounds"" under unloadNamespace with Imports: methods",S4methods,michaelchirico4,NEW,2026-05-29 06:28:25 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19079
-19083,"setGeneric(""f"", \(x) { standardGeneric(""x"") }) makes generic with class 'nonstandardGenericFunction'",S4methods,michaelchirico4,CONFIRMED,2026-06-22 18:04:14 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19083
-19237,.updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups),S4methods,michaelchirico4,NEW,2026-10-21 08:02:38 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19237
-19239,Add fast paths for quadratic loop in .resetInheritedMethods,S4methods,michaelchirico4,NEW,2026-10-21 23:12:33 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19239
-19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19244
-19246,typo in .recacheSubclasses -- wrong inheritance is checked in class unions,S4methods,michaelchirico4,NEW,2026-10-24 16:54:10 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19246
-19248,getClassDef(where=<character>) stopped working,S4methods,michaelchirico4,NEW,2026-10-26 05:55:03 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19248
-19249,Use getClassDef itself to avoid implicitly calling it twice isClass,S4methods,michaelchirico4,NEW,2026-10-26 06:07:26 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19249
-19254,Add fast paths for early exit from is(),S4methods,michaelchirico4,NEW,2026-10-26 19:08:45 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19254
-19257,Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs,S4methods,michaelchirico4,NEW,2026-10-27 08:04:54 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19257
-18025,xgettext/xngettext miss messages when supplied with qualified namespace,Translations,michaelchirico4,UNCONFIRMED,2021-01-04 16:17:57 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18025
-17819,Translate untranslated char arrays in all library packages,Translations,michaelchirico4,UNCONFIRMED,2023-09-01 13:35:46 +0000,4,https://bugs.r-project.org/show_bug.cgi?id=17819
-17957,Missing translations of some messages,Translations,michaelchirico4,NEW,2023-09-10 19:07:05 +0000,3,https://bugs.r-project.org/show_bug.cgi?id=17957
-18793,checkPoFile() has a really strong assumption of no blank lines between msgid and msgstr entries,Translations,michaelchirico4,UNCONFIRMED,2024-09-09 03:52:58 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18793
-18091,tools::xgettext fails on a wrapper of a gettextf,Translations,michaelchirico4,UNCONFIRMED,2024-09-14 18:32:20 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18091
-19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,https://bugs.r-project.org/show_bug.cgi?id=19143
-19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19198
-17676,vcov.lm should calculate vcov more directly for efficiency,Wishlist,michaelchirico4,UNCONFIRMED,2019-12-17 09:02:33 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17676
-17778,barplot should take user-supplied lwd,Wishlist,michaelchirico4,UNCONFIRMED,2020-05-01 02:45:12 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17778
-17918,"Improve debugcall and debugcallonce to support calls to funs via :: :::, patch included",Wishlist,gabembecker,UNCONFIRMED,2020-09-08 10:48:11 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=17918
-18039,Wishlist: allow Sys.setenv() to accept named vector,Wishlist,kevinushey,UNCONFIRMED,2021-01-27 05:50:20 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18039
-18407,Underscore-separated numeric literals,Wishlist,ikrylov,UNCONFIRMED,2022-09-20 21:39:39 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18407
-18700,Error passing improvements in 'parallel',Wishlist,ikrylov,UNCONFIRMED,2024-04-23 12:46:56 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=18700
-18883,Wish: resize the input width in Rterm.exe,Wishlist,ikrylov,UNCONFIRMED,2025-04-15 15:22:17 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18883
-18995,tre-parse.c has a variety of out-of-bounds reads,Wishlist,kevinushey,UNCONFIRMED,2026-01-26 17:32:18 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=18995
-19004,Package version: keep formatting,Wishlist,lluis.revilla,UNCONFIRMED,2026-02-14 11:56:06 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19004
-19028,Should object.size() be ALTREP aware?,Wishlist,kevinushey,NEW,2026-03-24 19:00:53 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19028
-19030,Enable constant folding of paste / paste0?,Wishlist,kevinushey,NEW,2026-03-26 22:51:02 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19030
-19042,Provide getDLLVersion on all platforms?,Wishlist,kevinushey,NEW,2026-04-02 18:41:54 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19042
-19105,Provide a traceback when crashing on Windows,Wishlist,ikrylov,NEW,2026-07-19 20:25:09 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19105
-19141,`is.na()` and the `as.*()` coercions read their argument one element at a time,Wishlist,kevinushey,NEW,2026-09-03 18:54:12 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19141
-19159,"hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash",Wishlist,kevinushey,NEW,2026-09-04 00:20:58 +0000,2,https://bugs.r-project.org/show_bug.cgi?id=19159
-19256,R CMD check: note packages repeated within one DESCRIPTION dependency field,Wishlist,kevinushey,NEW,2026-10-27 04:04:06 +0000,1,https://bugs.r-project.org/show_bug.cgi?id=19256
+bug_id,summary,component,reporter,status,patch_date,patch_count,importance,priority,core_cc,bugzilla_url
+19252,compiler::compile() segfaults on break in complex assignment,Low-level,kevinushey,CONFIRMED,2026-10-28 22:15:52 +0000,2,P2,P2,tierney,https://bugs.r-project.org/show_bug.cgi?id=19252
+19111,`EnlargeVector()` allocates while the freshly coerced LHS is unprotected (`options(check.bounds = TRUE)`),Low-level,kevinushey,NEW,2026-10-29 23:37:03 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19111
+19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19198
+18995,tre-parse.c has a variety of out-of-bounds reads,Wishlist,kevinushey,UNCONFIRMED,2026-10-30 01:32:10 +0000,2,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=18995
+19051,casts from double to R_xlen_t can trigger undefined behaviour,Low-level,kevinushey,NEW,2026-04-14 21:41:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19051
+19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19119
+19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19158
+19227,"Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC",Low-level,kevinushey,NEW,2026-10-16 20:45:34 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19227
+19050,float-to-int overflow in R parser,Low-level,kevinushey,NEW,2026-10-30 01:32:12 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19050
+19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19244
+19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19143
+19103,choose.dir() returns NA without showing a dialog in Rterm/Rscript,Windows GUI / Window specific,kevinushey,NEW,2026-10-30 00:58:58 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19103
+19129,Rf_EncodeString sometimes over-counts double quotes,I/O,ikrylov,NEW,2026-08-07 15:16:40 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19129
+19208,readLines() leaks its line buffer when an error unwinds mid-read,I/O,kevinushey,CONFIRMED,2026-10-09 03:26:44 +0000,3,P4,P4,tierney,https://bugs.r-project.org/show_bug.cgi?id=19208
+18353,assigning to hashtab via $<- 'corrupts' table,Low-level,kevinushey,UNCONFIRMED,2025-09-12 13:39:57 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18353
+19025,Provide tool for manipulating order of objects on search path,Low-level,kevinushey,NEW,2026-03-23 21:04:42 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19025
+19026,Proposal for embedding API managing debugger state,Low-level,kevinushey,NEW,2026-03-23 21:34:12 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19026
+19031,"patch: implement fast path for |, & in byte code evaluator",Low-level,kevinushey,NEW,2026-03-27 00:00:40 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19031
+19032,SETVAR does not prime the smallcache binding cache,Low-level,kevinushey,NEW,2026-03-27 07:15:23 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19032
+19024,Add R_mapEnv as internal C helper for iterating over environment values,Low-level,kevinushey,NEW,2026-03-31 05:56:58 +0000,4,P4,P4,tierney,https://bugs.r-project.org/show_bug.cgi?id=19024
+19114,poison free small-node data to catch use of collected objects,Low-level,kevinushey,NEW,2026-08-01 21:07:10 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19114
+19123,Memory leak in `scan()` when a field fails type conversion,Low-level,kevinushey,NEW,2026-08-04 14:45:42 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19123
+19157,unserialize() leaks the CHARSXP read buffer when the stream errors mid-string,Low-level,kevinushey,NEW,2026-09-03 21:10:43 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19157
+19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19209
+19008,on.exit() at top level is a silent no-op,Low-level,kevinushey,CONFIRMED,2026-10-29 23:20:32 +0000,1,P4,P4,tierney,https://bugs.r-project.org/show_bug.cgi?id=19008
+19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19092
+18039,Wishlist: allow Sys.setenv() to accept named vector,Wishlist,kevinushey,UNCONFIRMED,2021-01-27 05:50:20 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18039
+19028,Should object.size() be ALTREP aware?,Wishlist,kevinushey,NEW,2026-03-24 19:00:53 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19028
+19030,Enable constant folding of paste / paste0?,Wishlist,kevinushey,NEW,2026-03-26 22:51:02 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19030
+19042,Provide getDLLVersion on all platforms?,Wishlist,kevinushey,NEW,2026-04-02 18:41:54 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19042
+19141,`is.na()` and the `as.*()` coercions read their argument one element at a time,Wishlist,kevinushey,NEW,2026-09-03 18:54:12 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19141
+19159,"hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash",Wishlist,kevinushey,NEW,2026-09-04 00:20:58 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19159
+18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18705
+18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,P5,P5,maechler,https://bugs.r-project.org/show_bug.cgi?id=18583
+18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18096
+18863,Add source locations to parser warnings,Low-level,michaelchirico4,UNCONFIRMED,2025-02-26 06:53:43 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18863
+19096,Update handling of overflow in integer operations,Low-level,michaelchirico4,NEW,2026-06-30 17:39:29 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19096
+19125,Integer arithmetic means '%z' for minute-level offsets is incorrect,Low-level,michaelchirico4,NEW,2026-08-04 17:34:22 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19125
+19145,MSan issue in context.c reading uninitialized state,Low-level,michaelchirico4,NEW,2026-09-01 05:37:00 +0000,2,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19145
+19259,Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs),Low-level,michaelchirico4,NEW,2026-10-27 18:35:28 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19259
+18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18938
+18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18958
+18833,methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments,S4methods,jaganmn2,UNCONFIRMED,2024-12-07 01:20:58 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18833
+19079,"S4 packages with group methods error with ""subscript out of bounds"" under unloadNamespace with Imports: methods",S4methods,michaelchirico4,NEW,2026-05-29 06:28:25 +0000,2,P5,P5,lawrence,https://bugs.r-project.org/show_bug.cgi?id=19079
+19083,"setGeneric(""f"", \(x) { standardGeneric(""x"") }) makes generic with class 'nonstandardGenericFunction'",S4methods,michaelchirico4,CONFIRMED,2026-06-22 18:04:14 +0000,2,P5,P5,maechler,https://bugs.r-project.org/show_bug.cgi?id=19083
+19237,.updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups),S4methods,michaelchirico4,NEW,2026-10-21 08:02:38 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19237
+19239,Add fast paths for quadratic loop in .resetInheritedMethods,S4methods,michaelchirico4,NEW,2026-10-21 23:12:33 +0000,2,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19239
+19246,typo in .recacheSubclasses -- wrong inheritance is checked in class unions,S4methods,michaelchirico4,NEW,2026-10-24 16:54:10 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19246
+19248,getClassDef(where=<character>) stopped working,S4methods,michaelchirico4,NEW,2026-10-26 05:55:03 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19248
+19249,Use getClassDef itself to avoid implicitly calling it twice isClass,S4methods,michaelchirico4,NEW,2026-10-26 06:07:26 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19249
+19254,Add fast paths for early exit from is(),S4methods,michaelchirico4,NEW,2026-10-26 19:08:45 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19254
+19257,Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs,S4methods,michaelchirico4,NEW,2026-10-27 08:04:54 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19257
+18025,xgettext/xngettext miss messages when supplied with qualified namespace,Translations,michaelchirico4,UNCONFIRMED,2021-01-04 16:17:57 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18025
+17819,Translate untranslated char arrays in all library packages,Translations,michaelchirico4,UNCONFIRMED,2023-09-01 13:35:46 +0000,4,P5,P5,lawrence,https://bugs.r-project.org/show_bug.cgi?id=17819
+17957,Missing translations of some messages,Translations,michaelchirico4,NEW,2023-09-10 19:07:05 +0000,3,P5,P5,maechler,https://bugs.r-project.org/show_bug.cgi?id=17957
+18793,checkPoFile() has a really strong assumption of no blank lines between msgid and msgstr entries,Translations,michaelchirico4,UNCONFIRMED,2024-09-09 03:52:58 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18793
+18091,tools::xgettext fails on a wrapper of a gettextf,Translations,michaelchirico4,UNCONFIRMED,2024-09-14 18:32:20 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18091
+17676,vcov.lm should calculate vcov more directly for efficiency,Wishlist,michaelchirico4,UNCONFIRMED,2019-12-17 09:02:33 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=17676
+17778,barplot should take user-supplied lwd,Wishlist,michaelchirico4,UNCONFIRMED,2020-05-01 02:45:12 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=17778
+17918,"Improve debugcall and debugcallonce to support calls to funs via :: :::, patch included",Wishlist,gabembecker,UNCONFIRMED,2020-09-08 10:48:11 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=17918
+18407,Underscore-separated numeric literals,Wishlist,ikrylov,UNCONFIRMED,2022-09-20 21:39:39 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18407
+18700,Error passing improvements in 'parallel',Wishlist,ikrylov,UNCONFIRMED,2024-04-23 12:46:56 +0000,2,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18700
+18883,Wish: resize the input width in Rterm.exe,Wishlist,ikrylov,UNCONFIRMED,2025-04-15 15:22:17 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18883
+19004,Package version: keep formatting,Wishlist,lluis.revilla,UNCONFIRMED,2026-02-14 11:56:06 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19004
+19105,Provide a traceback when crashing on Windows,Wishlist,ikrylov,NEW,2026-07-19 20:25:09 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19105

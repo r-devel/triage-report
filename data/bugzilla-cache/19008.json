@@ -1,7 +1,20 @@
 {
   "bug": {
+    "faults": [],
     "bugs": [
       {
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "on.exit() at top level is a silent no-op",
+        "see_also": [],
+        "target_milestone": "---",
         "cc_detail": [
           {
             "real_name": "Luke Tierney",
@@ -9,98 +22,98 @@
             "id": 34
           }
         ],
-        "last_change_time": "2026-02-24T19:38:02Z",
-        "target_milestone": "---",
-        "see_also": [],
-        "summary": "on.exit() at top level is a silent no-op",
-        "is_cc_accessible": true,
-        "assigned_to_detail": {
-          "real_name": "R-core",
-          "id": 16,
-          "name": "R-core"
-        },
-        "groups": [],
-        "blocks": [],
-        "url": "",
-        "creator_detail": {
-          "real_name": "Kevin Ushey",
-          "id": 1044,
-          "name": "kevinushey"
-        },
-        "resolution": "",
-        "status": "CONFIRMED",
-        "creator": "kevinushey",
-        "is_creator_accessible": true,
-        "alias": [],
-        "op_sys": "Other",
-        "is_confirmed": true,
-        "flags": [],
+        "last_change_time": "2026-10-29T23:20:34Z",
         "platform": "Other",
-        "qa_contact": "",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "Other",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "CONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "product": "R",
+        "priority": "P4",
+        "creation_time": "2026-02-23T05:27:04Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "deadline": {},
+        "id": 19008,
+        "dupe_of": {},
+        "severity": "normal",
         "cc": [
           "luke"
         ],
-        "severity": "normal",
-        "dupe_of": {},
-        "deadline": {},
-        "id": 19008,
-        "whiteboard": "",
-        "version": "R-devel (trunk)",
-        "creation_time": "2026-02-23T05:27:04Z",
-        "priority": "P5",
-        "product": "R",
-        "component": "Low-level",
-        "keywords": [],
-        "depends_on": [],
-        "is_open": true,
+        "qa_contact": "",
+        "assigned_to": "R-core",
         "classification": "Unclassified",
-        "assigned_to": "R-core"
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Low-level"
       }
-    ],
-    "faults": []
+    ]
   },
   "comments": {
     "bugs": {
       "19008": {
         "comments": [
           {
+            "tags": [],
+            "is_private": false,
+            "id": 102642,
+            "creation_time": "2026-02-23T05:27:04Z",
+            "count": 0,
+            "bug_id": 19008,
+            "text": "For example, consider the script:\n\n```\non.exit(print(\"exit\"))\n```\n\nThis exit handler will not be executed if at the top-level; e.g. if executed via something like `R -f script.R`. However, it will be executed if run via `source(\"script.R\")`.\n\nIs this intentional? If so, I think it's worth documenting this caveat more explicitly in `?on.exit`. Strictly speaking, I believe it behaves as documented, since in the `Rscript -f script.R` example there indeed is no parent function context for `on.exit()` to attach to, but that is likely only apparent to R experts.\n\nIf not, it would be helpful if these handlers could be registered and executed on process exit at some appropriate point.\n\nFor posterity, I bumped into this with code of the form:\n\n```\nconn <- socketConnection(...)\non.exit(close(conn))\n```\n\n---\n\n```\n> utils::sessionInfo()\nR version 4.5.1 (2025-06-13)\nPlatform: aarch64-apple-darwin20\nRunning under: macOS Tahoe 26.2\n```",
             "attachment_id": {},
             "time": "2026-02-23T05:27:04Z",
             "creator": "kevinushey",
-            "is_markdown": true,
-            "tags": [],
-            "id": 102642,
-            "is_private": false,
-            "creation_time": "2026-02-23T05:27:04Z",
-            "bug_id": 19008,
-            "text": "For example, consider the script:\n\n```\non.exit(print(\"exit\"))\n```\n\nThis exit handler will not be executed if at the top-level; e.g. if executed via something like `R -f script.R`. However, it will be executed if run via `source(\"script.R\")`.\n\nIs this intentional? If so, I think it's worth documenting this caveat more explicitly in `?on.exit`. Strictly speaking, I believe it behaves as documented, since in the `Rscript -f script.R` example there indeed is no parent function context for `on.exit()` to attach to, but that is likely only apparent to R experts.\n\nIf not, it would be helpful if these handlers could be registered and executed on process exit at some appropriate point.\n\nFor posterity, I bumped into this with code of the form:\n\n```\nconn <- socketConnection(...)\non.exit(close(conn))\n```\n\n---\n\n```\n> utils::sessionInfo()\nR version 4.5.1 (2025-06-13)\nPlatform: aarch64-apple-darwin20\nRunning under: macOS Tahoe 26.2\n```",
-            "count": 0
+            "is_markdown": true
           },
           {
-            "time": "2026-02-23T13:34:46Z",
-            "attachment_id": {},
             "is_markdown": true,
-            "creator": "luke",
-            "id": 102644,
-            "is_private": false,
-            "tags": [],
-            "text": "(In reply to Kevin Ushey from comment #0)\n> For example, consider the script:\n> \n> ```\n> on.exit(print(\"exit\"))\n> ```\n> \n> This exit handler will not be executed if at the top-level; e.g. if executed\n> via something like `R -f script.R`. However, it will be executed if run via\n> `source(\"script.R\")`.\n> \n> Is this intentional? If so, I think it's worth documenting this caveat more\n> explicitly in `?on.exit`. Strictly speaking, I believe it behaves as\n> documented, since in the `Rscript -f script.R` example there indeed is no\n> parent function context for `on.exit()` to attach to, but that is likely\n> only apparent to R experts.\n\nIt is consistent with the documentation. I can't see how the `Rscript` case would be surprising. The `source()` case may be, but many things can be surprising when `eval()` is involved. I don't think there would be any harm in signaling a warning, or maybe even an error, when no current function is found, but I'm not sure it is worth it.\n\n> If not, it would be helpful if these handlers could be registered and\n> executed on process exit at some appropriate point.\n\nI don't think overloading `on.exit` for this would be a good idea. A separate mechanism could be added for this but it would be a fair bit of work and I'm not sure it is worth the effort. `reg.finalizer` is already available for some of this. If you want to pursue this you can submit a WISHLIST item, preferably with a proposed patch.\n\nI'll leave this open for now, but my current inclination is to close as WONTFIX.\n\n> For posterity, I bumped into this with code of the form:\n> \n> ```\n> conn <- socketConnection(...)\n> on.exit(close(conn))\n> ```\n> \n> ---\n> \n> ```\n> > utils::sessionInfo()\n> R version 4.5.1 (2025-06-13)\n> Platform: aarch64-apple-darwin20\n> Running under: macOS Tahoe 26.2\n> ```",
-            "bug_id": 19008,
             "count": 1,
-            "creation_time": "2026-02-23T13:34:46Z"
+            "bug_id": 19008,
+            "text": "(In reply to Kevin Ushey from comment #0)\n> For example, consider the script:\n> \n> ```\n> on.exit(print(\"exit\"))\n> ```\n> \n> This exit handler will not be executed if at the top-level; e.g. if executed\n> via something like `R -f script.R`. However, it will be executed if run via\n> `source(\"script.R\")`.\n> \n> Is this intentional? If so, I think it's worth documenting this caveat more\n> explicitly in `?on.exit`. Strictly speaking, I believe it behaves as\n> documented, since in the `Rscript -f script.R` example there indeed is no\n> parent function context for `on.exit()` to attach to, but that is likely\n> only apparent to R experts.\n\nIt is consistent with the documentation. I can't see how the `Rscript` case would be surprising. The `source()` case may be, but many things can be surprising when `eval()` is involved. I don't think there would be any harm in signaling a warning, or maybe even an error, when no current function is found, but I'm not sure it is worth it.\n\n> If not, it would be helpful if these handlers could be registered and\n> executed on process exit at some appropriate point.\n\nI don't think overloading `on.exit` for this would be a good idea. A separate mechanism could be added for this but it would be a fair bit of work and I'm not sure it is worth the effort. `reg.finalizer` is already available for some of this. If you want to pursue this you can submit a WISHLIST item, preferably with a proposed patch.\n\nI'll leave this open for now, but my current inclination is to close as WONTFIX.\n\n> For posterity, I bumped into this with code of the form:\n> \n> ```\n> conn <- socketConnection(...)\n> on.exit(close(conn))\n> ```\n> \n> ---\n> \n> ```\n> > utils::sessionInfo()\n> R version 4.5.1 (2025-06-13)\n> Platform: aarch64-apple-darwin20\n> Running under: macOS Tahoe 26.2\n> ```",
+            "creation_time": "2026-02-23T13:34:46Z",
+            "creator": "luke",
+            "is_private": false,
+            "id": 102644,
+            "time": "2026-02-23T13:34:46Z",
+            "tags": [],
+            "attachment_id": {}
           },
           {
-            "creation_time": "2026-02-24T19:38:02Z",
             "creator": "kevinushey",
             "is_markdown": true,
-            "count": 2,
-            "bug_id": 19008,
-            "text": "Thinking about this a bit more, execution of top-level `on.exit()` invocations on exit would almost certainly be undesired in interactive sessions -- one might interactively run the same `on.exit()` calls multiple times in an interactive session while e.g. debugging code / stepping through tests, and the actual time at which the user would intend those `on.exit()` expressions to be run isn't very well defined. Relatedly, any sort of message / warning output would likely be annoying in this scenario.\n\nFor non-interactive sessions, it might make more sense to run top-level handlers on process exit at some appropriate time, but it's hard for me to argue it's worth the effort when the user could just do something like `main <- function(...) {}; main()`, and put their exit handlers in the `main` function.\n\nTo wit, I think I agree on the balance it's best to keep the code as-is. I still think it's worth documenting this explicitly though. Some proposals:\n\n```\n--- src/library/base/man/on.exit.Rd\n+++ src/library/base/man/on.exit.Rd\n@@ -41,6 +41,8 @@ on.exit(expr = NULL, add = FALSE, after = TRUE)\n   If multiple \\code{on.exit} expressions are set using \\code{add = TRUE}\n   then all expressions will be run even if one signals an error.\n\n+  Top-level \\code{on.exit} invocations are silently discarded.\n+\n   This is a \\sQuote{special} \\link{primitive} function: it only\n   evaluates the arguments \\code{add} and \\code{after}.\n```\n\nOr\n\n```\n--- src/library/base/man/on.exit.Rd\n+++ src/library/base/man/on.exit.Rd\n@@ -41,6 +41,9 @@ on.exit(expr = NULL, add = FALSE, after = TRUE)\n   If multiple \\code{on.exit} expressions are set using \\code{add = TRUE}\n   then all expressions will be run even if one signals an error.\n\n+  Top-level \\code{on.exit} invocations are silently discarded, as there\n+  is no evaluation frame with which to associate the provided \\code{expr}.\n+\n   This is a \\sQuote{special} \\link{primitive} function: it only\n   evaluates the arguments \\code{add} and \\code{after}.\n```\n\nsince IMHO this fact is not immediately obvious to non-experts.",
             "attachment_id": {},
+            "time": "2026-02-24T19:38:02Z",
+            "creation_time": "2026-02-24T19:38:02Z",
+            "count": 2,
+            "text": "Thinking about this a bit more, execution of top-level `on.exit()` invocations on exit would almost certainly be undesired in interactive sessions -- one might interactively run the same `on.exit()` calls multiple times in an interactive session while e.g. debugging code / stepping through tests, and the actual time at which the user would intend those `on.exit()` expressions to be run isn't very well defined. Relatedly, any sort of message / warning output would likely be annoying in this scenario.\n\nFor non-interactive sessions, it might make more sense to run top-level handlers on process exit at some appropriate time, but it's hard for me to argue it's worth the effort when the user could just do something like `main <- function(...) {}; main()`, and put their exit handlers in the `main` function.\n\nTo wit, I think I agree on the balance it's best to keep the code as-is. I still think it's worth documenting this explicitly though. Some proposals:\n\n```\n--- src/library/base/man/on.exit.Rd\n+++ src/library/base/man/on.exit.Rd\n@@ -41,6 +41,8 @@ on.exit(expr = NULL, add = FALSE, after = TRUE)\n   If multiple \\code{on.exit} expressions are set using \\code{add = TRUE}\n   then all expressions will be run even if one signals an error.\n\n+  Top-level \\code{on.exit} invocations are silently discarded.\n+\n   This is a \\sQuote{special} \\link{primitive} function: it only\n   evaluates the arguments \\code{add} and \\code{after}.\n```\n\nOr\n\n```\n--- src/library/base/man/on.exit.Rd\n+++ src/library/base/man/on.exit.Rd\n@@ -41,6 +41,9 @@ on.exit(expr = NULL, add = FALSE, after = TRUE)\n   If multiple \\code{on.exit} expressions are set using \\code{add = TRUE}\n   then all expressions will be run even if one signals an error.\n\n+  Top-level \\code{on.exit} invocations are silently discarded, as there\n+  is no evaluation frame with which to associate the provided \\code{expr}.\n+\n   This is a \\sQuote{special} \\link{primitive} function: it only\n   evaluates the arguments \\code{add} and \\code{after}.\n```\n\nsince IMHO this fact is not immediately obvious to non-experts.",
+            "bug_id": 19008,
             "tags": [],
             "is_private": false,
-            "id": 102647,
-            "time": "2026-02-24T19:38:02Z"
+            "id": 102647
+          },
+          {
+            "id": 104010,
+            "time": "2026-10-29T23:20:32Z",
+            "is_private": false,
+            "attachment_id": 3972,
+            "tags": [],
+            "bug_id": 19008,
+            "text": "Created attachment 3972\npatch: document on.exit() at top level and under eval()/source(); fix example\n\nAttached is a documentation patch along the lines of comment 2. It adds a paragraph to Details: at top level, e.g. in a script run by Rscript, there is no function call for on.exit() to attach to, so expr is silently discarded. It also covers the source() case Luke mentioned: each top-level expression is evaluated by eval(), so the handler is attached to that call and runs as soon as the expression finishes, not at the end of the file.\n\nThe patch also rewrites the example, which itself called on.exit() at top level (a no-op under R CMD check, and run immediately under example()), to use it inside a function.\n\nChecked with tools::checkRd(); the patch is against r90794.",
+            "is_markdown": false,
+            "count": 3,
+            "creation_time": "2026-10-29T23:20:32Z",
+            "creator": "kevinushey"
           }
         ]
       }
@@ -108,10 +121,27 @@
     "comments": {}
   },
   "attachments": {
-    "attachments": {},
     "bugs": {
-      "19008": []
-    }
+      "19008": [
+        {
+          "bug_id": 19008,
+          "file_name": "on-exit-top-level-doc.diff",
+          "summary": "patch: document on.exit() at top level and under eval()/source(); fix example",
+          "creation_time": "2026-10-29T23:20:32Z",
+          "id": 3972,
+          "is_private": false,
+          "size": 1607,
+          "last_change_time": "2026-10-29T23:20:32Z",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvbWFuL29uLmV4aXQuUmQKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2xpYnJhcnkvYmFzZS9tYW4vb24uZXhpdC5SZAkocmV2aXNpb24gOTA3OTQpCisrKyBzcmMvbGlicmFyeS9iYXNlL21hbi9vbi5leGl0LlJkCSh3b3JraW5nIGNvcHkpCkBAIC0xLDYgKzEsNiBAQAogJSBGaWxlIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL29uLmV4aXQuUmQKICUgUGFydCBvZiB0aGUgUiBwYWNrYWdlLCBodHRwczovL3d3dy5SLXByb2plY3Qub3JnCi0lIENvcHlyaWdodCAxOTk1LTIwMjAgUiBDb3JlIFRlYW0KKyUgQ29weXJpZ2h0IDE5OTUtMjAyNiBSIENvcmUgVGVhbQogJSBEaXN0cmlidXRlZCB1bmRlciBHUEwgMiBvciBsYXRlcgogCiBcbmFtZXtvbi5leGl0fQpAQCAtNDEsNiArNDEsMTQgQEAgb24uZXhpdChleHByID0gTlVMTCwgYWRkID0gRkFMU0UsIGFmdGVyID0gVFJVRSkKICAgSWYgbXVsdGlwbGUgXGNvZGV7b24uZXhpdH0gZXhwcmVzc2lvbnMgYXJlIHNldCB1c2luZyBcY29kZXthZGQgPSBUUlVFfQogICB0aGVuIGFsbCBleHByZXNzaW9ucyB3aWxsIGJlIHJ1biBldmVuIGlmIG9uZSBzaWduYWxzIGFuIGVycm9yLgogCisgIFxjb2Rle2V4cHJ9IGlzIGF0dGFjaGVkIHRvIHRoZSBmdW5jdGlvbiBjYWxsIGZyb20gd2hvc2UgZXZhbHVhdGlvbgorICBmcmFtZSBcY29kZXtvbi5leGl0fSBpcyBjYWxsZWQuICBBdCB0b3AgbGV2ZWwsIGZvciBleGFtcGxlIGluIGEgc2NyaXB0CisgIHJ1biBieSBcY29tbWFuZHtSc2NyaXB0fSwgdGhlcmUgaXMgbm8gc3VjaCBjYWxsIGFuZCBcY29kZXtleHByfSBpcworICBzaWxlbnRseSBkaXNjYXJkZWQuICBXaXRoaW4gXGNvZGV7XGxpbmt7ZXZhbH19LCB3aGljaCBpbmNsdWRlcyBlYWNoCisgIHRvcC1sZXZlbCBleHByZXNzaW9uIG9mIGEgZmlsZSBydW4gYnkgXGNvZGV7XGxpbmt7c291cmNlfX0sIFxjb2Rle2V4cHJ9CisgIGlzIGF0dGFjaGVkIHRvIHRoZSBcY29kZXtldmFsfSBjYWxsLCBhbmQgc28gaXMgcnVuIGFzIHNvb24gYXMgdGhhdAorICBleHByZXNzaW9uIGhhcyBiZWVuIGV2YWx1YXRlZC4KKwogICBUaGlzIGlzIGEgXHNRdW90ZXtzcGVjaWFsfSBcbGlua3twcmltaXRpdmV9IGZ1bmN0aW9uOiBpdCBvbmx5CiAgIGV2YWx1YXRlcyB0aGUgYXJndW1lbnRzIFxjb2Rle2FkZH0gYW5kIFxjb2Rle2FmdGVyfS4KIH0KQEAgLTU4LDggKzY2LDEyIEBAIG9uLmV4aXQoZXhwciA9IE5VTEwsIGFkZCA9IEZBTFNFLCBhZnRlciA9IFRSVUUpCiBcZXhhbXBsZXN7CiByZXF1aXJlKGdyYXBoaWNzKQogCi1vcGFyIDwtIHBhcihtYWkgPSBjKDEsMSwxLDEpKQotb24uZXhpdChwYXIob3BhcikpCi1cZG9udHNob3d7cGFyKG9wYXIpfQorZiA8LSBmdW5jdGlvbigpIHsKKyAgICBvcGFyIDwtIHBhcihtYWkgPSBjKDEsMSwxLDEpKQorICAgIG9uLmV4aXQocGFyKG9wYXIpKQorICAgIHBhcigibWFpIikgIyBjaGFuZ2VkIHdoaWxlIGYoKSBydW5zCit9CitmKCkKK3BhcigibWFpIikgIyByZXN0b3JlZCB3aGVuIGYoKSBleGl0ZWQKIH0KIFxrZXl3b3Jke3Byb2dyYW1taW5nfQo=",
+          "creator": "kevinushey",
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
   },
-  "source_changed": "2026-02-24 19:38:02"
+  "source_changed": "2026-10-29 23:20:34"
 }
