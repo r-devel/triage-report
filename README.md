@@ -50,8 +50,13 @@ These are the most important or urgent regular patches from the Triage Team and 
 
 #### Low-level
 
+* [Bug 19259](https://bugs.r-project.org/show_bug.cgi?id=19259) — Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs) (2026-10-27)
 * [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-28, in CC: tierney)
-* [Bug 19111](https://bugs.r-project.org/show_bug.cgi?id=19111) — `EnlargeVector()` allocates while the freshly coerced LHS is unprotected (`options(check.bounds = TRUE)`) (2026-10-29)
+
+#### S4methods
+
+* [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
+* [Bug 19257](https://bugs.r-project.org/show_bug.cgi?id=19257) — Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs (2026-10-27)
 
 #### Windows GUI / Window specific
 
@@ -89,7 +94,6 @@ These Triage Team patches can wait their turn.
 #### I/O
 
 * [Bug 19129](https://bugs.r-project.org/show_bug.cgi?id=19129) — Rf_EncodeString sometimes over-counts double quotes (2026-08-07)
-* [Bug 19208](https://bugs.r-project.org/show_bug.cgi?id=19208) — readLines() leaks its line buffer when an error unwinds mid-read (2026-10-09, in CC: tierney)
 
 #### Low-level
 
@@ -137,7 +141,6 @@ These patches have not yet been prioritised.
 * [Bug 19096](https://bugs.r-project.org/show_bug.cgi?id=19096) — Update handling of overflow in integer operations (2026-06-30)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
-* [Bug 19259](https://bugs.r-project.org/show_bug.cgi?id=19259) — Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs) (2026-10-27)
 
 #### Misc
 
@@ -154,8 +157,6 @@ These patches have not yet been prioritised.
 * [Bug 19246](https://bugs.r-project.org/show_bug.cgi?id=19246) — typo in .recacheSubclasses -- wrong inheritance is checked in class unions (2026-10-24)
 * [Bug 19248](https://bugs.r-project.org/show_bug.cgi?id=19248) — getClassDef(where=<character>) stopped working (2026-10-26)
 * [Bug 19249](https://bugs.r-project.org/show_bug.cgi?id=19249) — Use getClassDef itself to avoid implicitly calling it twice isClass (2026-10-26)
-* [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
-* [Bug 19257](https://bugs.r-project.org/show_bug.cgi?id=19257) — Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs (2026-10-27)
 
 #### Translations
 

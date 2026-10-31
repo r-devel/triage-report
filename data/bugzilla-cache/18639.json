@@ -2,82 +2,95 @@
   "bug": {
     "bugs": [
       {
-        "op_sys": "All",
-        "is_confirmed": false,
-        "platform": "All",
-        "flags": [],
-        "alias": [],
-        "is_creator_accessible": true,
-        "creator": "michaelchirico4",
-        "status": "UNCONFIRMED",
-        "creator_detail": {
-          "real_name": "Michael Chirico",
-          "id": 3256,
-          "name": "michaelchirico4"
-        },
-        "resolution": "",
-        "blocks": [],
-        "url": "",
-        "summary": "Export tools:::.split_dependencies",
-        "assigned_to_detail": {
-          "name": "R-core",
-          "id": 16,
-          "real_name": "R-core"
-        },
-        "groups": [],
-        "is_cc_accessible": true,
-        "target_milestone": "---",
-        "see_also": [],
-        "last_change_time": "2023-12-19T01:17:56Z",
-        "cc_detail": [],
         "assigned_to": "R-core",
-        "component": "Wishlist",
-        "classification": "Unclassified",
-        "is_open": true,
         "keywords": [],
         "depends_on": [],
-        "priority": "P5",
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Wishlist",
         "product": "R",
-        "whiteboard": "",
-        "creation_time": "2023-12-19T01:17:56Z",
+        "priority": "P5",
         "version": "R-devel (trunk)",
+        "creation_time": "2023-12-19T01:17:56Z",
+        "whiteboard": "",
+        "dupe_of": {},
+        "severity": "normal",
         "deadline": {},
         "id": 18639,
-        "severity": "normal",
-        "dupe_of": {},
+        "cc": [],
         "qa_contact": "",
-        "cc": []
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3256,
+          "name": "michaelchirico4",
+          "real_name": "Michael Chirico"
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "summary": "Export tools:::.split_dependencies",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-10-30T17:27:38Z",
+        "cc_detail": []
       }
     ],
     "faults": []
   },
   "comments": {
-    "comments": {},
     "bugs": {
       "18639": {
         "comments": [
           {
-            "time": "2023-12-19T01:17:56Z",
-            "attachment_id": {},
-            "is_markdown": true,
+            "creation_time": "2023-12-19T01:17:56Z",
             "creator": "michaelchirico4",
-            "is_private": false,
-            "id": 100455,
-            "tags": [],
+            "is_markdown": true,
             "count": 0,
             "bug_id": 18639,
             "text": "Please export `tools:::.split_dependencies()`. It's important for any author trying to parse DESCRIPTION files correctly, which has any number of use cases for writing tooling. I've hand-written similar logic dozens of times in subtly incorrect ways, as have other authors. I very quickly find 100 examples in CRAN packages:\n\nhttps://github.com/search?q=org%3Acran+%2Fread%5B.%5Ddcf%5B%28%5D%2F+%2F%5B%27%22%5DDESCRIPTION%2F+%2Fstrsplit%5B%28%5D%2F&type=code\n\nThe function is very stable (I don't see any substantive change in 15 years). Is there any reason to keep it private? It seems like having a canonical mapping from plaintext-in-DESCRIPTION to a corresponding parsed data structure is a good tool to share.",
-            "creation_time": "2023-12-19T01:17:56Z"
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 100455,
+            "time": "2023-12-19T01:17:56Z"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2026-10-30T17:27:38Z",
+            "id": 104025,
+            "creator": "michaelchirico4",
+            "creation_time": "2026-10-30T17:27:38Z",
+            "count": 1,
+            "is_markdown": true,
+            "text": "If dependency _names_ is all we need, we _could_ fudge `package_dependencies` to work:\n\n```\ndb = cbind(Imports=\"utils (>= 4.6.0), data.table, dplyr (>= 1.0.0)\", Package=\"myPkg\")\ntools::package_dependencies(\"myPkg\", db=db, which=\"Imports\")\n# $myPkg\n# [1] \"utils\"      \"data.table\" \"dplyr\"\n```\n\nOf course, it's pretty unintuitive and drops information about version requirements.",
+            "bug_id": 18639
           }
         ]
       }
-    }
+    },
+    "comments": {}
   },
   "attachments": {
+    "attachments": {},
     "bugs": {
       "18639": []
-    },
-    "attachments": {}
+    }
   },
-  "source_changed": "2023-12-19 01:17:56"
+  "source_changed": "2026-10-30 17:27:38"
 }
