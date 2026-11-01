@@ -1,0 +1,121 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "resolution": "",
+        "creator_detail": {
+          "name": "davis",
+          "id": 3237,
+          "real_name": "Davis Vaughan"
+        },
+        "status": "TRIAGED",
+        "creator": "davis",
+        "is_creator_accessible": true,
+        "alias": [],
+        "flags": [],
+        "platform": "Other",
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "cc_detail": [
+          {
+            "real_name": "Ivan Krylov",
+            "name": "ikrylov",
+            "id": 3307
+          }
+        ],
+        "last_change_time": "2026-10-31T08:53:25Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "summary": "Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper",
+        "url": "",
+        "blocks": [],
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "cc": [
+          "ikrylov"
+        ],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19265,
+        "version": "R 4.6.x",
+        "creation_time": "2026-10-29T14:49:28Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19265": {
+        "comments": [
+          {
+            "attachment_id": 3969,
+            "time": "2026-10-29T14:49:28Z",
+            "creator": "davis",
+            "is_markdown": true,
+            "tags": [],
+            "id": 104000,
+            "is_private": false,
+            "creation_time": "2026-10-29T14:49:28Z",
+            "bug_id": 19265,
+            "text": "Created attachment 3969\nFurther harden `getRUser()`'s `ShellGetPersonalDirectory()` helper\n\nA follow up to someone else's R-dev-day patch, merged here https://github.com/wch/r-source/commit/e1e4c5d5c7d47d484ceba8fa827b24321b54cb29.\n\nI also had cause to look into `getRUser()` lately (for https://github.com/posit-dev/ark/pull/1454, https://github.com/posit-dev/ark/pull/1453) and I noticed that even with this new patch, it is still a little buggy!\n\nThe main goal here is correctness. We want to ensure that we reject any time we can't losslessly convert to the ACP rather than returning something with \"best fit\" translations. That will allow `getRUser()` to fall through to the next candidate (`HOMEUSER + HOMEPATH`).\n\nFixes to `ShellGetPersonalDirectory()`:\n\n-  Fixed failure check on the size query. `WideCharToMultiByte()` returns `0` on failure, never `-1`, so the old `needed != -1` test always passed.\n\n-  More exact allocation size. With `cchWideChar = -1` supplied to `WideCharToMultiByte()`, `needed` already counts the terminating NUL. The old `needed + 1` suggested the terminator wasn't counted.\n\n-  The second `WideCharToMultiByte()` call is now checked. Rare, but the second call to `WideCharToMultiByte()` could fail.\n\n-  Reject silent best-fit replacement on non-UTF-8 code pages. When the process ACP isn't UTF-8, the conversion uses `WC_NO_BEST_FIT_CHARS` and passes `lpUsedDefaultChar`. Characters the code page can't represent no longer turn into \"best fits\" (e.g. `ø` to `o`). If it can't be represented exactly, we now reject and fall through to the next candidate.\n\n-  Reject lone surrogates under a UTF-8 ACP. `CP_UTF8` doesn't support `lpUsedDefaultChar`, so the UTF-8 branch uses `WC_ERR_INVALID_CHARS` instead. Invalid UTF-16 (lone surrogates) is now rejected and we fall through to the next candidate.\n\n- NEWS tweaks. It mentioned `%USER%`, but the code checks `R_USER`. It now names `R_USER` and `HOME`. It also now mentions that the issue could be anywhere in the Documents folder path, not just the user name. It typically is the user name, but doesn't have to be!\n\nThe usage of different options for `CP_UTF8` vs `CP_ACP` is supported by a close read of https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte (this is really such a painful function to call!)",
+            "count": 0
+          },
+          {
+            "count": 1,
+            "is_markdown": true,
+            "text": "Thank you for the report and for preparing the enhancement for Bug 18949!\n\nI confirm that if I run Windows 7 (where R uses an 8-bit ANSI code page), move the Documents folder to a path that is not representable in that code page (e.g. `C:\\Users\\foobar\\føøbäř` on a CP1251 system), unpatched R will use a purely-ASCII fallback (`path.expand(\"~\")` => `C:\\Users\\foobar\\foobar`, which does not exist), and with your patch applied, R will correctly fall back to `%HOMEDRIVE%%HOMEPATH%`. If the user profile directory is not representable in ANSI, R fails to start with or without the patch. Thankfully, this doesn't happen on supported versions of Windows where R uses UTF-8 (bug 18631 comment 2).\n\nYour fixes for allocation size calculation, error handling, and lone surrogates all make sense. I agree that it's worth doing right, even if the individual issues may be not very prevalent.",
+            "bug_id": 19265,
+            "creator": "ikrylov",
+            "creation_time": "2026-10-31T08:53:25Z",
+            "is_private": false,
+            "time": "2026-10-31T08:53:25Z",
+            "id": 104029,
+            "attachment_id": {},
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19265": [
+        {
+          "creation_time": "2026-10-29T14:49:28Z",
+          "summary": "Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper",
+          "file_name": "get-r-user-windows.patch",
+          "bug_id": 19265,
+          "last_change_time": "2026-10-29T14:49:28Z",
+          "size": 3060,
+          "is_private": false,
+          "id": 3969,
+          "creator": "davis",
+          "data": "RnJvbSA2OTBlMWE1OGM3YWIyZjQ1MTlhNzU1ZmU2NjU2YWEzNDU4NDU2Mzc3IE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQpGcm9tOiBEYXZpcyBWYXVnaGFuIDxkYXZpc0Bwb3NpdC5jbz4KRGF0ZTogVGh1LCAyOSBPY3QgMjAyNiAxMDoyMToxMSAtMDQwMApTdWJqZWN0OiBbUEFUQ0hdIFJldmlzZSBgU2hlbGxHZXRQZXJzb25hbERpcmVjdG9yeSgpYCB1c2FnZSBvZgogYFdpZGVDaGFyVG9NdWx0aUJ5dGUoKWAKCi0tLQogZG9jL05FV1MuUmQgICAgICAgICAgfCAgOCArKysrLS0tLQogc3JjL2dudXdpbjMyL3NoZXh0LmMgfCAzOCArKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKy0tLS0tLQogMiBmaWxlcyBjaGFuZ2VkLCAzNiBpbnNlcnRpb25zKCspLCAxMCBkZWxldGlvbnMoLSkKCmRpZmYgLS1naXQgYS9kb2MvTkVXUy5SZCBiL2RvYy9ORVdTLlJkCmluZGV4IDU1M2Y1MTcyNDkuLjQ2NTYzNGVjZDMgMTAwNjQ0Ci0tLSBhL2RvYy9ORVdTLlJkCisrKyBiL2RvYy9ORVdTLlJkCkBAIC01NzcsMTAgKzU3NywxMCBAQAogICBcc3Vic2VjdGlvbntCdWcgRml4ZXMgKFdpbmRvd3MpfXsKICAgICBcaXRlbWl6ZXsKICAgICAgIFxpdGVtIFxjb2Rle3BhdGguZXhwYW5kKCJ+Iil9IGFuZCBzaW1pbGFyIG5vdyBzaG91bGQgd29yayBjb3JyZWN0bHkKLSAgICAgIG9uIFdpbmRvd3Mgd2hlbiB0aGUgdXNlciBuYW1lIGlzIG5vdCBpbiBBU0NJSSBhbmQgbmVpdGhlcgotICAgICAgXGVudntcJUhPTUVcJX0gbm9yIFxlbnZ7XCVVU0VSXCV9IGVudmlyb25tZW50IHZhcmlhYmxlcyBhcmUgc2V0LAotICAgICAgZml4aW5nIFxQUnsxODk0OX0gdGhhbmtzIHRvIHRoZSByZXBvcnQgYW5kIHBhdGNoIGZyb20gXEl7SXZhbiBLcnlsb3Z9Ci0gICAgICBhbmQgXEl7TWF1cmljaW8gVmFyZ2FzfSdzIFxJe1IgRGV2IERheX0gd29yay4KKyAgICAgIG9uIFdpbmRvd3Mgd2hlbiB0aGUgRG9jdW1lbnRzIGZvbGRlciBwYXRoIGlzIG5vdCBBU0NJSSBhbmQgbmVpdGhlcgorICAgICAgXGVudntSX1VTRVJ9IG5vciBcZW52e0hPTUV9IGFyZSBzZXQsIGZpeGluZyBcUFJ7MTg5NDl9IHRoYW5rcyB0bworICAgICAgdGhlIHJlcG9ydCBhbmQgcGF0Y2ggZnJvbSBcSXtJdmFuIEtyeWxvdn0gYW5kIFxJe01hdXJpY2lvIFZhcmdhc30ncworICAgICAgXEl7UiBEZXYgRGF5fSB3b3JrLgogCiAgICAgICBcaXRlbSBcY29kZXtmaWxlLmNvcHkoKiwgZGF0ZT1UUlVFKX0gbm8gbG9uZ2VyIG9wZW5zIGZpbGVzIGZvcgogICAgICAgZXhjbHVzaXZlIGFjY2VzcyB3aGVuIGNvcHlpbmcgdGhlIGZpbGUgdGltZS4gIENvbnNlcXVlbnRseSwgdGhlIHRpbWUKZGlmZiAtLWdpdCBhL3NyYy9nbnV3aW4zMi9zaGV4dC5jIGIvc3JjL2dudXdpbjMyL3NoZXh0LmMKaW5kZXggMzRhYzRmMzE5Mi4uOGNiMzg4MDI5NyAxMDA2NDQKLS0tIGEvc3JjL2dudXdpbjMyL3NoZXh0LmMKKysrIGIvc3JjL2dudXdpbjMyL3NoZXh0LmMKQEAgLTMzLDEyICszMywzOCBAQCBzdGF0aWMgY2hhciAqU2hlbGxHZXRQZXJzb25hbERpcmVjdG9yeSh2b2lkKQogICAgIC8qIENTSURMX1BFUlNPTkFMICovCiAgICAgaWYgKFNIR2V0S25vd25Gb2xkZXJQYXRoKCZGT0xERVJJRF9Eb2N1bWVudHMsIEtGX0ZMQUdfQ1JFQVRFLCBOVUxMLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAmd3BhdGgpID09IFNfT0spIHsKLQlpbnQgbmVlZGVkID0gV2lkZUNoYXJUb011bHRpQnl0ZShDUF9BQ1AsIDAsIHdwYXRoLCAtMSwgTlVMTCwgMCwgTlVMTCwgTlVMTCk7Ci0JaWYgKG5lZWRlZCAhPSAtMSkgewotCSAgICByZXN1bHQgPSAoY2hhciAqKW1hbGxvYyhuZWVkZWQgKyAxKTsKLQkgICAgaWYgKHJlc3VsdCkKLQkJLyogTk9URTogc29tZSBjaGFyYWN0ZXJzIG1heSBub3QgYmUgcmVwcmVzZW50YWJsZSAqLwotCQlXaWRlQ2hhclRvTXVsdGlCeXRlKENQX0FDUCwgMCwgd3BhdGgsIC0xLCByZXN1bHQsIG5lZWRlZCsxLCBOVUxMLCBOVUxMKTsKKwlVSU5UIGNwOworCURXT1JEIGZsYWdzOworCUJPT0wgdXNlZERlZmF1bHRDaGFyID0gRkFMU0U7CisJQk9PTCAqcFVzZWREZWZhdWx0Q2hhcjsKKworCS8qIE9wdGlvbnMgYXJlIHNldCB3aXRoIHRoZSBnb2FsIG9mIGZhbGxpbmcgYmFjayB0byB0aGUgbmV4dAorCSAgIGNhbmRpZGF0ZSByYXRoZXIgdGhhbiByZXR1cm5pbmcgc29tZXRoaW5nIGxvc3N5LiAqLworCWlmIChHZXRBQ1AoKSA9PSBDUF9VVEY4KSB7CisJICAgIC8qIENQX1VURjggZG9lc24ndCBzdXBwb3J0IGxwVXNlZERlZmF1bHRDaGFyLiBJbnN0ZWFkIHVzZQorCSAgICAgICBXQ19FUlJfSU5WQUxJRF9DSEFSUyB0byBjYXVzZSAwIHRvIGJlIHJldHVybmVkIG9uIGxvbmUKKwkgICAgICAgc3Vycm9nYXRlcy4gKi8KKwkgICAgY3AgPSBDUF9VVEY4OworCSAgICBmbGFncyA9IFdDX0VSUl9JTlZBTElEX0NIQVJTOworCSAgICBwVXNlZERlZmF1bHRDaGFyID0gTlVMTDsKKwl9IGVsc2UgeworCSAgICAvKiBPdGhlcndpc2UsIGxldCBXQ19OT19CRVNUX0ZJVF9DSEFSUyBzZXQgbHBVc2VkRGVmYXVsdENoYXIKKwkgICAgICAgcmF0aGVyIHRoYW4gZmlsbGluZyBpbiBhIGxvc3N5IGJlc3QgZml0IGFwcHJveGltYXRpb24uICovCisJICAgIGNwID0gQ1BfQUNQOworCSAgICBmbGFncyA9IFdDX05PX0JFU1RfRklUX0NIQVJTOworCSAgICBwVXNlZERlZmF1bHRDaGFyID0gJnVzZWREZWZhdWx0Q2hhcjsKKwl9CisKKwlpbnQgbmVlZGVkID0gV2lkZUNoYXJUb011bHRpQnl0ZShjcCwgZmxhZ3MsIHdwYXRoLCAtMSwgTlVMTCwgMCwgTlVMTCwgcFVzZWREZWZhdWx0Q2hhcik7CisKKwlpZiAobmVlZGVkID4gMCAmJiAhdXNlZERlZmF1bHRDaGFyKSB7CisJICAgIHJlc3VsdCA9IChjaGFyICopbWFsbG9jKG5lZWRlZCk7CisJICAgIGlmIChyZXN1bHQpIHsKKwkJaWYgKCFXaWRlQ2hhclRvTXVsdGlCeXRlKGNwLCBmbGFncywgd3BhdGgsIC0xLCByZXN1bHQsIG5lZWRlZCwgTlVMTCwgTlVMTCkpIHsKKwkJICAgIGZyZWUocmVzdWx0KTsKKwkJICAgIHJlc3VsdCA9IE5VTEw7CisJCX0KKwkgICAgfQogCX0KICAgICB9CiAgICAgQ29UYXNrTWVtRnJlZSh3cGF0aCk7",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-10-31 08:53:25"
+}

@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-30._
+_Automatically generated from the R Bugzilla dump updated 2026-10-31._
 
 ## Triaged bugs
 
@@ -19,6 +19,7 @@ _Core developers in CC should not be assumed responsible for action._
 * [Bug 19163](https://bugs.r-project.org/show_bug.cgi?id=19163) — axis() throws error and plot() runs out of memory when repeated many times (> 1000 plots) (2026-09-12)
 * [Bug 18911](https://bugs.r-project.org/show_bug.cgi?id=18911) — cleanup tcltk (2026-09-19)
 * [Bug 19098](https://bugs.r-project.org/show_bug.cgi?id=19098) — Ctrl-D does not exit R console on Windows (2026-09-22, in CC: tierney)
+* [Bug 19265](https://bugs.r-project.org/show_bug.cgi?id=19265) — Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper (2026-10-31)
 
 ### Recommended closures
 
@@ -48,11 +49,6 @@ _None._
 
 These are the most important or urgent regular patches from the Triage Team and should be prioritised before others below.
 
-#### Low-level
-
-* [Bug 19259](https://bugs.r-project.org/show_bug.cgi?id=19259) — Lazy-load DB is too small (100 slots for .rdb vs. >600 for DLLs) (2026-10-27)
-* [Bug 19252](https://bugs.r-project.org/show_bug.cgi?id=19252) — compiler::compile() segfaults on break in complex assignment (2026-10-28, in CC: tierney)
-
 #### S4methods
 
 * [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
@@ -61,10 +57,6 @@ These are the most important or urgent regular patches from the Triage Team and 
 #### Windows GUI / Window specific
 
 * [Bug 19198](https://bugs.r-project.org/show_bug.cgi?id=19198) — Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing (2026-10-01)
-
-#### Wishlist
-
-* [Bug 18995](https://bugs.r-project.org/show_bug.cgi?id=18995) — tre-parse.c has a variety of out-of-bounds reads (2026-10-30)
 
 ### P3
 
@@ -107,7 +99,6 @@ These Triage Team patches can wait their turn.
 * [Bug 19123](https://bugs.r-project.org/show_bug.cgi?id=19123) — Memory leak in `scan()` when a field fails type conversion (2026-08-04)
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
-* [Bug 19008](https://bugs.r-project.org/show_bug.cgi?id=19008) — on.exit() at top level is a silent no-op (2026-10-29, in CC: tierney)
 
 #### Mac GUI / Mac specific
 
