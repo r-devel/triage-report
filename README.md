@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-10-31._
+_Automatically generated from the R Bugzilla dump updated 2026-11-02._
 
 ## Triaged bugs
 
@@ -68,7 +68,6 @@ These Triage Team patches should be looked at next.
 * [Bug 19119](https://bugs.r-project.org/show_bug.cgi?id=19119) — `writeChar()` on Windows counts supplementary characters twice (2026-08-03)
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
-* [Bug 19050](https://bugs.r-project.org/show_bug.cgi?id=19050) — float-to-int overflow in R parser (2026-10-30)
 
 #### S4methods
 
@@ -82,6 +81,10 @@ These Triage Team patches should be looked at next.
 ### P4
 
 These Triage Team patches can wait their turn.
+
+#### Analyses
+
+* [Bug 19275](https://bugs.r-project.org/show_bug.cgi?id=19275) — rWishart() leaks its work matrices when it signals an error (2026-11-02)
 
 #### I/O
 
