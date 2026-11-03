@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-02T17:42:04Z",
+        "blocks": [],
+        "url": "",
+        "summary": ".Random.seed with a negative Mersenne-Twister position, length 0, or an unloaded user normal kind crashes R",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "deadline": {},
+        "id": 19276,
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P2",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-02T17:41:52Z",
+        "version": "R-devel (trunk)",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19276": {
+        "comments": [
+          {
+            "tags": [],
+            "id": 104061,
+            "is_private": false,
+            "creation_time": "2026-11-02T17:41:52Z",
+            "bug_id": 19276,
+            "text": ".Random.seed is an ordinary variable that users, packages and restored workspaces can set to anything, so GetRNGkind() and FixupSeeds() in src/main/RNG.c check it and warn and reseed on invalid values. Three corrupt values get through the checks and crash R instead:\n\n- .Random.seed[2] negative with the Mersenne-Twister: FixupSeeds() tests `I1 <= 0` on an unsigned value, so negatives pass, and MT_genrand() indexes the state array with the negative number.\n- length(.Random.seed) == 0: GetRNGkind() reads element 0 before checking the length, and GetRNGstate() copies 625 ints from past the end.\n- .Random.seed[1] encoding the user-supplied normal kind (e.g. 10303) with no generator loaded: only USER_UNIF is checked, so rnorm() calls a NULL function pointer.\n\nA fourth, non-crashing case is fixed alongside: for L'Ecuyer-CMRG the all-zero flag is not reset between the two components, so an all-zero second component is accepted.\n\nReproducible example: attached as random-seed-validation-repro.R; each block segfaults, expected a warning and a fresh seed as for other invalid values.\n\nProposed patch: attached as random-seed-validation.diff, against r90825. It adds the checks at the existing choke point with the current warn-and-reseed behaviour, with a regression test in tests/reg-tests-1e.R. Valid states are unaffected: RNG output digests over all kinds, seeds and parallel streams are identical to unpatched trunk.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/446, where CI results can be seen.",
+            "count": 0,
+            "attachment_id": {},
+            "time": "2026-11-02T17:41:52Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 3991,
+            "time": "2026-11-02T17:42:03Z",
+            "creation_time": "2026-11-02T17:42:03Z",
+            "count": 1,
+            "bug_id": 19276,
+            "text": "Created attachment 3991\npatch: validate .Random.seed in GetRNGkind() and FixupSeeds()",
+            "tags": [],
+            "is_private": false,
+            "id": 104062
+          },
+          {
+            "tags": [],
+            "id": 104063,
+            "is_private": false,
+            "creation_time": "2026-11-02T17:42:04Z",
+            "text": "Created attachment 3992\nreproducer: three crashing .Random.seed values, one block per case",
+            "bug_id": 19276,
+            "count": 2,
+            "attachment_id": 3992,
+            "time": "2026-11-02T17:42:04Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19276": [
+        {
+          "summary": "patch: validate .Random.seed in GetRNGkind() and FixupSeeds()",
+          "creation_time": "2026-11-02T17:42:03Z",
+          "bug_id": 19276,
+          "file_name": "random-seed-validation.diff",
+          "size": 3264,
+          "last_change_time": "2026-11-02T17:42:03Z",
+          "id": 3991,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL1JORy5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL1JORy5jCShyZXZpc2lvbiA5MDgyNSkKKysrIHNyYy9tYWluL1JORy5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMjEsOCArMjIxLDEwIEBAIHN0YXRpYyB2b2lkIEZpeHVwU2VlZHMoUk5HdHlwZSBSTkdfa2luZCwgaW50IGluaXRpYWwpCiAKICAgICBjYXNlIE1FUlNFTk5FX1RXSVNURVI6CiAJaWYoaW5pdGlhbCkgSTEgPSA2MjQ7Ci0JIC8qIE5vIGFjdGlvbiB1bmxlc3MgdXNlciBoYXMgY29ycnVwdGVkIC5SYW5kb20uc2VlZCAqLwotCWlmKEkxIDw9IDApIEkxID0gNjI0OworCS8qIE5vIGFjdGlvbiB1bmxlc3MgdXNlciBoYXMgY29ycnVwdGVkIC5SYW5kb20uc2VlZC4KKwkgICBJMSBpcyB1bnNpZ25lZCBidXQgTVRfZ2VucmFuZCgpIHJlYWRzIGl0IGFzIGEgc2lnbmVkIGluZGV4LAorCSAgIHNvIHRlc3QgdGhlIHNpZ25lZCB2YWx1ZS4gKi8KKwlpZigoaW50KSBJMSA8PSAwKSBJMSA9IDYyNDsKIAkvKiBjaGVjayBmb3IgYWxsIHplcm9lcyAqLwogCWZvciAoaiA9IDE7IGogPD0gNjI0OyBqKyspCiAJICAgIGlmKFJOR19UYWJsZVtSTkdfa2luZF0uaV9zZWVkW2pdICE9IDApIHsKQEAgLTI1Nyw2ICsyNTksNyBAQCBzdGF0aWMgdm9pZCBGaXh1cFNlZWRzKFJOR3R5cGUgUk5HX2tpbmQsIGludCBpbml0aWFsKQogCSAgICBpZiAodG1wID49IG0xKSBhbGxPSyA9IDA7CiAJfQogCWlmKCFub3RhbGx6ZXJvIHx8ICFhbGxPSykgUmFuZG9taXplKFJOR19raW5kKTsKKwlub3RhbGx6ZXJvID0gMDsKIAlmb3IgKGogPSAzOyBqIDwgNjsgaisrKSB7CiAJICAgIHRtcCA9IFJOR19UYWJsZVtSTkdfa2luZF0uaV9zZWVkW2pdOwogCSAgICBpZih0bXAgIT0gMCkgbm90YWxsemVybyA9IDE7CkBAIC0zNjAsNiArMzYzLDEwIEBAIHN0YXRpYyBib29sIEdldFJOR2tpbmQoU0VYUCBzZWVkcykKIAkJUl90eXBlVG9DaGFyKHNlZWRzKSk7CiAJZ290byBpbnZhbGlkOwogICAgIH0KKyAgICBpZiAoWExFTkdUSChzZWVkcykgPT0gMCkgeworCXdhcm5pbmcoXygiJy5SYW5kb20uc2VlZCcgaGFzIGxlbmd0aCAwLCBzbyBpZ25vcmVkIikpOworCWdvdG8gaW52YWxpZDsKKyAgICB9CiAgICAgaW50ICppcyA9IElOVEVHRVIoc2VlZHMpLAogCXRtcCA9IGlzWzBdOwogICAgIC8qIGF2b2lkIG92ZXJmbG93IGhlcmU6IG1heCBjdXJyZW50IHZhbHVlIGlzIDExMDUwNyAqLwpAQCAtMzk0LDYgKzQwMSwxMCBAQCBzdGF0aWMgYm9vbCBHZXRSTkdraW5kKFNFWFAgc2VlZHMpCiAJd2FybmluZyhfKCInLlJhbmRvbS5zZWVkWzFdICUlIDEwMCcgaXMgbm90IGEgdmFsaWQgUk5HIGtpbmQgc28gaWdub3JlZCIpKTsKIAlnb3RvIGludmFsaWQ7CiAgICAgfQorICAgIGlmIChuZXdOMDEgPT0gVVNFUl9OT1JNICYmICFVc2VyX25vcm1fZnVuKSB7CisJd2FybmluZyhfKCInLlJhbmRvbS5zZWVkWzFdJyBzcGVjaWZpZXMgYSB1c2VyLXN1cHBsaWVkIG5vcm1hbCBnZW5lcmF0b3IgYnV0IG5vbmUgaXMgbG9hZGVkLCBzbyBpZ25vcmVkIikpOworCWdvdG8gaW52YWxpZDsKKyAgICB9CiAgICAgUk5HX2tpbmQgPSBuZXdSTkc7IE4wMV9raW5kID0gbmV3TjAxOyBTYW1wbGVfa2luZCA9IG5ld1NhbXBsZTsgQmlub21fa2luZCA9IG5ld0Jpbm9tOwogICAgIHJldHVybiBmYWxzZTsKIGludmFsaWQ6CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA4MjUpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDQzNCw2ICs0NDM0LDMzIEBAIHN0b3BpZm5vdChpZGVudGljYWwoc3VwcHJlc3NXYXJuaW5ncyhzdHIybGFuZygiNDI5NDk2NzI5NkwiKSksIDQyOTQ5NjcyOTYpLAogIyMgY29udmVydGVkIG91dC1vZi1yYW5nZSBkb3VibGVzIHRvIGludCAodW5kZWZpbmVkIGJlaGF2aW91cikgaW4gUiA8PSA0LjYuMgogCiAKKyMjIGNvcnJ1cHQgLlJhbmRvbS5zZWVkIG11c3Qgbm90IGJlIHVzZWQgYXMgaXMKK3JrIDwtIFJOR2tpbmQoKQorbXNncyA8LSBjaGFyYWN0ZXIoKQoraCA8LSBmdW5jdGlvbih3KSB7IG1zZ3MgPDwtIGMobXNncywgY29uZGl0aW9uTWVzc2FnZSh3KSk7IGludm9rZVJlc3RhcnQoIm11ZmZsZVdhcm5pbmciKSB9CitzZXQuc2VlZCgxKTsgcyA8LSAuUmFuZG9tLnNlZWQKKy5SYW5kb20uc2VlZCA8LSBpbnRlZ2VyKDApCit3aXRoQ2FsbGluZ0hhbmRsZXJzKHJ1bmlmKDEpLCB3YXJuaW5nID0gaCkKK3N0b3BpZm5vdChsZW5ndGgoLlJhbmRvbS5zZWVkKSA9PSA2MjZMKQorc1syXSA8LSAtMTAwMDAwMDAwMEwgIyBNZXJzZW5uZS1Ud2lzdGVyIHBvc2l0aW9uIGJlZm9yZSB0aGUgc3RhdGUgYXJyYXkKKy5SYW5kb20uc2VlZCA8LSBzCitzdG9waWZub3QocnVuaWYoMSkgPj0gMCwgLlJhbmRvbS5zZWVkWzJdID4gMEwpCitzWzFdIDwtIDEwMzAzTCAjIHVzZXItc3VwcGxpZWQgbm9ybWFsIGdlbmVyYXRvciwgbm9uZSBsb2FkZWQKKy5SYW5kb20uc2VlZCA8LSBzCit3aXRoQ2FsbGluZ0hhbmRsZXJzKHJub3JtKDEpLCB3YXJuaW5nID0gaCkKK3N0b3BpZm5vdCguUmFuZG9tLnNlZWRbMV0gJSUgMTAwMDBMICUvJSAxMDBMICE9IDNMKQorc3RvcGlmbm90KGxlbmd0aChtc2dzKSA9PSAyTCwgZ3JlcGwoImxlbmd0aCAwIiwgbXNnc1sxXSksCisgICAgICAgICAgZ3JlcGwoIm5vcm1hbCBnZW5lcmF0b3IiLCBtc2dzWzJdKSkKK1JOR2tpbmQoIkwnRWN1eWVyLUNNUkciKTsgc2V0LnNlZWQoMSk7IHMgPC0gLlJhbmRvbS5zZWVkCitzWzU6N10gPC0gMEwgIyBzZWNvbmQgY29tcG9uZW50IGFsbCB6ZXJvOiB0aGUgZ2VuZXJhdG9yIGRlZ2VuZXJhdGVzCisuUmFuZG9tLnNlZWQgPC0gcworcnVuaWYoMSkKK3N0b3BpZm5vdChhbnkoLlJhbmRvbS5zZWVkWzU6N10gIT0gMEwpKQorZG8uY2FsbChSTkdraW5kLCBhcy5saXN0KHJrKSkKKyMjIHJlYWQgYmVmb3JlIHRoZSBzdGF0ZSBhcnJheSwgY2FsbGVkIGEgTlVMTCBmdW5jdGlvbiBwb2ludGVyLCBhbmQga2VwdAorIyMgYSBkZWdlbmVyYXRlIEwnRWN1eWVyLUNNUkcgc3RhdGUgaW4gUiA8PSA0LjYuMgorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        },
+        {
+          "is_patch": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgRWFjaCBibG9jayBpcyBpbmRlcGVuZGVudDsgcnVuIG9uZSBhdCBhIHRpbWUgaW4gYSBmcmVzaCBSIHNlc3Npb24uCiMjIEFsbCB0aHJlZSBhcmUgcmVhY2hhYmxlIGZyb20gYSByZXN0b3JlZCB3b3Jrc3BhY2UsIHNpbmNlIC5SYW5kb20uc2VlZAojIyBpcyBhbiBvcmRpbmFyeSB2YXJpYWJsZSBpbiB0aGUgZ2xvYmFsIGVudmlyb25tZW50LgoKIyMgMS4gTmVnYXRpdmUgTWVyc2VubmUtVHdpc3RlciBwb3NpdGlvbjogb3V0LW9mLWJvdW5kcyByZWFkLCBvZmZzZXQKIyMgICAgY2hvc2VuIGJ5IHRoZSBpbnB1dC4gU21hbGwgb2Zmc2V0cyBsZWFrIG1lbW9yeSB0aHJvdWdoIHJ1bmlmKCk7CiMjICAgIGxhcmdlIG9uZXMgY3Jhc2guCnNldC5zZWVkKDEpCnMgPC0gLlJhbmRvbS5zZWVkCnNbMl0gPC0gLTJMCi5SYW5kb20uc2VlZCA8LSBzCnByaW50KHJ1bmlmKDMpLCBkaWdpdHMgPSAxNykgICAgICAgICAgIyB3b3JkcyByZWFkIGZyb20gYmVmb3JlIHRoZSBzdGF0ZSBhcnJheQpzWzJdIDwtIC0xMDAwMDAwMDAwTAouUmFuZG9tLnNlZWQgPC0gcwpydW5pZigxKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMgc2VnZmF1bHQKCiMjIDIuIFplcm8tbGVuZ3RoIC5SYW5kb20uc2VlZDogZWxlbWVudCAwIHJlYWQgdW5jaGVja2VkLCB0aGVuIDYyNSBpbnRzCiMjICAgIG9mIG5laWdoYm91cmluZyBtZW1vcnkgY29waWVkIGludG8gdGhlIGdlbmVyYXRvciBzdGF0ZS4KLlJhbmRvbS5zZWVkIDwtIGludGVnZXIoMCkKcnVuaWYoMSkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIGNyYXNoIG9uIC0tZW5hYmxlLXN0cmljdC1iYXJyaWVyIGJ1aWxkcwoKIyMgMy4gVXNlci1zdXBwbGllZCBub3JtYWwga2luZCB3aXRoIG5vIHVzZXIgZ2VuZXJhdG9yIGxvYWRlZDogcm5vcm0oKQojIyAgICBjYWxscyBhIE5VTEwgZnVuY3Rpb24gcG9pbnRlci4Kc2V0LnNlZWQoMSkKcyA8LSAuUmFuZG9tLnNlZWQKc1sxXSA8LSAxMDMwM0wgICAgICAgICAgICAgICAgICAgICAgICAjIE4wMSBraW5kIDMgPSBVU0VSX05PUk0KLlJhbmRvbS5zZWVkIDwtIHMKcm5vcm0oMSkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIHNlZ2ZhdWx0Cg==",
+          "is_private": false,
+          "id": 3992,
+          "last_change_time": "2026-11-02T17:42:04Z",
+          "size": 1099,
+          "file_name": "random-seed-validation-repro.R",
+          "bug_id": 19276,
+          "creation_time": "2026-11-02T17:42:04Z",
+          "summary": "reproducer: three crashing .Random.seed values, one block per case"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-02 17:42:04"
+}

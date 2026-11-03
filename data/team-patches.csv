@@ -1,7 +1,9 @@
 bug_id,summary,component,reporter,status,patch_date,patch_count,importance,priority,core_cc,bugzilla_url
+19276,".Random.seed with a negative Mersenne-Twister position, length 0, or an unloaded user normal kind crashes R",Low-level,kevinushey,NEW,2026-11-02 17:42:03 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19276
 19254,Add fast paths for early exit from is(),S4methods,michaelchirico4,NEW,2026-10-26 19:08:45 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19254
 19257,Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs,S4methods,michaelchirico4,NEW,2026-10-27 08:04:54 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19257
 19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19198
+19277,sample() without replacement draws zero-weight and least likely items with wrong probabilities,Accuracy,kevinushey,NEW,2026-11-02 18:22:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19277
 19051,casts from double to R_xlen_t can trigger undefined behaviour,Low-level,kevinushey,NEW,2026-04-14 21:41:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19051
 19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19119
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19158

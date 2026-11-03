@@ -1,0 +1,171 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "last_change_time": "2026-11-02T18:22:26Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "sample() without replacement draws zero-weight and least likely items with wrong probabilities",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "status": "NEW",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "cc": [],
+        "qa_contact": "",
+        "id": 19277,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "creation_time": "2026-11-02T18:22:08Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P3",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Accuracy",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19277": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2026-11-02T18:22:08Z",
+            "id": 104064,
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": false,
+            "count": 0,
+            "text": "sample() without replacement draws the least likely items with the wrong probabilities once the weights span about 16 orders of magnitude (e.g. exp(loglik) weights), and can return an item whose weight is exactly zero. Sampling with replacement is not affected.\n\nReproducible example: attached as sample-noreplace-drift-repro.R; sample.int(5, 4, prob = c(1, 1, 1, 1e-20, 0)) returns the zero-weight item 5 in all of 1000 samples (expected never), and with c(1, 1, 1, 1e-20, 1e-20) the fourth draw is always the same one of the two tied items (expected a 50/50 split). Seen on R 4.6.1 and R-devel r90827.\n\nAnalysis:\n\nProbSampleNoReplace() in src/main/random.c keeps the remaining mass as a running total, totalmass -= p[j], which cancels: after the three weights of 1/3 are drawn it is 1.1e-16 rather than the 3.3e-21 actually left, so the target totalmass * unif_rand() lies beyond everything the search can accumulate and it falls through to the last item.\n\nTwo patches are attached, for R Core to choose between:\n\nsample-noreplace-resum-fix.diff fixes the draws by keeping the remaining mass as a fresh sum, accumulated during the shift that each draw already performs. Ordinary weights give identical results (209,867 draws compared), but the target differs in its last bits in principle, and the summation makes large draws without replacement about 1.7 times slower (n = 1e5, k = 1e4: 0.29 s to 0.48 s). Submitted as https://github.com/r-devel/r-svn/pull/445.\n\nsample-noreplace-drift-warning.diff preserves existing behaviour instead: the draws are unchanged, the drift is tracked exactly in constant time per draw (2Sum on each subtraction), and sample() warns when it reaches 1e-3 of the remaining mass or a zero weight was drawn. Submitted as https://github.com/r-devel/r-svn/pull/450.\n\nBoth include a regression test and pass make test-Reg; CI results are on the pull requests.",
+            "bug_id": 19277,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-02T18:22:08Z"
+          },
+          {
+            "text": "Created attachment 3993\nreproducer: zero-weight draw and biased tie",
+            "bug_id": 19277,
+            "count": 1,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-02T18:22:25Z",
+            "time": "2026-11-02T18:22:25Z",
+            "id": 104065,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 3993
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-02T18:22:26Z",
+            "text": "Created attachment 3994\nfix: keep the remaining mass as a fresh sum; draws change in the last bits (r-svn PR 445)",
+            "bug_id": 19277,
+            "count": 2,
+            "is_markdown": false,
+            "tags": [],
+            "attachment_id": 3994,
+            "time": "2026-11-02T18:22:26Z",
+            "id": 104066,
+            "is_private": false
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 104067,
+            "creation_time": "2026-11-02T18:22:26Z",
+            "count": 3,
+            "text": "Created attachment 3995\nalternative: track the drift exactly and warn, draws unchanged (r-svn PR 450)",
+            "bug_id": 19277,
+            "attachment_id": 3995,
+            "time": "2026-11-02T18:22:26Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19277": [
+        {
+          "bug_id": 19277,
+          "file_name": "sample-noreplace-drift-repro.R",
+          "summary": "reproducer: zero-weight draw and biased tie",
+          "creation_time": "2026-11-02T18:22:25Z",
+          "id": 3993,
+          "is_private": false,
+          "size": 1147,
+          "last_change_time": "2026-11-02T18:22:25Z",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgc2FtcGxlKCkgd2l0aG91dCByZXBsYWNlbWVudCB3aXRoIHdlaWdodHMgc3Bhbm5pbmcgbWFueSBvcmRlcnMgb2YgbWFnbml0dWRlLgojIyBPYnNlcnZlZCBvbiBSIDQuNi4xIGFuZCBSLWRldmVsIHI5MDgyNy4KCiMjIDEuIEFuIGl0ZW0gd2l0aCB3ZWlnaHQgZXhhY3RseSAwIGlzIGRyYXduIChleHBlY3RlZDogbmV2ZXIpLgp3IDwtIGMoMSwgMSwgMSwgMWUtMjAsIDApCnplcm8gPC0gdmFwcGx5KDE6MTAwMCwgZnVuY3Rpb24oaSkgNUwgJWluJSBzYW1wbGUuaW50KDVMLCA0TCwgcHJvYiA9IHcpLCBOQSkKY2F0KCJ6ZXJvLXdlaWdodCBpdGVtIGRyYXduIGluIiwgc3VtKHplcm8pLCAib2YgMTAwMCBzYW1wbGVzIChleHBlY3RlZCAwKVxuIikKCiMjIDIuIFRoZSBzYW1lIHdpdGggd2VpZ2h0cyBmcm9tIGEgbG9nLWxpa2VsaWhvb2QsIGV4cChsb2dsaWspLgp3IDwtIGMoZXhwKGMoMCwgLTEsIC0yLCAtNDApKSwgMCkKemVybyA8LSB2YXBwbHkoMToxMDAwLCBmdW5jdGlvbihpKSA1TCAlaW4lIHNhbXBsZS5pbnQoNUwsIDRMLCBwcm9iID0gdyksIE5BKQpjYXQoInplcm8td2VpZ2h0IGl0ZW0gZHJhd24gaW4iLCBzdW0oemVybyksICJvZiAxMDAwIHNhbXBsZXMgKGV4cGVjdGVkIDApXG4iKQoKIyMgMy4gTm8gemVybyB3ZWlnaHQ6IGEgc2lsZW50IGJpYXMgaW5zdGVhZC4gVGhlIGZvdXJ0aCBkcmF3IHNob3VsZCBiZQojIyAgICBpdGVtIDQgb3IgaXRlbSA1IHdpdGggcHJvYmFiaWxpdHkgMS8yIGVhY2guCncgPC0gYygxLCAxLCAxLCAxZS0yMCwgMWUtMjApCmZvdXJ0aCA8LSB2YXBwbHkoMToxMDAwLCBmdW5jdGlvbihpKSBzYW1wbGUuaW50KDVMLCA0TCwgcHJvYiA9IHcpWzRMXSwgMUwpCmNhdCgiZm91cnRoIGRyYXcgaXMgaXRlbSA0IGluIiwgc3VtKGZvdXJ0aCA9PSA0TCksICJvZiAxMDAwIHNhbXBsZXMgKGV4cGVjdGVkIGFib3V0IDUwMClcbiIpCgojIyBTYW1wbGluZyB3aXRoIHJlcGxhY2VtZW50IGlzIG5vdCBhZmZlY3RlZDoKdyA8LSBjKDEsIDEsIDEsIDFlLTIwLCAwKQpjYXQoIndpdGggcmVwbGFjZW1lbnQ6Iiwgc3VtKHNhbXBsZS5pbnQoNUwsIDFlNUwsIHJlcGxhY2UgPSBUUlVFLCBwcm9iID0gdykgPT0gNUwpLAogICAgInplcm8td2VpZ2h0IGRyYXdzIG9mIDFlNSAoZXhwZWN0ZWQgMClcbiIpCg==",
+          "creator": "kevinushey",
+          "is_patch": false
+        },
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3JhbmRvbS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3JhbmRvbS5jCShyZXZpc2lvbiA5MDgyNSkKKysrIHNyYy9tYWluL3JhbmRvbS5jCSh3b3JraW5nIGNvcHkpCkBAIC00MTgsMjEgKzQxOCwzNSBAQCBzdGF0aWMgdm9pZCBQcm9iU2FtcGxlTm9SZXBsYWNlKGludCBuLCBkb3VibGUgKnAsIGludCAqcGVybSwKICAgICAvKiBPcmRlciBlbGVtZW50IGlkZW50aXRpZXMgaW4gcGFyYWxsZWwgKi8KICAgICByZXZzb3J0KHAsIHBlcm0sIG4pOwogCisgICAgLyogdG90YWxtYXNzIGlzIHRoZSByZW1haW5pbmcgbWFzcyBzdW1tZWQgaW4gdGhlIG9yZGVyIHRoZSBzZWFyY2gKKyAgICAgICBiZWxvdyBhY2N1bXVsYXRlcyBpdCwgc28gdGhlIHRhcmdldCBjYW4gbmV2ZXIgZXhjZWVkIHRoZSBtYXNzIHRoZQorICAgICAgIHNlYXJjaCByZWFjaGVzIGJ5IHRoZSBsYXN0IHBvc2l0aXZlIHdlaWdodC4gIEEgcnVubmluZyB0b3RhbAorICAgICAgICh0b3RhbG1hc3MgLT0gcFtqXSkgZHJpZnRzLCBhbmQgb25jZSB0aGUgZHJpZnQgZXhjZWVkcyB0aGUgc21hbGxlc3QKKyAgICAgICB3ZWlnaHRzIGxlZnQgdGhlIHNlYXJjaCBmYWxscyB0aHJvdWdoIHRvIHRoZSBsYXN0IGl0ZW0sIHdoaWNoIGhhcworICAgICAgIHplcm8gd2VpZ2h0IGlmIGFueSBkb2VzLiAgUmF0aGVyIHRoYW4gcmUtc3VtbWluZyBiZWZvcmUgZWFjaCBkcmF3LAorICAgICAgIHRoZSBzZWFyY2gga2VlcHMgdGhlIHByZWZpeCBiZWZvcmUgcFtqXSBhbmQgdGhlIHNoaWZ0IGFkZHMgdGhlCisgICAgICAgcmVzdCwgd2hpY2ggaXMgdGhlIHNhbWUgbGVmdCBmb2xkLiAqLworICAgIHRvdGFsbWFzcyA9IDA7CisgICAgZm9yIChqID0gMDsgaiA8IG47IGorKykKKwl0b3RhbG1hc3MgKz0gcFtqXTsKKwogICAgIC8qIENvbXB1dGUgdGhlIHNhbXBsZSAqLwotICAgIHRvdGFsbWFzcyA9IDE7CiAgICAgZm9yIChpID0gMCwgbjEgPSBuLTE7IGkgPCBuYW5zOyBpKyssIG4xLS0pIHsKIAlyVCA9IHRvdGFsbWFzcyAqIHVuaWZfcmFuZCgpOwogCW1hc3MgPSAwOwogCWZvciAoaiA9IDA7IGogPCBuMTsgaisrKSB7CisJICAgIHRvdGFsbWFzcyA9IG1hc3M7CS8qIHN1bSBvZiBwWzAuLmotMV0gKi8KIAkgICAgbWFzcyArPSBwW2pdOwogCSAgICBpZiAoclQgPD0gbWFzcykKIAkJYnJlYWs7CiAJfQorCWlmIChqID09IG4xKQorCSAgICB0b3RhbG1hc3MgPSBtYXNzOwkvKiBmZWxsIHRocm91Z2g6IHBbbjFdIGlzIHRoZSBvbmUgcmVtb3ZlZCAqLwogCWFuc1tpXSA9IHBlcm1bal07Ci0JdG90YWxtYXNzIC09IHBbal07CiAJZm9yKGsgPSBqOyBrIDwgbjE7IGsrKykgewogCSAgICBwW2tdID0gcFtrICsgMV07CiAJICAgIHBlcm1ba10gPSBwZXJtW2sgKyAxXTsKKwkgICAgdG90YWxtYXNzICs9IHBba107CiAJfQogICAgIH0KIH0KSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDgyNSkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NDM0LDYgKzQ0MzQsMTggQEAgc3RvcGlmbm90KGlkZW50aWNhbChzdXBwcmVzc1dhcm5pbmdzKHN0cjJsYW5nKCI0Mjk0OTY3Mjk2TCIpKSwgNDI5NDk2NzI5NiksCiAjIyBjb252ZXJ0ZWQgb3V0LW9mLXJhbmdlIGRvdWJsZXMgdG8gaW50ICh1bmRlZmluZWQgYmVoYXZpb3VyKSBpbiBSIDw9IDQuNi4yCiAKIAorIyMgc2FtcGxlKCkgd2l0aG91dCByZXBsYWNlbWVudCwgd2VpZ2h0cyBzcGFubmluZyBtYW55IG9yZGVycyBvZiBtYWduaXR1ZGUKK3cgPC0gYygxLCAxLCAxLCAxZS0yMCwgMCkKK3NldC5zZWVkKDEpCitzdG9waWZub3QoIXZhcHBseSgxOjIwMCwgZnVuY3Rpb24oaSkgNUwgJWluJSBzYW1wbGUuaW50KDVMLCA0TCwgcHJvYiA9IHcpLCBOQSkpCit3IDwtIGMoMSwgMSwgMSwgMWUtMjAsIDFlLTIwKQorc2V0LnNlZWQoMikKK2ZvdXJ0aCA8LSB2YXBwbHkoMToxMDAwLCBmdW5jdGlvbihpKSBzYW1wbGUuaW50KDVMLCA0TCwgcHJvYiA9IHcpWzRMXSwgMUwpCitzdG9waWZub3QoYWJzKG1lYW4oZm91cnRoID09IDRMKSAtIDAuNSkgPCAwLjEpCisjIyBkcmV3IHRoZSB6ZXJvLXdlaWdodCBpdGVtLCBhbmQgYWx3YXlzIGl0ZW0gNSBvZiB0aGUgdHdvIGVxdWFsIHNtYWxsCisjIyB3ZWlnaHRzLCBhcyB0aGUgcnVubmluZyB0b3RhbCBvZiB0aGUgcmVtYWluaW5nIG1hc3MgZHJpZnRlZCwgaW4gUiA8PSA0LjYuMgorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-11-02T18:22:26Z",
+          "size": 2433,
+          "is_private": false,
+          "id": 3994,
+          "creation_time": "2026-11-02T18:22:26Z",
+          "summary": "fix: keep the remaining mass as a fresh sum; draws change in the last bits (r-svn PR 445)",
+          "file_name": "sample-noreplace-resum-fix.diff",
+          "bug_id": 19277
+        },
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3JhbmRvbS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3JhbmRvbS5jCShyZXZpc2lvbiA5MDgyNykKKysrIHNyYy9tYWluL3JhbmRvbS5jCSh3b3JraW5nIGNvcHkpCkBAIC00MDQsMTEgKzQwNCwyMiBAQCB3YWxrZXJfUHJvYlNhbXBsZVJlcGxhY2UoaW50IG4sIGRvdWJsZSAqcCwgaW50ICphLCBpbnQgbmFucywgaW50ICphbnMpCiAKIC8qIFVuZXF1YWwgcHJvYmFiaWxpdHkgc2FtcGxpbmc7IHdpdGhvdXQtcmVwbGFjZW1lbnQgY2FzZSAqLwogCisvKiBUaGUgcnVubmluZyB0b3RhbCBvZiB0aGUgcmVtYWluaW5nIG1hc3MgKHRvdGFsbWFzcyAtPSBwW2pdIGJlbG93KQorICAgZHJpZnRzIGJ5IHJvdW5kaW5nLiAgT25jZSB0aGUgd2VpZ2h0cyBzcGFuIGVub3VnaCBvcmRlcnMgb2YgbWFnbml0dWRlCisgICBmb3IgdGhlIGRyaWZ0IHRvIGJlIGNvbXBhcmFibGUgdG8gdGhlIG1hc3MgYWN0dWFsbHkgbGVmdCwgdGhlIGxlYXN0CisgICBsaWtlbHkgaXRlbXMgYXJlIGRyYXduIHdpdGggdGhlIHdyb25nIHByb2JhYmlsaXRpZXMsIGFuZCBhIHplcm8gd2VpZ2h0CisgICBjYW4gYmUgZHJhd24uICBUaGUgZHJhd3MgYXJlIGxlZnQgYXMgdGhleSBhcmUsIHNvIHRoYXQgcmVzdWx0cyBzdGF5CisgICByZXByb2R1Y2libGUsIGJ1dCB0aGUgZHJpZnQgaXMgdHJhY2tlZCBleGFjdGx5IChlYWNoIHN1YnRyYWN0aW9uJ3MKKyAgIHJvdW5kaW5nIGVycm9yIGlzIHJlY292ZXJlZCB3aXRoIHRoZSAyU3VtIHRyYW5zZm9ybWF0aW9uKSBhbmQgYQorICAgd2FybmluZyBpcyBnaXZlbiBvbmNlIGl0IHJlYWNoZXMgdGhpcyBmcmFjdGlvbiBvZiB0aGUgcmVtYWluaW5nIG1hc3MuICovCisjZGVmaW5lIFNBTVBMRV9EUklGVF9UT0wgMWUtMworCiBzdGF0aWMgdm9pZCBQcm9iU2FtcGxlTm9SZXBsYWNlKGludCBuLCBkb3VibGUgKnAsIGludCAqcGVybSwKIAkJCQlpbnQgbmFucywgaW50ICphbnMpCiB7Ci0gICAgZG91YmxlIHJULCBtYXNzLCB0b3RhbG1hc3M7CisgICAgZG91YmxlIHJULCBtYXNzLCB0b3RhbG1hc3MsIGRyaWZ0LCBzdW0sIGNvbXA7CiAgICAgaW50IGksIGosIGssIG4xOworICAgIGJvb2wgZHJpZnRlZCA9IEZBTFNFOwogCiAgICAgLyogUmVjb3JkIGVsZW1lbnQgaWRlbnRpdGllcyAqLwogICAgIGZvciAoaSA9IDA7IGkgPCBuOyBpKyspCkBAIC00MTgsOSArNDI5LDI0IEBAIHN0YXRpYyB2b2lkIFByb2JTYW1wbGVOb1JlcGxhY2UoaW50IG4sIGRvdWJsZSAqcCwgaW50ICpwZXJtLAogICAgIC8qIE9yZGVyIGVsZW1lbnQgaWRlbnRpdGllcyBpbiBwYXJhbGxlbCAqLwogICAgIHJldnNvcnQocCwgcGVybSwgbik7CiAKKyAgICAvKiBkcmlmdCA9IHRvdGFsbWFzcyAtIGV4YWN0IHJlbWFpbmluZyBtYXNzLCBpbml0aWFsbHkgMSAtIHN1bShwKQorICAgICAgIHdpdGggc3VtKHApIGJ5IE5ldW1haWVyIHN1bW1hdGlvbiAocFtpXSA+PSAwIGhlcmUpICovCisgICAgc3VtID0gY29tcCA9IDA7CisgICAgZm9yIChpID0gMDsgaSA8IG47IGkrKykgeworCWRvdWJsZSB0ID0gc3VtICsgcFtpXTsKKwljb21wICs9IChzdW0gPj0gcFtpXSkgPyAoc3VtIC0gdCkgKyBwW2ldIDogKHBbaV0gLSB0KSArIHN1bTsKKwlzdW0gPSB0OworICAgIH0KKyAgICBkcmlmdCA9ICgxIC0gc3VtKSAtIGNvbXA7CisKICAgICAvKiBDb21wdXRlIHRoZSBzYW1wbGUgKi8KICAgICB0b3RhbG1hc3MgPSAxOwogICAgIGZvciAoaSA9IDAsIG4xID0gbi0xOyBpIDwgbmFuczsgaSsrLCBuMS0tKSB7CisJaWYgKG4xID4gMCkgewkvKiBhIHJlYWwgY2hvaWNlIHJlbWFpbnMgKi8KKwkgICAgZG91YmxlIHJlbWFpbmluZyA9IHRvdGFsbWFzcyAtIGRyaWZ0OworCSAgICBpZiAocmVtYWluaW5nIDw9IDAgfHwgZmFicyhkcmlmdCkgPiBTQU1QTEVfRFJJRlRfVE9MICogcmVtYWluaW5nKQorCQlkcmlmdGVkID0gVFJVRTsKKwl9CiAJclQgPSB0b3RhbG1hc3MgKiB1bmlmX3JhbmQoKTsKIAltYXNzID0gMDsKIAlmb3IgKGogPSAwOyBqIDwgbjE7IGorKykgewpAQCAtNDI5LDEyICs0NTUsMjIgQEAgc3RhdGljIHZvaWQgUHJvYlNhbXBsZU5vUmVwbGFjZShpbnQgbiwgZG91YmxlICpwLCBpbnQgKnBlcm0sCiAJCWJyZWFrOwogCX0KIAlhbnNbaV0gPSBwZXJtW2pdOwotCXRvdGFsbWFzcyAtPSBwW2pdOworCWlmIChwW2pdID09IDApCisJICAgIGRyaWZ0ZWQgPSBUUlVFOworCXsgICAvKiB0b3RhbG1hc3MgLT0gcFtqXSwga2VlcGluZyB0aGUgcm91bmRpbmcgZXJyb3IgKDJTdW0pICovCisJICAgIGRvdWJsZSBhID0gdG90YWxtYXNzLCBiID0gLXBbal0sIHQgPSBhICsgYiwgYmIgPSB0IC0gYTsKKwkgICAgZHJpZnQgLT0gKGEgLSAodCAtIGJiKSkgKyAoYiAtIGJiKTsKKwkgICAgdG90YWxtYXNzID0gdDsKKwl9CiAJZm9yKGsgPSBqOyBrIDwgbjE7IGsrKykgewogCSAgICBwW2tdID0gcFtrICsgMV07CiAJICAgIHBlcm1ba10gPSBwZXJtW2sgKyAxXTsKIAl9CiAgICAgfQorCisgICAgaWYgKGRyaWZ0ZWQpCisJd2FybmluZyhfKCJ3ZWlnaHRzIHNwYW4gdG9vIG1hbnkgb3JkZXJzIG9mIG1hZ25pdHVkZTogdGhlIGxlYXN0ICIKKwkJICAibGlrZWx5IGl0ZW1zIHdlcmUgc2FtcGxlZCB3aXRoIGluYWNjdXJhdGUgcHJvYmFiaWxpdGllcyIpKTsKIH0KIAogc3RhdGljIHZvaWQgRml4dXBQcm9iKGRvdWJsZSAqcCwgaW50IG4sIGludCByZXF1aXJlX2ssIGJvb2wgcmVwbGFjZSkKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDgyNykKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NDM0LDYgKzQ0MzQsMjMgQEAgc3RvcGlmbm90KGlkZW50aWNhbChzdXBwcmVzc1dhcm5pbmdzKHN0cjJsYW5nKCI0Mjk0OTY3Mjk2TCIpKSwgNDI5NDk2NzI5NiksCiAjIyBjb252ZXJ0ZWQgb3V0LW9mLXJhbmdlIGRvdWJsZXMgdG8gaW50ICh1bmRlZmluZWQgYmVoYXZpb3VyKSBpbiBSIDw9IDQuNi4yCiAKIAorIyMgc2FtcGxlKCkgd2l0aG91dCByZXBsYWNlbWVudCwgd2VpZ2h0cyBzcGFubmluZyBtYW55IG9yZGVycyBvZiBtYWduaXR1ZGUKK3NldC5zZWVkKDEpCithc3NlcnRXYXJuVihzYW1wbGUuaW50KDVMLCA0TCwgcHJvYiA9IGMoMSwgMSwgMSwgMWUtMjAsIDApKSkKK2Fzc2VydFdhcm5WKHNhbXBsZS5pbnQoNUwsIDRMLCBwcm9iID0gYygxLCAxLCAxLCAxZS0xNiwgMWUtMTYpKSkKK2Fzc2VydFdhcm5WKHNhbXBsZS5pbnQoNUwsIDRMLCBwcm9iID0gZXhwKGMoMCwgLTEsIC0yLCAtNDAsIC1JbmYpKSkpCitub1dhcm4gPC0gZnVuY3Rpb24oZXhwcikKKyAgICB3aXRoQ2FsbGluZ0hhbmRsZXJzKGV4cHIsIHdhcm5pbmcgPSBmdW5jdGlvbih3KQorICAgICAgICBzdG9wKCJ1bmV4cGVjdGVkIHdhcm5pbmc6ICIsIGNvbmRpdGlvbk1lc3NhZ2UodykpKQorc2V0LnNlZWQoMikKK2ZvciAoaSBpbiAxOjIwKSBub1dhcm4oc2FtcGxlLmludCgxMDAwTCwgMTAwMEwsIHByb2IgPSBydW5pZigxMDAwKSkpCitub1dhcm4oc2FtcGxlLmludCgxMDAwTCwgMTAwTCwgcHJvYiA9IGV4cCgtNjAgKiBydW5pZigxMDAwKSkpKQorbm9XYXJuKHNhbXBsZS5pbnQoNUwsIDJMLCBwcm9iID0gYygxLCAxLCAxLCAxZS0yMCwgMCkpKQorIyMgbm8gd2FybmluZyB3aGVuIHRoZSBydW5uaW5nIHRvdGFsIG9mIHRoZSByZW1haW5pbmcgbWFzcyBkcmlmdGVkIHBhc3QgdGhlCisjIyBtYXNzIGxlZnQsIHNvIHRoYXQgdGhlIGxlYXN0IGxpa2VseSBpdGVtcyAoZXZlbiBhIHplcm8gd2VpZ2h0LCBhcyBpbiB0aGUKKyMjIGZpcnN0IGNhc2UpIHdlcmUgZHJhd24gd2l0aCB0aGUgd3JvbmcgcHJvYmFiaWxpdGllcywgaW4gUiA8PSA0LjYuMgorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-11-02T18:22:26Z",
+          "size": 4056,
+          "is_private": false,
+          "id": 3995,
+          "creation_time": "2026-11-02T18:22:26Z",
+          "summary": "alternative: track the drift exactly and warn, draws unchanged (r-svn PR 450)",
+          "file_name": "sample-noreplace-drift-warning.diff",
+          "bug_id": 19277
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-02 18:22:26"
+}

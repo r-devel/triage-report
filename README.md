@@ -49,6 +49,10 @@ _None._
 
 These are the most important or urgent regular patches from the Triage Team and should be prioritised before others below.
 
+#### Low-level
+
+* [Bug 19276](https://bugs.r-project.org/show_bug.cgi?id=19276) — .Random.seed with a negative Mersenne-Twister position, length 0, or an unloaded user normal kind crashes R (2026-11-02)
+
 #### S4methods
 
 * [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
@@ -61,6 +65,10 @@ These are the most important or urgent regular patches from the Triage Team and 
 ### P3
 
 These Triage Team patches should be looked at next.
+
+#### Accuracy
+
+* [Bug 19277](https://bugs.r-project.org/show_bug.cgi?id=19277) — sample() without replacement draws zero-weight and least likely items with wrong probabilities (2026-11-02)
 
 #### Low-level
 
