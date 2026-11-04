@@ -4,6 +4,8 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19257,Pick S4 methods' internal environments' parents intentionally to avoid very large storage/startup costs,S4methods,michaelchirico4,NEW,2026-10-27 08:04:54 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19257
 19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19198
 19277,sample() without replacement draws zero-weight and least likely items with wrong probabilities,Accuracy,kevinushey,NEW,2026-11-02 18:22:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19277
+19279,contour() and contourLines() mishandle all-negative z (zmax initialized to DBL_MIN),Graphics,kevinushey,NEW,2026-11-03 18:48:38 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19279
+19278,deparse() omits parentheses around a negative constant as the base of ^,Language,kevinushey,NEW,2026-11-03 17:41:11 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19278
 19051,casts from double to R_xlen_t can trigger undefined behaviour,Low-level,kevinushey,NEW,2026-04-14 21:41:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19051
 19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19119
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19158
@@ -11,7 +13,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19244
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19143
 19103,choose.dir() returns NA without showing a dialog in Rterm/Rscript,Windows GUI / Window specific,kevinushey,NEW,2026-10-30 00:58:58 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19103
-19275,rWishart() leaks its work matrices when it signals an error,Analyses,kevinushey,NEW,2026-11-02 03:45:58 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19275
 19129,Rf_EncodeString sometimes over-counts double quotes,I/O,ikrylov,NEW,2026-08-07 15:16:40 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19129
 18353,assigning to hashtab via $<- 'corrupts' table,Low-level,kevinushey,UNCONFIRMED,2025-09-12 13:39:57 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18353
 19025,Provide tool for manipulating order of objects on search path,Low-level,kevinushey,NEW,2026-03-23 21:04:42 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19025

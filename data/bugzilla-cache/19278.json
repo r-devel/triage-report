@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "creation_time": "2026-11-03T17:41:03Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P3",
+        "cc": [],
+        "qa_contact": "",
+        "id": 19278,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "assigned_to": "R-core",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "component": "Language",
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "deparse() omits parentheses around a negative constant as the base of ^",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-03T17:41:12Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "resolution": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "status": "NEW"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19278": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 104072,
+            "time": "2026-11-03T17:41:03Z",
+            "is_private": false,
+            "creation_time": "2026-11-03T17:41:03Z",
+            "creator": "kevinushey",
+            "bug_id": 19278,
+            "text": "deparse() does not parenthesize a negative numeric constant when it is the left operand of ^ (likewise [, [[ and $), so the deparsed text re-parses as a different expression. Any computed call with a negative constant in that position is affected, e.g. bquote(.(x)^2) with x <- -2, substitute(x^2, list(x = -2)), or call(\"^\", -2, 2): all deparse as \"-2^2\", which parses as -(2^2). Integer and infinite constants (-2L, -Inf) behave the same.\n\nReproducible example: attached as deparse-negative-base-repro.R; eval(e) gives 4 but the re-parsed deparse(e) gives -4, expected 4 (i.e. \"(-2)^2\").\n\nAnalysis:\n\nneedsparens() in src/main/deparse.c has parenthesized complex scalars (which deparse as the binary expression 0-1i) since the 2002 deparse rewrite, but never negative real or integer scalars, which deparse with a unary minus and so bind like one. Seen on R-devel r90833; the code is unchanged in all released versions.\n\nProposed patch: attached as deparse-negative-base.diff. It adds the missing branch, mirroring the existing rule for unary operators: parentheses are added only on the left of a tighter-binding operator, so \"2^-2\", \"-1 * 2\", \"-1:2\" and \"--1\" are unchanged. A regression test is included; make test-Reg passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/452, where CI results can be seen.",
+            "count": 0,
+            "is_markdown": false
+          },
+          {
+            "time": "2026-11-03T17:41:11Z",
+            "attachment_id": 3997,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "id": 104073,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19278,
+            "text": "Created attachment 3997\npatch: parenthesize negative constants in needsparens()",
+            "count": 1,
+            "creation_time": "2026-11-03T17:41:11Z"
+          },
+          {
+            "is_markdown": false,
+            "count": 2,
+            "bug_id": 19278,
+            "text": "Created attachment 3998\nreproducer",
+            "creation_time": "2026-11-03T17:41:12Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 104074,
+            "time": "2026-11-03T17:41:12Z",
+            "attachment_id": 3998,
+            "tags": []
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19278": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL2RlcGFyc2UuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9kZXBhcnNlLmMJKHJldmlzaW9uIDkwODMzKQorKysgc3JjL21haW4vZGVwYXJzZS5jCSh3b3JraW5nIGNvcHkpCkBAIC02NTYsNiArNjU2LDE1IEBAIHN0YXRpYyBib29sIG5lZWRzcGFyZW5zKFBQaW5mbyBtYWlub3AsIFNFWFAgYXJnLCB1bnNpZ25lZCBpbnQgbGVmdCwKIAkgICAgcmV0dXJuIHRydWU7CiAJfQogICAgIH0KKyAgICBlbHNlIGlmIChBVFRSSUIoYXJnKSA9PSBSX05pbFZhbHVlICYmIGxlbmd0aChhcmcpID09IDEgJiYKKwkgICAgICgoVFlQRU9GKGFyZykgPT0gUkVBTFNYUCAmJiBSRUFMKGFyZylbMF0gPCAwKSB8fAorCSAgICAgIChUWVBFT0YoYXJnKSA9PSBJTlRTWFAgJiYgSU5URUdFUihhcmcpWzBdICE9IE5BX0lOVEVHRVIgJiYKKwkgICAgICAgSU5URUdFUihhcmcpWzBdIDwgMCkpKSB7CisJLyogYSBuZWdhdGl2ZSBjb25zdGFudCBkZXBhcnNlcyB3aXRoIGEgdW5hcnkgbWludXMsIHNvIGl0IGJpbmRzCisJICAgbGlrZSBvbmU6IGNhbGwoIl4iLCAtMiwgMikgbXVzdCBiZWNvbWUgKC0yKV4yLCBub3QgLTJeMiAqLworCXJldHVybiAobGVmdCAmJiBtYWlub3AucHJlY2VkZW5jZSA+IFBSRUNfU0lHTikKKwkgICAgfHwgKGRlZXBMZWZ0ICYmIGRlZXBMZWZ0ID4gUFJFQ19TSUdOKTsKKyAgICB9CiAgICAgcmV0dXJuIGZhbHNlOwogfQogCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA4MzMpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDQ3OCw2ICs0NDc4LDIxIEBAIGxvY2FsKHsKICMjIG92ZXJmbG93ZWQgYSBoZWFwIGJ1ZmZlciwgdHlwaWNhbGx5IGFib3J0aW5nLCBpbiBSIDw9IDQuNi4yCiAKIAorIyMgZGVwYXJzZSgpIG9mIGEgbmVnYXRpdmUgY29uc3RhbnQgYXMgdGhlIGxlZnQgb3BlcmFuZCBvZiBeLCBbLCBbWyBvciAkCit4IDwtIC0yCitlIDwtIGJxdW90ZSguKHgpXjIpCitzdG9waWZub3QoaWRlbnRpY2FsKGRlcGFyc2UoZSksICIoLTIpXjIiKSwKKyAgICAgICAgICBpZGVudGljYWwoZXZhbChwYXJzZSh0ZXh0ID0gZGVwYXJzZShlKSlbWzFdXSksIGV2YWwoZSkpLAorICAgICAgICAgIGlkZW50aWNhbChkZXBhcnNlKGNhbGwoIl4iLCAtMkwsIDIpKSwgIigtMkwpXjIiKSwKKyAgICAgICAgICBpZGVudGljYWwoZGVwYXJzZShjYWxsKCJbIiwgLTEsIDEpKSwgIigtMSlbMV0iKSwKKyAgICAgICAgICAjIyB1bmNoYW5nZWQ6IG5vIHBhcmVucyB3aGVyZSBub25lIGFyZSBuZWVkZWQKKyAgICAgICAgICBpZGVudGljYWwoZGVwYXJzZShjYWxsKCJeIiwgMiwgLTIpKSwgIjJeLTIiKSwKKyAgICAgICAgICBpZGVudGljYWwoZGVwYXJzZShjYWxsKCIqIiwgLTEsIDIpKSwgIi0xICogMiIpLAorICAgICAgICAgIGlkZW50aWNhbChkZXBhcnNlKGNhbGwoIi0iLCAtMSkpLCAiLS0xIiksCisgICAgICAgICAgaWRlbnRpY2FsKGRlcGFyc2UoY2FsbCgiOiIsIC0xLCAyKSksICItMToyIikpCisjIyBnYXZlICItMl4yIiwgd2hpY2ggcmUtcGFyc2VzIGFzIC0oMl4yKSwgaW4gUiA8PSA0LjYuMgorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "creator": "kevinushey",
+          "is_patch": true,
+          "bug_id": 19278,
+          "file_name": "deparse-negative-base.diff",
+          "summary": "patch: parenthesize negative constants in needsparens()",
+          "creation_time": "2026-11-03T17:41:11Z",
+          "id": 3997,
+          "is_private": false,
+          "size": 1803,
+          "last_change_time": "2026-11-03T17:41:11Z"
+        },
+        {
+          "id": 3998,
+          "is_private": false,
+          "size": 462,
+          "last_change_time": "2026-11-03T17:41:12Z",
+          "bug_id": 19278,
+          "file_name": "deparse-negative-base-repro.R",
+          "summary": "reproducer",
+          "creation_time": "2026-11-03T17:41:12Z",
+          "is_patch": false,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "IyMgZGVwYXJzZSgpIGRyb3BzIHRoZSBwYXJlbnRoZXNlcyBhcm91bmQgYSBuZWdhdGl2ZSBjb25zdGFudCB1c2VkIGFzIHRoZQojIyBsZWZ0IG9wZXJhbmQgb2YgXiAobGlrZXdpc2UgWywgW1sgYW5kICQpLCBzbyB0aGUgdGV4dCByZS1wYXJzZXMgYXMgLSgyXjIpLgp4IDwtIC0yCmUgPC0gYnF1b3RlKC4oeCleMikgICAgICAgICAgIyBzYW1lIGZvciBzdWJzdGl0dXRlKHheMiwgbGlzdCh4ID0gLTIpKSwgY2FsbCgiXiIsIC0yLCAyKQpldmFsKGUpICAgICAgICAgICAgICAgICAgICAgICMgNApkZXBhcnNlKGUpICAgICAgICAgICAgICAgICAgICMgIi0yXjIiICAgLS0gZXhwZWN0ZWQgIigtMileMiIKZXZhbChwYXJzZSh0ZXh0ID0gZGVwYXJzZShlKSlbWzFdXSkgICAjIC00CgpzdG9waWZub3QoaWRlbnRpY2FsKGV2YWwocGFyc2UodGV4dCA9IGRlcGFyc2UoZSkpW1sxXV0pLCBldmFsKGUpKSkgICMgZmFpbHMK",
+          "creator": "kevinushey"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-03 17:41:12"
+}

@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-11-03T18:48:39Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "contour() and contourLines() mishandle all-negative z (zmax initialized to DBL_MIN)",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19279,
+        "qa_contact": "",
+        "cc": [],
+        "priority": "P3",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-03T18:48:32Z",
+        "component": "Graphics",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19279": {
+        "comments": [
+          {
+            "creation_time": "2026-11-03T18:48:32Z",
+            "text": "contour() and contourLines() initialize the running maximum of z with zmax = DBL_MIN, the smallest positive double, instead of -DBL_MAX. For a surface whose values are all negative (a log-likelihood, say), zmax stays at about 2e-308, so the perturbation used to move data values off a contour level, atom = 1e-3 * (zmax - zmin), scales with |min(z)| instead of the range of z. Grid points equal to a level are then pushed well away from the drawn contour, and the same surface shifted to positive values is drawn differently. Constant negative z also gives no \"all z values are equal\" warning.\n\nReproducible example: attached as contour-zmax-init-repro.R; the contour at level -999 passes through (2.33, 1), (2, 1.33), ..., whereas the identical surface shifted by +2000 gives (3, 1), (2, 2), (1, 3), expected for both.\n\nAnalysis:\n\nThe line zmax = DBL_MIN has been in the contour code since 1998 (now in both src/main/plot3d.c for contourLines() and src/library/graphics/src/plot3d.c for contour()); zmin on the adjacent line is correctly started at DBL_MAX. Seen on R-devel r90833.\n\nProposed patch: attached as contour-zmax-init.diff. It changes the initialization to -DBL_MAX in both files and adds a regression test; make test-Reg passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/453, where CI results can be seen.",
+            "bug_id": 19279,
+            "count": 0,
+            "tags": [],
+            "id": 104075,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2026-11-03T18:48:32Z"
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 3999,
+            "time": "2026-11-03T18:48:38Z",
+            "creation_time": "2026-11-03T18:48:38Z",
+            "count": 1,
+            "text": "Created attachment 3999\npatch: initialize zmax to -DBL_MAX in contour code",
+            "bug_id": 19279,
+            "tags": [],
+            "is_private": false,
+            "id": 104076
+          },
+          {
+            "attachment_id": 4000,
+            "time": "2026-11-03T18:48:39Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "is_private": false,
+            "id": 104077,
+            "creation_time": "2026-11-03T18:48:39Z",
+            "count": 2,
+            "bug_id": 19279,
+            "text": "Created attachment 4000\nreproducer"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19279": [
+        {
+          "creation_time": "2026-11-03T18:48:38Z",
+          "summary": "patch: initialize zmax to -DBL_MAX in contour code",
+          "file_name": "contour-zmax-init.diff",
+          "bug_id": 19279,
+          "last_change_time": "2026-11-03T18:48:38Z",
+          "size": 1941,
+          "is_private": false,
+          "id": 3999,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2dyYXBoaWNzL3NyYy9wbG90M2QuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9ncmFwaGljcy9zcmMvcGxvdDNkLmMJKHJldmlzaW9uIDkwODMzKQorKysgc3JjL2xpYnJhcnkvZ3JhcGhpY3Mvc3JjL3Bsb3QzZC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xOTU3LDcgKzE5NTcsNyBAQCBTRVhQIENfY29udG91cihTRVhQIGFyZ3MpCiAJCSAgaSsxLCBSRUFMKGMpW2ldKTsKIAogICAgIHptaW4gPSBEQkxfTUFYOwotICAgIHptYXggPSBEQkxfTUlOOworICAgIHptYXggPSAtREJMX01BWDsKICAgICBmb3IgKGkgPSAwOyBpIDwgbnggKiBueTsgaSsrKQogCWlmIChSX0ZJTklURShSRUFMKHopW2ldKSkgewogCSAgICBpZiAoem1heCA8IFJFQUwoeilbaV0pIHptYXggPSAgUkVBTCh6KVtpXTsKSW5kZXg6IHNyYy9tYWluL3Bsb3QzZC5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3Bsb3QzZC5jCShyZXZpc2lvbiA5MDgzMykKKysrIHNyYy9tYWluL3Bsb3QzZC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xODYsNyArMTg2LDcgQEAgU0VYUCBHRWNvbnRvdXJMaW5lcyhkb3VibGUgKngsIGludCBueCwgZG91YmxlICp5LCBpbnQgbnksCiAgICAgICogInRpZS1icmVha2VyIiB2YWx1ZXMKICAgICAgKi8KICAgICB6bWluID0gREJMX01BWDsKLSAgICB6bWF4ID0gREJMX01JTjsKKyAgICB6bWF4ID0gLURCTF9NQVg7CiAgICAgZm9yIChpID0gMDsgaSA8IG54ICogbnk7IGkrKykKIAlpZiAoUl9GSU5JVEUoeltpXSkpIHsKIAkgICAgaWYgKHptYXggPCB6W2ldKSB6bWF4ID0gIHpbaV07CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA4MzMpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDQ3OCw2ICs0NDc4LDE4IEBAIGxvY2FsKHsKICMjIG92ZXJmbG93ZWQgYSBoZWFwIGJ1ZmZlciwgdHlwaWNhbGx5IGFib3J0aW5nLCBpbiBSIDw9IDQuNi4yCiAKIAorIyMgY29udG91ckxpbmVzKCkgYW5kIGNvbnRvdXIoKSB3aXRoIGFsbC1uZWdhdGl2ZSB6OiB6bWF4IHdhcyBpbml0aWFsaXplZCB0bworIyMgREJMX01JTiwgc28gdGhlIGxldmVsIHBlcnR1cmJhdGlvbiB1c2VkIHxtaW4oeil8IGluc3RlYWQgb2YgdGhlIHJhbmdlCit6IDwtIC0xMDAwICsgbWF0cml4KGMoMCwgMC41LCAxLCAwLjUsIDEsIDEuNSwgMSwgMS41LCAyKSwgMykKK2NsIDwtIGNvbnRvdXJMaW5lcygxOjMsIDE6MywgeiwgbGV2ZWxzID0gLTk5OSkKK2NwIDwtIGNvbnRvdXJMaW5lcygxOjMsIDE6MywgeiArIDIwMDAsIGxldmVscyA9IDEwMDEpICMgc2FtZSBzdXJmYWNlLCBzaGlmdGVkCitzdG9waWZub3QobGVuZ3RoKGNsKSA9PSAxTCwgYWxsLmVxdWFsKGNsW1sxXV1bYygieCIsICJ5IildLCBjcFtbMV1dW2MoIngiLCAieSIpXSksCisgICAgICAgICAgYWxsLmVxdWFsKGNsW1sxXV0keCwgYygzLCAyLCAyLCAxKSwgdG9sZXJhbmNlID0gMC4wMSkpCit0b29sczo6YXNzZXJ0V2FybmluZyhjb250b3VyTGluZXMobWF0cml4KC0xLCAzLCAzKSksIHZlcmJvc2UgPSBUUlVFKQorIyMgdGhlIGNvbnRvdXIgbWlzc2VkIHRoZSBncmlkIHBvaW50cyBhbmQgbm8gImFsbCB6IHZhbHVlcyBhcmUgZXF1YWwiCisjIyB3YXJuaW5nIHdhcyBnaXZlbiwgaW4gUiA8PSA0LjYuMgorCisKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAogICAgICAgdG90YWwgPSBwcm9jLnRpbWUoKSkK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": true
+        },
+        {
+          "is_patch": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgY29udG91cigpL2NvbnRvdXJMaW5lcygpIGluaXRpYWxpemUgem1heCB3aXRoIERCTF9NSU4gKHRoZSBzbWFsbGVzdAojIyBwb3NpdGl2ZSBkb3VibGUpIGluc3RlYWQgb2YgLURCTF9NQVgsIHNvIGFsbC1uZWdhdGl2ZSBzdXJmYWNlcyBtaXNiZWhhdmUuCnogPC0gLTEwMDAgKyBtYXRyaXgoYygwLCAwLjUsIDEsIDAuNSwgMSwgMS41LCAxLCAxLjUsIDIpLCAzKQphIDwtIGNvbnRvdXJMaW5lcygxOjMsIDE6MywgeiwgbGV2ZWxzID0gLTk5OSlbWzFdXQpiIDwtIGNvbnRvdXJMaW5lcygxOjMsIDE6MywgeiArIDIwMDAsIGxldmVscyA9IDEwMDEpW1sxXV0gICMgc2FtZSBzdXJmYWNlLCBzaGlmdGVkCnN0cihhW2MoIngiLCAieSIpXSkgICAjIHg6IDIuMzMgMiAxLjMzIDEsIHk6IDEgMS4zMyAyIDIuMzMgIC0tIG9ic2VydmVkCnN0cihiW2MoIngiLCAieSIpXSkgICAjIHg6IDMgMiAyIDEsICAgICAgICB5OiAxIDIgMiAzICAgICAgIC0tIGV4cGVjdGVkIGZvciBib3RoCnN0b3BpZm5vdChhbGwuZXF1YWwoYVtjKCJ4IiwgInkiKV0sIGJbYygieCIsICJ5IildKSkgICAgICAjIGZhaWxzCgpjb250b3VyTGluZXMobWF0cml4KC0xLCAzLCAzKSkgICAjIGxpc3QoKSwgbm8gImFsbCB6IHZhbHVlcyBhcmUgZXF1YWwiIHdhcm5pbmcKY29udG91ckxpbmVzKG1hdHJpeCggMSwgMywgMykpICAgIyBOVUxMLCB3aXRoIHRoZSB3YXJuaW5nCg==",
+          "is_private": false,
+          "id": 4000,
+          "last_change_time": "2026-11-03T18:48:39Z",
+          "size": 700,
+          "file_name": "contour-zmax-init-repro.R",
+          "bug_id": 19279,
+          "creation_time": "2026-11-03T18:48:39Z",
+          "summary": "reproducer"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-03 18:48:39"
+}

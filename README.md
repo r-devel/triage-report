@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-02._
+_Automatically generated from the R Bugzilla dump updated 2026-11-03._
 
 ## Triaged bugs
 
@@ -70,6 +70,14 @@ These Triage Team patches should be looked at next.
 
 * [Bug 19277](https://bugs.r-project.org/show_bug.cgi?id=19277) — sample() without replacement draws zero-weight and least likely items with wrong probabilities (2026-11-02)
 
+#### Graphics
+
+* [Bug 19279](https://bugs.r-project.org/show_bug.cgi?id=19279) — contour() and contourLines() mishandle all-negative z (zmax initialized to DBL_MIN) (2026-11-03)
+
+#### Language
+
+* [Bug 19278](https://bugs.r-project.org/show_bug.cgi?id=19278) — deparse() omits parentheses around a negative constant as the base of ^ (2026-11-03)
+
 #### Low-level
 
 * [Bug 19051](https://bugs.r-project.org/show_bug.cgi?id=19051) — casts from double to R_xlen_t can trigger undefined behaviour (2026-04-14)
@@ -89,10 +97,6 @@ These Triage Team patches should be looked at next.
 ### P4
 
 These Triage Team patches can wait their turn.
-
-#### Analyses
-
-* [Bug 19275](https://bugs.r-project.org/show_bug.cgi?id=19275) — rWishart() leaks its work matrices when it signals an error (2026-11-02)
 
 #### I/O
 
