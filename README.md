@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-03._
+_Automatically generated from the R Bugzilla dump updated 2026-11-04._
 
 ## Triaged bugs
 
@@ -76,7 +76,7 @@ These Triage Team patches should be looked at next.
 
 #### Language
 
-* [Bug 19278](https://bugs.r-project.org/show_bug.cgi?id=19278) — deparse() omits parentheses around a negative constant as the base of ^ (2026-11-03)
+* [Bug 19278](https://bugs.r-project.org/show_bug.cgi?id=19278) — deparse() omits parentheses around a negative constant as the base of ^ (2026-11-04)
 
 #### Low-level
 
