@@ -1,49 +1,30 @@
 {
   "bug": {
+    "faults": [],
     "bugs": [
       {
-        "qa_contact": "",
-        "cc": [
-          "jaganmn2",
-          "lawremi"
-        ],
-        "id": 17872,
-        "deadline": {},
-        "dupe_of": {},
-        "severity": "normal",
-        "creation_time": "2020-07-31T10:41:04Z",
-        "version": "R 4.0.x",
-        "whiteboard": "",
-        "product": "R",
-        "priority": "P5",
-        "classification": "Unclassified",
-        "is_open": true,
-        "keywords": [],
-        "depends_on": [],
-        "component": "S4methods",
-        "assigned_to": "R-core",
-        "last_change_time": "2026-11-06T09:38:33Z",
         "cc_detail": [
           {
-            "id": 3462,
+            "real_name": "Mikael Jagan",
             "name": "jaganmn2",
-            "real_name": "Mikael Jagan"
+            "id": 3462
           },
           {
-            "real_name": "Michael Lawrence",
+            "id": 1249,
             "name": "lawremi",
-            "id": 1249
+            "real_name": "Michael Lawrence"
           }
         ],
+        "last_change_time": "2026-11-06T09:38:33Z",
         "target_milestone": "---",
         "see_also": [],
+        "is_cc_accessible": true,
+        "groups": [],
         "assigned_to_detail": {
-          "name": "R-core",
           "id": 16,
+          "name": "R-core",
           "real_name": "R-core"
         },
-        "groups": [],
-        "is_cc_accessible": true,
         "summary": "methods() works, showMethods() fails for S4 methods loaded but not attached",
         "url": "",
         "blocks": [],
@@ -55,15 +36,34 @@
         },
         "status": "CONFIRMED",
         "is_creator_accessible": true,
-        "creator": "maechler",
         "alias": [],
-        "platform": "All",
+        "creator": "maechler",
         "flags": [],
+        "platform": "All",
         "op_sys": "All",
-        "is_confirmed": true
+        "is_confirmed": true,
+        "qa_contact": "",
+        "cc": [
+          "jaganmn2",
+          "lawremi"
+        ],
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 17872,
+        "version": "R 4.0.x",
+        "creation_time": "2020-07-31T10:41:04Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "S4methods",
+        "assigned_to": "R-core"
       }
-    ],
-    "faults": []
+    ]
   },
   "comments": {
     "comments": {},
@@ -71,94 +71,94 @@
       "17872": {
         "comments": [
           {
+            "time": "2020-07-31T10:41:04Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "maechler",
             "id": 96187,
             "is_private": false,
             "tags": [],
             "bug_id": 17872,
             "text": "A repr.ex. is easiest with the `Matrix` package. (as that is present everywhere):\n\n```r\n> str(Matrix::rankMatrix)\nfunction (x, tol = NULL, method = c(\"tolNorm2\", \"qr.R\", \"qrLINPACK\", \"qr\", \n    \"useGrad\", \"maybeGrad\"), sval = svd(x, 0, 0)$d, warn.t = TRUE)  \n> methods(\"qr\")\n[1] qr,ANY-method          qr,dgCMatrix-method    qr,sparseMatrix-method\n[4] qr.default             qr.lm*                \nsee '?methods' for accessing help and source code\n> showMethods(\"qr\")\n\nFunction \"qr\":\n <not an S4 generic function>\n> showMethods(qr)\n\nFunction \"qr\":\n <not an S4 generic function>\n> .S4methods(\"qr\")\n[1] qr,sparseMatrix-method qr,dgCMatrix-method    qr,ANY-method         \nsee '?methods' for accessing help and source code\n> \n> showMethods(Matrix::qr)  ## this does work (but is \"not obvious\")\nFunction: qr (package base)\nx=\"ANY\"\nx=\"dgCMatrix\"\nx=\"matrix\"\n    (inherited from: x=\"ANY\")\nx=\"sparseMatrix\"\n\n> \n```\n\nAlso note that `?methods` (the help page) talks about finding methods in packages in the search path, but not about finding methods in non-attached namespaces.\n\nRelatedly,  `selectMethod()`  in this situation finds the S4 methods well,\nbut it seems,  they are  *not*  selected in reality.\n\nLast but not least: Maybe this *is* special because 'qr' is from base and hence cannot be imported into Matrix before it is augmented with S4 methods there and then these are (re)exported via   `exportMethods(\"qr\")`",
             "count": 0,
-            "creation_time": "2020-07-31T10:41:04Z",
-            "time": "2020-07-31T10:41:04Z",
-            "attachment_id": {},
-            "is_markdown": true,
-            "creator": "maechler"
+            "creation_time": "2020-07-31T10:41:04Z"
           },
           {
-            "time": "2020-07-31T11:07:03Z",
-            "attachment_id": 2667,
-            "is_markdown": true,
-            "creator": "maechler",
-            "is_private": false,
-            "id": 96188,
             "tags": [],
-            "count": 1,
+            "id": 96188,
+            "is_private": false,
+            "creation_time": "2020-07-31T11:07:03Z",
             "bug_id": 17872,
             "text": "Created attachment 2667\nreproducible ex. script ('short_showMethods...')\n\n.. and now \"of course\", I forgot to `[Preview]` .. .. producing a bit of a mess.\n\nI attach a repr.ex. R script (with some of the results in comments).",
-            "creation_time": "2020-07-31T11:07:03Z"
+            "count": 1,
+            "attachment_id": 2667,
+            "time": "2020-07-31T11:07:03Z",
+            "creator": "maechler",
+            "is_markdown": true
           },
           {
-            "is_private": false,
-            "id": 96192,
             "time": "2020-07-31T16:08:21Z",
-            "tags": [],
             "attachment_id": {},
             "is_markdown": true,
+            "creator": "lawremi",
+            "is_private": false,
+            "id": 96192,
+            "tags": [],
             "count": 2,
             "bug_id": 17872,
             "text": "Are you working on this already? If not, I can take it on.",
-            "creation_time": "2020-07-31T16:08:21Z",
-            "creator": "lawremi"
+            "creation_time": "2020-07-31T16:08:21Z"
           },
           {
-            "is_private": false,
             "id": 96194,
-            "time": "2020-07-31T16:38:34Z",
+            "is_private": false,
             "tags": [],
-            "attachment_id": {},
-            "is_markdown": true,
-            "count": 3,
             "bug_id": 17872,
             "text": "(In reply to Michael Lawrence from comment #2)\n> Are you working on this already? If not, I can take it on.\n\nam happy if you go ahead -- giving some food for thought :\n\nI was not even sure which way the inconsistency should be reconciled.\n\nAt first, I thought that `showMethods(qr,.)`  \"must work\",\nbut then, as qr is really base::qr, the S3 generic in search() ...\n\nIdeally, when loading Matrix with its S4 generic qr ... that would become \"visible\",  but how exactly?\n\nLess ideally, but possibly easier would be the .S4methods() not seeing things in a non-attached namespace ..\nbut their must have been a reason .S4methods() works as it does now...",
+            "count": 3,
             "creation_time": "2020-07-31T16:38:34Z",
+            "time": "2020-07-31T16:38:34Z",
+            "attachment_id": {},
+            "is_markdown": true,
             "creator": "maechler"
           },
           {
-            "is_private": false,
-            "id": 104098,
-            "tags": [],
-            "count": 4,
-            "text": "Package **methods** is not consistent about where it looks for generic function definitions, by its own admission, e.g., `help(\"getMethod\")` says:\n\n> In contrast, `findMethod` has a different default and the optional `where=` argument may be needed.\n\nCalled without `where=`, `findMethod` and `showMethods` use `getGeneric(f, where = where)`.  The default expression for `where` evaluates to `.GlobalEnv`, so only attached package environments are searched.\n\nCalled without `where=`, `getMethod` and `selectMethod` use `getGeneric(f)`, so the cache `methods:::.genericTable` is searched first.  `.S4methods` (called from `methods`) also uses `getGeneric(f)`.\n\nIt would be nice to make consistent the default behaviours of these functions admitting a formal argument `where`.  If we do that, then my preference would be to give more information rather than less, hence to in more places consult the cache when `where` is missing from the call.",
-            "bug_id": 17872,
-            "creation_time": "2026-11-06T01:12:05Z",
-            "time": "2026-11-06T01:12:05Z",
             "attachment_id": {},
+            "tags": [],
+            "id": 104098,
+            "time": "2026-11-06T01:12:05Z",
+            "is_private": false,
+            "creation_time": "2026-11-06T01:12:05Z",
+            "creator": "jaganmn2",
+            "bug_id": 17872,
+            "text": "Package **methods** is not consistent about where it looks for generic function definitions, by its own admission, e.g., `help(\"getMethod\")` says:\n\n> In contrast, `findMethod` has a different default and the optional `where=` argument may be needed.\n\nCalled without `where=`, `findMethod` and `showMethods` use `getGeneric(f, where = where)`.  The default expression for `where` evaluates to `.GlobalEnv`, so only attached package environments are searched.\n\nCalled without `where=`, `getMethod` and `selectMethod` use `getGeneric(f)`, so the cache `methods:::.genericTable` is searched first.  `.S4methods` (called from `methods`) also uses `getGeneric(f)`.\n\nIt would be nice to make consistent the default behaviours of these functions admitting a formal argument `where`.  If we do that, then my preference would be to give more information rather than less, hence to in more places consult the cache when `where` is missing from the call.",
             "is_markdown": true,
-            "creator": "jaganmn2"
+            "count": 4
           },
           {
-            "creation_time": "2026-11-06T08:48:43Z",
+            "is_markdown": true,
             "count": 5,
             "text": "(In reply to Mikael Jagan from comment #4)\n> Package **methods** is not consistent about where it looks for generic\n> function definitions, by its own admission, ..................................................\n> It would be nice to make consistent the default behaviours of these\n> functions admitting a formal argument `where`.  If we do that, then my\n> preference would be to give more information rather than less, hence to in\n> more places consult the cache when `where` is missing from the call.\n\nThank you, Mikael.  I entirely agree on both\n  1. make consistent\n  2. (by default) give *more* information",
             "bug_id": 17872,
-            "tags": [],
-            "is_private": false,
-            "id": 104101,
             "creator": "maechler",
-            "is_markdown": true,
-            "attachment_id": {},
-            "time": "2026-11-06T08:48:43Z"
+            "creation_time": "2026-11-06T08:48:43Z",
+            "is_private": false,
+            "time": "2026-11-06T08:48:43Z",
+            "id": 104101,
+            "tags": [],
+            "attachment_id": {}
           },
           {
             "creation_time": "2026-11-06T09:38:33Z",
-            "text": "(In reply to Martin Maechler from comment #5)\n> (In reply to Mikael Jagan from comment #4)\n\n.. Ah, now of course, it is more complicated and I think we need a more sophisticated solution (than what the above comment #4 (and #5) implied) :\n\nI maintain we must consider (for the default behaviour) which *was* on my mind when reporting this as a bug:\n\nBoth `methods()` and `showMethods()` should show the methods that *are* used, i.e., dispatched to when the user calls `<generic>(<some class>, ..)`.\nComing back to my Matrix package example, this would currently *not* dispatch\nto the sparseMatrix-methods when Matrix is only loaded but not in the `search()` path... *unless* one uses  `Matrix::<generic>(<some class>, ..)`,\nsee the very end of my repro.R script (attachment 2667 from July 2020):\n```\n        qr(tsM) # -> dense and base::qr()\nMatrix::qr(tsM) # -> sparseQR\n```\n\nI still agree and think we should make  `methods()` and `showMethods()` more compatible, and maybe by a version of the following idea:\n\nFor a long time now {almost since the time Luke introduced namespaces to R!},\n`methods()` distinguishes in its returned object and the `print()` method of that between  hidden and visible methods, using the `*`\nwhere the `*` is currently only used for namespace-only S3 methods.\nI think we should\n\n1. also use it (the `*`; or possibly other ascii markup) for hidden S4 methods {in `methods(qr)`}\n2. also use it (some markup to distinguish hidden vs visible S4 methods) for `showMethods()`.\n\nUnfortunately, `showMethods()` is currently a bit like a `print()` method but *without* the imporant print()-contract to return its input object invisibly.\nI think we should really consider writing a `show()` {i.e., indirectly `print()`} method for `findMethods()` where that would need to be updated to return all methods from attached namespaces *and* distinguish which are currently dispatched from a call to `<generic>(...)`, in our example to methods seen from `qr()` {which is `base::qr`} and those seen from the `getGeneric(\"qr\")`. Note the following -- nicely revealing and overlooked by me for the current problem:\n```\n> getGeneric(\"qr\")\nstandardGeneric for \"qr\" defined from package \"base\"\n\nfunction (x, ...) \nstandardGeneric(\"qr\")\n<environment: 0x47478a88>\nMethods may be defined for arguments: x\nUse  showMethods(Matrix::qr)  for currently available ones.\n\n> base::qr\nfunction (x, ...) \nUseMethod(\"qr\")\n<bytecode: 0x3f8fb098>\n<environment: namespace:base>\n> \n```\nWhich is revealing on one hand but also \"lying\" to the useR  to some extent by starting to say\n```\nstandardGeneric for \"qr\" defined from package \"base\"\n```\n(as when the user *does* look at `base::qr` that is *not* a standardGeneric ...).\n\nAll in all, I conclude the solution to this PR needs even more work,  but I definitely think I'd want this work be done\n.. not at all necessarily by me or mostly me, though.",
-            "bug_id": 17872,
-            "count": 6,
-            "tags": [],
-            "id": 104102,
-            "is_private": false,
             "creator": "maechler",
+            "count": 6,
             "is_markdown": true,
+            "bug_id": 17872,
+            "text": "(In reply to Martin Maechler from comment #5)\n> (In reply to Mikael Jagan from comment #4)\n\n.. Ah, now of course, it is more complicated and I think we need a more sophisticated solution (than what the above comment #4 (and #5) implied) :\n\nI maintain we must consider (for the default behaviour) which *was* on my mind when reporting this as a bug:\n\nBoth `methods()` and `showMethods()` should show the methods that *are* used, i.e., dispatched to when the user calls `<generic>(<some class>, ..)`.\nComing back to my Matrix package example, this would currently *not* dispatch\nto the sparseMatrix-methods when Matrix is only loaded but not in the `search()` path... *unless* one uses  `Matrix::<generic>(<some class>, ..)`,\nsee the very end of my repro.R script (attachment 2667 from July 2020):\n```\n        qr(tsM) # -> dense and base::qr()\nMatrix::qr(tsM) # -> sparseQR\n```\n\nI still agree and think we should make  `methods()` and `showMethods()` more compatible, and maybe by a version of the following idea:\n\nFor a long time now {almost since the time Luke introduced namespaces to R!},\n`methods()` distinguishes in its returned object and the `print()` method of that between  hidden and visible methods, using the `*`\nwhere the `*` is currently only used for namespace-only S3 methods.\nI think we should\n\n1. also use it (the `*`; or possibly other ascii markup) for hidden S4 methods {in `methods(qr)`}\n2. also use it (some markup to distinguish hidden vs visible S4 methods) for `showMethods()`.\n\nUnfortunately, `showMethods()` is currently a bit like a `print()` method but *without* the imporant print()-contract to return its input object invisibly.\nI think we should really consider writing a `show()` {i.e., indirectly `print()`} method for `findMethods()` where that would need to be updated to return all methods from attached namespaces *and* distinguish which are currently dispatched from a call to `<generic>(...)`, in our example to methods seen from `qr()` {which is `base::qr`} and those seen from the `getGeneric(\"qr\")`. Note the following -- nicely revealing and overlooked by me for the current problem:\n```\n> getGeneric(\"qr\")\nstandardGeneric for \"qr\" defined from package \"base\"\n\nfunction (x, ...) \nstandardGeneric(\"qr\")\n<environment: 0x47478a88>\nMethods may be defined for arguments: x\nUse  showMethods(Matrix::qr)  for currently available ones.\n\n> base::qr\nfunction (x, ...) \nUseMethod(\"qr\")\n<bytecode: 0x3f8fb098>\n<environment: namespace:base>\n> \n```\nWhich is revealing on one hand but also \"lying\" to the useR  to some extent by starting to say\n```\nstandardGeneric for \"qr\" defined from package \"base\"\n```\n(as when the user *does* look at `base::qr` that is *not* a standardGeneric ...).\n\nAll in all, I conclude the solution to this PR needs even more work,  but I definitely think I'd want this work be done\n.. not at all necessarily by me or mostly me, though.",
+            "tags": [],
             "attachment_id": {},
+            "is_private": false,
+            "id": 104102,
             "time": "2026-11-06T09:38:33Z"
           }
         ]
@@ -169,24 +169,24 @@
     "bugs": {
       "17872": [
         {
-          "bug_id": 17872,
-          "file_name": "short_showMethods_PR-17872.R",
-          "summary": "reproducible ex. script ('short_showMethods...')",
-          "creation_time": "2020-07-31T11:07:03Z",
-          "id": 2667,
           "is_private": false,
-          "size": 1636,
+          "id": 2667,
           "last_change_time": "2020-07-31T11:07:03Z",
-          "is_obsolete": false,
-          "content_type": "text/plain",
+          "size": 1636,
+          "file_name": "short_showMethods_PR-17872.R",
+          "bug_id": 17872,
+          "creation_time": "2020-07-31T11:07:03Z",
+          "summary": "reproducible ex. script ('short_showMethods...')",
+          "is_patch": false,
           "flags": [],
-          "data": "CiMjIEEgcmVwci5leC4gaXMgZWFzaWVzdCB3aXRoIHRoZSBgTWF0cml4YCBwYWNrYWdlLiAoYXMgdGhhdCBpcyBwcmVzZW50CiMjIGV2ZXJ5d2hlcmUpOgoKc3RyKE1hdHJpeDo6cmFua01hdHJpeCkKbWV0aG9kcygicXIiKQojIyBbMV0gcXIsQU5ZLW1ldGhvZCAgICAgICAgICBxcixkZ0NNYXRyaXgtbWV0aG9kICAgIHFyLHNwYXJzZU1hdHJpeC1tZXRob2QKIyMgWzRdIHFyLmRlZmF1bHQgICAgICAgICAgICAgcXIubG0qCiMjIHNlZSAnP21ldGhvZHMnIGZvciBhY2Nlc3NpbmcgaGVscCBhbmQgc291cmNlIGNvZGUKCnNob3dNZXRob2RzKCJxciIpCiMjIEZ1bmN0aW9uICJxciI6CiMjICA8bm90IGFuIFM0IGdlbmVyaWMgZnVuY3Rpb24+CnNob3dNZXRob2RzKHFyKSAjIGRpdHRvCgouUzRtZXRob2RzKCJxciIpCiMjIHFyLHNwYXJzZU1hdHJpeC1tZXRob2QgICBxcixkZ0NNYXRyaXgtbWV0aG9kICAgIHFyLEFOWS1tZXRob2QKCnNob3dNZXRob2RzKE1hdHJpeDo6cXIpICAjIyB0aGlzIGRvZXMgd29yayAoYnV0IGlzICJub3Qgb2J2aW91cyIpCiMjIEZ1bmN0aW9uOiBxciAocGFja2FnZSBiYXNlKQojIyB4PSJBTlkiCiMjIHg9ImRnQ01hdHJpeCIKIyMgeD0ibWF0cml4IgojIyAgICAgKGluaGVyaXRlZCBmcm9tOiB4PSJBTlkiKQojIyB4PSJzcGFyc2VNYXRyaXgiCgojIy0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCiMjIFJlbGF0ZWRseSwgIGBzZWxlY3RNZXRob2QoKWAgIGluIHRoaXMgc2l0dWF0aW9uIGZpbmRzIHRoZSBTNCBtZXRob2RzIHdlbGwsCiMjIGJ1dCB0aGV5IGFyZSAgKm5vdCogIHNlbGVjdGVkIGluIHJlYWxpdHkKIyMgKCJvZiBjb3Vyc2UiOikgcXIgaXMgYmFzZTo6cXIgYW5kIHRoYXQgaXMgUzMgZ2VuZXJpYyBvbmx5LCBoZW5jZSBjYW5ub3QKIyMgZGlzcGF0Y2ggUzQgbWV0aG9kcy4uLgoKbSA8LSByYmluZCgwLDA6LTEsY2JpbmQoMCwgMCwgZGlhZyh4PTM6MCksMCwgMDozKSkKKHNNIDwtIE1hdHJpeDo6TWF0cml4KG0pKQojIyA2IHggOCBzcGFyc2UgTWF0cml4IG9mIGNsYXNzICJkZ0NNYXRyaXgiCgojIyBbMSxdIC4gIC4gLiAgLiAuICAuIC4gIC4KIyMgWzIsXSAuIC0xIC4gLTEgLiAtMSAuIC0xCiMjIFszLF0gLiAgLiAzICAuIC4gIC4gLiAgLgojIyBbNCxdIC4gIC4gLiAgMiAuICAuIC4gIDEKIyMgWzUsXSAuICAuIC4gIC4gMSAgLiAuICAyCiMjIFs2LF0gLiAgLiAuICAuIC4gIC4gLiAgMwoKdHJhY2UoTWF0cml4Ojpxciwgc2lnbmF0dXJlID0gImRnQ01hdHJpeCIpCgojIyBxcihzTSkgc3RpbGwgY2FsbHMgdGhlIGJhc2UgbWV0aG9kCmlkZW50aWNhbChxcihzTSksIHFyKGFzLm1hdHJpeChzTSkpKQoKIyMgd2hlcmVhcwpNYXRyaXg6OnFyKHNNKSAjIGRvZXMgY2FsbCB0aGUgTWF0cml4IGdlbmVyaWMgLT4gYW5kIGhlbmNlIGRpc3BhdGNoZXMKIyMgYW5kIGdpdmVzIGFuIGVycm9yIGhlcmUgOgoiRXJyb3IgaW4gLmxvY2FsKHgsIC4uLikgOiBBIG11c3QgaGF2ZSAje3Jvd3N9ID49ICN7Y29sdW1uc30iCgp0c00gPC0gTWF0cml4Ojp0KHNNKQoKICAgICAgICBxcih0c00pICMgLT4gZGVuc2UgYW5kIGJhc2U6OnFyKCkKTWF0cml4Ojpxcih0c00pICMgLT4gc3BhcnNlUVIKCg==",
+          "content_type": "text/plain",
+          "is_obsolete": false,
           "creator": "maechler",
-          "is_patch": false
+          "data": "CiMjIEEgcmVwci5leC4gaXMgZWFzaWVzdCB3aXRoIHRoZSBgTWF0cml4YCBwYWNrYWdlLiAoYXMgdGhhdCBpcyBwcmVzZW50CiMjIGV2ZXJ5d2hlcmUpOgoKc3RyKE1hdHJpeDo6cmFua01hdHJpeCkKbWV0aG9kcygicXIiKQojIyBbMV0gcXIsQU5ZLW1ldGhvZCAgICAgICAgICBxcixkZ0NNYXRyaXgtbWV0aG9kICAgIHFyLHNwYXJzZU1hdHJpeC1tZXRob2QKIyMgWzRdIHFyLmRlZmF1bHQgICAgICAgICAgICAgcXIubG0qCiMjIHNlZSAnP21ldGhvZHMnIGZvciBhY2Nlc3NpbmcgaGVscCBhbmQgc291cmNlIGNvZGUKCnNob3dNZXRob2RzKCJxciIpCiMjIEZ1bmN0aW9uICJxciI6CiMjICA8bm90IGFuIFM0IGdlbmVyaWMgZnVuY3Rpb24+CnNob3dNZXRob2RzKHFyKSAjIGRpdHRvCgouUzRtZXRob2RzKCJxciIpCiMjIHFyLHNwYXJzZU1hdHJpeC1tZXRob2QgICBxcixkZ0NNYXRyaXgtbWV0aG9kICAgIHFyLEFOWS1tZXRob2QKCnNob3dNZXRob2RzKE1hdHJpeDo6cXIpICAjIyB0aGlzIGRvZXMgd29yayAoYnV0IGlzICJub3Qgb2J2aW91cyIpCiMjIEZ1bmN0aW9uOiBxciAocGFja2FnZSBiYXNlKQojIyB4PSJBTlkiCiMjIHg9ImRnQ01hdHJpeCIKIyMgeD0ibWF0cml4IgojIyAgICAgKGluaGVyaXRlZCBmcm9tOiB4PSJBTlkiKQojIyB4PSJzcGFyc2VNYXRyaXgiCgojIy0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCiMjIFJlbGF0ZWRseSwgIGBzZWxlY3RNZXRob2QoKWAgIGluIHRoaXMgc2l0dWF0aW9uIGZpbmRzIHRoZSBTNCBtZXRob2RzIHdlbGwsCiMjIGJ1dCB0aGV5IGFyZSAgKm5vdCogIHNlbGVjdGVkIGluIHJlYWxpdHkKIyMgKCJvZiBjb3Vyc2UiOikgcXIgaXMgYmFzZTo6cXIgYW5kIHRoYXQgaXMgUzMgZ2VuZXJpYyBvbmx5LCBoZW5jZSBjYW5ub3QKIyMgZGlzcGF0Y2ggUzQgbWV0aG9kcy4uLgoKbSA8LSByYmluZCgwLDA6LTEsY2JpbmQoMCwgMCwgZGlhZyh4PTM6MCksMCwgMDozKSkKKHNNIDwtIE1hdHJpeDo6TWF0cml4KG0pKQojIyA2IHggOCBzcGFyc2UgTWF0cml4IG9mIGNsYXNzICJkZ0NNYXRyaXgiCgojIyBbMSxdIC4gIC4gLiAgLiAuICAuIC4gIC4KIyMgWzIsXSAuIC0xIC4gLTEgLiAtMSAuIC0xCiMjIFszLF0gLiAgLiAzICAuIC4gIC4gLiAgLgojIyBbNCxdIC4gIC4gLiAgMiAuICAuIC4gIDEKIyMgWzUsXSAuICAuIC4gIC4gMSAgLiAuICAyCiMjIFs2LF0gLiAgLiAuICAuIC4gIC4gLiAgMwoKdHJhY2UoTWF0cml4Ojpxciwgc2lnbmF0dXJlID0gImRnQ01hdHJpeCIpCgojIyBxcihzTSkgc3RpbGwgY2FsbHMgdGhlIGJhc2UgbWV0aG9kCmlkZW50aWNhbChxcihzTSksIHFyKGFzLm1hdHJpeChzTSkpKQoKIyMgd2hlcmVhcwpNYXRyaXg6OnFyKHNNKSAjIGRvZXMgY2FsbCB0aGUgTWF0cml4IGdlbmVyaWMgLT4gYW5kIGhlbmNlIGRpc3BhdGNoZXMKIyMgYW5kIGdpdmVzIGFuIGVycm9yIGhlcmUgOgoiRXJyb3IgaW4gLmxvY2FsKHgsIC4uLikgOiBBIG11c3QgaGF2ZSAje3Jvd3N9ID49ICN7Y29sdW1uc30iCgp0c00gPC0gTWF0cml4Ojp0KHNNKQoKICAgICAgICBxcih0c00pICMgLT4gZGVuc2UgYW5kIGJhc2U6OnFyKCkKTWF0cml4Ojpxcih0c00pICMgLT4gc3BhcnNlUVIKCg=="
         }
       ]
     },
     "attachments": {}
   },
-  "source_changed": "2026-11-06 01:12:05"
+  "source_changed": "2026-11-06 09:38:33"
 }

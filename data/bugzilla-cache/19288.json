@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "I/O",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "priority": "P2",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-06T18:20:50Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 19288,
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "unserialize() reads past a string's end when a stream declares the wchar_t encoding",
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-11-06T18:21:01Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19288": {
+        "comments": [
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-11-06T18:20:50Z",
+            "attachment_id": {},
+            "count": 0,
+            "bug_id": 19288,
+            "text": "unserialize() and readRDS() read past the end of a string buffer when a version-3 stream declares the platform's wchar_t encoding (UCS-4LE/BE, or UTF-16LE on Windows) as its native encoding and holds a string that cannot be converted to UTF-8.\n\nReproducible example: attached as serialize-bound-recoding-repro.R; a normal build reads silently, while an AddressSanitizer build reports a dynamic-stack-buffer-overflow in wcslen(). This is OSS-Fuzz testcase 5161193048965120.\n\nAnalysis: ReadChar() in src/main/serialize.c hands the length-delimited string to reEnc3() to build the \"cannot be translated\" warning. reEnc3() infers from the encoding name that its input is a wide string and measures it with wcslen(), which runs past the buffer of length + 1 bytes.\n\nProposed patch: attached as serialize-bound-recoding.diff, against r90844. It adds reEnc4(), which takes the byte length explicitly, and uses it wherever the caller knows the length. It also makes unserialize() and infoRDS() reject an encoding name with an embedded nul, which is currently truncated silently, and adds a test to tests/reg-tests-1b.R. It supersedes attachment 3851 on the closed bug 19047, which was not applied.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/339, where CI results can be seen.",
+            "creation_time": "2026-11-06T18:20:50Z",
+            "is_private": false,
+            "id": 104108,
+            "tags": []
+          },
+          {
+            "text": "Created attachment 4013\nadd reEnc4() and bound recoding of length-delimited strings",
+            "bug_id": 19288,
+            "is_markdown": false,
+            "count": 1,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-06T18:21:00Z",
+            "time": "2026-11-06T18:21:00Z",
+            "id": 104109,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 4013
+          },
+          {
+            "attachment_id": 4014,
+            "time": "2026-11-06T18:21:01Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 104110,
+            "is_private": false,
+            "creation_time": "2026-11-06T18:21:01Z",
+            "text": "Created attachment 4014\nreproducer: wchar_t-encoded string and nul in encoding name",
+            "bug_id": 19288,
+            "count": 2
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19288": [
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9nbnV3aW4zMi9SZGxsLmhpZGUKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2dudXdpbjMyL1JkbGwuaGlkZQkocmV2aXNpb24gOTA4NDQpCisrKyBzcmMvZ251d2luMzIvUmRsbC5oaWRlCSh3b3JraW5nIGNvcHkpCkBAIC01NDQsNiArNTQ0LDcgQEAKICBSZl9wcm9taXNlQXJncwogIFJmX3FjaGlzcV9hcHByCiAgUmZfcmVFbmMzCisgUmZfcmVFbmM0CiAgUmZfcmVhZFMzVmFyc0Zyb21GcmFtZQogIFJmX3JlZ2NvbXAKICBSZl9yZWdlcnJvcgpJbmRleDogc3JjL2luY2x1ZGUvRGVmbi5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9pbmNsdWRlL0RlZm4uaAkocmV2aXNpb24gOTA4NDQpCisrKyBzcmMvaW5jbHVkZS9EZWZuLmgJKHdvcmtpbmcgY29weSkKQEAgLTI0NDgsNiArMjQ0OCw4IEBAIFNFWFAgUmZfaW5zdGFsbFRyQ2hhcihTRVhQKTsKIAogY29uc3Qgd2NoYXJfdCAqd3RyYW5zQ2hhcihTRVhQIHgpOyAvKiBmcm9tIHN5c3V0aWxzLmMgKi8KIGNvbnN0IGNoYXIgKlJmX3JlRW5jMyhjb25zdCBjaGFyICp4LCBjb25zdCBjaGFyICpmcm9tY29kZSwgY29uc3QgY2hhciAqdG9jb2RlLCBpbnQgc3Vic3QpOworY29uc3QgY2hhciAqUmZfcmVFbmM0KGNvbnN0IGNoYXIgKngsIHNpemVfdCBsZW5ndGgsIGNvbnN0IGNoYXIgKmZyb21jb2RlLAorCQkgICAgIGNvbnN0IGNoYXIgKnRvY29kZSwgaW50IHN1YnN0KTsKIAogI2RlZmluZSBtYnNfaW5pdCh4KSBtZW1zZXQoeCwgMCwgc2l6ZW9mKG1ic3RhdGVfdCkpCiBzaXplX3QgTWJydG93Yyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcywgc2l6ZV90IG4sIG1ic3RhdGVfdCAqcHMpOwpJbmRleDogc3JjL2luY2x1ZGUvUmludGVybmFscy5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9pbmNsdWRlL1JpbnRlcm5hbHMuaAkocmV2aXNpb24gOTA4NDQpCisrKyBzcmMvaW5jbHVkZS9SaW50ZXJuYWxzLmgJKHdvcmtpbmcgY29weSkKQEAgLTEwMTYsNiArMTAxNiw3IEBAIHZvaWQgUl9vcmRlclZlY3RvcjEoaW50ICppbmR4LCBpbnQgbiwgU0VYUCB4LCAgICAgICBSYm9vbGVhbiBuYWxhc3QsIFJib29sZWFuIGRlCiAjZGVmaW5lIHJlYWRTM1ZhcnNGcm9tRnJhbWUJUmZfcmVhZFMzVmFyc0Zyb21GcmFtZQogI2RlZmluZSByZUVuYwkJCVJmX3JlRW5jCiAjZGVmaW5lIHJlRW5jMwkJCVJmX3JlRW5jMworI2RlZmluZSByZUVuYzQJCQlSZl9yZUVuYzQKICNkZWZpbmUgUzNDbGFzcyAgICAgICAgICAgICAgICAgUmZfUzNDbGFzcwogI2RlZmluZSBTY2FsYXJDb21wbGV4CQlSZl9TY2FsYXJDb21wbGV4CiAjZGVmaW5lIFNjYWxhckludGVnZXIJCVJmX1NjYWxhckludGVnZXIKSW5kZXg6IHNyYy9tYWluL2VudmlyLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vZW52aXIuYwkocmV2aXNpb24gOTA4NDQpCisrKyBzcmMvbWFpbi9lbnZpci5jCSh3b3JraW5nIGNvcHkpCkBAIC00NzI2LDcgKzQ3MjYsNyBAQCBzdGF0aWMgdm9pZCByZXBvcnRJbnZhbGlkU3RyaW5nKFNFWFAgY3ZhbCwgaW50IGFjdGlvbldoZW5JbnZhbGlkKQogCWVsc2UgaWYgKElTX0xBVElOMShjdmFsKSkKIAkgICAgZnJvbSA9ICJDUDEyNTIiOwogCi0JbmF0aXZlX3N0ciA9IHJlRW5jMyhDSEFSKGN2YWwpLCBmcm9tLCAiIiwgMSk7CisJbmF0aXZlX3N0ciA9IHJlRW5jNChDSEFSKGN2YWwpLCBMRU5HVEgoY3ZhbCksIGZyb20sICIiLCAxKTsKIAlpZiAoYWN0aW9uV2hlbkludmFsaWQgPT0gMSkKIAkgICAgd2FybmluZygiaW52YWxpZCBzdHJpbmcgJXMiLCBuYXRpdmVfc3RyKTsKIAllbHNlIGlmIChhY3Rpb25XaGVuSW52YWxpZCA9PSAyKQpJbmRleDogc3JjL21haW4vc2VyaWFsaXplLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vc2VyaWFsaXplLmMJKHJldmlzaW9uIDkwODQ0KQorKysgc3JjL21haW4vc2VyaWFsaXplLmMJKHdvcmtpbmcgY29weSkKQEAgLTE2OTEsMTcgKzE2OTEsMTggQEAgc3RhdGljIGNoYXIgKm5hdGl2ZV9mcm9tY29kZShSX2lucHN0cmVhbV90IHN0cmVhbSkKICAgICByZXR1cm4gZnJvbTsKIH0KIAotc3RhdGljIHZvaWQgaW52YWxpZF91dGY4X3dhcm5pbmcoY29uc3QgY2hhciAqYnVmLCBjb25zdCBjaGFyICpmcm9tKQorc3RhdGljIHZvaWQgaW52YWxpZF91dGY4X3dhcm5pbmcoY29uc3QgY2hhciAqYnVmLCBpbnQgbGVuZ3RoLCBjb25zdCBjaGFyICpmcm9tKQogewogICAgIGNvbnN0IHZvaWQgKnZtYXggPSB2bWF4Z2V0KCk7CiAgICAgY29uc3QgY2hhciAqbmF0aXZlX2J1ZjsKIAogICAgIGlmICh1dGY4VmFsaWQoYnVmKSkgewotCW5hdGl2ZV9idWYgPSByZUVuYzMoYnVmLCAiVVRGLTgiLCAiIiwgMSk7CisJbmF0aXZlX2J1ZiA9IHJlRW5jNChidWYsIGxlbmd0aCwgIlVURi04IiwgIiIsIDEpOwogCXdhcm5pbmcoXygiaW5wdXQgc3RyaW5nICclcycgY2Fubm90IGJlIHRyYW5zbGF0ZWQgZnJvbSAnJXMnIHRvIFVURi04LCBidXQgaXMgdmFsaWQgVVRGLTgiKSwKIAkJbmF0aXZlX2J1ZiwgZnJvbSk7CiAgICAgfSBlbHNlIHsKLQluYXRpdmVfYnVmID0gcmVFbmMocmVFbmMzKGJ1ZiwgZnJvbSwgIlVURi04IiwgMSksIENFX1VURjgsIENFX05BVElWRSwgMik7CisJbmF0aXZlX2J1ZiA9IHJlRW5jKHJlRW5jNChidWYsIGxlbmd0aCwgZnJvbSwgIlVURi04IiwgMSksCisJCQkgICBDRV9VVEY4LCBDRV9OQVRJVkUsIDIpOwogCXdhcm5pbmcoXygiaW5wdXQgc3RyaW5nICclcycgY2Fubm90IGJlIHRyYW5zbGF0ZWQgdG8gVVRGLTgsIGlzIGl0IHZhbGlkIGluICclcyc/IiksCiAJCW5hdGl2ZV9idWYsIGZyb20pOwogICAgIH0KQEAgLTE3NTcsNyArMTc1OCw3IEBAIFJlYWRDaGFyKFJfaW5wc3RyZWFtX3Qgc3RyZWFtLCBjaGFyICpidWYsIGludCBsZW5ndGgsIGludCBsZXZzKQogCWlmIChrbm93bl90b19iZV91dGY4KSB7CiAJICAgIC8qIG5hdDJuYXRfb2JqIGlzIGNvbnZlcnRpbmcgdG8gVVRGLTgsIG5vIG5lZWQgdG8gdXNlIG5hdDJ1dGY4X29iaiAqLwogCSAgICBzdHJlYW0tPm5hdDJ1dGY4X29iaiA9ICh2b2lkICopLTE7Ci0JICAgIGludmFsaWRfdXRmOF93YXJuaW5nKGJ1ZiwgbmF0aXZlX2Zyb21jb2RlKHN0cmVhbSkpOworCSAgICBpbnZhbGlkX3V0Zjhfd2FybmluZyhidWYsIGxlbmd0aCwgbmF0aXZlX2Zyb21jb2RlKHN0cmVhbSkpOwogCX0KICAgICB9CiAgICAgLyogdHJ5IGNvbnZlcnRpbmcgdG8gVVRGLTggKi8KQEAgLTE3NzYsNyArMTc3Nyw3IEBAIFJlYWRDaGFyKFJfaW5wc3RyZWFtX3Qgc3RyZWFtLCBjaGFyICpidWYsIGludCBsZW5ndGgsIGludCBsZXZzKQogCVNFWFAgYW5zID0gQ29udmVydENoYXIoc3RyZWFtLT5uYXQydXRmOF9vYmosIGJ1ZiwgbGVuZ3RoLCBDRV9VVEY4KTsKIAlpZiAoYW5zICE9IFJfTmlsVmFsdWUpCiAJICAgIHJldHVybiBhbnM7Ci0JaW52YWxpZF91dGY4X3dhcm5pbmcoYnVmLCBuYXRpdmVfZnJvbWNvZGUoc3RyZWFtKSk7CisJaW52YWxpZF91dGY4X3dhcm5pbmcoYnVmLCBsZW5ndGgsIG5hdGl2ZV9mcm9tY29kZShzdHJlYW0pKTsKICAgICB9CiAgICAgLyogbm8gdHJhbnNsYXRpb24gcG9zc2libGUgKi8KICAgICByZXR1cm4gbWtDaGFyTGVuQ0UoYnVmLCBsZW5ndGgsIENFX05BVElWRSk7CkBAIC0yMjk4LDYgKzIyOTksOCBAQCBTRVhQIFJfVW5zZXJpYWxpemUoUl9pbnBzdHJlYW1fdCBzdHJlYW0pCiAJICAgIGVycm9yKF8oImludmFsaWQgbGVuZ3RoIG9mIGVuY29kaW5nIG5hbWUiKSk7CiAJSW5TdHJpbmcoc3RyZWFtLCBzdHJlYW0tPm5hdGl2ZV9lbmNvZGluZywgbmVsZW4pOwogCXN0cmVhbS0+bmF0aXZlX2VuY29kaW5nW25lbGVuXSA9ICdcMCc7CisJaWYgKG1lbWNocihzdHJlYW0tPm5hdGl2ZV9lbmNvZGluZywgJ1wwJywgbmVsZW4pKQorCSAgICBlcnJvcihfKCJlbWJlZGRlZCBudWwgaW4gZW5jb2RpbmcgbmFtZSIpKTsKIAlicmVhazsKICAgICB9CiAgICAgZGVmYXVsdDoKQEAgLTIzODksNiArMjM5Miw4IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBSX1NlcmlhbGl6ZUluZm8oUl9pbnBzdHJlYW1fdCBzdHJlYW0pCiAJY2hhciBuYnVmW25lbGVuICsgMV07CiAJSW5TdHJpbmcoc3RyZWFtLCBuYnVmLCBuZWxlbik7CiAJbmJ1ZltuZWxlbl0gPSAnXDAnOworCWlmIChtZW1jaHIobmJ1ZiwgJ1wwJywgbmVsZW4pKQorCSAgICBlcnJvcihfKCJlbWJlZGRlZCBudWwgaW4gZW5jb2RpbmcgbmFtZSIpKTsKIAlTRVRfVkVDVE9SX0VMVChhbnMsIDQsIG1rU3RyaW5nKG5idWYpKTsKICAgICB9CiAgICAgc2V0QXR0cmliKGFucywgUl9OYW1lc1N5bWJvbCwgbmFtZXMpOwpJbmRleDogc3JjL21haW4vc3lzdXRpbHMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9zeXN1dGlscy5jCShyZXZpc2lvbiA5MDg0NCkKKysrIHNyYy9tYWluL3N5c3V0aWxzLmMJKHdvcmtpbmcgY29weSkKQEAgLTIxNzksNyArMjE3OSw5IEBAIG5leHRfY2hhcjoKICAgICBpZih0dHlwZSA9PSBOVF9GUk9NX05BVElWRSkgUmljb252X2Nsb3NlKG9iaik7CiAgICAgaWYgKG11c3RXb3JrICYmIGZhaWxlZCkgewogCWNvbnN0IHZvaWQgKnZtYXggPSB2bWF4Z2V0KCk7Ci0JY29uc3QgY2hhciAqbmF0aXZlX2J1ZiA9IHJlRW5jMyhjYnVmZi0+ZGF0YSwgVE9fV0NIQVIsICIiLCAyKTsKKwljb25zdCBjaGFyICpuYXRpdmVfYnVmID0gcmVFbmM0KGNidWZmLT5kYXRhLAorCQkJCSAgICAgICAoc2l6ZV90KSAob3V0YnVmIC0gY2J1ZmYtPmRhdGEpLAorCQkJCSAgICAgICBUT19XQ0hBUiwgIiIsIDIpOwogCiAJLyogY29weSB0byB0cnVuY2F0ZSAoYW5kIG1hcmsgYXMgdHJ1bmNhdGVkKSAqLwogCWNoYXIgZXJyX2J1ZmZbMjU2XTsKQEAgLTIyMzcsNyArMjIzOSw3IEBAIGNvbnN0IHdjaGFyX3QgKnd0cmFuc0NoYXIyKFNFWFAgeCkKIAlyZXR1cm4gd2NvcHlBbmRGcmVlU3RyaW5nQnVmZmVyKCZjYnVmZik7CiB9CiAKLXN0YXRpYyBpbnQgcmVFbmNvZGVJY29udihjb25zdCBjaGFyICp4LCBSX1N0cmluZ0J1ZmZlciAqY2J1ZmYsCitzdGF0aWMgaW50IHJlRW5jb2RlSWNvbnYoY29uc3QgY2hhciAqeCwgc2l6ZV90IGxlbmd0aCwgUl9TdHJpbmdCdWZmZXIgKmNidWZmLAogICAgICAgICAgICAgICAgICAgICAgICAgIGNvbnN0IGNoYXIgKmZyb21jb2RlLCBjb25zdCBjaGFyICp0b2NvZGUsIGludCBzdWJzdCkKIHsKICAgICB2b2lkICogb2JqOwpAQCAtMjI1MSwxMCArMjI1Myw3IEBAIHN0YXRpYyBpbnQgcmVFbmNvZGVJY29udihjb25zdCBjaGFyICp4LCBSX1N0cmluZ0J1ZmZlciAqY2J1ZmYsCiAgICAgUl9BbGxvY1N0cmluZ0J1ZmZlcigwLCBjYnVmZik7CiB0b3Bfb2ZfbG9vcDoKICAgICBpbmJ1ZiA9IHg7Ci0gICAgaWYgKGZyb21XY2hhcikKLQlpbmIgPSB3Y3NsZW4oKHdjaGFyX3QgKilpbmJ1ZikgKiBzaXplb2Yod2NoYXJfdCk7Ci0gICAgZWxzZQotCWluYiA9IHN0cmxlbihpbmJ1Zik7CisgICAgaW5iID0gbGVuZ3RoOwogICAgIG91dGJ1ZiA9IGNidWZmLT5kYXRhOyBvdXRiID0gY2J1ZmYtPmJ1ZnNpemUgLSAzOwogICAgIC8qIEZpcnN0IGluaXRpYWxpemUgb3V0cHV0ICovCiAgICAgUmljb252IChvYmosIE5VTEwsIE5VTEwsICZvdXRidWYsICZvdXRiKTsKQEAgLTIzNjIsNyArMjM2MSw3IEBAIHN0YXRpYyBpbnQgcmVFbmNvZGUoY29uc3QgY2hhciAqeCwgUl9TdHJpbmdCdWZmZXIgKmNidWZmLAogICAgIGRlZmF1bHQ6IHJldHVybiAxOwogICAgIH0KIAotICAgIHJldHVybiByZUVuY29kZUljb252KHgsIGNidWZmLCBmcm9tY29kZSwgdG9jb2RlLCBzdWJzdCk7CisgICAgcmV0dXJuIHJlRW5jb2RlSWNvbnYoeCwgc3RybGVuKHgpLCBjYnVmZiwgZnJvbWNvZGUsIHRvY29kZSwgc3Vic3QpOwogfQogCiAvKiBUaGlzIG1heSByZXR1cm4gYSBSX2FsbG9jLWVkIHJlc3VsdCwgc28gdGhlIGNhbGxlciBoYXMgdG8gbWFuYWdlIHRoZQpAQCAtMjQwMyw5ICsyNDAyLDE5IEBAIHZvaWQgcmVFbmMyKGNvbnN0IGNoYXIgKngsIGNoYXIgKnksIGludCBueSwKIGF0dHJpYnV0ZV9oaWRkZW4KIGNvbnN0IGNoYXIgKnJlRW5jMyhjb25zdCBjaGFyICp4LAogICAgICAgICAgICAgICAgICAgIGNvbnN0IGNoYXIgKmZyb21jb2RlLCBjb25zdCBjaGFyICp0b2NvZGUsIGludCBzdWJzdCkKK3sKKyAgICBzaXplX3QgbGVuZ3RoID0gIXN0cmNtcChmcm9tY29kZSwgVE9fV0NIQVIpCisJPyB3Y3NsZW4oKHdjaGFyX3QgKikgeCkgKiBzaXplb2Yod2NoYXJfdCkgOiBzdHJsZW4oeCk7CisgICAgcmV0dXJuIHJlRW5jNCh4LCBsZW5ndGgsIGZyb21jb2RlLCB0b2NvZGUsIHN1YnN0KTsKK30KKworLyogQXMgcmVFbmMzLCB3aXRoIHRoZSBpbnB1dCBsZW5ndGggc3VwcGxpZWQgZXhwbGljaXRseS4gKi8KK2F0dHJpYnV0ZV9oaWRkZW4KK2NvbnN0IGNoYXIgKnJlRW5jNChjb25zdCBjaGFyICp4LCBzaXplX3QgbGVuZ3RoLAorCQkgICBjb25zdCBjaGFyICpmcm9tY29kZSwgY29uc3QgY2hhciAqdG9jb2RlLCBpbnQgc3Vic3QpCiB7CiAgICAgUl9TdHJpbmdCdWZmZXIgY2J1ZmYgPSB7TlVMTCwgMCwgTUFYRUxUU0laRX07Ci0gICAgaWYgKHJlRW5jb2RlSWNvbnYoeCwgJmNidWZmLCBmcm9tY29kZSwgdG9jb2RlLCBzdWJzdCkpIHJldHVybiB4OworICAgIGlmIChyZUVuY29kZUljb252KHgsIGxlbmd0aCwgJmNidWZmLCBmcm9tY29kZSwgdG9jb2RlLCBzdWJzdCkpIHJldHVybiB4OwogICAgIHNpemVfdCByZXMgPSBzdHJsZW4oY2J1ZmYuZGF0YSkgKyAxOwogICAgIGNoYXIgKnAgPSBSX2FsbG9jKHJlcywgMSk7CiAgICAgbWVtY3B5KHAsIGNidWZmLmRhdGEsIHJlcyk7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWIuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWIuUgkocmV2aXNpb24gOTA4NDQpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWIuUgkod29ya2luZyBjb3B5KQpAQCAtMTczMSw2ICsxNzMxLDIxIEBAIHN0b3BpZm5vdChpZGVudGljYWwoaW5wdXQsIHJlcykpCiB1bmxpbmsoInNlcmlhbCIpCiAjIyBKdXN0IGEgdGVzdCBmb3IgcG9zc2libGUgcmVncmVzc2lvbnMuCiAKKyMjIGludmFsaWQgZW5jb2RpbmdzIGluIHNlcmlhbGl6ZWQgZGF0YQord2lkZSA8LSBpZiAoLlBsYXRmb3JtJE9TLnR5cGUgPT0gIndpbmRvd3MiKSAiVVRGLTE2TEUiIGVsc2UKKyAgICBwYXN0ZTAoIlVDUy00IiwgaWYgKC5QbGF0Zm9ybSRlbmRpYW4gPT0gImxpdHRsZSIpICJMRSIgZWxzZSAiQkUiKQorYmFkIDwtIGMoY2hhclRvUmF3KHNwcmludGYoIkFcbjNcbjZcbjhcbiVkXG4lczE2XG4xXG45XG4xXG4iLAorCQkJICAgbmNoYXIod2lkZSksIHdpZGUpKSwgYXMucmF3KDB4ZmYpKQorb3V0IDwtIHN1cHByZXNzV2FybmluZ3ModW5zZXJpYWxpemUoYmFkKSkKK3N0b3BpZm5vdChpZGVudGljYWwoY2hhclRvUmF3KG91dCksIGFzLnJhdygweGZmKSkpCisKK2JhZCA8LSBjKGNoYXJUb1JhdygiQVxuM1xuNlxuOFxuMTRcblVURi04IiksIGFzLnJhdygwKSwKKwkgY2hhclRvUmF3KCJwYWRkaW5nITI1NFxuIikpCithc3NlcnRFcnJvcih1bnNlcmlhbGl6ZShiYWQpKQorY29uIDwtIHJhd0Nvbm5lY3Rpb24oYmFkKQorYXNzZXJ0RXJyb3IoaW5mb1JEUyhjb24pKQorY2xvc2UoY29uKQorCiAKICMjIG1pcy1QUk9URUNUKClpb24gaW4gcHJpbnRhcnJheSBDIGNvZGU6CiBkZiA8LSBkYXRhLmZyYW1lKGE9MToyMDgwLCBiPTEwMDE6MjA0MCwgYz1sZXR0ZXJzLCBkPUxFVFRFUlMsIGU9MToxMDQwKQo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-11-06T18:21:00Z",
+          "size": 8024,
+          "is_private": false,
+          "id": 4013,
+          "creation_time": "2026-11-06T18:21:00Z",
+          "summary": "add reEnc4() and bound recoding of length-delimited strings",
+          "file_name": "serialize-bound-recoding.diff",
+          "bug_id": 19288
+        },
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgQSB2ZXJzaW9uLTMgc3RyZWFtIGRlY2xhcmluZyB0aGUgcGxhdGZvcm0ncyB3Y2hhcl90IGVuY29kaW5nCiMjIChVQ1MtNExFL0JFLCBVVEYtMTZMRSBvbiBXaW5kb3dzKSBhcyBpdHMgbmF0aXZlIGVuY29kaW5nLCBob2xkaW5nIGEKIyMgb25lLWJ5dGUgc3RyaW5nIHRoYXQgY2Fubm90IGJlIGNvbnZlcnRlZCB0byBVVEYtOC4KIyMgT2JzZXJ2ZWQ6IHRoZSAiY2Fubm90IGJlIHRyYW5zbGF0ZWQiIHdhcm5pbmcgcnVucyB3Y3NsZW4oKSBvbiB0aGUKIyMgdHdvLWJ5dGUgc3RyaW5nIGJ1ZmZlciBhbmQgcmVhZHMgcGFzdCBpdHMgZW5kOyBhbiBBZGRyZXNzU2FuaXRpemVyCiMjIGJ1aWxkIHJlcG9ydHMgYSBkeW5hbWljLXN0YWNrLWJ1ZmZlci1vdmVyZmxvdywgYSBub3JtYWwgYnVpbGQgcmVhZHMKIyMgc2lsZW50bHkuICBFeHBlY3RlZDogbm8gcmVhZCBiZXlvbmQgdGhlIHN0cmluZy4Kd2lkZSA8LSBpZiAoLlBsYXRmb3JtJE9TLnR5cGUgPT0gIndpbmRvd3MiKSAiVVRGLTE2TEUiIGVsc2UKICAgIHBhc3RlMCgiVUNTLTQiLCBpZiAoLlBsYXRmb3JtJGVuZGlhbiA9PSAibGl0dGxlIikgIkxFIiBlbHNlICJCRSIpCmJhZCA8LSBjKGNoYXJUb1JhdyhzcHJpbnRmKCJBXG4zXG42XG44XG4lZFxuJXMxNlxuMVxuOVxuMVxuIiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgbmNoYXIod2lkZSksIHdpZGUpKSwKICAgICAgICAgYXMucmF3KDB4ZmYpKQp4IDwtIHN1cHByZXNzV2FybmluZ3ModW5zZXJpYWxpemUoYmFkKSkKc3RvcGlmbm90KGlkZW50aWNhbChjaGFyVG9SYXcoeCksIGFzLnJhdygweGZmKSkpCgojIyBBbiBlbmNvZGluZyBuYW1lIHdpdGggYW4gZW1iZWRkZWQgbnVsLgojIyBPYnNlcnZlZDogdGhlIG5hbWUgaXMgc2lsZW50bHkgdHJ1bmNhdGVkIGFuZCB1bnNlcmlhbGl6ZSgpIHJldHVybnMKIyMgTlVMTC4gIEV4cGVjdGVkOiBhbiBlcnJvci4KYmFkIDwtIGMoY2hhclRvUmF3KCJBXG4zXG42XG44XG4xNFxuVVRGLTgiKSwgYXMucmF3KDApLAogICAgICAgICBjaGFyVG9SYXcoInBhZGRpbmchMjU0XG4iKSkKciA8LSB0cnlDYXRjaCh1bnNlcmlhbGl6ZShiYWQpLCBlcnJvciA9IGNvbmRpdGlvbk1lc3NhZ2UpCmNhdCgiZW1iZWRkZWQgbnVsIGluIGVuY29kaW5nIG5hbWU6IiwKICAgIGlmIChpcy5jaGFyYWN0ZXIocikpIHIgZWxzZSAibm8gZXJyb3IiLCAiXG4iKQo=",
+          "creator": "kevinushey",
+          "is_patch": false,
+          "bug_id": 19288,
+          "file_name": "serialize-bound-recoding-repro.R",
+          "summary": "reproducer: wchar_t-encoded string and nul in encoding name",
+          "creation_time": "2026-11-06T18:21:01Z",
+          "id": 4014,
+          "is_private": false,
+          "size": 1184,
+          "last_change_time": "2026-11-06T18:21:01Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-06 18:21:01"
+}

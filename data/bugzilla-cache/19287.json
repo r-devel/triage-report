@@ -1,0 +1,171 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19287,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P2",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-06T18:05:08Z",
+        "whiteboard": "",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "I/O",
+        "assigned_to": "R-core",
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-11-06T18:16:27Z",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "readRDS() can seg.fault on a malformed serialized ALTREP object",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19287": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "id": 104104,
+            "time": "2026-11-06T18:05:08Z",
+            "creation_time": "2026-11-06T18:05:08Z",
+            "creator": "kevinushey",
+            "count": 0,
+            "is_markdown": false,
+            "bug_id": 19287,
+            "text": "readRDS() and unserialize() can seg.fault, or return garbage, on a serialized ALTREP object of one of the base classes whose state has the wrong shape.\n\nReproducible example: attached as altrep-unserialize-state-repro.R; every case should signal an error, but in R 4.6.1 two return garbage and three seg.fault, the last being OSS-Fuzz testcase 6358277886377984 (111 bytes, read with readRDS()).\n\nAnalysis: the Unserialize methods in src/main/altclasses.c (compact sequences, wrappers, deferred strings, mmap) take the state apart without checking its type or length. CAR() of an external pointer state is a NULL address, CAR() of a plain vector is its length, and short vectors are read past their end.\n\nProposed patch: attached as altrep-unserialize-state.diff, against r90844. It checks the state in all five methods and signals \"invalid ... serialized state\"; the added test in tests/reg-tests-1e.R fails without it. It supersedes attachment 3842 on the closed bug 19047, which covered only the compact sequences and was not applied. As there, this is a robustness fix, since unserializing untrusted data is documented as unsafe.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/336, where CI results can be seen."
+          },
+          {
+            "tags": [],
+            "attachment_id": 4010,
+            "is_private": false,
+            "time": "2026-11-06T18:05:22Z",
+            "id": 104105,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-06T18:05:22Z",
+            "is_markdown": false,
+            "count": 1,
+            "text": "Created attachment 4010\nvalidate the serialized state in the base ALTREP Unserialize methods",
+            "bug_id": 19287
+          },
+          {
+            "is_private": false,
+            "time": "2026-11-06T18:05:23Z",
+            "id": 104106,
+            "tags": [],
+            "attachment_id": 4011,
+            "is_markdown": false,
+            "count": 2,
+            "text": "Created attachment 4011\nreproducer: malformed ALTREP states passed to unserialize()",
+            "bug_id": 19287,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-06T18:05:23Z"
+          },
+          {
+            "creation_time": "2026-11-06T18:16:27Z",
+            "creator": "kevinushey",
+            "bug_id": 19287,
+            "text": "Created attachment 4012\nR-exts: ALTREP Unserialize methods should check their state\n\nI've attached a separate documentation patch for Writing R Extensions. To find a class that is not registered yet, unserialize() loads the namespace of the package named in the stream, so a malformed state can reach any installed package's ALTREP class, which the code fix in attachment 4010 cannot protect. The added sentences, next to the description of how a class is identified, ask Unserialize and UnserializeEX methods to check the state's type and length and signal an error. The patch also fixes a stray comma there.\n\nIt applies independently of attachment 4010 and of the R-exts patch on bug 19227. Patch also at https://github.com/r-devel/r-svn/pull/336",
+            "is_markdown": false,
+            "count": 3,
+            "tags": [],
+            "attachment_id": 4012,
+            "id": 104107,
+            "time": "2026-11-06T18:16:27Z",
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19287": [
+        {
+          "last_change_time": "2026-11-06T18:05:22Z",
+          "size": 5217,
+          "is_private": false,
+          "id": 4010,
+          "creation_time": "2026-11-06T18:05:22Z",
+          "summary": "validate the serialized state in the base ALTREP Unserialize methods",
+          "file_name": "altrep-unserialize-state.diff",
+          "bug_id": 19287,
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2FsdGNsYXNzZXMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hbHRjbGFzc2VzLmMJKHJldmlzaW9uIDkwODQ0KQorKysgc3JjL21haW4vYWx0Y2xhc3Nlcy5jCSh3b3JraW5nIGNvcHkpCkBAIC04Niw2ICs4NiwxNSBAQCBzdGF0aWMgU0VYUCBuZXdfY29tcGFjdF9yZWFsc2VxKFJfeGxlbl90LCBkb3VibGUsIGRvdWJsZSk7CiAKIHN0YXRpYyBTRVhQIGNvbXBhY3RfaW50c2VxX1Vuc2VyaWFsaXplKFNFWFAgY2xhc3MsIFNFWFAgc3RhdGUpCiB7CisgICAgLyogc3RhdGUgaXMgdGhlIHNlcmlhbGl6ZWQgaW5mbyB2ZWN0b3IgKHNlZSBjb21wYWN0X2ludHNlcV9TZXJpYWxpemVkX3N0YXRlKToKKyAgICAgICBhIG51bWVyaWMgdmVjdG9yIG9mIGxlbmd0aCAzLiAgQSBjcmFmdGVkIHNlcmlhbGl6ZWQgc3RyZWFtIGNhbiBzdXBwbHkKKyAgICAgICBhbnkgb2JqZWN0IGhlcmUsIHNvIHJlamVjdCBhIG1hbGZvcm1lZCBzdGF0ZSB3aXRoIGEgY2xlYW4gZXJyb3IgcmF0aGVyCisgICAgICAgdGhhbiByZWFkaW5nIFJFQUwwL0lOVEVHRVIwIG9mZiB0aGUgZW5kIG9mIGEgc2hvcnQgb3Igd3JvbmctdHlwZWQKKyAgICAgICAob3Igbm9uLXZlY3Rvcikgb2JqZWN0LiAqLworICAgIGlmICgoVFlQRU9GKHN0YXRlKSAhPSBSRUFMU1hQICYmIFRZUEVPRihzdGF0ZSkgIT0gSU5UU1hQKSB8fAorCVhMRU5HVEgoc3RhdGUpIDwgMykKKwllcnJvcigiaW52YWxpZCBjb21wYWN0X2ludHNlcSBzZXJpYWxpemVkIHN0YXRlIik7CisKICAgICBSX3hsZW5fdCBuID0gQ09NUEFDVF9JTlRTRVFfU0VSSUFMSVpFRF9TVEFURV9MRU5HVEgoc3RhdGUpOwogICAgIGludCBuMSA9IENPTVBBQ1RfSU5UU0VRX1NFUklBTElaRURfU1RBVEVfRklSU1Qoc3RhdGUpOwogICAgIGludCBpbmMgPSBDT01QQUNUX0lOVFNFUV9TRVJJQUxJWkVEX1NUQVRFX0lOQ1Ioc3RhdGUpOwpAQCAtMzYzLDYgKzM3MiwxMiBAQCBzdGF0aWMgU0VYUCBjb21wYWN0X3JlYWxzZXFfU2VyaWFsaXplZF9zdGF0ZShTRVhQIHgpCiAKIHN0YXRpYyBTRVhQIGNvbXBhY3RfcmVhbHNlcV9VbnNlcmlhbGl6ZShTRVhQIGNsYXNzLCBTRVhQIHN0YXRlKQogeworICAgIC8qIGFzIGZvciBjb21wYWN0X2ludHNlcV9VbnNlcmlhbGl6ZTogdGhlIGluZm8gdmVjdG9yIHJlYWQgYmVsb3cgaXMgYQorICAgICAgIGxlbmd0aC0zIFJFQUxTWFAsIGJ1dCBhIGNyYWZ0ZWQgc3RyZWFtIGNhbiBzdXBwbHkgYW55dGhpbmcsIHNvIHJlamVjdAorICAgICAgIGEgbWFsZm9ybWVkIHN0YXRlIHJhdGhlciB0aGFuIHJlYWRpbmcgUkVBTDAgb2ZmIHRoZSBlbmQuICovCisgICAgaWYgKFRZUEVPRihzdGF0ZSkgIT0gUkVBTFNYUCB8fCBYTEVOR1RIKHN0YXRlKSA8IDMpCisJZXJyb3IoImludmFsaWQgY29tcGFjdF9yZWFsc2VxIHNlcmlhbGl6ZWQgc3RhdGUiKTsKKwogICAgIGRvdWJsZSBpbmMgPSBDT01QQUNUX1JFQUxTRVFfSU5GT19JTkNSKHN0YXRlKTsKICAgICBSX3hsZW5fdCBsZW4gPSBDT01QQUNUX1JFQUxTRVFfSU5GT19MRU5HVEgoc3RhdGUpOwogICAgIGRvdWJsZSBuMSA9IENPTVBBQ1RfUkVBTFNFUV9JTkZPX0ZJUlNUKHN0YXRlKTsKQEAgLTY1Niw2ICs2NzEsMTQgQEAgc3RhdGljIFNFWFAgZGVmZXJyZWRfc3RyaW5nX1NlcmlhbGl6ZWRfc3RhdGUoU0VYUCB4KQogCiBzdGF0aWMgU0VYUCBkZWZlcnJlZF9zdHJpbmdfVW5zZXJpYWxpemUoU0VYUCBjbGFzcywgU0VYUCBzdGF0ZSkKIHsKKyAgICAvKiBzdGF0ZSBpcyBDT05TKGFyZywgaW5mbykgd2l0aCBpbmZvIGFuIGludGVnZXIgdmVjdG9yIGhvbGRpbmcKKyAgICAgICBzY2lwZW4sIGJ1dCBhIGNyYWZ0ZWQgc2VyaWFsaXplZCBzdHJlYW0gY2FuIHN1cHBseSBhbnkgb2JqZWN0LgorICAgICAgIFJfZGVmZXJyZWRfY29lcmNlVG9TdHJpbmcgY2hlY2tzIHRoZSB0eXBlIG9mIGFyZy4gKi8KKyAgICBpZiAoVFlQRU9GKHN0YXRlKSAhPSBMSVNUU1hQIHx8CisJVFlQRU9GKERFRkVSUkVEX1NUUklOR19TVEFURV9JTkZPKHN0YXRlKSkgIT0gSU5UU1hQIHx8CisJWExFTkdUSChERUZFUlJFRF9TVFJJTkdfU1RBVEVfSU5GTyhzdGF0ZSkpIDwgMSkKKwllcnJvcigiaW52YWxpZCBkZWZlcnJlZCBzdHJpbmcgc2VyaWFsaXplZCBzdGF0ZSIpOworCiAgICAgU0VYUCBhcmcgPSBERUZFUlJFRF9TVFJJTkdfU1RBVEVfQVJHKHN0YXRlKTsKICAgICBTRVhQIGluZm8gPSBERUZFUlJFRF9TVFJJTkdfU1RBVEVfSU5GTyhzdGF0ZSk7CiAgICAgcmV0dXJuIFJfZGVmZXJyZWRfY29lcmNlVG9TdHJpbmcoYXJnLCBpbmZvKTsKQEAgLTExMDcsNiArMTEzMCwxNyBAQCBzdGF0aWMgU0VYUCBtbWFwX2ZpbGUoU0VYUCwgaW50LCBSYm9vbGVhbiwgUmJvb2xlYW4sIFJib29sZWFuLCBSYm9vbGVhbik7CiAKIHN0YXRpYyBTRVhQIG1tYXBfVW5zZXJpYWxpemUoU0VYUCBjbGFzcywgU0VYUCBzdGF0ZSkKIHsKKyAgICAvKiBzdGF0ZSBpcyBsaXN0MyhmaWxlLCBzaXplcywgaW5mbykgKHNlZSBtYWtlX21tYXBfc3RhdGUpLCBidXQgYQorICAgICAgIGNyYWZ0ZWQgc2VyaWFsaXplZCBzdHJlYW0gY2FuIHN1cHBseSBhbnkgb2JqZWN0LiAqLworICAgIGlmIChUWVBFT0Yoc3RhdGUpICE9IExJU1RTWFAgfHwKKwlUWVBFT0YoQ0RSKHN0YXRlKSkgIT0gTElTVFNYUCB8fAorCVRZUEVPRihDRERSKHN0YXRlKSkgIT0gTElTVFNYUCB8fAorCVRZUEVPRihNTUFQX1NUQVRFX0ZJTEUoc3RhdGUpKSAhPSBTVFJTWFAgfHwKKwlYTEVOR1RIKE1NQVBfU1RBVEVfRklMRShzdGF0ZSkpIDwgMSB8fAorCVRZUEVPRihDQUREUihzdGF0ZSkpICE9IElOVFNYUCB8fAorCVhMRU5HVEgoQ0FERFIoc3RhdGUpKSA8IDQpCisJZXJyb3IoImludmFsaWQgbW1hcCBzZXJpYWxpemVkIHN0YXRlIik7CisKICAgICBTRVhQIGZpbGUgPSBNTUFQX1NUQVRFX0ZJTEUoc3RhdGUpOwogICAgIGludCB0eXBlID0gTU1BUF9TVEFURV9UWVBFKHN0YXRlKTsKICAgICBSYm9vbGVhbiBwdHJPSyA9IChSYm9vbGVhbikgTU1BUF9TVEFURV9QVFJPSyhzdGF0ZSk7CkBAIC0xNTE0LDYgKzE1NDgsMTQgQEAgc3RhdGljIFNFWFAgbWFrZV93cmFwcGVyKFNFWFAsIFNFWFApOwogCiBzdGF0aWMgU0VYUCB3cmFwcGVyX1Vuc2VyaWFsaXplKFNFWFAgY2xhc3MsIFNFWFAgc3RhdGUpCiB7CisgICAgLyogc3RhdGUgaXMgQ09OUyh3cmFwcGVkLCBtZXRhKSB3aXRoIG1ldGEgYW4gaW50ZWdlciB2ZWN0b3Igb2YgbGVuZ3RoCisgICAgICAgTk1FVEEsIGJ1dCBhIGNyYWZ0ZWQgc2VyaWFsaXplZCBzdHJlYW0gY2FuIHN1cHBseSBhbnkgb2JqZWN0OiBDQVIKKyAgICAgICBvZiBhbiBleHRlcm5hbCBwb2ludGVyIGlzIGl0cyAoTlVMTCkgYWRkcmVzcywgYW5kIENBUiBvZiBhIHZlY3RvcgorICAgICAgIGlzIGl0cyBsZW5ndGguICBtYWtlX3dyYXBwZXIgY2hlY2tzIHRoZSB0eXBlIG9mIHRoZSB3cmFwcGVkIHZhbHVlLiAqLworICAgIGlmIChUWVBFT0Yoc3RhdGUpICE9IExJU1RTWFAgfHwgVFlQRU9GKENEUihzdGF0ZSkpICE9IElOVFNYUCB8fAorCVhMRU5HVEgoQ0RSKHN0YXRlKSkgPCBOTUVUQSkKKwllcnJvcigiaW52YWxpZCB3cmFwcGVyIHNlcmlhbGl6ZWQgc3RhdGUiKTsKKwogICAgIHJldHVybiBtYWtlX3dyYXBwZXIoQ0FSKHN0YXRlKSwgQ0RSKHN0YXRlKSk7CiB9CiAKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDg0NCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NTAxLDYgKzQ1MDEsMjkgQEAgc3RvcGlmbm90KGV4cHJzID0gewogIyMgc21vb3RoKHgpIHdhcyBpZGVudGljYWwgdG8geCBhbmQgc1Mgc2FpZCAiTk9UIGNoYW5nZWQiLCBpbiBSIDw9IDQuNi4yCiAKIAorIyMgbWFsZm9ybWVkIHNlcmlhbGl6ZWQgc3RhdGUgb2YgdGhlIGJhc2UgQUxUUkVQIGNsYXNzZXMKK2hkcmxlbiA8LSBsZW5ndGgoc2VyaWFsaXplKE5VTEwsIE5VTEwpKSAtIDRMCitpdGVtIDwtIGZ1bmN0aW9uKHgpIHNlcmlhbGl6ZSh4LCBOVUxMKVstc2VxX2xlbihoZHJsZW4pXQorYWx0cmVwU3RyZWFtIDwtIGZ1bmN0aW9uKGNscywgdHlwZSwgc3RhdGUpCisgICAgYyhzZXJpYWxpemUoTlVMTCwgTlVMTClbc2VxX2xlbihoZHJsZW4pXSwKKyAgICAgIGFzLnJhdyhjKDAsIDAsIDAsIDIzOCkpLCAjIEFMVFJFUF9TWFAKKyAgICAgIGl0ZW0ocGFpcmxpc3QoYXMubmFtZShjbHMpLCBhcy5uYW1lKCJiYXNlIiksIHR5cGUpKSwKKyAgICAgIGl0ZW0oc3RhdGUpLCBpdGVtKE5VTEwpKQorc3RhdGVzIDwtIGxpc3Qod3JhcF9pbnRlZ2VyID0gMTo1LCB3cmFwX2ludGVnZXIgPSBjKDJMLCA3TCwgOUwpLAorICAgICAgICAgICAgICAgd3JhcF9pbnRlZ2VyID0gcGFpcmxpc3QoMTozLCAxTCksCisgICAgICAgICAgICAgICBkZWZlcnJlZF9zdHJpbmcgPSAxOjMsIGRlZmVycmVkX3N0cmluZyA9IHBhaXJsaXN0KDEuNSksCisgICAgICAgICAgICAgICBtbWFwX2ludGVnZXIgPSAxOjMsIG1tYXBfaW50ZWdlciA9IHBhaXJsaXN0KCJ4IiwgMSwgMTNMKSkKK3R5cGVzIDwtIGMod3JhcF9pbnRlZ2VyID0gMTNMLCBkZWZlcnJlZF9zdHJpbmcgPSAxNkwsIG1tYXBfaW50ZWdlciA9IDEzTCkKK2VycnMgPC0gTWFwKGZ1bmN0aW9uKGNscywgc3RhdGUpCisgICAgICAgICAgICAgICAgdHJ5Q2lkKHVuc2VyaWFsaXplKGFsdHJlcFN0cmVhbShjbHMsIHR5cGVzW1tjbHNdXSwgc3RhdGUpKSksCisgICAgICAgICAgICBuYW1lcyhzdGF0ZXMpLCBzdGF0ZXMpCitzdG9waWZub3QodmFwcGx5KGVycnMsIGZ1bmN0aW9uKGUpIGluaGVyaXRzKGUsICJlcnJvciIpICYmCisgICAgICAgICAgICAgICAgIGdyZXBsKCJzZXJpYWxpemVkIHN0YXRlIiwgY29uZGl0aW9uTWVzc2FnZShlKSksIE5BKSkKK3ggPC0gLkludGVybmFsKHdyYXBfbWV0YShjKDFMLCA1TCwgOUwpLCAxTCwgMUwpKQorc3RvcGlmbm90KGlkZW50aWNhbCh1bnNlcmlhbGl6ZShzZXJpYWxpemUoeCwgTlVMTCkpLCB4KSkKKyMjIGJ1aWx0IGdhcmJhZ2Ugb2JqZWN0cyBvciBzZWcuZmF1bHRlZCBpbiBSIDw9IDQuNi4yCisKKwogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        },
+        {
+          "bug_id": 19287,
+          "file_name": "altrep-unserialize-state-repro.R",
+          "summary": "reproducer: malformed ALTREP states passed to unserialize()",
+          "creation_time": "2026-11-06T18:05:23Z",
+          "id": 4011,
+          "is_private": false,
+          "size": 1920,
+          "last_change_time": "2026-11-06T18:05:23Z",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgdW5zZXJpYWxpemUoKSBvZiBhbiBBTFRSRVAgb2JqZWN0IHdpdGggYSBtYWxmb3JtZWQgc2VyaWFsaXplZCBzdGF0ZS4KIyMgRXhwZWN0ZWQ6IGV2ZXJ5IGNhc2Ugc2lnbmFscyBhbiBSIGVycm9yLgojIyBPYnNlcnZlZCBpbiBSIDQuNi4xOiB0aGUgZmlyc3QgdHdvIHJldHVybiBnYXJiYWdlLCB0aGUgbGFzdCB0aHJlZQojIyBzZWcuZmF1bHQgKGVhY2ggb25lIGFsb25lOyB0aGUgZmlyc3QgZmF1bHQgZW5kcyB0aGUgc2Vzc2lvbikuCgpoZHJsZW4gPC0gbGVuZ3RoKHNlcmlhbGl6ZShOVUxMLCBOVUxMKSkgLSA0TAppdGVtIDwtIGZ1bmN0aW9uKHgpIHNlcmlhbGl6ZSh4LCBOVUxMKVstc2VxX2xlbihoZHJsZW4pXQojIyBoZWFkZXIsIEFMVFJFUF9TWFAsIGNsYXNzIGluZm8gKGNsYXNzLCBwYWNrYWdlLCB0eXBlKSwgc3RhdGUsIGF0dHJpYnV0ZXMKYWx0cmVwU3RyZWFtIDwtIGZ1bmN0aW9uKGNscywgdHlwZSwgc3RhdGUpCiAgICBjKHNlcmlhbGl6ZShOVUxMLCBOVUxMKVtzZXFfbGVuKGhkcmxlbildLCBhcy5yYXcoYygwLCAwLCAwLCAyMzgpKSwKICAgICAgaXRlbShwYWlybGlzdChhcy5uYW1lKGNscyksIGFzLm5hbWUoImJhc2UiKSwgdHlwZSkpLAogICAgICBpdGVtKHN0YXRlKSwgaXRlbShOVUxMKSkKY2hlY2sgPC0gZnVuY3Rpb24obGFiZWwsIGV4cHIpIHsKICAgIHIgPC0gdHJ5Q2F0Y2goZXhwciwgZXJyb3IgPSBpZGVudGl0eSkKICAgIGNhdChzcHJpbnRmKCIlLTM0cyIsIGxhYmVsKSkKICAgIGlmIChpbmhlcml0cyhyLCAiZXJyb3IiKSkgY2F0KCJlcnJvcjoiLCBjb25kaXRpb25NZXNzYWdlKHIpLCAiXG4iKQogICAgZWxzZSBjYXQoInJldHVybmVkIiwgZGVwYXJzZShyKSwgIlxuIikKfQoKIyMgMTozIHNlcmlhbGl6ZXMgYXMgYSBjb21wYWN0IHNlcXVlbmNlOyBDQVIoKSBvZiBpdCBpcyBpdHMgaW5mbyB2ZWN0b3IKY2hlY2soImRlZmVycmVkX3N0cmluZywgc3RhdGUgMTozIiwKICAgICAgdW5zZXJpYWxpemUoYWx0cmVwU3RyZWFtKCJkZWZlcnJlZF9zdHJpbmciLCAxNkwsIDE6MykpKQpjaGVjaygid3JhcF9pbnRlZ2VyLCBzdGF0ZSAxOjUiLAogICAgICB1bnNlcmlhbGl6ZShhbHRyZXBTdHJlYW0oIndyYXBfaW50ZWdlciIsIDEzTCwgMTo1KSkpCmNoZWNrKCJtbWFwX2ludGVnZXIsIHN0YXRlIDE6MyIsCiAgICAgIHVuc2VyaWFsaXplKGFsdHJlcFN0cmVhbSgibW1hcF9pbnRlZ2VyIiwgMTNMLCAxOjMpKSkKIyMgQ0FSKCkgb2YgYSBwbGFpbiB2ZWN0b3IgaXMgaXRzIGxlbmd0aCwgdXNlZCBhcyBhIHBvaW50ZXIKY2hlY2soIndyYXBfaW50ZWdlciwgcGxhaW4gdmVjdG9yIHN0YXRlIiwKICAgICAgdW5zZXJpYWxpemUoYWx0cmVwU3RyZWFtKCJ3cmFwX2ludGVnZXIiLCAxM0wsIGMoMkwsIDdMLCA5TCwgNEwsIDFMKSkpKQojIyBPU1MtRnV6eiB0ZXN0Y2FzZSA2MzU4Mjc3ODg2Mzc3OTg0OiB3cmFwX3JlYWwgd2l0aCBhbiBleHRlcm5hbAojIyBwb2ludGVyIHN0YXRlLCB3aG9zZSBDQVIoKSBpcyBpdHMgTlVMTCBhZGRyZXNzCmhleCA8LSBwYXN0ZTAoCiAgICAiNTgwYTAwMDAwMDAzMDAwNDA3MDAwMDAzMDUwMDAwMDAwMDAwMDAwMDAwZWUwMDAwMDAwMjAwMDAwMDAxMDAwNDAwMDkwMDAwMDAiLAogICAgIjA5Nzc3MjYxNzA1ZjcyNjU2MTZjMDAwMDAwMDIwMDAwMDAwMTAwMDQwMDA5MDAwMDAwMDQ2MjYxNzM2NTAwMDAwMDAyMDAwMDAwIiwKICAgICIwZDAwMDAwMDAxMDAwMDAwMGUwMDAwMDBmZTAwMDAwMDE2MDAwMDAwMGUwMDAwMDAwMDAwMDAwMGZmMDAwMDAwMDEwMDAwMDBmZSIpCnggPC0gYXMucmF3KHN0cnRvaShzdWJzdHJpbmcoaGV4LCBzZXEoMSwgbmNoYXIoaGV4KSwgMiksIHNlcSgyLCBuY2hhcihoZXgpLCAyKSksIDE2TCkpCmNoZWNrKCJPU1MtRnV6eiBpbnB1dCB2aWEgcmVhZFJEUygpIiwgcmVhZFJEUyhyYXdDb25uZWN0aW9uKHgpKSkK",
+          "creator": "kevinushey",
+          "is_patch": false
+        },
+        {
+          "is_private": false,
+          "id": 4012,
+          "last_change_time": "2026-11-06T18:16:27Z",
+          "size": 1320,
+          "file_name": "altrep-unserialize-state-doc.diff",
+          "bug_id": 19287,
+          "creation_time": "2026-11-06T18:16:27Z",
+          "summary": "R-exts: ALTREP Unserialize methods should check their state",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IGRvYy9tYW51YWwvUi1leHRzLnRleGkKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gZG9jL21hbnVhbC9SLWV4dHMudGV4aQkocmV2aXNpb24gOTA4NDQpCisrKyBkb2MvbWFudWFsL1ItZXh0cy50ZXhpCSh3b3JraW5nIGNvcHkpCkBAIC0xNTIwNCw5ICsxNTIwNCwxNiBAQCBTb21lIGZ1bmN0aW9ucyB1c2VmdWwgaW4gaW1wbGVtZW50aW5nIG5ldyBhbHRlcm5hdGUgcmVwcmVzZW50YXRpb24KIEBlYXBpaGRyIFJfZXh0L0FsdHJlcC5oCiBUaGUgY2xhc3Mgb2YgYW4gQEl7QUxUUkVQfSBvYmplY3QgaXMgaWRlbnRpZmllZCBieSBhIGNsYXNzIG5hbWUgc3ltYm9sIGFuZCBhCiBwYWNrYWdlIG5hbWUgc3ltYm9sOyB0aGVzZSBjYW4gYmUgcmV0cmlldmVkIHVzaW5nCi1AY29kZXtSX2FsdHJlcF9jbGFzc19uYW1lfSBhbmQgQGNvZGV7Ul9hbHRyZXBfY2xhc3NfcGFja2FnZX0sCitAY29kZXtSX2FsdHJlcF9jbGFzc19uYW1lfSBhbmQgQGNvZGV7Ul9hbHRyZXBfY2xhc3NfcGFja2FnZX0uCiBAZWFwaWZ1biBSX2FsdHJlcF9jbGFzc19uYW1lCiBAZWFwaWZ1biBSX2FsdHJlcF9jbGFzc19wYWNrYWdlCitXaGVuIGFuIEBJe0FMVFJFUH0gb2JqZWN0IGlzIHVuc2VyaWFsaXplZCwgaXRzIGNsYXNzIGlzIGxvb2tlZCB1cCBieSB0aGVzZQordHdvIHN5bWJvbHMsIGxvYWRpbmcgdGhlIG5hbWVzcGFjZSBvZiB0aGUgbmFtZWQgcGFja2FnZSBpZiBuZWNlc3NhcnksCithbmQgdGhlIGNsYXNzJ3MgQGNvZGV7VW5zZXJpYWxpemV9IG9yIEBjb2Rle1Vuc2VyaWFsaXplRVh9IG1ldGhvZCBpcworY2FsbGVkIHdpdGggdGhlIHN0YXRlIGFuZCBhdHRyaWJ1dGVzIHJlYWQgZnJvbSB0aGUgc3RyZWFtLiAgVGhlIHN0cmVhbQorbWF5IGJlIGNvcnJ1cHQgb3IgY3JhZnRlZCwgc28gdGhlIHN0YXRlIG5lZWQgbm90IGJlIHdoYXQgdGhlIGNsYXNzJ3MKK0Bjb2Rle1NlcmlhbGl6ZWRfc3RhdGV9IG1ldGhvZCBwcm9kdWNlZDogdGhlc2UgbWV0aG9kcyBzaG91bGQgY2hlY2sgaXRzCit0eXBlIGFuZCBsZW5ndGggYmVmb3JlIHVzaW5nIGl0IGFuZCBzaWduYWwgYW4gZXJyb3IgaWYgaXQgaXMgbWFsZm9ybWVkLgogVGhlIGZ1bmN0aW9uIEBjb2Rle0FMVFJFUF9DTEFTU30gaXMgYWxzbyBhdmFpbGFibGUgYnV0IGlzIG5vdCBsaWtlbHkgdG8KIGJlIG5lZWRlZCBhbmQgbWF5IGJlIHJlbW92ZWQuICBUaGUgdHlwZSBhbmQgY29udGVudHMgb2YgdGhlIHZhbHVlCiByZXR1cm5lZCBieSBAY29kZXtBTFRSRVBfQ0xBU1N9IGFyZSBzdWJqZWN0IHRvIGNoYW5nZS4K"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-06 18:16:27"
+}

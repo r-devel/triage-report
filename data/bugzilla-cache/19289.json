@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "priority": "P3",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-06T19:02:45Z",
+        "version": "R-devel (trunk)",
+        "deadline": {},
+        "id": 19289,
+        "severity": "normal",
+        "dupe_of": {},
+        "cc": [],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "component": "I/O",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "blocks": [],
+        "url": "",
+        "summary": "readChar() on a raw vector can write past its buffer in UTF-8 locales on macOS",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-11-06T19:02:58Z",
+        "cc_detail": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": ""
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19289": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2026-11-06T19:02:45Z",
+            "creation_time": "2026-11-06T19:02:45Z",
+            "text": "readChar() on a raw vector, in a UTF-8 locale whose MB_CUR_MAX is 4 (macOS, and it seems Windows), can write past the end of its output buffer.\n\nReproducible example: attached as readchar-utf8-buffer-repro.R; it should print \"ok\", but R 4.6.1 on macOS seg.faults in the gc() that follows readChar(). An AddressSanitizer build reports a heap-buffer-overflow WRITE in rawFixedString().\n\nAnalysis: rawFixedString() in src/main/connections.c sizes its buffer as R_MB_CUR_MAX * nchars + 1 but copies utf8clen() bytes per character, which is 6 for lead bytes 0xfc to 0xff. With more than 4 * nchars + 1 bytes left in the vector, it copies up to 6 * nchars input bytes. readFixedString() (the connection path) has the same sizing but overruns by at most a byte. glibc's MB_CUR_MAX is 6, so Linux is not affected.\n\nProposed patch: attached as readchar-utf8-buffer.diff, against r90844. It sizes both buffers by 6, the longest length utf8clen() returns, and adds a test to tests/reg-tests-1e.R; results are unchanged where nothing overflowed. I found no CRAN or Bioconductor package that calls readChar() on a raw vector in a way that reaches the overflow.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/456, where CI results can be seen.",
+            "bug_id": 19289,
+            "count": 0,
+            "tags": [],
+            "id": 104112,
+            "is_private": false
+          },
+          {
+            "id": 104113,
+            "time": "2026-11-06T19:02:57Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 4015,
+            "bug_id": 19289,
+            "text": "Created attachment 4015\nsize readChar()'s UTF-8 buffers for the longest utf8clen()",
+            "count": 1,
+            "is_markdown": false,
+            "creation_time": "2026-11-06T19:02:57Z",
+            "creator": "kevinushey"
+          },
+          {
+            "id": 104114,
+            "time": "2026-11-06T19:02:58Z",
+            "is_private": false,
+            "attachment_id": 4016,
+            "tags": [],
+            "bug_id": 19289,
+            "text": "Created attachment 4016\nreproducer: 6-byte lead bytes passed to readChar() on a raw vector",
+            "is_markdown": false,
+            "count": 2,
+            "creation_time": "2026-11-06T19:02:58Z",
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19289": [
+        {
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA4NDQpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC01MjI0LDYgKzUyMjQsMTEgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3dyaXRlYmluKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKICAgICByZXR1cm4gYW5zOwogfQogCisvKiB1dGY4Y2xlbigpIHJldHVybnMgdXAgdG8gNiAoZm9yIHRoZSA1LSBhbmQgNi1ieXRlIGZvcm1zKSwgbW9yZSB0aGFuCisgICBNQl9DVVJfTUFYIGluIFVURi04IGxvY2FsZXMgb24gbWFjT1MgYW5kIFdpbmRvd3MsIHNvIHRoZSBVVEYtOAorICAgYnVmZmVycyBiZWxvdyBhcmUgc2l6ZWQgYnkgdGhpcyByYXRoZXIgdGhhbiBieSBSX01CX0NVUl9NQVguICovCisjZGVmaW5lIFVURjhDTEVOX01BWCA2CisKIC8qIEZJWE1FOiBjb3VsZCBkbyBhbnkgTUJDUyBsb2NhbGUsIGJ1dCB3b3VsZCBuZWVkIHB1c2hiYWNrICovCiBzdGF0aWMgU0VYUAogcmVhZEZpeGVkU3RyaW5nKFJjb25uZWN0aW9uIGNvbiwgaW50IGxlbiwgaW50IHVzZUJ5dGVzLCBSYm9vbGVhbiAqd2Fybk9uTnVsKQpAQCAtNTIzNCw3ICs1MjM5LDcgQEAgcmVhZEZpeGVkU3RyaW5nKFJjb25uZWN0aW9uIGNvbiwgaW50IGxlbiwgaW50IHVzZUJ5dGVzLCBSYm9vbGVhbiAqd2Fybk9uTnVsKQogICAgIGNvbnN0IHZvaWQgKnZtYXggPSB2bWF4Z2V0KCk7CiAKICAgICBpZih1dGY4bG9jYWxlICYmICF1c2VCeXRlcykgewotCVJfU0laRV9UIGNvdW50ID0gUl9NQl9DVVJfTUFYICogKFJfU0laRV9UKWxlbiArMTsKKwlSX1NJWkVfVCBjb3VudCA9IFVURjhDTEVOX01BWCAqIChSX1NJWkVfVClsZW4gKzE7CiAJY2hhciAqcCA9IGJ1ZiA9IChjaGFyICopIFJfYWxsb2MoY291bnQsIHNpemVvZihjaGFyKSk7CiAJbWVtc2V0KGJ1ZiwgMCwgY291bnQpOwogCW1ic3RhdGVfdCBtYl9zdDsKQEAgLTUyOTEsNyArNTI5Niw3IEBAIHJhd0ZpeGVkU3RyaW5nKFJieXRlICpieXRlcywgaW50IGxlbiwgaW50IG5ieXRlcywgaW50ICpucCwgaW50IHVzZUJ5dGVzKQogICAgIC8qIE5vdGU6IG1rQ2hhckxlbkNFIHNpZ25hbHMgYW4gZXJyb3Igb24gZW1iZWRkZWQgbnVscy4gKi8KICAgICBpZih1dGY4bG9jYWxlICYmICF1c2VCeXRlcykgewogCWludCBpLCBjbGVuLCBpcmVhZCA9ICpucDsKLQljaGFyICpwID0gYnVmID0gKGNoYXIgKikgUl9hbGxvYyhSX01CX0NVUl9NQVgqKFJfU0laRV9UKWxlbiArMSwgc2l6ZW9mKGNoYXIpKTsKKwljaGFyICpwID0gYnVmID0gKGNoYXIgKikgUl9hbGxvYyhVVEY4Q0xFTl9NQVgqKFJfU0laRV9UKWxlbiArMSwgc2l6ZW9mKGNoYXIpKTsKIAlmb3IoaSA9IDA7IGkgPCBsZW47IGkrKywgcCArPSBjbGVuLCBpcmVhZCArPSBjbGVuKSB7CiAJICAgIGlmIChpcmVhZCA+PSBuYnl0ZXMpIGJyZWFrOwogCSAgICBSYnl0ZSAqcSA9IGJ5dGVzICsgaXJlYWQ7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA4NDQpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDUwMSw2ICs0NTAxLDE1IEBAIHN0b3BpZm5vdChleHBycyA9IHsKICMjIHNtb290aCh4KSB3YXMgaWRlbnRpY2FsIHRvIHggYW5kIHNTIHNhaWQgIk5PVCBjaGFuZ2VkIiwgaW4gUiA8PSA0LjYuMgogCiAKKyMjIHJlYWRDaGFyKCkgb24gYSByYXcgdmVjdG9yIGhvbGRpbmcgNi1ieXRlIFVURi04IGxlYWQgYnl0ZXMKK2lmIChsMTBuX2luZm8oKVtbIlVURi04Il1dKSB7CisgICAgcyA8LSByZWFkQ2hhcihhcy5yYXcocmVwKDB4ZmYsIDYgKiA2NCkpLCA2NEwpCisgICAgaW52aXNpYmxlKGdjKCkpCisgICAgc3RvcGlmbm90KGlkZW50aWNhbChuY2hhcihzLCAiYnl0ZXMiKSwgMzg0TCkpCit9CisjIyB3cm90ZSBwYXN0IGl0cyBidWZmZXIgd2hlcmUgTUJfQ1VSX01BWCBpcyA0IChtYWNPUyksIHNlZy5mYXVsdGluZywgaW4gUiA8PSA0LjYuMgorCisKIAogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCg==",
+          "creator": "kevinushey",
+          "is_patch": true,
+          "bug_id": 19289,
+          "file_name": "readchar-utf8-buffer.diff",
+          "summary": "size readChar()'s UTF-8 buffers for the longest utf8clen()",
+          "creation_time": "2026-11-06T19:02:57Z",
+          "id": 4015,
+          "is_private": false,
+          "size": 2233,
+          "last_change_time": "2026-11-06T19:02:57Z"
+        },
+        {
+          "creator": "kevinushey",
+          "data": "IyMgcmVhZENoYXIoKSBvbiBhIHJhdyB2ZWN0b3IgaW4gYSBVVEYtOCBsb2NhbGUsIHdpdGggbGVhZCBieXRlcyB0aGF0CiMjIHV0ZjhjbGVuKCkgY291bnRzIGFzIDYtYnl0ZSBjaGFyYWN0ZXJzLgojIyBPYnNlcnZlZCAoUiA0LjYuMSwgbWFjT1MpOiBoZWFwIGNvcnJ1cHRpb247IHRoZSBnYygpIHNlZy5mYXVsdHMuCiMjIEFuIEFkZHJlc3NTYW5pdGl6ZXIgYnVpbGQgcmVwb3J0cyBhIGhlYXAtYnVmZmVyLW92ZXJmbG93IFdSSVRFIGluCiMjIHJhd0ZpeGVkU3RyaW5nKCkuICBMaW51eCAoZ2xpYmMsIE1CX0NVUl9NQVggNikgaXMgbm90IGFmZmVjdGVkLgojIyBFeHBlY3RlZDogcyBob2xkcyB0aGUgMzg0IGlucHV0IGJ5dGVzIGFuZCBSIGNhcnJpZXMgb24uCnN0b3BpZm5vdChsMTBuX2luZm8oKVtbIlVURi04Il1dKQpzIDwtIHJlYWRDaGFyKGFzLnJhdyhyZXAoMHhmZiwgNiAqIDY0KSksIDY0TCkKaW52aXNpYmxlKGdjKCkpCnN0b3BpZm5vdChpZGVudGljYWwobmNoYXIocywgImJ5dGVzIiksIDM4NEwpKQpjYXQoIm9rXG4iKQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": false,
+          "creation_time": "2026-11-06T19:02:58Z",
+          "summary": "reproducer: 6-byte lead bytes passed to readChar() on a raw vector",
+          "file_name": "readchar-utf8-buffer-repro.R",
+          "bug_id": 19289,
+          "last_change_time": "2026-11-06T19:02:58Z",
+          "size": 530,
+          "is_private": false,
+          "id": 4016
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-06 19:02:58"
+}

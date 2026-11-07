@@ -1,0 +1,108 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Models",
+        "assigned_to": "R-core",
+        "id": 19164,
+        "deadline": {},
+        "severity": "enhancement",
+        "dupe_of": {},
+        "cc": [
+          "jaganmn2"
+        ],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-09-08T22:27:14Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "Thomas.SOEIRO",
+          "id": 3340,
+          "real_name": "Thomas Soeiro"
+        },
+        "platform": "All",
+        "flags": [],
+        "is_confirmed": false,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "creator": "Thomas.SOEIRO",
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "name": "jaganmn2",
+            "id": 3462,
+            "real_name": "Mikael Jagan"
+          }
+        ],
+        "last_change_time": "2026-11-06T07:01:09Z",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "optionally include xreg in arima() output"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19164": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 103608,
+            "time": "2026-09-08T22:27:14Z",
+            "attachment_id": 3841,
+            "tags": [],
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19164,
+            "text": "Created attachment 3841\noptionally include `xreg` in `arima()` output\n\nHere is a patch proposal to optionally include `xreg` in `arima()` output, as suggested in https://stat.ethz.ch/pipermail/r-devel/2026-September/084691.html.\n\nNotes:\n\n- Usage of capitalization and terminal punctuation is not uniform in the `\\arguments{}` section; happy to \"fix\" that if preferred.\n- Perhaps it may be useful to also update the description to make the role of `xreg` explicit, e.g.:\n\n```\n-  Fit an ARIMA model to a univariate time series.\n+  Fit an ARIMA model, or a linear regression with ARMA errors when external regressors are provided, to a univariate time series.\n```",
+            "creation_time": "2026-09-08T22:27:14Z",
+            "creator": "Thomas.SOEIRO"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19164": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "ZGlmZiAtLWdpdCBhL2FyaW1hLnBhdGNoIGIvYXJpbWEucGF0Y2gKbmV3IGZpbGUgbW9kZSAxMDA2NDQKaW5kZXggMDAwMDAwMDAwMC4uZTY5ZGUyOWJiMgpkaWZmIC0tZ2l0IGEvc3JjL2xpYnJhcnkvc3RhdHMvUi9hcmltYS5SIGIvc3JjL2xpYnJhcnkvc3RhdHMvUi9hcmltYS5SCmluZGV4IDNkMjYwZDc1ZWYuLmJiZWM5NDU5MDEgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L3N0YXRzL1IvYXJpbWEuUgorKysgYi9zcmMvbGlicmFyeS9zdGF0cy9SL2FyaW1hLlIKQEAgLTIzLDcgKzIzLDcgQEAgYXJpbWEgPC0gZnVuY3Rpb24oeCwgb3JkZXIgPSBjKDBMLCAwTCwgMEwpLAogICAgICAgICAgICAgICAgICAgbWV0aG9kID0gYygiQ1NTLU1MIiwgIk1MIiwgIkNTUyIpLCBuLmNvbmQsCiAgICAgICAgICAgICAgICAgICBTU2luaXQgPSBjKCJHYXJkbmVyMTk4MCIsICJSb3NzaWdub2wyMDExIiksCiAgICAgICAgICAgICAgICAgICBvcHRpbS5tZXRob2QgPSAiQkZHUyIsCi0gICAgICAgICAgICAgICAgICBvcHRpbS5jb250cm9sID0gbGlzdCgpLCBrYXBwYSA9IDFlNikKKyAgICAgICAgICAgICAgICAgIG9wdGltLmNvbnRyb2wgPSBsaXN0KCksIGthcHBhID0gMWU2LCBrZWVwLnhyZWcgPSBGQUxTRSkKIHsKICAgICAiJSslIiA8LSBmdW5jdGlvbihhLCBiKSAuQ2FsbChDX1RTY29udiwgYSwgYikKIApAQCAtMzYxLDEyICszNjEsMTQgQEAgYXJpbWEgPC0gZnVuY3Rpb24oeCwgb3JkZXIgPSBjKDBMLCAwTCwgMEwpLAogICAgIHJlc2lkIDwtIHZhbFtbMkxdXQogICAgIHRzcChyZXNpZCkgPC0geHRzcAogICAgIGNsYXNzKHJlc2lkKSA8LSAidHMiCi0gICAgc3RydWN0dXJlKGxpc3QoY29lZiA9IGNvZWYsIHNpZ21hMiA9IHNpZ21hMiwgdmFyLmNvZWYgPSB2YXIsIG1hc2sgPSBtYXNrLAotCQkgICBsb2dsaWsgPSAtMC41ICogdmFsdWUsIGFpYyA9IGFpYywgYXJtYSA9IGFybWEsCi0JCSAgIHJlc2lkdWFscyA9IHJlc2lkLCBjYWxsID0gbWF0Y2guY2FsbCgpLCBzZXJpZXMgPSBzZXJpZXMsCi0JCSAgIGNvZGUgPSByZXMkY29udmVyZ2VuY2UsIG4uY29uZCA9IG5jb25kLCBub2JzID0gbi51c2VkLAotCQkgICBtb2RlbCA9IG1vZCksCi0JICAgICAgY2xhc3MgPSAiQXJpbWEiKQorICAgIGFucyA8LSBsaXN0KGNvZWYgPSBjb2VmLCBzaWdtYTIgPSBzaWdtYTIsIHZhci5jb2VmID0gdmFyLCBtYXNrID0gbWFzaywKKwkJbG9nbGlrID0gLTAuNSAqIHZhbHVlLCBhaWMgPSBhaWMsIGFybWEgPSBhcm1hLAorCQlyZXNpZHVhbHMgPSByZXNpZCwgY2FsbCA9IG1hdGNoLmNhbGwoKSwgc2VyaWVzID0gc2VyaWVzLAorCQljb2RlID0gcmVzJGNvbnZlcmdlbmNlLCBuLmNvbmQgPSBuY29uZCwgbm9icyA9IG4udXNlZCwKKwkJbW9kZWwgPSBtb2QpCisgICAgaWYgKCFpcy5udWxsKHhyZWcpICYmIGtlZXAueHJlZykgYW5zJHhyZWcgPC0geHJlZworICAgIGNsYXNzKGFucykgPC0gIkFyaW1hIgorICAgIGFucwogfQogCiAKZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L3N0YXRzL21hbi9hcmltYS5SZCBiL3NyYy9saWJyYXJ5L3N0YXRzL21hbi9hcmltYS5SZAppbmRleCAwNjFlOGMxZDlkLi44NjE1N2MxNzkyIDEwMDY0NAotLS0gYS9zcmMvbGlicmFyeS9zdGF0cy9tYW4vYXJpbWEuUmQKKysrIGIvc3JjL2xpYnJhcnkvc3RhdHMvbWFuL2FyaW1hLlJkCkBAIC0xOSw3ICsxOSw3IEBAIGFyaW1hKHgsIG9yZGVyID0gYygwTCwgMEwsIDBMKSwKICAgICAgIG1ldGhvZCA9IGMoIkNTUy1NTCIsICJNTCIsICJDU1MiKSwgbi5jb25kLAogICAgICAgU1Npbml0ID0gYygiR2FyZG5lcjE5ODAiLCAiUm9zc2lnbm9sMjAxMSIpLAogICAgICAgb3B0aW0ubWV0aG9kID0gIkJGR1MiLAotICAgICAgb3B0aW0uY29udHJvbCA9IGxpc3QoKSwga2FwcGEgPSAxZTYpCisgICAgICBvcHRpbS5jb250cm9sID0gbGlzdCgpLCBrYXBwYSA9IDFlNiwga2VlcC54cmVnID0gRkFMU0UpCiB9CiBcYXJndW1lbnRzewogICBcaXRlbXt4fXthIHVuaXZhcmlhdGUgdGltZSBzZXJpZXN9CkBAIC0xMDEsNiArMTAxLDkgQEAgYXJpbWEoeCwgb3JkZXIgPSBjKDBMLCAwTCwgMEwpLAogICBcaXRlbXtrYXBwYX17dGhlIHByaW9yIHZhcmlhbmNlIChhcyBhIG11bHRpcGxlIG9mIHRoZSBpbm5vdmF0aW9ucwogICAgIHZhcmlhbmNlKSBmb3IgdGhlIHBhc3Qgb2JzZXJ2YXRpb25zIGluIGEgZGlmZmVyZW5jZWQgbW9kZWwuICBEbyBub3QKICAgICByZWR1Y2UgdGhpcy59CisKKyAgXGl0ZW17a2VlcC54cmVnfXtBIGxvZ2ljYWwgaW5kaWNhdGluZyB3aGV0aGVyIHRvIHJldHVybiBcY29kZXt4cmVnfS4gIElnbm9yZWQKKyAgICBpZiBcY29kZXt4cmVnfSBpcyBub3QgcHJvdmlkZWQufQogfQogXGRldGFpbHN7CiAgIERpZmZlcmVudCBkZWZpbml0aW9ucyBvZiBBUk1BIG1vZGVscyBoYXZlIGRpZmZlcmVudCBzaWducyBmb3IgdGhlCkBAIC0yMDEsNiArMjA0LDggQEAgYXJpbWEoeCwgb3JkZXIgPSBjKDBMLCAwTCwgMEwpLAogCiAgIFxpdGVte21vZGVsfXtBIGxpc3QgcmVwcmVzZW50aW5nIHRoZSBcSXtLYWxtYW59IGZpbHRlciB1c2VkIGluIHRoZQogICAgIGZpdHRpbmcuICBTZWUgXGNvZGV7XGxpbmt7S2FsbWFuTGlrZX19Ln0KKworICBcaXRlbXt4cmVnfXtpZiByZXF1ZXN0ZWQsIHRoZSBleHRlcm5hbCByZWdyZXNzb3JzLn0KIH0KIFxyZWZlcmVuY2VzewogICBcYmliaW5mb3tSOkJyb2Nrd2VsbCtEYXZpczoxOTk2fXtub3RlfXtTZWN0aW9ucyAzLjMgYW5kIDguM30K",
+          "creator": "Thomas.SOEIRO",
+          "id": 3841,
+          "is_private": false,
+          "size": 2733,
+          "last_change_time": "2026-09-08T22:27:14Z",
+          "bug_id": 19164,
+          "file_name": "arima.patch",
+          "summary": "optionally include `xreg` in `arima()` output",
+          "creation_time": "2026-09-08T22:27:14Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-06 07:01:09"
+}

@@ -49,6 +49,11 @@ _None._
 
 These are the most important or urgent regular patches from the Triage Team and should be prioritised before others below.
 
+#### I/O
+
+* [Bug 19287](https://bugs.r-project.org/show_bug.cgi?id=19287) — readRDS() can seg.fault on a malformed serialized ALTREP object (2026-11-06)
+* [Bug 19288](https://bugs.r-project.org/show_bug.cgi?id=19288) — unserialize() reads past a string's end when a stream declares the wchar_t encoding (2026-11-06)
+
 #### Low-level
 
 * [Bug 19276](https://bugs.r-project.org/show_bug.cgi?id=19276) — .Random.seed with a negative Mersenne-Twister position, length 0, or an unloaded user normal kind crashes R (2026-11-02)
@@ -73,6 +78,10 @@ These Triage Team patches should be looked at next.
 #### Graphics
 
 * [Bug 19279](https://bugs.r-project.org/show_bug.cgi?id=19279) — contour() and contourLines() mishandle all-negative z (zmax initialized to DBL_MIN) (2026-11-03)
+
+#### I/O
+
+* [Bug 19289](https://bugs.r-project.org/show_bug.cgi?id=19289) — readChar() on a raw vector can write past its buffer in UTF-8 locales on macOS (2026-11-06)
 
 #### Language
 
