@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-06._
+_Automatically generated from the R Bugzilla dump updated 2026-11-07._
 
 ## Triaged bugs
 
@@ -57,6 +57,8 @@ These are the most important or urgent regular patches from the Triage Team and 
 #### Low-level
 
 * [Bug 19276](https://bugs.r-project.org/show_bug.cgi?id=19276) — .Random.seed with a negative Mersenne-Twister position, length 0, or an unloaded user normal kind crashes R (2026-11-02)
+* [Bug 19291](https://bugs.r-project.org/show_bug.cgi?id=19291) — format(<POSIXlt>, usetz = TRUE) overflows its output buffer when appending the zone (2026-11-07)
+* [Bug 19292](https://bugs.r-project.org/show_bug.cgi?id=19292) — chartr() writes past its translation table when the spec expands to 2^32 entries (int count overflow) (2026-11-07)
 
 #### S4methods
 
