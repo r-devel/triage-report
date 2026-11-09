@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc_detail": [
+          {
+            "real_name": "Ivan Krylov",
+            "name": "ikrylov",
+            "id": 3307
+          }
+        ],
+        "last_change_time": "2026-11-08T10:11:28Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "Surprise old R versions for Windows now only located at https://cran-archive.r-project.org/bin/windows/base/old",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Andre Mikulec",
+          "id": 1849,
+          "name": "Andre_Mikulec"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "Andre_Mikulec",
+        "op_sys": "Windows 64-bit",
+        "is_confirmed": false,
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "flags": [],
+        "cc": [
+          "ikrylov"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19290,
+        "dupe_of": {},
+        "severity": "minor",
+        "whiteboard": "",
+        "creation_time": "2026-11-07T03:52:14Z",
+        "version": "old",
+        "priority": "P5",
+        "product": "R",
+        "component": "Installation",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19290": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 104115,
+            "time": "2026-11-07T03:52:14Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19290,
+            "text": "Hi,\n\nI do not know where to report this.  Therefore, I am reporting this here.  If I am reporting in the wrong place, please tell me the correct place to report or please refer me.\n\nIn the future (emphasis), when changing the physical locations of the old versions of R for Windows that would be moved from \"https://cran.r-project.org/bin/windows/base/old/\" to \"https://cran-archive.r-project.org/bin/windows/base/old/\", then please report this change somewhere publicly.  E.g. \"What's New?\" at this page (or a sub-page of) https://www.r-project.org/news.html .\n\nThe location of the old R versions for Windows have changed from \"any version 4.0.0 or less\" to \"any version 4.2.0 or less\" during late October 2026 or early November 2026 without an announcement. \n\nOld - seen OCT 22 2026\n```\nR 4.0.0 (April, 2020)\nIn the CRAN archives (https://cran-archive.r-project.org/bin/windows/base/old/):\nR 3.6.3 (February, 2020)\n```\nat \nhttps://web.archive.org/web/20261022065611/https://cran.r-project.org/bin/windows/base/old/\n\nNew - seen NOV 07 2026\n```\nR 4.2.0 (April, 2022)\nIn the CRAN archives (https://cran-archive.r-project.org/bin/windows/base/old/):\nR 4.1.3 (March, 2022)\n```\nat \nhttps://web.archive.org/web/20261107030245/https://cran.r-project.org/bin/windows/base/old/\n\nThis change surprised me. Thus, I could not know to change my builder job old R for Windows location.  Therefore, my \"Embedded R\" builder job failed:\n\nhttps://ci.appveyor.com/project/AndreMikulec/plr/build/job/penn9uwfffvhtddq#L321\n```\nVERBOSE: GET https://cran.r-project.org/bin/windows/base/old/4.1.3/R-4.1.3-win.exe with 0-byte payload\ncurl : The remote server returned an error: (404) Not Found.\nAt line:26 char:3\n+   curl -o \"R-${env:rversion}-win.exe\" -v \"${env:rversionurl}\"\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n```\n\nAgain, would just appreciate a(n) future (emphasis) announcement.\n\nThanks,\nAndre Mikulec",
+            "creation_time": "2026-11-07T03:52:14Z",
+            "creator": "Andre_Mikulec"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-11-08T10:11:28Z",
+            "id": 104126,
+            "is_private": false,
+            "creator": "ikrylov",
+            "creation_time": "2026-11-08T10:11:28Z",
+            "text": "Thank you for the report! I think you'll need to contact someone from the [CRAN team], likely Dr. Uwe Ligges (since he's responsible for the Windows binary packages).\n\nSince this problem is not in the base R source code, this bug report will have to be closed.\n\n[CRAN team]: https://cran.r-project.org/CRAN_team.htm",
+            "bug_id": 19290,
+            "count": 1,
+            "is_markdown": true
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19290": []
+    }
+  },
+  "source_changed": "2026-11-08 10:11:28"
+}

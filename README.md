@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-07._
+_Automatically generated from the R Bugzilla dump updated 2026-11-08._
 
 ## Triaged bugs
 
@@ -56,9 +56,7 @@ These are the most important or urgent regular patches from the Triage Team and 
 
 #### Low-level
 
-* [Bug 19276](https://bugs.r-project.org/show_bug.cgi?id=19276) — .Random.seed with a negative Mersenne-Twister position, length 0, or an unloaded user normal kind crashes R (2026-11-02)
 * [Bug 19291](https://bugs.r-project.org/show_bug.cgi?id=19291) — format(<POSIXlt>, usetz = TRUE) overflows its output buffer when appending the zone (2026-11-07)
-* [Bug 19292](https://bugs.r-project.org/show_bug.cgi?id=19292) — chartr() writes past its translation table when the spec expands to 2^32 entries (int count overflow) (2026-11-07)
 
 #### S4methods
 
@@ -166,7 +164,6 @@ These patches have not yet been prioritised.
 
 #### S4methods
 
-* [Bug 18833](https://bugs.r-project.org/show_bug.cgi?id=18833) — methods:::.identicalGeneric can wrongly ignore differences in default values of formal arguments (2024-12-07)
 * [Bug 19079](https://bugs.r-project.org/show_bug.cgi?id=19079) — S4 packages with group methods error with "subscript out of bounds" under unloadNamespace with Imports: methods (2026-05-29, in CC: lawrence)
 * [Bug 19083](https://bugs.r-project.org/show_bug.cgi?id=19083) — setGeneric("f", \(x) { standardGeneric("x") }) makes generic with class 'nonstandardGenericFunction' (2026-06-22, in CC: maechler)
 * [Bug 19237](https://bugs.r-project.org/show_bug.cgi?id=19237) — .updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups) (2026-10-21)
