@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-08._
+_Automatically generated from the R Bugzilla dump updated 2026-11-10._
 
 ## Triaged bugs
 
@@ -23,7 +23,7 @@ _Core developers in CC should not be assumed responsible for action._
 
 ### Recommended closures
 
-_None._
+* [Bug 19290](https://bugs.r-project.org/show_bug.cgi?id=19290) — Surprise old R versions for Windows now only located at https://cran-archive.r-project.org/bin/windows/base/old (2026-11-08)
 
 ### Needs more information
 
@@ -54,10 +54,6 @@ These are the most important or urgent regular patches from the Triage Team and 
 * [Bug 19287](https://bugs.r-project.org/show_bug.cgi?id=19287) — readRDS() can seg.fault on a malformed serialized ALTREP object (2026-11-06)
 * [Bug 19288](https://bugs.r-project.org/show_bug.cgi?id=19288) — unserialize() reads past a string's end when a stream declares the wchar_t encoding (2026-11-06)
 
-#### Low-level
-
-* [Bug 19291](https://bugs.r-project.org/show_bug.cgi?id=19291) — format(<POSIXlt>, usetz = TRUE) overflows its output buffer when appending the zone (2026-11-07)
-
 #### S4methods
 
 * [Bug 19254](https://bugs.r-project.org/show_bug.cgi?id=19254) — Add fast paths for early exit from is() (2026-10-26)
@@ -82,10 +78,6 @@ These Triage Team patches should be looked at next.
 #### I/O
 
 * [Bug 19289](https://bugs.r-project.org/show_bug.cgi?id=19289) — readChar() on a raw vector can write past its buffer in UTF-8 locales on macOS (2026-11-06)
-
-#### Language
-
-* [Bug 19278](https://bugs.r-project.org/show_bug.cgi?id=19278) — deparse() omits parentheses around a negative constant as the base of ^ (2026-11-04)
 
 #### Low-level
 

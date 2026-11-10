@@ -1,0 +1,134 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "whiteboard": "",
+        "creation_time": "2026-11-04T15:15:02Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "qa_contact": "",
+        "cc": [
+          "kevinushey"
+        ],
+        "id": 19282,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "is_creator_accessible": true,
+        "creator": "hugo.gruson+Rbugzilla",
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "Linux",
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "id": 3647,
+          "name": "hugo.gruson+Rbugzilla",
+          "real_name": "Hugo Gruson"
+        },
+        "resolution": "",
+        "status": "CONFIRMED",
+        "summary": "seq.int(x, length.out = l) doesn't return a compact ALTREP vector",
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [
+          {
+            "name": "kevinushey",
+            "id": 1044,
+            "real_name": "Kevin Ushey"
+          }
+        ],
+        "last_change_time": "2026-11-10T01:19:49Z",
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19282": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 104085,
+            "time": "2026-11-04T15:15:02Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19282,
+            "text": "When `from` and `to` are specified, `seq.int()` returns a compact ALTREP vector, but the same isn't true when `from` and `length.out` are specified, making the latter massively slower.\n\nThis caught me by surprise and I suspect most R users also won't expect this. The \"fix\" is to use the less readable alternative, where `to` is manually computed to be passed to `seq.int()`.\n\nAs far as I can tell, it should be possible & sensible to return a compact ALTREP vector in both cases, as long as only these two arguments are specified.\n\n``` r\nstart <- 2026L\n\nbench::mark(\n  seq.int(start, 1e7+start-1L),\n  seq.int(start, length.out = 1e7)\n)\n#> # A tibble: 2 × 6\n#>   expression                            min  median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr>                        <bch:t> <bch:t>     <dbl> <bch:byt>    <dbl>\n#> 1 seq.int(start, 1e+07 + start - 1…   121ns   158ns 4936346.         0B      0  \n#> 2 seq.int(start, length.out = 1e+0…  15.5ms  16.3ms      60.4    38.1MB     60.4\n\n.Internal(inspect(seq.int(start, 1e7+start-1L)))\n#> @6227e5b42718 13 INTSXP g0c0 [REF(65535)]  2026 : 10002025 (compact)\n.Internal(inspect(seq.int(start, length.out = 1e7)))\n#> @71ff0a226010 13 INTSXP g0c7 [] (len=10000000, tl=0) 2026,2027,2028,2029,2030,...\n```",
+            "creation_time": "2026-11-04T15:15:02Z",
+            "creator": "hugo.gruson+Rbugzilla"
+          },
+          {
+            "text": "I messed up formatting of the code block in my previous message. Apologies.\n\n```\nstart <- 2026L\n\nbench::mark(\n  seq.int(start, 1e7+start-1L),\n  seq.int(start, length.out = 1e7)\n)\n#> # A tibble: 2 × 6\n#>   expression                            min  median `itr/sec` mem_alloc `gc/sec`\n#>   <bch:expr>                        <bch:t> <bch:t>     <dbl> <bch:byt>    <dbl>\n#> 1 seq.int(start, 1e+07 + start - 1…   121ns   158ns 4936346.         0B      0  \n#> 2 seq.int(start, length.out = 1e+0…  15.5ms  16.3ms      60.4    38.1MB     60.4\n\n.Internal(inspect(seq.int(start, 1e7+start-1L)))\n#> @6227e5b42718 13 INTSXP g0c0 [REF(65535)]  2026 : 10002025 (compact)\n.Internal(inspect(seq.int(start, length.out = 1e7)))\n#> @71ff0a226010 13 INTSXP g0c7 [] (len=10000000, tl=0) 2026,2027,2028,2029,2030,...\n```",
+            "bug_id": 19282,
+            "is_markdown": true,
+            "count": 1,
+            "creator": "hugo.gruson+Rbugzilla",
+            "creation_time": "2026-11-04T15:15:56Z",
+            "time": "2026-11-04T15:15:56Z",
+            "id": 104086,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creation_time": "2026-11-10T01:17:16Z",
+            "creator": "kevinushey",
+            "count": 2,
+            "is_markdown": false,
+            "bug_id": 19282,
+            "text": "Created attachment 4023\npatch: return compact sequences from seq.int() with length.out\n\nAgreed, and this is cheap to do: by the time do_seq() handles length.out it has already computed the endpoints and decided the result is the integer sequence from:to, but then allocates and fills the whole vector instead of calling seq_colon() as seq.int(from, to) does.\n\nThe attached patch (against r90865) routes the length.out cases whose result is exactly from:to -- by missing, or by = +/- 1 -- through seq_colon(), so seq.int(from, length.out = n) and the to= / unit-step from,to variants now return compact sequences. Values and types are unchanged, and endpoints that do not round-trip keep the old code. Includes a regression test; make check passes.\n\nPatch also at https://github.com/r-devel/r-svn/pull/464",
+            "tags": [],
+            "attachment_id": 4023,
+            "is_private": false,
+            "id": 104141,
+            "time": "2026-11-10T01:17:16Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19282": [
+        {
+          "file_name": "seq-length-out-compact.diff",
+          "bug_id": 19282,
+          "creation_time": "2026-11-10T01:17:16Z",
+          "summary": "patch: return compact sequences from seq.int() with length.out",
+          "is_private": false,
+          "id": 4023,
+          "last_change_time": "2026-11-10T01:17:16Z",
+          "size": 3566,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3NlcS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3NlcS5jCShyZXZpc2lvbiA5MDg2NSkKKysrIHNyYy9tYWluL3NlcS5jCSh3b3JraW5nIGNvcHkpCkBAIC05NjUsNiArOTY1LDEwIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXEoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQogCWlmKG1pc3NfZnJvbSkgcmZyb20gPSBydG8gICAtIChkb3VibGUpbG91dCArIDE7CiAJaWYoIVJfRklOSVRFKHJmcm9tKSkgZXJyb3JjYWxsKGNhbGwsIF8oIiclcycgbXVzdCBiZSBhIGZpbml0ZSBudW1iZXIiKSwgImZyb20iKTsKIAlpZighUl9GSU5JVEUocnRvKSkgICBlcnJvcmNhbGwoY2FsbCwgXygiJyVzJyBtdXN0IGJlIGEgZmluaXRlIG51bWJlciIpLCAidG8iKTsKKwlpZihmYWJzKHJ0byAtIHJmcm9tKSA9PSAoZG91YmxlKShsb3V0IC0gMSkpIHsgLy8gYnkgPSArLy0gMTogc2FtZSBhcyBmcm9tOnRvCisJICAgIGFucyA9IHNlcV9jb2xvbihyZnJvbSwgcnRvLCBjYWxsKTsKKwkgICAgZ290byBkb25lOworCX0KIAlib29sIGZpbml0ZV9kZWwgPSAwOwogCWlmKGxvdXQgPiAyKSB7IC8vIG9ubHkgdGhlbiwgdXNlICdieScKIAkgICAgZG91YmxlIG5pbnQgPSAoZG91YmxlKShsb3V0IC0gMSk7CkBAIC0xMDEyLDYgKzEwMTYsMTAgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX3NlcShTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pCiAJaWYoIVJfRklOSVRFKHJmcm9tKSkgZXJyb3JjYWxsKGNhbGwsIF8oIiclcycgbXVzdCBiZSBhIGZpbml0ZSBudW1iZXIiKSwgImZyb20iKTsKIAlpZighUl9GSU5JVEUocmJ5KSkgICBlcnJvcmNhbGwoY2FsbCwgXygiJyVzJyBtdXN0IGJlIGEgZmluaXRlIG51bWJlciIpLCAiYnkiKTsKIAlydG8gPSByZnJvbSArIChkb3VibGUpKGxvdXQtMSkqcmJ5OworCWlmKGZhYnMocmJ5KSA9PSAxLiAmJiBmYWJzKHJ0byAtIHJmcm9tKSA9PSAoZG91YmxlKShsb3V0IC0gMSkpIHsKKwkgICAgYW5zID0gc2VxX2NvbG9uKHJmcm9tLCBydG8sIGNhbGwpOyAvLyBjb21wYWN0LCBhcyBmcm9tOnRvCisJICAgIGdvdG8gZG9uZTsKKwl9CiAJLy8gYXZvaWQgdW5kZWZpbmVkIGJlaGF2aW91ciBieSB0ZXN0aW5nIHJhbmdlIGJlZm9yZSBjb252ZXJ0aW5nLgogCWlmKHJmcm9tIDw9IElOVF9NQVggJiYgcmZyb20gPj0gSU5UX01JTgogCSAgICYmICBydG8gIDw9IElOVF9NQVggJiYgIHJ0byAgPj0gSU5UX01JTgpAQCAtMTAzMyw2ICsxMDQxLDEwIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19zZXEoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgcmhvKQogCSAgICByZnJvbSA9IHJ0byAtIChkb3VibGUpKGxvdXQtMSkqcmJ5OwogCWlmKCFSX0ZJTklURShydG8pKSBlcnJvcmNhbGwoY2FsbCwgXygiJyVzJyBtdXN0IGJlIGEgZmluaXRlIG51bWJlciIpLCAidG8iKTsKIAlpZighUl9GSU5JVEUocmJ5KSkgZXJyb3JjYWxsKGNhbGwsIF8oIiclcycgbXVzdCBiZSBhIGZpbml0ZSBudW1iZXIiKSwgImJ5Iik7CisJaWYoZmFicyhyYnkpID09IDEuICYmIGZhYnMocnRvIC0gcmZyb20pID09IChkb3VibGUpKGxvdXQgLSAxKSkgeworCSAgICBhbnMgPSBzZXFfY29sb24ocmZyb20sIHJ0bywgY2FsbCk7IC8vIGNvbXBhY3QsIGFzIGZyb206dG8KKwkgICAgZ290byBkb25lOworCX0KIAlpZihyYnkgPT0gKGludClyYnkgJiYgcnRvID09IChpbnQpcnRvCiAJICAgJiYgcmZyb20gPD0gSU5UX01BWCAmJiByZnJvbSA+PSBJTlRfTUlOCiAJICAgJiYgIHJ0byAgPD0gSU5UX01BWCAmJiAgcnRvICA+PSBJTlRfTUlOKSB7CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA4NjUpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDU4NCw2ICs0NTg0LDI5IEBAIHN0b3BpZm5vdChpZGVudGljYWwoZCwgZGV2LmN1cigpKSwgbmFtZXMoZCkgPT0gInBkZiIpCiBkZXYub2ZmKGQpOyBvcHRpb25zKG9wKQogIyMgcmV0dXJuZWQgYygibnVsbCBkZXZpY2UiID0gMUwpIGluIFIgPD0gNC42LjIKIAorIyMgc2VxLmludChmcm9tLCBsZW5ndGgub3V0ID0gbikgcmV0dXJucyBhIGNvbXBhY3Qgc2VxdWVuY2UgLS0gUFIjMTkyODIKK2FsdENsYXNzIDwtIGZ1bmN0aW9uKHgpIC5JbnRlcm5hbChhbHRyZXBfY2xhc3MoeCkpWzFMXQorc3RvcGlmbm90KGV4cHJzID0geworICAgIGlkZW50aWNhbChzZXEuaW50KDIwMjZMLCBsZW5ndGgub3V0ID0gMTApLCAyMDI2OjIwMzUpCisgICAgaWRlbnRpY2FsKHNlcS5pbnQoMjAyNiwgbGVuZ3RoLm91dCA9IDEwKSwgMjAyNjoyMDM1KQorICAgIGlkZW50aWNhbChzZXEuaW50KHRvID0gMTAsIGxlbmd0aC5vdXQgPSAzKSwgODoxMCkKKyAgICBpZGVudGljYWwoc2VxLmludCgxLCAxMCwgbGVuZ3RoLm91dCA9IDEwKSwgMToxMCkKKyAgICBpZGVudGljYWwoc2VxLmludCgxMCwgMSwgbGVuZ3RoLm91dCA9IDEwKSwgMTA6MSkKKyAgICBpZGVudGljYWwoc2VxLmludCg1LCBieSA9IDEsIGxlbmd0aC5vdXQgPSA0KSwgNTo4KQorICAgIGlkZW50aWNhbChzZXEuaW50KDUsIGJ5ID0gLTEsIGxlbmd0aC5vdXQgPSA0KSwgNToyKQorICAgIGlkZW50aWNhbChzZXEuaW50KHRvID0gNSwgYnkgPSAxLCBsZW5ndGgub3V0ID0gNCksIDI6NSkKKyAgICBpZGVudGljYWwoc2VxLmludCgyLjUsIGxlbmd0aC5vdXQgPSAzKSwgYygyLjUsIDMuNSwgNC41KSkKKyAgICBpZGVudGljYWwoc2VxLmludCg3LCBsZW5ndGgub3V0ID0gMSksIDdMKQorICAgIGlkZW50aWNhbChzZXEuaW50KDEsIDEwLCBsZW5ndGgub3V0ID0gNCksIGMoMUwsIDRMLCA3TCwgMTBMKSkKKyAgICBpZGVudGljYWwoc2VxLmludCgxZTE3LCBsZW5ndGgub3V0ID0gMyksIHJlcCgxZTE3LCAzKSkKKyAgICBpZGVudGljYWwoYWx0Q2xhc3Moc2VxLmludCgyMDI2TCwgbGVuZ3RoLm91dCA9IDFlNykpLCAiY29tcGFjdF9pbnRzZXEiKQorICAgIGlkZW50aWNhbChhbHRDbGFzcyhzZXEuaW50KHRvID0gMWU3LCBsZW5ndGgub3V0ID0gMWU3KSksICJjb21wYWN0X2ludHNlcSIpCisgICAgaWRlbnRpY2FsKGFsdENsYXNzKHNlcS5pbnQoMSwgMWU3LCBsZW5ndGgub3V0ID0gMWU3KSksICJjb21wYWN0X2ludHNlcSIpCisgICAgaWRlbnRpY2FsKGFsdENsYXNzKHNlcS5pbnQoMWU3LCBieSA9IC0xLCBsZW5ndGgub3V0ID0gMWU3KSksICJjb21wYWN0X2ludHNlcSIpCisgICAgaWRlbnRpY2FsKGFsdENsYXNzKHNlcS5pbnQoM2U5LCBsZW5ndGgub3V0ID0gMWU3KSksICJjb21wYWN0X3JlYWxzZXEiKQorfSkKKyMjIGFsbG9jYXRlZCBhbmQgZmlsbGVkIGEgZnVsbCB2ZWN0b3IgaW4gUiA8PSA0LjYuMgorCiAKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAo=",
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-10 01:19:49"
+}
