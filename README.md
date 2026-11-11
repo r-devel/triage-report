@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-10._
+_Automatically generated from the R Bugzilla dump updated 2026-11-11._
 
 ## Triaged bugs
 
@@ -128,6 +128,7 @@ These Triage Team patches can wait their turn.
 * [Bug 19042](https://bugs.r-project.org/show_bug.cgi?id=19042) — Provide getDLLVersion on all platforms? (2026-04-02)
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
+* [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-11)
 
 ### P5
 
@@ -177,10 +178,8 @@ These patches have not yet been prioritised.
 * [Bug 17676](https://bugs.r-project.org/show_bug.cgi?id=17676) — vcov.lm should calculate vcov more directly for efficiency (2019-12-17)
 * [Bug 17778](https://bugs.r-project.org/show_bug.cgi?id=17778) — barplot should take user-supplied lwd (2020-05-01)
 * [Bug 17918](https://bugs.r-project.org/show_bug.cgi?id=17918) — Improve debugcall and debugcallonce to support calls to funs via :: :::, patch included (2020-09-08)
-* [Bug 18407](https://bugs.r-project.org/show_bug.cgi?id=18407) — Underscore-separated numeric literals (2022-09-20)
 * [Bug 18700](https://bugs.r-project.org/show_bug.cgi?id=18700) — Error passing improvements in 'parallel' (2024-04-23)
 * [Bug 18883](https://bugs.r-project.org/show_bug.cgi?id=18883) — Wish: resize the input width in Rterm.exe (2025-04-15)
-* [Bug 19004](https://bugs.r-project.org/show_bug.cgi?id=19004) — Package version: keep formatting (2026-02-14)
 * [Bug 19105](https://bugs.r-project.org/show_bug.cgi?id=19105) — Provide a traceback when crashing on Windows (2026-07-19)
 
 ## About this report

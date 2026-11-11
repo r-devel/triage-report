@@ -1,0 +1,126 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-01T11:17:03Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "minor",
+        "id": 19195,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "Vcells count drops, or wraps past zero, after a symbol lookup through a differently marked copy of its name",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-11-11T05:08:06Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "r",
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": false,
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Nicolas Bennett",
+          "name": "r",
+          "id": 3225
+        },
+        "status": "UNCONFIRMED"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19195": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19195,
+            "text": "Looking up an existing symbol through a copy of its name with another declared encoding leaves the copy hashed, and freeing it lowers the vector heap count by the hash. R 4.5.3 and R Under development (unstable) (2026-09-30 r90605), x86_64-pc-linux-gnu, Ubuntu 24.04.4 LTS, en_US.UTF-8:\n\n    $ R --vanilla --quiet\n    > vcells <- function() { invisible(gc()); gc()[\"Vcells\", c(\"used\", \"gc trigger\")] }\n    > x <- strrep(\"\\u00e9\", 100L)   # 200 bytes, declared UTF-8\n    > s <- as.symbol(x)             # makes the symbol, named by x\n    > vcells()\n          used gc trigger\n        528900    8388608\n    > local({ y <- x; Encoding(y) <- \"unknown\"; invisible(as.symbol(y)) })\n    > vcells()\n            used   gc trigger\n    1.844674e+19 1.844674e+19\n\nIn a fresh session, a name refused for its length wraps the used count the same way: try(as.symbol(strrep(\"a\", 10001L))).\n\nThe shortfall persists, adds up with each such copy freed, and is not just a reporting error: the same count decides when an allocation triggers a collection, how the heap is resized, as the gc trigger above shows, and when the vector limit is reached (src/main/memory.c:2710-2714, 1184).\n\nThe root cause is installNoTrChar() storing the hash in the CHARSXP's TRUELENGTH (src/main/names.c:1303-1306) before returning an existing symbol named by a different CHARSXP (or refusing a name over MAXIDSIZE). Either way the CHARSXP stays hashed without becoming a PRINTNAME. On a CHARSXP, CACHED_MASK is the bit GROWABLE_MASK tests (src/include/Defn.h:937-938), so once it is collected, getVecSizeInVEC() sizes it by TRUELENGTH and the hash is what comes off R_LargeVallocSize (memory.c:1108-1109, 1166). Only CHARSXPs in the large-vector class are affected.\n\nWould it be worth leaving CHARSXPs out of the growable adjustment in getVecSizeInVEC(), since bit 5 means cached on them? Storing the hash only once installNoTrChar() makes the CHARSXP a PRINTNAME would also close both cases. I'm happy to supply a patch if this sounds right.\n\nDisclosure: I used an AI assistant to find the cause in the R sources and to draft this report, then edited it and reproduced the results myself on R 4.5.3 and R-devel r90605.",
+            "creation_time": "2026-10-01T11:17:03Z",
+            "creator": "r",
+            "is_private": false,
+            "id": 103749,
+            "time": "2026-10-01T11:17:03Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "time": "2026-10-01T13:14:15Z",
+            "attachment_id": 3882,
+            "is_markdown": true,
+            "creator": "r",
+            "id": 103750,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19195,
+            "text": "Created attachment 3882\nNo longer apply the growable adjustment to CHARSXPs in getVecSizeInVEC() and store the hash only once the CHARSXP has become a PRINTNAME in installNoTrChar()\n\nPatch against trunk r90605, in three parts: getVecSizeInVEC() no longer applies the growable adjustment to CHARSXPs, installNoTrChar() stores the hash only once the CHARSXP has become a PRINTNAME, and tests/reg-tests-1e.R gains two regression tests. The first checks that the Vcells count neither falls nor wraps; it fails on stock r90605 and passes with either change alone. The second reads the hash bit through .Internal(inspect()), with a symbol’s own name as a positive control, and fails without the installNoTrChar() change. With both changes, both tests pass in a normal build and in one configured with –enable-strict-barrier. The full make check passes with each change alone and with both, and repeating the lookup and the refused name 400 times leaves no drift in the count.",
+            "count": 1,
+            "creation_time": "2026-10-01T13:14:15Z"
+          },
+          {
+            "is_private": false,
+            "id": 104166,
+            "time": "2026-11-11T05:08:06Z",
+            "attachment_id": {},
+            "tags": [],
+            "count": 2,
+            "is_markdown": false,
+            "bug_id": 19195,
+            "text": "OSS-Fuzz ran into this through unserialize(): a SYMSXP whose name is longer than 10000 bytes takes the refused-name path, so reading serialized data is enough to wrap the count. The fuzzing process, started with R_MAX_VSIZE=512Mb, then stopped collecting on vector allocation and grew to 2.5 Gb (testcase 4823638474555392).\n\nI arrived at the same getVecSizeInVEC() change as attachment 3882 before finding this report, and can confirm it on trunk r90874: with that hunk alone the count is unchanged in both cases and the limit holds again. That hunk, with a test in tests/reg-fuzz.R, is at https://github.com/r-devel/r-svn/pull/466, where CI results can be seen.",
+            "creation_time": "2026-11-11T05:08:06Z",
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19195": [
+        {
+          "data": "SW5kZXg6IHNyYy9tYWluL21lbW9yeS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL21lbW9yeS5jCShyZXZpc2lvbiA5MDYwNSkKKysrIHNyYy9tYWluL21lbW9yeS5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMTA1LDcgKzExMDUsOSBAQAogLyogY29tcHV0ZSBzaXplIGluIFZFQyB1bml0cyBzbyByZXN1bHQgd2lsbCBmaXQgaW4gTEVOR1RIIGZpZWxkIGZvciBGUkVFU1hQcyAqLwogc3RhdGljIFJfSU5MSU5FIFJfc2l6ZV90IGdldFZlY1NpemVJblZFQyhTRVhQIHMpCiB7Ci0gICAgaWYgKElTX0dST1dBQkxFKHMpKQorICAgIC8qIE9uIGEgQ0hBUlNYUCB0aGUgZ3Jvd2FibGUgYml0IGlzIHRoZSBDQUNIRUQgYml0IGFuZCBUUlVFTEVOR1RICisgICAgICAgbWF5IGhvbGQgdGhlIGhhc2ggb2YgYSBzeW1ib2wgbmFtZSwgc28gbmVpdGhlciBnaXZlcyBpdHMgc2l6ZS4gKi8KKyAgICBpZiAoVFlQRU9GKHMpICE9IENIQVJTWFAgJiYgSVNfR1JPV0FCTEUocykpCiAJU0VUX1NURFZFQ19MRU5HVEgocywgWFRSVUVMRU5HVEgocykpOwogCiAgICAgUl9zaXplX3Qgc2l6ZTsKSW5kZXg6IHNyYy9tYWluL25hbWVzLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vbmFtZXMuYwkocmV2aXNpb24gOTA2MDUpCisrKyBzcmMvbWFpbi9uYW1lcy5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMzAwLDEwICsxMzAwLDEwIEBACiAgICAgU0VYUCBzeW07CiAgICAgaW50IGksIGhhc2hjb2RlOwogCisgICAgLyogVGhlIGhhc2ggZ29lcyBvbiBjaGFyU1hQIG9ubHkgb25jZSBpdCBpcyB0aGUgUFJJTlROQU1FOiBhIENIQVJTWFAKKyAgICAgICBsZWZ0IGhhc2hlZCBpcyBmcmVlZCBhdCB0aGUgc2l6ZSBpdHMgVFJVRUxFTkdUSCBnaXZlcy4gKi8KICAgICBpZiggIUhBU0hBU0goY2hhclNYUCkgKSB7CiAJaGFzaGNvZGUgPSBSX05ld2hhc2hwancoQ0hBUihjaGFyU1hQKSk7Ci0JU0VUX0hBU0hWQUxVRShjaGFyU1hQLCBoYXNoY29kZSk7Ci0JU0VUX0hBU0hBU0goY2hhclNYUCwgMSk7CiAgICAgfSBlbHNlIHsKIAloYXNoY29kZSA9IEhBU0hWQUxVRShjaGFyU1hQKTsKICAgICB9CkBAIC0xMzE4LDkgKzEzMTgsMTEgQEAKICAgICBpZiAobGVuID4gTUFYSURTSVpFKQogCWVycm9yKF8oInZhcmlhYmxlIG5hbWVzIGFyZSBsaW1pdGVkIHRvICVkIGJ5dGVzIiksIE1BWElEU0laRSk7CiAgICAgaWYgKElTX0FTQ0lJKGNoYXJTWFApIHx8IChJU19VVEY4KGNoYXJTWFApICYmIHV0Zjhsb2NhbGUpIHx8Ci0JCQkJCShJU19MQVRJTjEoY2hhclNYUCkgJiYgbGF0aW4xbG9jYWxlKSApCisJCQkJCShJU19MQVRJTjEoY2hhclNYUCkgJiYgbGF0aW4xbG9jYWxlKSApIHsKIAlzeW0gPSBta1NZTVNYUChjaGFyU1hQLCBSX1VuYm91bmRWYWx1ZSk7Ci0gICAgZWxzZSB7CisJU0VUX0hBU0hWQUxVRShjaGFyU1hQLCBoYXNoY29kZSk7CisJU0VUX0hBU0hBU0goY2hhclNYUCwgMSk7CisgICAgfSBlbHNlIHsKIAkvKiBUaGlzIGJyYW5jaCBpcyB0byBtYXRjaCBiZWhhdmlvdXIgb2YgaW5zdGFsbCAod2hpY2ggaXMgb2xkZXIpOgogCSAgIHN5bWJvbCBDLXN0cmluZyBuYW1lcyBhcmUgYWx3YXlzIGludGVycHJldGVkIGFzIGlmCiAJICAgaW4gdGhlIG5hdGl2ZSBsb2NhbGUsIGV2ZW4gd2hlbiB0aGV5IGFyZSBub3QgaW4gdGhlIG5hdGl2ZSBsb2NhbGUgKi8KSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDYwNSkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0zODAxLDYgKzM4MDEsMzMgQEAKICMjIGdhdmUgZ2FyYmFnZSAob3IgYSBjcmFzaCkgZm9yIHRoZSBMSFMgb2YgJysnIGluIFIgPD0gNC42LngKIAogCisjIyBhIENIQVJTWFAgaGFzaGVkIGJ5IGluc3RhbGxOb1RyQ2hhcigpIHdpdGhvdXQgYmVjb21pbmcgYSBQUklOVE5BTUUgd2FzIGZyZWVkCisjIyBhdCB0aGUgc2l6ZSBpdHMgaGFzaCBnYXZlLCB0aGUgQ0FDSEVEIGJpdCBiZWluZyB0aGUgR1JPV0FCTEUgYml0IC0tIFBSIzE5MTk1Cit2Y2VsbHMgPC0gZnVuY3Rpb24oKSB7IGludmlzaWJsZShnYygpKTsgZ2MoKVtbIlZjZWxscyIsICJ1c2VkIl1dIH0KK3UwIDwtIHZjZWxscygpCit0cnkoYXMuc3ltYm9sKHN0cnJlcCgiYSIsIDEwMDAxTCkpLCBzaWxlbnQgPSBUUlVFKSAjIHJlZnVzZWQgYXMgdG9vIGxvbmcKK2lmKGwxMG5faW5mbygpW1siVVRGLTgiXV0pIHsgIyBsb29rZWQgdXAgdGhyb3VnaCBhIHJlLW1hcmtlZCBjb3B5IG9mIHRoZSBuYW1lCisgICAgeCA8LSBzdHJyZXAoIlx1MDBlOSIsIDEwMEwpOyBzIDwtIGFzLnN5bWJvbCh4KQorICAgIGxvY2FsKHsgeSA8LSB4OyBFbmNvZGluZyh5KSA8LSAidW5rbm93biI7IGludmlzaWJsZShhcy5zeW1ib2woeSkpIH0pCit9CitkIDwtIHZjZWxscygpIC0gdTAgIyBhbGxvY2F0aW9uIGNhbiBvbmx5IHJhaXNlICd1c2VkJworc3RvcGlmbm90KC0xZTUgPCBkLCBkIDwgMWU5KQorIyMgJ3VzZWQnIGZlbGwgYnkgdGhlIGhhc2gsIG9yIHdyYXBwZWQgcm91bmQgcGFzdCB6ZXJvLCBpbiBSIDw9IDQuNi54CisjIyBhbmQgYSBDSEFSU1hQIGdldHMgYSBoYXNoIG9ubHkgb25jZSBpbnN0YWxsTm9UckNoYXIoKSBtYWtlcyBpdCBhIFBSSU5UTkFNRQoraGFzaGFzaCA8LSBmdW5jdGlvbihzKSB7ICMgYml0IDAgb2YgdGhlIGdwIGZpZWxkIGluc3BlY3QoKSBwcmludHMgZm9yIHNbMV0KKyAgICBvIDwtIGdyZXAoIiBDSEFSU1hQICIsIGNhcHR1cmUub3V0cHV0KC5JbnRlcm5hbChpbnNwZWN0KHMpKSksIHZhbHVlID0gVFJVRSkKKyAgICBiaXR3QW5kKHN0cnRvaShzdWIoIi4qZ3A9MHgoWzAtOWEtZl0rKS4qIiwgIlxcMSIsIG9bMV0pLCAxNkwpLCAxTCkgPT0gMUwKK30KK3ogPC0gc3RycmVwKCJiIiwgMTAwMDFMKTsgdHJ5KGFzLnN5bWJvbCh6KSwgc2lsZW50ID0gVFJVRSkKK3N0b3BpZm5vdCghaGFzaGFzaCh6KSkKK2lmKGwxMG5faW5mbygpW1siVVRGLTgiXV0pIHsKKyAgICB6IDwtIHN0cnJlcCgiXHUwMGU4IiwgMTAwTCk7IHMgPC0gYXMuc3ltYm9sKHopICMgeiBub3cgbmFtZXMgYSBzeW1ib2wsCisgICAgeSA8LSB6OyBFbmNvZGluZyh5KSA8LSAidW5rbm93biI7IGludmlzaWJsZShhcy5zeW1ib2woeSkpICMgZm91bmQgdmlhIHkKKyAgICBzdG9waWZub3QoaGFzaGFzaCh6KSwgIWhhc2hhc2goeSkpCit9CisjIyBib3RoIHdlcmUgbGVmdCBoYXNoZWQgaW4gUiA8PSA0LjYueAorCisKIAogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCg==",
+          "creator": "r",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true,
+          "summary": "No longer apply the growable adjustment to CHARSXPs in getVecSizeInVEC() and store the hash only once the CHARSXP has become a PRINTNAME in installNoTrChar()",
+          "creation_time": "2026-10-01T13:14:15Z",
+          "bug_id": 19195,
+          "file_name": "r-bug-19195.diff",
+          "size": 3442,
+          "last_change_time": "2026-10-01T13:14:15Z",
+          "id": 3882,
+          "is_private": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-11 05:08:06"
+}
