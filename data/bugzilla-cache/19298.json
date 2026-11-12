@@ -1,0 +1,104 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc": [
+          "gabembecker"
+        ],
+        "qa_contact": "",
+        "deadline": {},
+        "id": 19298,
+        "dupe_of": {},
+        "severity": "normal",
+        "creation_time": "2026-11-11T05:24:03Z",
+        "version": "R 4.6.x",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "component": "Language",
+        "assigned_to": "R-core",
+        "cc_detail": [
+          {
+            "id": 1299,
+            "name": "gabembecker",
+            "real_name": "Gabriel Becker"
+          }
+        ],
+        "last_change_time": "2026-11-11T18:42:54Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "Segfault at socketSelect",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "name": "0599jiangyc",
+          "id": 3797,
+          "real_name": "Yuancheng Jiang"
+        },
+        "status": "UNCONFIRMED",
+        "creator": "0599jiangyc",
+        "is_creator_accessible": true,
+        "alias": [],
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "Other",
+        "is_confirmed": false
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19298": {
+        "comments": [
+          {
+            "is_markdown": true,
+            "creator": "0599jiangyc",
+            "time": "2026-11-11T05:24:03Z",
+            "attachment_id": {},
+            "count": 0,
+            "text": "The following code:\n\n```\ns <- socketConnection(port = 8083L, open = \"\")\nsocketSelect(list(s), timeout = 0)\n```\n\nResulted in this output:\n\n```\n *** caught segfault ***\naddress 0x7e69dddd8df8, cause 'memory not mapped'\n\nTraceback:\n 1: socketSelect(list(s), timeout = 0)\nAn irrecoverable exception occurred. R is aborting now ...\nSegmentation fault (core dumped)\n```\n\nTo reproduce: \n```\nRscript -e 's <- socketConnection(port = 8083L, open = \"\"); socketSelect(list(s), timeout = 0)'\n```",
+            "bug_id": 19298,
+            "creation_time": "2026-11-11T05:24:03Z",
+            "is_private": false,
+            "id": 104167,
+            "tags": []
+          },
+          {
+            "creator": "gabembecker",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-11-11T18:42:54Z",
+            "creation_time": "2026-11-11T18:42:54Z",
+            "bug_id": 19298,
+            "text": "This does not reproduce for me on mac in a fresh build of Rdevel:\n\n```\ngbecker@Gabriels-MacBook-Pro Rdevelraw % ~/local/Rdevelraw2/R.framework/Resources/bin/R\n\n<snip>\n\n> s <- socketConnection(port = 8083L, open = \"\")\n> socketSelect(list(s), timeout = 0)\n[1] FALSE\n> sessionInfo()\nR Under development (unstable) (2026-11-11 r90876)\nPlatform: aarch64-apple-darwin25.6.0\nRunning under: macOS Tahoe 26.6\n\nMatrix products: default\nBLAS:   /Users/gbecker/local/Rdevelraw2/R.framework/Versions/4.7/Resources/lib/libRblas.dylib \nLAPACK: /Users/gbecker/local/Rdevelraw2/R.framework/Versions/4.7/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\ntime zone: America/Los_Angeles\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.7.0\n```\n\n@Yuancheng what OS and R version were you using?",
+            "count": 1,
+            "tags": [],
+            "id": 104176,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19298": []
+    }
+  },
+  "source_changed": "2026-11-11 18:42:54"
+}
