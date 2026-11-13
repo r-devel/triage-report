@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "Improve closure call performance by searching unhashed frames inline in GET_BINDING_CELL()",
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-12T17:32:42Z",
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "priority": "P4",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-12T17:32:33Z",
+        "version": "R-devel (trunk)",
+        "id": 19304,
+        "deadline": {},
+        "severity": "enhancement",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19304": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": false,
+            "text": "GET_BINDING_CELL() in eval.c is how GETVAR and the other variable instructions find a binding cell the first time they touch a variable in a call, before it is in the per-call binding cache. Each such lookup calls R_findVarLocInFrame(), which calls findVarLocInFrame(), and for the frame of a function call that is a walk down a short unhashed list. Every call starts with an empty cache, so each argument and local a function uses costs those two calls once per call.\n\nTimings: binding-cell-frame-scan-bench.R, attached, prints ns per call for nine cases. On aarch64 (r90875), calls made from a loop inside a closure are 3 to 8% faster with both Apple clang 21 and gcc 15.2; calls from top level gain less, mostly within noise.\n\nProposed patch: attached as binding-cell-frame-scan.diff, against r90877. It does the walk in GET_BINDING_CELL() itself when the frame is unhashed; hashed frames go through R_findVarLocInFrame() as before.\n\nmake test-Specific test-Reg passes on macOS. The patch is also submitted as https://github.com/r-devel/r-svn/pull/472, with the full measurements.",
+            "bug_id": 19304,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T17:32:33Z",
+            "is_private": false,
+            "time": "2026-11-12T17:32:33Z",
+            "id": 104189,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "attachment_id": 4038,
+            "tags": [],
+            "id": 104190,
+            "time": "2026-11-12T17:32:41Z",
+            "is_private": false,
+            "creation_time": "2026-11-12T17:32:41Z",
+            "creator": "kevinushey",
+            "bug_id": 19304,
+            "text": "Created attachment 4038\npatch: GET_BINDING_CELL(): search an unhashed frame inline",
+            "is_markdown": false,
+            "count": 1
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T17:32:42Z",
+            "is_markdown": false,
+            "count": 2,
+            "text": "Created attachment 4039\nbenchmark: ns per call for nine closure-call cases",
+            "bug_id": 19304,
+            "attachment_id": 4039,
+            "tags": [],
+            "is_private": false,
+            "time": "2026-11-12T17:32:42Z",
+            "id": 104191
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19304": [
+        {
+          "id": 4038,
+          "is_private": false,
+          "size": 815,
+          "last_change_time": "2026-11-12T17:32:41Z",
+          "bug_id": 19304,
+          "file_name": "binding-cell-frame-scan.diff",
+          "summary": "patch: GET_BINDING_CELL(): search an unhashed frame inline",
+          "creation_time": "2026-11-12T17:32:41Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDkwODc3KQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yNzM3LDYgKzI3MzcsMTQgQEAgc3RhdGljIFJfSU5MSU5FIFNFWFAgR0VUX0JJTkRJTkdfQ0VMTChTRVhQIHN5bWJvbCwgU0VYUCByaG8pCiB7CiAgICAgaWYgKHJobyA9PSBSX0Jhc2VFbnYgfHwgcmhvID09IFJfQmFzZU5hbWVzcGFjZSB8fCBJU19VU0VSX0RBVEFCQVNFKHJobykpCiAJcmV0dXJuIFJfTmlsVmFsdWU7CisgICAgZWxzZSBpZiAoSEFTSFRBQihyaG8pID09IFJfTmlsVmFsdWUpIHsKKwkvKiBBbiB1bmhhc2hlZCBmcmFtZSwgYXMgaW4gYSBmdW5jdGlvbiBjYWxsOiB0aGUgc2FtZSBzZWFyY2gKKwkgICBSX2ZpbmRWYXJMb2NJbkZyYW1lIG1ha2VzLCB3aXRob3V0IHRoZSBjYWxscy4gKi8KKwlTRVhQIGZyYW1lID0gRlJBTUUocmhvKTsKKwl3aGlsZSAoZnJhbWUgIT0gUl9OaWxWYWx1ZSAmJiBUQUcoZnJhbWUpICE9IHN5bWJvbCkKKwkgICAgZnJhbWUgPSBDRFIoZnJhbWUpOworCXJldHVybiBJU19BQ1RJVkVfQklORElORyhmcmFtZSkgPyBSX05pbFZhbHVlIDogZnJhbWU7CisgICAgfQogICAgIGVsc2UgewogCVJfdmFybG9jX3QgbG9jID0gUl9maW5kVmFyTG9jSW5GcmFtZShyaG8sIHN5bWJvbCk7CiAJcmV0dXJuICghIFJfVkFSTE9DX0lTX05VTEwobG9jKSAmJiAhIElTX0FDVElWRV9CSU5ESU5HKGxvYy5jZWxsKSkgPwo=",
+          "creator": "kevinushey"
+        },
+        {
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "IyMgQ2xvc3VyZSBjYWxsIHRpbWluZ3M6IG5zIHBlciBjYWxsIChsb29wIG92ZXJoZWFkIGluY2x1ZGVkKSwgYmVzdCBvZiA1IHJ1bnMuCiMjIFJ1biB3aXRoIGBSIC0tdmFuaWxsYSAtZiBiaW5kaW5nLWNlbGwtZnJhbWUtc2Nhbi1iZW5jaC5SYCBvbiB0d28gYnVpbGRzIG9mCiMjIFIgdGhhdCBkaWZmZXIgb25seSBpbiB0aGUgcGF0Y2ggKHNhbWUgY29tcGlsZXIsIHNhbWUgZmxhZ3MpLiBCYXNlIFIgb25seS4KCmYwIDwtIGZ1bmN0aW9uKCkgTlVMTApmMSA8LSBmdW5jdGlvbih4KSB4CmYyIDwtIGZ1bmN0aW9uKHgsIHkpIHggKyB5CmZkZWYgPC0gZnVuY3Rpb24oeCwgayA9IDEpIHggKyBrCmZpYiA8LSBmdW5jdGlvbihrKSBpZiAoayA8IDIpIGsgZWxzZSBmaWIoayAtIDEpICsgZmliKGsgLSAyKQp4IDwtIDEKeSA8LSAyCm4gPC0gNWU2Cgp0aW1lX25zIDwtIGZ1bmN0aW9uKGV4cHIsIGNhbGxzKSB7CiAgICBzZWNzIDwtIHJlcGxpY2F0ZSg1LCB7IGdjKEZBTFNFKTsgc3lzdGVtLnRpbWUoZXZhbChleHByLCBnbG9iYWxlbnYoKSkpW1siZWxhcHNlZCJdXSB9KQogICAgMWU5ICogbWluKHNlY3MpIC8gY2FsbHMKfQoKbnMgPC0gbnVtZXJpYygpCgojIyBjYWxscyBtYWRlIGJ5IGEgbG9vcCBpbnNpZGUgYSBjbG9zdXJlLCBjYWxsZWQgYXMgZyhuLCAxLCAyKTogdGhlCiMjIGNhbGxlcidzIHZhcmlhYmxlcyBhcmUgZm91bmQgYnkgYSBzZWFyY2ggb2YgaXRzIHVuaGFzaGVkIGZyYW1lCmZvciAoY2FsbCBpbiBjKCJmMihhLCBiKSIsICJmMihpLCAxKSIsICJmMihhICsgMSwgYikiKSkgewogICAgZyA8LSBldmFsKHBhcnNlKHRleHQgPSBzcHJpbnRmKCJmdW5jdGlvbihuLCBhLCBiKSBmb3IgKGkgaW4gMTpuKSAlcyIsIGNhbGwpKSkKICAgIGcgPC0gY29tcGlsZXI6OmNtcGZ1bihnKQogICAgbnNbW3Bhc3RlKCJjbG9zdXJlOiAgIiwgY2FsbCldXSA8LSB0aW1lX25zKHF1b3RlKGcobiwgMSwgMikpLCBuKQp9CgojIyB0aGUgc2FtZSBsb29wIGF0IHRvcCBsZXZlbCwgd2hlcmUgdGhlIGNhbGxlcidzIHZhcmlhYmxlcyBhcmUgZ2xvYmFscwpmb3IgKGNhbGwgaW4gYygiZjIoeCwgeSkiLCAiZjEoeCkiLCAiZmRlZih4KSIsICJmMCgpIikpIHsKICAgIGxvb3AgPC0gcGFyc2UodGV4dCA9IHNwcmludGYoImZvciAoaSBpbiAxOm4pICVzIiwgY2FsbCkpW1sxTF1dCiAgICBuc1tbcGFzdGUoInRvcCBsZXZlbDoiLCBjYWxsKV1dIDwtIHRpbWVfbnMobG9vcCwgbikKfQoKIyMgZmliKDI3KSBtYWtlcyA2MzU2MjEgY2FsbHMKbnNbWyJmaWIoMjcpLCBwZXIgY2FsbCJdXSA8LSB0aW1lX25zKHF1b3RlKGZpYigyNykpLCA2MzU2MjEpCm5zW1sidmFwcGx5KDE6MWU2LCBmMSwgMEwpLCBwZXIgY2FsbCJdXSA8LSB0aW1lX25zKHF1b3RlKHZhcHBseSgxOjFlNiwgZjEsIDBMKSksIDFlNikKCmNhdChSLnZlcnNpb24uc3RyaW5nLCAiXG4iKQpjYXQoc3ByaW50ZigiJS0zMnMgJTguMmYgbnNcbiIsIG5hbWVzKG5zKSwgbnMpLCBzZXAgPSAiIikK",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-11-12T17:32:42Z",
+          "size": 1491,
+          "is_private": false,
+          "id": 4039,
+          "creation_time": "2026-11-12T17:32:42Z",
+          "summary": "benchmark: ns per call for nine closure-call cases",
+          "file_name": "binding-cell-frame-scan-bench.R",
+          "bug_id": 19304
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-12 17:32:42"
+}

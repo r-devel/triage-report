@@ -1,0 +1,171 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "qa_contact": "",
+        "cc": [],
+        "deadline": {},
+        "id": 19308,
+        "severity": "normal",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2026-11-12T19:01:00Z",
+        "version": "R-devel (trunk)",
+        "priority": "P3",
+        "product": "R",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc_detail": [],
+        "last_change_time": "2026-11-12T20:02:43Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "JIT leaves a function uncompiled for good when another function with the same body is in the code cache",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19308": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-11-12T19:01:00Z",
+            "id": 104199,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T19:01:00Z",
+            "text": "The JIT code cache is keyed on the function body. When a closure's body matches a cached one but jit_env_match() rejects the cached code, R_cmpfun() marks the closure NOJIT for good. That happens for an extra formal, a different top-level environment, an enclosing-frame variable the cached function lacked, or any hashed frame below the top-level environment, which new.env(), local() and sys.source(envir = new.env()) all create. Loops in such functions run 7-8x slower; an R6 method inherited by a subclass with private members is a common case. Separately, jit_env_match() never returns for an unhashed environment chain ending at emptyenv().\n\nReproducible example: attached as jit-cache-nojit-repro.R; it prints FALSE for the second function of each pair where TRUE (compiled) is expected, and its last call hangs.\n\nProposed patch: attached as jit-cache-nojit.diff, against r90880. It adds the formals and top-level environment to the cache key, accepts hashed frames, hashes the stored environment snapshots, stops the walks at the empty environment, and on a remaining conflict compiles for the union of both environments' variables (up to 256) instead of setting NOJIT. A regression test is included; make check passes on macOS.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/477, where CI results can be seen.",
+            "bug_id": 19308,
+            "count": 0,
+            "is_markdown": false
+          },
+          {
+            "bug_id": 19308,
+            "text": "Created attachment 4044\nPatch against r90880: key the JIT cache on formals and top-level environment, recompile on conflicts instead of NOJIT",
+            "is_markdown": false,
+            "count": 1,
+            "creation_time": "2026-11-12T19:02:25Z",
+            "creator": "kevinushey",
+            "id": 104200,
+            "time": "2026-11-12T19:02:25Z",
+            "is_private": false,
+            "attachment_id": 4044,
+            "tags": []
+          },
+          {
+            "time": "2026-11-12T19:02:32Z",
+            "attachment_id": 4045,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "id": 104201,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19308,
+            "text": "Created attachment 4045\nReproducer: prints whether each function was compiled; the last call hangs without the patch",
+            "count": 2,
+            "creation_time": "2026-11-12T19:02:32Z"
+          },
+          {
+            "text": "Created attachment 4048\nR6 reproducer: an inherited method stays uncompiled once the base class has compiled it\n\nA correction on the R6 case: private members aren't needed. Plain inheritance is enough, because R6 binds an extra `.__active__` in an inherited method's environment. Installed packages are affected too, since R6's `$new()` rebinds each method with `environment<-`, which drops the bytecode. Classes defined in a hashed environment (a Shiny app.R, a testthat test file, local()) fare worse: only the first object's methods are ever compiled.\n\nReproducer attached (r6-inherited-method-repro.R); it prints FALSE and a 6x slower time for the subclass's copy of the method. A workaround for the inheritance cases is proposed for R6 in https://github.com/r-lib/R6/pull/304; the hashed-environment case needs the fix in R.",
+            "bug_id": 19308,
+            "count": 3,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T20:02:43Z",
+            "time": "2026-11-12T20:02:43Z",
+            "id": 104205,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 4048
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19308": [
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDkwODgwKQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMzk1LDcgKzEzOTUsNiBAQCBzdGF0aWMgUl9leHByaGFzaF90IGhhc2hzcmNyZWYoU0VYUCBlLCBSX2V4cHJoYXNoX3QgaCkKICAgICB9CiAgICAgcmV0dXJuIGg7CiB9Ci0jdW5kZWYgSEFTSAogCiBzdGF0aWMgUl9leHByaGFzaF90IGhhc2hleHByKFNFWFAgZSkKIHsKQEAgLTE0MDcsOCArMTQwNiwyMSBAQCBzdGF0aWMgUl9leHByaGFzaF90IGhhc2hmdW4oU0VYUCBmKQogICAgIFJfZXhwcmhhc2hfdCBoID0gaGFzaGV4cHIoQk9EWShmKSk7CiAgICAgaWYgKGdldEF0dHJpYihCT0RZKGYpLCBSX1NyY3JlZlN5bWJvbCkgPT0gUl9OaWxWYWx1ZSkKIAloID0gaGFzaHNyY3JlZihnZXRBdHRyaWIoZiwgUl9TcmNyZWZTeW1ib2wpLCBoKTsKKworICAgIC8qIENhY2hlZCBjb2RlIGNhbiBvbmx5IGJlIHVzZWQgZm9yIGEgZnVuY3Rpb24gd2l0aCB0aGUgc2FtZSB0b3AKKyAgICAgICBsZXZlbCBlbnZpcm9ubWVudCB3aG9zZSBmb3JtYWxzIGFyZSBhbGwgbG9jYWwgdmFyaWFibGVzIG9mIHRoZQorICAgICAgIGNhY2hlZCBmdW5jdGlvbiAoc2VlIGppdF9lbnZfbWF0Y2gpLCBzbyBmdW5jdGlvbnMgdGhhdCBzaGFyZSBhCisgICAgICAgYm9keSBidXQgZGlmZmVyIGluIHRoZXNlIHNob3VsZCBub3Qgc2hhcmUgYSBjYWNoZSBlbnRyeS4gKi8KKyAgICBmb3IgKFNFWFAgZnJtbHMgPSBGT1JNQUxTKGYpOyBmcm1scyAhPSBSX05pbFZhbHVlOyBmcm1scyA9IENEUihmcm1scykpIHsKKwlTRVhQIHRhZyA9IFRBRyhmcm1scyk7CisJaCA9IEhBU0godGFnLCBoKTsKKyAgICB9CisgICAgU0VYUCB0b3AgPSB0b3BlbnYoUl9OaWxWYWx1ZSwgQ0xPRU5WKGYpKTsKKyAgICBoID0gSEFTSCh0b3AsIGgpOworCiAgICAgcmV0dXJuIGg7CiB9CisjdW5kZWYgSEFTSAogCiBzdGF0aWMgdm9pZCBsb2FkQ29tcGlsZXJOYW1lc3BhY2Uodm9pZCkKIHsKQEAgLTE2NTIsMTEgKzE2NjQsMTEgQEAgc3RhdGljIFJfSU5MSU5FIFJib29sZWFuIFJfQ2hlY2tKSVQoU0VYUCBmdW4pCiAgICB0aGUgY21wZW52IGNoYW5naW5nIGFmdGVyIGJlaW5nIGVudGVyZWQgaW4gdGhlIGNhY2hlLCBhbmQgYWxzbwogICAgYWxsb3dzIGxhcmdlIHZhbHVlcyB0aGF0IG1pZ2h0IGJlIGJvdW5kIHRvIGxvY2FsIHZhcmlhYmxlcyBpbgogICAgY21wZW52IHRvIGJlIHJlY2xhaW1lZCAoYWxzbywgc29tZSBwYWNrYWdlIHRlc3RzLCBlLmcuIGluIHNoaW55LCB0ZXN0Ci0gICB3aGVuIHRoaW5ncyBnZXQgcmVjbGFpbWVkKS4gU3RhbmRhcmQgbG9jYWwgZnJhbWVzIGFyZSBwcm9jZXNzZWQgZGlyZWN0bHksCi0gICBoYXNoZWQgZnJhbWVzIGFyZSBwcm9jZXNzZWQgdmlhIGxzSW50ZXJuYWwzLCB3aGljaCBpbnZvbHZlcyBleHRyYQotICAgYWxsb2NhdGlvbnMsIGJ1dCBzaG91bGQgYmUgdXNlZCByYXJlbHkuIElmIGEgbG9jYWwgZW52aXJvbm1lbnQgaXMKLSAgIG9mIHVuc3VwcG9ydGVkIHR5cGUsIHRvcGVudiBpcyByZXR1cm5lZCBhcyBhIHZhbGlkIGNvbnNlcnZhdGl2ZQotICAgYW5zd2VyLgorICAgd2hlbiB0aGluZ3MgZ2V0IHJlY2xhaW1lZCkuIFN0YW5kYXJkIGxvY2FsIGZyYW1lcywgaGFzaGVkIG9yIG5vdCwgYXJlCisgICBwcm9jZXNzZWQgZGlyZWN0bHkuIElmIGEgbG9jYWwgZW52aXJvbm1lbnQgaXMgb2YgdW5zdXBwb3J0ZWQgdHlwZSwKKyAgIHRvcGVudiBpcyByZXR1cm5lZCBhcyBhIHZhbGlkIGNvbnNlcnZhdGl2ZSBhbnN3ZXIuIFRoZSBuZXcKKyAgIGVudmlyb25tZW50IGlzIGhhc2hlZCwgYXMgaXQgaXMgc2VhcmNoZWQgZm9yIGVhY2ggbG9jYWwgdmFyaWFibGUgb2YKKyAgIGEgZnVuY3Rpb24gdGhhdCBtaWdodCB1c2UgdGhlIGNhY2hlZCBjb2RlLgogCiAgICBTaW5jZSB3ZSBjb21wdXRlIHRoZSBsb2NhbCB2YXJpYWJsZXMgYXQgY29tcGlsZQogICAgdGltZSB3ZSBzaG91bGQgcmVjb3JkIHRoZW0gaW4gdGhlIGJ5dGUgY29kZSBvYmplY3QgYW5kIHVzZSB0aGUKQEAgLTE2NzUsMTAgKzE2ODcsMTYgQEAgc3RhdGljIFJfSU5MSU5FIFNFWFAgbWFrZV9jYWNoZWRfY21wZW52KFNFWFAgZnVuKQogICAgIGlmIChjbXBlbnYgPT0gdG9wICYmIGZybWxzID09IFJfTmlsVmFsdWUpCiAJcmV0dXJuIGNtcGVudjsKICAgICBlbHNlIHsKLQlTRVhQIG5ld2VudiA9IFBST1RFQ1QoTmV3RW52aXJvbm1lbnQoUl9OaWxWYWx1ZSwgUl9OaWxWYWx1ZSwgdG9wKSk7CisJU0VYUCBuZXdlbnYgPSBQUk9URUNUKFJfTmV3SGFzaGVkRW52KHRvcCwgMCkpOwogCWZvciAoOyBmcm1scyAhPSBSX05pbFZhbHVlOyBmcm1scyA9IENEUihmcm1scykpCiAJICAgIGRlZmluZVZhcihUQUcoZnJtbHMpLCBSX05pbFZhbHVlLCBuZXdlbnYpOwogCWZvciAoU0VYUCBlbnYgPSBjbXBlbnY7IGVudiAhPSB0b3A7IGVudiA9IENEUihlbnYpKSB7CisJICAgIGlmIChlbnYgPT0gUl9FbXB0eUVudikgeworCQkvKiB0b3AgaXMgbm90IGFuIGFuY2VzdG9yIG9mIGNtcGVudjogZnVuIGNhbm5vdCBiZSBjb21waWxlZCAqLworCQlVTlBST1RFQ1QoMSk7IC8qIG5ld2VudiAqLworCQlyZXR1cm4gdG9wOworCSAgICB9CisKIAkgICAgaWYgKElTX1NUQU5EQVJEX1VOSEFTSEVEX0ZSQU1FKGVudikpCiAJCWNtcGVudl9lbnRlcl9mcmFtZShGUkFNRShlbnYpLCBuZXdlbnYpOwogCSAgICBlbHNlIGlmIChJU19TVEFOREFSRF9IQVNIRURfRlJBTUUoZW52KSkgewpAQCAtMTY5Miw3ICsxNzEwLDcgQEAgc3RhdGljIFJfSU5MSU5FIFNFWFAgbWFrZV9jYWNoZWRfY21wZW52KFNFWFAgZnVuKQogCSAgICB9CiAJCS8qIHRvcGVudiBpcyBhIHNhZmUgY29uc2VydmF0aXZlIGFuc3dlcjsgaWYgYSBjbG9zdXJlCiAJCSAgIGRlZmluZXMgYW55dGhpbmcsIGl0cyBlbnZpcm9ubWVudCB3aWxsIG5vdCBtYXRjaCwgYW5kCi0JCSAgIGl0IHdpbGwgbmV2ZXIgYmUgY29tcGlsZWQgKi8KKwkJICAgaXQgd2lsbCBiZSBjb21waWxlZCBhZ2FpbiAqLwogCQkvKiBGSVhNRTogd291bGQgaXQgYmUgc2FmZSB0byBzaW1wbHkgaWdub3JlIGVsZW1lbnRzIG9mCiAJCSAgIG9mIHRoZXNlIGVudmlyb25tZW50cz8gKi8KIAl9CkBAIC0xNzY2LDEzICsxNzg0LDE1IEBAIHN0YXRpYyBSX0lOTElORSBTRVhQIGNtcGVudl90b3BlbnYoU0VYUCBjbXBlbnYpCiAKIHN0YXRpYyBSX0lOTElORSBSYm9vbGVhbiBjbXBlbnZfZXhpc3RzX2xvY2FsKFNFWFAgc3ltLCBTRVhQIGNtcGVudiwgU0VYUCB0b3ApCiB7Ci0gICAgaWYgKGNtcGVudiAhPSB0b3ApCi0JZm9yIChTRVhQIGZyYW1lID0gRlJBTUUoY21wZW52KTsKLQkgICAgIGZyYW1lICE9IFJfTmlsVmFsdWU7Ci0JICAgICBmcmFtZSA9IENEUihmcmFtZSkpCi0JICAgIGlmIChUQUcoZnJhbWUpID09IHN5bSkKLQkJcmV0dXJuIFRSVUU7Ci0gICAgcmV0dXJuIEZBTFNFOworICAgIHJldHVybiBjbXBlbnYgIT0gdG9wICYmIFJfZXhpc3RzVmFySW5GcmFtZShjbXBlbnYsIHN5bSk7Cit9CisKK3N0YXRpYyBSX0lOTElORSBSYm9vbGVhbiBjbXBlbnZfZXhpc3RzX2ZyYW1lKFNFWFAgZnJhbWUsIFNFWFAgY21wZW52LCBTRVhQIHRvcCkKK3sKKyAgICBmb3IgKDsgZnJhbWUgIT0gUl9OaWxWYWx1ZTsgZnJhbWUgPSBDRFIoZnJhbWUpKQorCWlmICghIGNtcGVudl9leGlzdHNfbG9jYWwoVEFHKGZyYW1lKSwgY21wZW52LCB0b3ApKQorCSAgICByZXR1cm4gRkFMU0U7CisgICAgcmV0dXJuIFRSVUU7CiB9CiAKIHN0YXRpYyBSX0lOTElORSBSYm9vbGVhbiBqaXRfZW52X21hdGNoKFNFWFAgY21wZW52LCBTRVhQIGZ1bikKQEAgLTE3OTUsMTQgKzE4MTUsMjMgQEAgc3RhdGljIFJfSU5MSU5FIFJib29sZWFuIGppdF9lbnZfbWF0Y2goU0VYUCBjbXBlbnYsIFNFWFAgZnVuKQogCSAgICBpZiAoISBjbXBlbnZfZXhpc3RzX2xvY2FsKFRBRyhmcm1scyksIGNtcGVudiwgdG9wKSkKIAkJcmV0dXJuIEZBTFNFOwogCWZvciAoOyBlbnYgIT0gdG9wOyBlbnYgPSBFTkNMT1MoZW52KSkgeworCSAgICAvKiB0b3AgaXMgUl9HbG9iYWxFbnYgYnkgZGVmYXVsdCwgYW5kIG5lZWQgbm90IGJlIGFuCisJICAgICAgIGFuY2VzdG9yIG9mIGVudiAqLworCSAgICBpZiAoZW52ID09IFJfRW1wdHlFbnYpCisJCXJldHVybiBGQUxTRTsKKworCSAgICAvKiBBcyBpbiBtYWtlX2NhY2hlZF9jbXBlbnYsIG9ubHkgc3RhbmRhcmQgZnJhbWVzIGFyZQorCSAgICAgICBzdXBwb3J0ZWQ7IGhhc2hlZCBvbmVzIGFyZSB3aGF0IG5ldy5lbnYoKSBhbmQgbG9jYWwoKQorCSAgICAgICBjcmVhdGUgYnkgZGVmYXVsdC4gKi8KIAkgICAgaWYgKElTX1NUQU5EQVJEX1VOSEFTSEVEX0ZSQU1FKGVudikpIHsKLQkJLyogVG8ga2VlcCB0aGluZ3Mgc2ltcGxlLCBmb3IgYSBtYXRjaCB0aGlzIGNvZGUKLQkJICAgcmVxdWlyZXMgdGhhdCB0aGUgbG9jYWwgZnJhbWVzIGJlIHN0YW5kYXJkIHVuaGFzaGVkCi0JCSAgIGZyYW1lcy4gKi8KLQkJZm9yIChTRVhQIGZyYW1lID0gRlJBTUUoZW52KTsKLQkJICAgICBmcmFtZSAhPSBSX05pbFZhbHVlOwotCQkgICAgIGZyYW1lID0gQ0RSKGZyYW1lKSkKLQkJICAgIGlmICghIGNtcGVudl9leGlzdHNfbG9jYWwoVEFHKGZyYW1lKSwgY21wZW52LCB0b3ApKQorCQlpZiAoISBjbXBlbnZfZXhpc3RzX2ZyYW1lKEZSQU1FKGVudiksIGNtcGVudiwgdG9wKSkKKwkJICAgIHJldHVybiBGQUxTRTsKKwkgICAgfQorCSAgICBlbHNlIGlmIChJU19TVEFOREFSRF9IQVNIRURfRlJBTUUoZW52KSkgeworCQlTRVhQIGggPSBIQVNIVEFCKGVudik7CisJCWludCBuID0gbGVuZ3RoKGgpOworCQlmb3IgKGludCBpID0gMDsgaSA8IG47IGkrKykKKwkJICAgIGlmICghIGNtcGVudl9leGlzdHNfZnJhbWUoVkVDVE9SX0VMVChoLCBpKSwgY21wZW52LCB0b3ApKQogCQkJcmV0dXJuIEZBTFNFOwogCSAgICB9CiAJICAgIGVsc2UgcmV0dXJuIEZBTFNFOwpAQCAtMTg0MywxMCArMTg3Miw0NiBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgUl9jbXBmdW4xKFNFWFAgZnVuKQogICAgIHJldHVybiB2YWw7CiB9CiAKKy8qIENhY2hlZCBjb2RlIGNvbXBpbGVkIGZvciB0aGUgbG9jYWwgdmFyaWFibGVzIGluIGNtcGVudiBjYW5ub3QgYmUKKyAgIHVzZWQgZm9yIGZ1bi4gQ29tcGlsaW5nIGZ1biBhcyBpdCBpcyB3b3VsZCBsZWF2ZSBmdW5jdGlvbnMgd2l0aAorICAgZWl0aGVyIHNldCBvZiBsb2NhbCB2YXJpYWJsZXMgcmVwbGFjaW5nIGVhY2ggb3RoZXIncyBjYWNoZSBlbnRyeSwKKyAgIHNvIHJldHVybiBhIGNvcHkgb2YgZnVuIHdob3NlIGVudmlyb25tZW50IGRlZmluZXMgYm90aCBzZXRzOiB0aGUKKyAgIGNvZGUgY29tcGlsZWQgZm9yIHRoZSBjb3B5IGNhbiBiZSB1c2VkIGZvciBib3RoLiAqLworI2RlZmluZSBKSVRfTUFYX01FUkdFRF9WQVJTIDI1Ngorc3RhdGljIFNFWFAgaml0X21lcmdlZF9jbG9zdXJlKFNFWFAgZnVuLCBTRVhQIGNtcGVudikKK3sKKyAgICBTRVhQIHRvcCA9IHRvcGVudihSX05pbFZhbHVlLCBDTE9FTlYoZnVuKSk7CisgICAgaWYgKGNtcGVudiA9PSB0b3AgfHwgY21wZW52X3RvcGVudihjbXBlbnYpICE9IHRvcCkKKwlyZXR1cm4gZnVuOyAvKiBjbXBlbnYgaGFzIG5vIGxvY2FsIHZhcmlhYmxlcyB0aGF0IGNvdWxkIGJlIHVzZWQgKi8KKworICAgIC8qIGNtcGVudiB3b3VsZCBncm93IHdpdGhvdXQgYm91bmQgaWYgZWFjaCBmdW5jdGlvbiBoYWQgbmV3IGxvY2FsCisgICAgICAgdmFyaWFibGVzOyB0aGlzIGlzIG1lYW50IGZvciBmdW5jdGlvbnMgY3JlYXRlZCBhZ2FpbiBhbmQgYWdhaW4KKyAgICAgICBpbiBhIGZldyBraW5kcyBvZiBzbWFsbCBlbnZpcm9ubWVudCwgc3VjaCBhcyBjYWxsIGZyYW1lcyAqLworICAgIGlmIChsZW5ndGgoY21wZW52KSA+IEpJVF9NQVhfTUVSR0VEX1ZBUlMpCisJcmV0dXJuIGZ1bjsKKworICAgIFNFWFAgbmV3ZW52ID0gbWFrZV9jYWNoZWRfY21wZW52KGZ1bik7CisgICAgaWYgKG5ld2VudiA9PSB0b3ApCisJcmV0dXJuIGZ1bjsgLyogdGhlIGxvY2FsIHZhcmlhYmxlcyBvZiBmdW4gYXJlIG5vdCBrbm93biAqLworCisgICAgUFJPVEVDVChuZXdlbnYpOworICAgIFNFWFAgaCA9IEhBU0hUQUIoY21wZW52KTsKKyAgICBpbnQgbiA9IGxlbmd0aChoKTsKKyAgICBmb3IgKGludCBpID0gMDsgaSA8IG47IGkrKykKKwljbXBlbnZfZW50ZXJfZnJhbWUoVkVDVE9SX0VMVChoLCBpKSwgbmV3ZW52KTsKKworICAgIFNFWFAgdmFsID0gUFJPVEVDVChta0NMT1NYUChGT1JNQUxTKGZ1biksIEJPRFkoZnVuKSwgbmV3ZW52KSk7CisgICAgU0hBTExPV19EVVBMSUNBVEVfQVRUUklCKHZhbCwgZnVuKTsKKyAgICBVTlBST1RFQ1QoMik7IC8qIG5ld2VudiwgdmFsICovCisKKyAgICByZXR1cm4gdmFsOworfQorCiAvKiBmdW4gaXMgbW9kaWZpZWQgaW4tcGxhY2Ugd2hlbiBjb21waWxlZCAqLwogc3RhdGljIHZvaWQgUl9jbXBmdW4oU0VYUCBmdW4pCiB7CiAgICAgUl9leHByaGFzaF90IGhhc2ggPSAwOworICAgIFNFWFAgY21wZW52ID0gUl9OaWxWYWx1ZTsgLyogb2YgYSBjYWNoZSBlbnRyeSB0aGF0IGZ1biBjYW5ub3QgdXNlICovCiAgICAgaWYgKGppdF9zdHJhdGVneSAhPSBTVFJBVEVHWV9OT19DQUNIRSkgewogCWhhc2ggPSBoYXNoZnVuKGZ1bik7CiAJU0VYUCBlbnRyeSA9IGdldF9qaXRfY2FjaGVfZW50cnkoaGFzaCk7CkBAIC0xODgzLDE2ICsxOTQ4LDE5IEBAIHN0YXRpYyB2b2lkIFJfY21wZnVuKFNFWFAgZnVuKQogCQkvKiBGSVhNRTogcmV2aXNpdCB0aGlzIHdoZW4gZGVlcCBjb21wYXJpc29uIG9mIGVudmlyb25tZW50cwogCQkJICAoYW5kIHNyY3JlZnMpIGlzIGF2YWlsYWJsZSAqLwogCSAgICB9IGVsc2UgewotCQlTRVRfTk9KSVQoZnVuKTsKLQkJLyoqKiogYWxzbyBtYXJrIHRoZSBjYWNoZSBlbnRyeSBhcyBOT0pJVCwgb3IgYXMgbmVlZCB0byBzZWUKLQkJICAgICAgbWFueSB0aW1lcz8gKi8KLQkJcmV0dXJuOworCQkvKiBNYXJraW5nIGZ1biBhcyBOT0pJVCBoZXJlIHdvdWxkIGtlZXAgaXQgaW4gdGhlIEFTVAorCQkgICBpbnRlcnByZXRlciBmb3IgZ29vZCwgaG93ZXZlciBvZnRlbiBpdCBpcyBjYWxsZWQsIHNvCisJCSAgIHJlLWNvbXBpbGUgYW5kIHJlLWNhY2hlIGluIHRoaXMgY2FzZSBhcyB3ZWxsLiAqLworCQljbXBlbnYgPSBqaXRfY2FjaGVfZW52KGVudHJ5KTsKIAkgICAgfQogCX0KIAlQUklOVF9KSVRfSU5GTzsKICAgICB9CiAKLSAgICBTRVhQIHZhbCA9IFJfY21wZnVuMShmdW4pOworICAgIC8qIHRoZSBjbG9zdXJlIHBhc3NlZCB0byB0aGUgY29tcGlsZXIgKi8KKyAgICBTRVhQIGNtcGZ1biA9IGNtcGVudiA9PSBSX05pbFZhbHVlID8gZnVuIDogaml0X21lcmdlZF9jbG9zdXJlKGZ1biwgY21wZW52KTsKKyAgICBQUk9URUNUKGNtcGZ1bik7CisgICAgU0VYUCB2YWwgPSBSX2NtcGZ1bjEoY21wZnVuKTsKIAogICAgIGlmIChUWVBFT0YoQk9EWSh2YWwpKSAhPSBCQ09ERVNYUCkKIAlTRVRfTk9KSVQoZnVuKTsKQEAgLTE5MDEsNiArMTk2OSw3IEBAIHN0YXRpYyB2b2lkIFJfY21wZnVuKFNFWFAgZnVuKQogCSAgICBzZXRfaml0X2NhY2hlX2VudHJ5KGhhc2gsIHZhbCk7IC8qIHZhbCBpcyBwcm90ZWN0ZWQgYnkgY2FsbGVlICovCiAJU0VUX0JPRFkoZnVuLCBCT0RZKHZhbCkpOwogICAgIH0KKyAgICBVTlBST1RFQ1QoMSk7IC8qIGNtcGZ1biAqLwogfQogCiBzdGF0aWMgU0VYUCBSX2NvbXBpbGVFeHByKFNFWFAgZXhwciwgU0VYUCByaG8pCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA4ODApCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDQ0MCw2ICs0NDQwLDM1IEBAIHN0b3BpZm5vdChpcy5jaGFyYWN0ZXIobXNnKSwgZ3JlcGwoImYxIiwgbXNnKSkKICMjIGZhaWxlZCBmcm9tIGBjb250cmFzdHM8LWAoYCp0bXAqYCwgLi4uKSwgaGlkaW5nIHRoZSB2YXJpYWJsZSwgaW4gUiA8PSA0LjYuKgogCiAKKyMjIEpJVCBjb21waWxhdGlvbiBvZiBmdW5jdGlvbnMgc2hhcmluZyBhIGNhY2hlZCBmdW5jdGlvbidzIGJvZHkgLS0gUFIjMTkzMDgKK2lzLmNvbXBpbGVkIDwtIGZ1bmN0aW9uKGYpIHR5cGVvZiguSW50ZXJuYWwoYm9keUNvZGUoZikpKSA9PSAiYnl0ZWNvZGUiCitmMSA8LSBmdW5jdGlvbih4KSB7IGZvciAoaSBpbiB4KSBOVUxMIH0KK2YxKDEpOyBmMSgxKQoraWYoaXMuY29tcGlsZWQoZjEpKSB7ICMgbm90IHdoZW4gdGhlIEpJVCBpcyBkaXNhYmxlZAorICAgIGYyIDwtIGZ1bmN0aW9uKHgsIHkpIHsgZm9yIChpIGluIHgpIE5VTEwgfQorICAgIGYyKDEpOyBmMigxKQorICAgIGZuIDwtIHF1b3RlKGZ1bmN0aW9uKHgpIHsgZm9yIChpIGluIHgpIHggPC0gaTsgbWF4KHgpIH0pCisgICAgZjMgPC0gZXZhbChmbiwgbmV3LmVudigpKQorICAgIGY0IDwtIGV2YWwoZm4sIG5ldy5lbnYoKSkKKyAgICBmNSA8LSBldmFsKGZuLCBsaXN0MmVudihsaXN0KG1heCA9IGZ1bmN0aW9uKC4uLikgImxvY2FsIikpKQorICAgIGY2IDwtIGV2YWwoZm4sIG5ldy5lbnYoKSkKKyAgICBmb3IoaSBpbiAxOjMpCisgICAgICAgIHIgPC0gbGlzdChmMygxOjMpLCBmNCgxOjMpLCBmNSgxOjMpLCBmNigxOjMpKQorICAgIHN0b3BpZm5vdChpcy5jb21waWxlZChmMiksIGlzLmNvbXBpbGVkKGYzKSwgaXMuY29tcGlsZWQoZjQpLAorICAgICAgICAgICAgICBpcy5jb21waWxlZChmNSksIGlzLmNvbXBpbGVkKGY2KSwKKyAgICAgICAgICAgICAgaWRlbnRpY2FsKHIsIGxpc3QoM0wsIDNMLCAibG9jYWwiLCAzTCkpKQorICAgICMjIGVudmlyb25tZW50cyB0aGF0IGRvIG5vdCBsZWFkIHRvIGEgdG9wIGxldmVsIGVudmlyb25tZW50CisgICAgZjcgPC0gZjggPC0gZnVuY3Rpb24oeCkgeyBmb3IgKGkgaW4geCkgTlVMTCB9CisgICAgZW52aXJvbm1lbnQoZjcpIDwtIG5ldy5lbnYoaGFzaCA9IEZBTFNFLCBwYXJlbnQgPSBlbXB0eWVudigpKQorICAgIGVudmlyb25tZW50KGY4KSA8LSBsaXN0MmVudihsaXN0KCJ7IiA9IGZ1bmN0aW9uKC4uLikgImxvY2FsIiksCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmVudCA9IGVtcHR5ZW52KCkpCisgICAgZm9yKGkgaW4gMTozKQorICAgICAgICByIDwtIGxpc3QodHJ5Q2lkKGY3KDEpKSwgZjgoMSkpCisgICAgc3RvcGlmbm90KGluaGVyaXRzKHJbWzFdXSwgImVycm9yIiksIGlkZW50aWNhbChyW1syXV0sICJsb2NhbCIpKQorfQorIyMgZjIsIGY0LCBmNSBhbmQgZjYgd2VyZSBuZXZlciBjb21waWxlZCwgYW5kIGY3IGh1bmcsIGluIFIgPD0gNC42LjIKKworCiAKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-11-12T19:02:25Z",
+          "size": 9476,
+          "is_private": false,
+          "id": 4044,
+          "creation_time": "2026-11-12T19:02:25Z",
+          "summary": "Patch against r90880: key the JIT cache on formals and top-level environment, recompile on conflicts instead of NOJIT",
+          "file_name": "jit-cache-nojit.diff",
+          "bug_id": 19308
+        },
+        {
+          "is_patch": false,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgQSBmdW5jdGlvbiB3aG9zZSBib2R5IG1hdGNoZXMgb25lIGFscmVhZHkgaW4gdGhlIEpJVCBjb2RlIGNhY2hlIGlzCiMjIG1hcmtlZCBuZXZlci1jb21waWxlIHdoZW4gdGhlIGNhY2hlZCBjb2RlIGNhbm5vdCBiZSB1c2VkIGZvciBpdC4KIyMgUnVuIGluIGEgZnJlc2ggUiBzZXNzaW9uIHdpdGggdGhlIGRlZmF1bHQgSklUIGxldmVsICgzKS4gIEVhY2ggbGluZQojIyBiZWxvdyBzaG91bGQgcHJpbnQgVFJVRSAoY29tcGlsZWQpOyB0aGUgbGFzdCBjYWxsIGhhbmdzLgppcy5jb21waWxlZCA8LSBmdW5jdGlvbihmKSB0eXBlb2YoLkludGVybmFsKGJvZHlDb2RlKGYpKSkgPT0gImJ5dGVjb2RlIgpjYWxsMyA8LSBmdW5jdGlvbihmKSBmb3IgKGkgaW4gMTozKSBmKDEwKQoKIyMgMS4gYW4gZXh0cmEgZm9ybWFsCmYxIDwtIGZ1bmN0aW9uKG4pIHsgcyA8LSAwOyBmb3IgKGkgaW4gc2VxX2xlbihuKSkgcyA8LSBzICsgaTsgcyB9CmYyIDwtIGZ1bmN0aW9uKG4sIHZlcmJvc2UgPSBGQUxTRSkgeyBzIDwtIDA7IGZvciAoaSBpbiBzZXFfbGVuKG4pKSBzIDwtIHMgKyBpOyBzIH0KY2FsbDMoZjEpOyBjYWxsMyhmMikKCiMjIDIuIHRoZSBzYW1lIGZpbGUgc291cmNlZCBpbnRvIHR3byBlbnZpcm9ubWVudHMKZmlsZSA8LSB0ZW1wZmlsZShmaWxlZXh0ID0gIi5SIikKd3JpdGVMaW5lcygidG90YWwgPC0gZnVuY3Rpb24obikgeyBzIDwtIDE7IGZvciAoaSBpbiBzZXFfbGVuKG4pKSBzIDwtIHMgKyBpOyBzIH0iLCBmaWxlKQplMSA8LSBuZXcuZW52KCk7IHN5cy5zb3VyY2UoZmlsZSwgZW52aXIgPSBlMSkKZTIgPC0gbmV3LmVudigpOyBzeXMuc291cmNlKGZpbGUsIGVudmlyID0gZTIpCmNhbGwzKGUxJHRvdGFsKTsgY2FsbDMoZTIkdG90YWwpCgojIyAzLiBhbiBlbmNsb3NpbmcgZnJhbWUgd2l0aCBvbmUgbW9yZSB2YXJpYWJsZSAoYXMgZm9yIGFuIFI2IG1ldGhvZAojIyAgICBpbmhlcml0ZWQgYnkgYSBjbGFzcyB3aXRoIHByaXZhdGUgbWVtYmVycykKZzEgPC0gbG9jYWwoeyBzZWxmIDwtIDE7IGZ1bmN0aW9uKG4pIHsgcyA8LSAyOyBmb3IgKGkgaW4gc2VxX2xlbihuKSkgcyA8LSBzICsgaTsgcyB9IH0pCmcyIDwtIGxvY2FsKHsgc2VsZiA8LSAxOyBwcml2YXRlIDwtIDI7IGZ1bmN0aW9uKG4pIHsgcyA8LSAyOyBmb3IgKGkgaW4gc2VxX2xlbihuKSkgcyA8LSBzICsgaTsgcyB9IH0pCmNhbGwzKGcxKTsgY2FsbDMoZzIpCgojIyA0LiBhIGRpZmZlcmVudCB0b3AgbGV2ZWwgZW52aXJvbm1lbnQKaDEgPC0gZnVuY3Rpb24obikgeyBzIDwtIDM7IGZvciAoaSBpbiBzZXFfbGVuKG4pKSBzIDwtIHMgKyBpOyBzIH0KaDIgPC0gZXZhbHEoZnVuY3Rpb24obikgeyBzIDwtIDM7IGZvciAoaSBpbiBzZXFfbGVuKG4pKSBzIDwtIHMgKyBpOyBzIH0sIGFzTmFtZXNwYWNlKCJzdGF0cyIpKQpjYWxsMyhoMSk7IGNhbGwzKGgyKQoKcHJpbnQoYyhmMSA9IGlzLmNvbXBpbGVkKGYxKSwgZjIgPSBpcy5jb21waWxlZChmMiksCiAgICAgICAgZTEgPSBpcy5jb21waWxlZChlMSR0b3RhbCksIGUyID0gaXMuY29tcGlsZWQoZTIkdG90YWwpLAogICAgICAgIGcxID0gaXMuY29tcGlsZWQoZzEpLCBnMiA9IGlzLmNvbXBpbGVkKGcyKSwKICAgICAgICBoMSA9IGlzLmNvbXBpbGVkKGgxKSwgaDIgPSBpcy5jb21waWxlZChoMikpKQpjYXQoInNlY29uZHMgZm9yIDIwIGNhbGxzIG9mIGYxKDFlNSk6Iiwgc3lzdGVtLnRpbWUoZm9yIChpIGluIDE6MjApIGYxKDFlNSkpW1siZWxhcHNlZCJdXSwKICAgICIgZjIoMWU1KToiLCBzeXN0ZW0udGltZShmb3IgKGkgaW4gMToyMCkgZjIoMWU1KSlbWyJlbGFwc2VkIl1dLCAiXG4iKQoKIyMgNS4gYW4gdW5oYXNoZWQgZW52aXJvbm1lbnQgY2hhaW4gZW5kaW5nIGF0IGVtcHR5ZW52KCk6IHRoZSBzZWNvbmQKIyMgICAgY2FsbCwgd2hpY2ggdHJpZXMgdG8gY29tcGlsZSBrMiwgbmV2ZXIgcmV0dXJucwprMSA8LSBmdW5jdGlvbih4KSB7IGZvciAoaSBpbiB4KSBOVUxMIH0KazEoMSkKazIgPC0gZnVuY3Rpb24oeCkgeyBmb3IgKGkgaW4geCkgTlVMTCB9CmVudmlyb25tZW50KGsyKSA8LSBuZXcuZW52KGhhc2ggPSBGQUxTRSwgcGFyZW50ID0gZW1wdHllbnYoKSkKZm9yIChpIGluIDE6MikKICAgIHRyeShrMigxKSwgc2lsZW50ID0gVFJVRSkKY2F0KCJrMiBkaWQgbm90IGhhbmdcbiIpCg==",
+          "creator": "kevinushey",
+          "id": 4045,
+          "is_private": false,
+          "size": 2155,
+          "last_change_time": "2026-11-12T19:02:32Z",
+          "bug_id": 19308,
+          "file_name": "jit-cache-nojit-repro.R",
+          "summary": "Reproducer: prints whether each function was compiled; the last call hangs without the patch",
+          "creation_time": "2026-11-12T19:02:32Z"
+        },
+        {
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "IyMgQW4gUjYgbWV0aG9kIGluaGVyaXRlZCBieSBhIHN1YmNsYXNzIGlzIG5ldmVyIGNvbXBpbGVkIG9uY2UgYQojIyBiYXNlLWNsYXNzIG9iamVjdCBoYXMgY29tcGlsZWQgaXQ6IHRoZSBpbmhlcml0ZWQgY29weSdzIGVuY2xvc2luZwojIyBlbnZpcm9ubWVudCBiaW5kcyBgLl9fYWN0aXZlX19gIChhbmQgYHByaXZhdGVgLCBpZiBhbnkpLCB3aGljaCB0aGUKIyMgY2FjaGVkIGJhc2UtY2xhc3MgZW52aXJvbm1lbnQgbGFja3MuICBSdW4gaW4gYSBmcmVzaCBzZXNzaW9uLgpsaWJyYXJ5KFI2KQoKQ291bnRlciA8LSBSNkNsYXNzKCJDb3VudGVyIiwgcHVibGljID0gbGlzdCgKICB0b3RhbCA9IGZ1bmN0aW9uKG4pIHsKICAgIHMgPC0gMAogICAgZm9yIChpIGluIHNlcV9sZW4obikpCiAgICAgIHMgPC0gcyArIGkKICAgIHMKICB9CikpCkxvZ2dpbmdDb3VudGVyIDwtIFI2Q2xhc3MoIkxvZ2dpbmdDb3VudGVyIiwgaW5oZXJpdCA9IENvdW50ZXIpCgppc19jb21waWxlZCA8LSBmdW5jdGlvbihmKSB0eXBlb2YoLkludGVybmFsKGJvZHlDb2RlKGYpKSkgPT0gImJ5dGVjb2RlIgp0aW1laXQgPC0gZnVuY3Rpb24ob2JqKSBzeXN0ZW0udGltZShmb3IgKGsgaW4gMTo1MCkgb2JqJHRvdGFsKDFlNSkpW1siZWxhcHNlZCJdXQoKYmFzZSA8LSBDb3VudGVyJG5ldygpCnN1YiA8LSBMb2dnaW5nQ291bnRlciRuZXcoKQp0X2Jhc2UgPC0gdGltZWl0KGJhc2UpCnRfc3ViIDwtIHRpbWVpdChzdWIpCgpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKY2F0KHNwcmludGYoIiUtMTVzIGNvbXBpbGVkPSUtNXMgJS4zZiBzXG4iLCAiQ291bnRlciIsIGlzX2NvbXBpbGVkKGJhc2UkdG90YWwpLCB0X2Jhc2UpKQpjYXQoc3ByaW50ZigiJS0xNXMgY29tcGlsZWQ9JS01cyAlLjNmIHNcbiIsICJMb2dnaW5nQ291bnRlciIsIGlzX2NvbXBpbGVkKHN1YiR0b3RhbCksIHRfc3ViKSkK",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-11-12T20:02:43Z",
+          "size": 942,
+          "is_private": false,
+          "id": 4048,
+          "creation_time": "2026-11-12T20:02:43Z",
+          "summary": "R6 reproducer: an inherited method stays uncompiled once the base class has compiled it",
+          "file_name": "r6-inherited-method-repro.R",
+          "bug_id": 19308
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-12 20:02:43"
+}

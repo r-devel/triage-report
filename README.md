@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-11._
+_Automatically generated from the R Bugzilla dump updated 2026-11-13._
 
 ## Triaged bugs
 
@@ -71,10 +71,6 @@ These Triage Team patches should be looked at next.
 
 * [Bug 19277](https://bugs.r-project.org/show_bug.cgi?id=19277) — sample() without replacement draws zero-weight and least likely items with wrong probabilities (2026-11-02)
 
-#### Graphics
-
-* [Bug 19279](https://bugs.r-project.org/show_bug.cgi?id=19279) — contour() and contourLines() mishandle all-negative z (zmax initialized to DBL_MIN) (2026-11-03)
-
 #### I/O
 
 * [Bug 19289](https://bugs.r-project.org/show_bug.cgi?id=19289) — readChar() on a raw vector can write past its buffer in UTF-8 locales on macOS (2026-11-06)
@@ -85,6 +81,8 @@ These Triage Team patches should be looked at next.
 * [Bug 19119](https://bugs.r-project.org/show_bug.cgi?id=19119) — `writeChar()` on Windows counts supplementary characters twice (2026-08-03)
 * [Bug 19158](https://bugs.r-project.org/show_bug.cgi?id=19158) — env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently (2026-09-04)
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
+* [Bug 19308](https://bugs.r-project.org/show_bug.cgi?id=19308) — JIT leaves a function uncompiled for good when another function with the same body is in the code cache (2026-11-12)
+* [Bug 19311](https://bugs.r-project.org/show_bug.cgi?id=19311) — Byte-compiled reads of active bindings call the binding function twice (2026-11-13)
 
 #### S4methods
 
@@ -129,6 +127,9 @@ These Triage Team patches can wait their turn.
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
 * [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-11)
+* [Bug 19303](https://bugs.r-project.org/show_bug.cgi?id=19303) — Improve bcEval_loop() performance by intentionally spilling rarely-used variables (2026-11-12)
+* [Bug 19304](https://bugs.r-project.org/show_bug.cgi?id=19304) — Improve closure call performance by searching unhashed frames inline in GET_BINDING_CELL() (2026-11-12)
+* [Bug 19309](https://bugs.r-project.org/show_bug.cgi?id=19309) — Improve closure call performance by matching untagged arguments by position in one pass (2026-11-12)
 
 ### P5
 

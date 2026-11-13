@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "last_change_time": "2026-11-12T19:49:36Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "Improve closure call performance by matching untagged arguments by position in one pass",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "blocks": [],
+        "url": "",
+        "component": "Wishlist",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "enhancement",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19309,
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-12T19:49:24Z",
+        "priority": "P4",
+        "product": "R"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19309": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2026-11-12T19:49:24Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 104202,
+            "is_private": false,
+            "creation_time": "2026-11-12T19:49:24Z",
+            "bug_id": 19309,
+            "text": "matchArgs_NR() makes three passes over the formals for every closure call: exact tag matches, partial tag matches, then matches by position, and each tag pass also loops over the supplied arguments. When no supplied argument is tagged, the two tag passes do nothing except note where ... is. Argument matching is 16% of a call to function(x, y) x + y, and still 10% of a call with no arguments.\n\nTimings: matchargs-positional-bench.R, attached, prints ns per call for ten cases and fib(27). On aarch64 (r90875), calls with positional arguments execute 4 to 10% fewer instructions with Apple clang 21 and are 6 to 9% faster with gcc 15.2; a call with tagged arguments is unchanged.\n\nProposed patch: attached as matchargs-positional.diff, against r90875. matchArgs_NR() first tries matchPositionalArgs_NR(), which handles a call with no tagged argument and at most 32 arguments: it binds arguments to the formals before the first ... in order, gives the rest to ..., and builds the list directly. A tagged argument, or one that would be left unused, sends the call to the existing code, which still raises the error.\n\nmake test-Specific test-Reg passes on macOS. The patch is also submitted as https://github.com/r-devel/r-svn/pull/470, with the full measurements.",
+            "count": 0
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T19:49:35Z",
+            "count": 1,
+            "is_markdown": false,
+            "text": "Created attachment 4046\npatch: matchArgs_NR(): match untagged arguments by position in one pass",
+            "bug_id": 19309,
+            "attachment_id": 4046,
+            "tags": [],
+            "is_private": false,
+            "time": "2026-11-12T19:49:35Z",
+            "id": 104203
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 4047,
+            "time": "2026-11-12T19:49:36Z",
+            "creation_time": "2026-11-12T19:49:36Z",
+            "count": 2,
+            "text": "Created attachment 4047\nbenchmark: ns per call for ten closure calls and fib(27)",
+            "bug_id": 19309,
+            "tags": [],
+            "is_private": false,
+            "id": 104204
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19309": [
+        {
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL21hdGNoLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vbWF0Y2guYwkocmV2aXNpb24gOTA4NzUpCisrKyBzcmMvbWFpbi9tYXRjaC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNzYsNiArMTc2LDYzIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBtYXRjaEFyZ0V4YWN0KFNFWFAgdGFnLCBTRVhQICogbGlzdCkKICNkZWZpbmUgU0VUX0FSR1VTRUQoeCx2KSBTRVRMRVZFTFMoeCx2KQogCiAKKy8qIEZhc3QgcGF0aCBmb3IgbWF0Y2hBcmdzX05SOiBhIGNhbGwgaW4gd2hpY2ggbm8gYXJndW1lbnQgaXMgdGFnZ2VkCisgICBpcyBtYXRjaGVkIGJ5IHBvc2l0aW9uIGFsb25lLCBzbyB0aGUgdGFnIHBhc3NlcyBoYXZlIG5vdGhpbmcgdG8gZG8uCisgICBSZXR1cm5zIE5VTEwgdG8gbGVhdmUgdGhlIGNhbGwgdG8gdGhlIGdlbmVyYWwgY29kZSwgd2hpY2ggYWxzbworICAgcmVwb3J0cyBhbnkgdW51c2VkIGFyZ3VtZW50cy4gKi8KKyNkZWZpbmUgTUFYX1BPU0lUSU9OQUxfQVJHUyAzMgorCitzdGF0aWMgU0VYUCBtYXRjaFBvc2l0aW9uYWxBcmdzX05SKFNFWFAgZm9ybWFscywgU0VYUCBzdXBwbGllZCkKK3sKKyAgICBTRVhQIGNlbGxzW01BWF9QT1NJVElPTkFMX0FSR1NdOworICAgIGludCBuc3VwcGxpZWQgPSAwOworICAgIGZvciAoU0VYUCBiID0gc3VwcGxpZWQ7IGIgIT0gUl9OaWxWYWx1ZTsgYiA9IENEUihiKSkgeworCWlmIChUQUcoYikgIT0gUl9OaWxWYWx1ZSB8fCBuc3VwcGxpZWQgPT0gTUFYX1BPU0lUSU9OQUxfQVJHUykKKwkgICAgcmV0dXJuIE5VTEw7CisJY2VsbHNbbnN1cHBsaWVkKytdID0gYjsKKyAgICB9CisKKyAgICAvKiBhcmd1bWVudHMgYmVmb3JlIHRoZSBmaXJzdCAuLi4gYXJlIG1hdGNoZWQgaW4gb3JkZXI7IC4uLiB0YWtlcworICAgICAgIHdoYXRldmVyIGlzIGxlZnQgKi8KKyAgICBpbnQgbmZvcm1hbHMgPSAwLCBkb3RzcG9zID0gLTE7CisgICAgZm9yIChTRVhQIGYgPSBmb3JtYWxzOyBmICE9IFJfTmlsVmFsdWU7IGYgPSBDRFIoZiksIG5mb3JtYWxzKyspCisJaWYgKGRvdHNwb3MgPCAwICYmIFRBRyhmKSA9PSBSX0RvdHNTeW1ib2wpCisJICAgIGRvdHNwb3MgPSBuZm9ybWFsczsKKworICAgIGludCBubWF0Y2hlZCA9IGRvdHNwb3MgPCAwID8gbmZvcm1hbHMgOiBkb3RzcG9zOworICAgIGlmIChubWF0Y2hlZCA+IG5zdXBwbGllZCkKKwlubWF0Y2hlZCA9IG5zdXBwbGllZDsKKyAgICBlbHNlIGlmIChkb3RzcG9zIDwgMCAmJiBuc3VwcGxpZWQgPiBuZm9ybWFscykKKwlyZXR1cm4gTlVMTDsKKworICAgIC8qIGxlYXZlIHRoZSBzYW1lIG1hcmtzIG9uICdzdXBwbGllZCcgYXMgdGhlIGdlbmVyYWwgY29kZSAqLworICAgIGZvciAoaW50IGkgPSAwOyBpIDwgbnN1cHBsaWVkOyBpKyspCisJU0VUX0FSR1VTRUQoY2VsbHNbaV0sIGkgPCBubWF0Y2hlZCA/IDEgOiAwKTsKKworICAgIFNFWFAgZG90cyA9IFJfTWlzc2luZ0FyZzsKKyAgICBpZiAobnN1cHBsaWVkID4gbm1hdGNoZWQpIHsKKwlkb3RzID0gYWxsb2NMaXN0KG5zdXBwbGllZCAtIG5tYXRjaGVkKTsKKwlTRVRfVFlQRU9GKGRvdHMsIERPVFNYUCk7CisJU0VYUCBkID0gZG90czsKKwlmb3IgKGludCBpID0gbm1hdGNoZWQ7IGkgPCBuc3VwcGxpZWQ7IGkrKywgZCA9IENEUihkKSkKKwkgICAgU0VUQ0FSKGQsIENBUihjZWxsc1tpXSkpOworICAgIH0KKyAgICBQUk9URUNUKGRvdHMpOworCisgICAgLyogQ09OU19OUiBmb3IgdGhlIHNhbWUgcmVhc29uIGFzIGluIG1hdGNoQXJnc19OUiAqLworICAgIFNFWFAgYWN0dWFscyA9IFJfTmlsVmFsdWU7CisgICAgZm9yIChpbnQgaSA9IG5mb3JtYWxzIC0gMTsgaSA+PSAwOyBpLS0pIHsKKwlTRVhQIHZhbHVlID0gaSA9PSBkb3RzcG9zID8gZG90cyA6CisJICAgIGkgPCBubWF0Y2hlZCA/IENBUihjZWxsc1tpXSkgOiBSX01pc3NpbmdBcmc7CisJYWN0dWFscyA9IENPTlNfTlIodmFsdWUsIGFjdHVhbHMpOworCWlmIChpICE9IGRvdHNwb3MgJiYgdmFsdWUgPT0gUl9NaXNzaW5nQXJnKQorCSAgICBTRVRfTUlTU0lORyhhY3R1YWxzLCAxKTsKKyAgICB9CisKKyAgICBVTlBST1RFQ1QoMSk7CisgICAgcmV0dXJuIGFjdHVhbHM7Cit9CisKIC8qIFdlIG5lZWQgdG8gbGVhdmUgJ3N1cHBsaWVkJyB1bmNoYW5nZWQgaW4gY2FzZSB3ZSBjYWxsIFVzZU1ldGhvZCAqLwogLyogTVVMVElQTEVfTUFUQ0hFUyB3YXMgYWRkZWQgYnkgUkkgaW4gSmFuIDIwMDUgYnV0IG5ldmVyIGFjdGl2YXRlZDoKICAgIGNvZGUgaW4gUi0yLTgtYnJhbmNoICovCkBAIC0xODgsNiArMjQ1LDEwIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBtYXRjaEFyZ3NfTlIoU0VYUCBmb3JtYWxzLCBTRVhQIHN1cHBsaWVkLCBTRVhQIGNhbGwpCiAgICAgaW50IGksIGFyZ19pID0gMDsKICAgICBTRVhQIGYsIGEsIGIsIGRvdHMsIGFjdHVhbHM7CiAKKyAgICBhY3R1YWxzID0gbWF0Y2hQb3NpdGlvbmFsQXJnc19OUihmb3JtYWxzLCBzdXBwbGllZCk7CisgICAgaWYgKGFjdHVhbHMgIT0gTlVMTCkKKwlyZXR1cm4gYWN0dWFsczsKKwogICAgIGFjdHVhbHMgPSBSX05pbFZhbHVlOwogICAgIGZvciAoZiA9IGZvcm1hbHMgOyBmICE9IFJfTmlsVmFsdWUgOyBmID0gQ0RSKGYpLCBhcmdfaSsrKSB7CiAJLyogQ09OU19OUiBpcyB1c2VkIHNpbmNlIGFyZ3VtZW50IGxpc3RzIGNyZWF0ZWQgaGVyZSBhcmUgb25seQo=",
+          "is_patch": true,
+          "file_name": "matchargs-positional.diff",
+          "bug_id": 19309,
+          "creation_time": "2026-11-12T19:49:35Z",
+          "summary": "patch: matchArgs_NR(): match untagged arguments by position in one pass",
+          "is_private": false,
+          "id": 4046,
+          "last_change_time": "2026-11-12T19:49:35Z",
+          "size": 2735
+        },
+        {
+          "summary": "benchmark: ns per call for ten closure calls and fib(27)",
+          "creation_time": "2026-11-12T19:49:36Z",
+          "bug_id": 19309,
+          "file_name": "matchargs-positional-bench.R",
+          "size": 1092,
+          "last_change_time": "2026-11-12T19:49:36Z",
+          "id": 4047,
+          "is_private": false,
+          "data": "IyMgVGltaW5ncyBmb3IgcG9zaXRpb25hbCBhcmd1bWVudCBtYXRjaGluZyBpbiBtYXRjaEFyZ3NfTlIoKS4KIyMgUHJpbnRzIG5zIHBlciBjYWxsIChsb29wIG92ZXJoZWFkIGluY2x1ZGVkKS4gUnVuIHdpdGggUiAtLXZhbmlsbGEKIyMgYmVmb3JlIGFuZCBhZnRlciB0aGUgcGF0Y2guCm4gPC0gNWU2Cm5zIDwtIGZ1bmN0aW9uKGV4cHIsIGVudiA9IGdsb2JhbGVudigpKSB7CiAgICB0IDwtIG1pbihyZXBsaWNhdGUoNSwgc3lzdGVtLnRpbWUoZXZhbChleHByLCBlbnYpKVtbImVsYXBzZWQiXV0pKQogICAgcm91bmQodCAvIG4gKiAxZTksIDEpCn0KdG9wIDwtIGZ1bmN0aW9uKGJvZHkpIG5zKHBhcnNlKHRleHQgPSBzcHJpbnRmKCJmb3IgKGkgaW4gMTpuKSAlcyIsIGJvZHkpKVtbMUxdXSkKZjAgPC0gZnVuY3Rpb24oKSBOVUxMCmYxIDwtIGZ1bmN0aW9uKHUpIHUKZjIgPC0gZnVuY3Rpb24oYSwgYikgYSArIGIKZjQgPC0gZnVuY3Rpb24oYSwgYiwgYywgZCkgYSArIGQKZmRlZiA8LSBmdW5jdGlvbih2LCBrID0gMSkgdiArIGsKZmRvdHMgPC0gZnVuY3Rpb24odywgLi4uKSB3ICsgMQpmaWIgPC0gZnVuY3Rpb24oaykgaWYgKGsgPCAyKSBrIGVsc2UgZmliKGsgLSAxKSArIGZpYihrIC0gMikKeCA8LSAxOyB5IDwtIDIKYm9kaWVzIDwtIGMoIk5VTEwiLCAiZjAoKSIsICJmMSh4KSIsICJmMSgxKSIsICJmMih4LCB5KSIsICJmMihhID0geCwgYiA9IHkpIiwgImY0KHgsIHksIHgsIHkpIiwKICAgICAgICAgICAgImZkZWYoeCkiLCAiZmRvdHMoeCwgeSwgMSkiKQpyZXMgPC0gZGF0YS5mcmFtZShib2R5ID0gYm9kaWVzLCBucyA9IHNhcHBseShib2RpZXMsIHRvcCkpCmcgPC0gZnVuY3Rpb24obiwgYSwgYikgZm9yIChpIGluIDE6bikgZjIoYSwgYikKcmVzIDwtIHJiaW5kKHJlcywgZGF0YS5mcmFtZShib2R5ID0gImYyKGEsIGIpIGluIGEgY2xvc3VyZSIsIG5zID0gbnMocXVvdGUoZyhuLCAxLCAyKSkpKSkKcHJpbnQocmVzLCByb3cubmFtZXMgPSBGQUxTRSkKY2F0KCJmaWIoMjcpLCBtczoiLCByb3VuZCgxZTMgKiBtaW4ocmVwbGljYXRlKDUsIHN5c3RlbS50aW1lKGZpYigyNykpW1siZWxhcHNlZCJdXSkpKSwgIlxuIikK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-12 19:49:36"
+}

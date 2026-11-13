@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Wishlist",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "enhancement",
+        "deadline": {},
+        "id": 19303,
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P4",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-12T17:18:27Z",
+        "whiteboard": "",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-11-12T17:21:05Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "Improve bcEval_loop() performance by intentionally spilling rarely-used variables"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19303": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-11-12T17:18:27Z",
+            "id": 104186,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T17:18:27Z",
+            "is_markdown": false,
+            "count": 0,
+            "text": "The byte code interpreter spends more on each instruction dispatch than it needs to, for a different reason under each compiler:\n\n- gcc keeps a variable in memory for the whole function if it is live across a setjmp call (GCC PR 87466). In bcEval_loop() pc and five other locals are live across the SETJMP of an inline closure call, so every dispatch loads pc from the stack and stores it back. R 4.6.2 is affected too.\n- Recent clang (Apple clang 21, LLVM 22 and 23) emits six to eight register moves before each dispatch, because seven reassigned values are live across it.\n\nTimings: bceval-register-use-bench.R, attached, prints ns per iteration for ten loops. On aarch64 (r90875), loops in a closure are about 22% faster with gcc 13.3 and 16.2 and 13% faster with Apple clang 21; closure calls gain 0 to 4%. x86_64 is not timed; its generated code changes in the same way.\n\nProposed patch: attached as bceval-register-use.diff, against r90877. It reloads the locals after the SETJMP, as was already done for body, and keeps four rarely read locals (body, vcache, smallcache, oldbcpc) in memory; -DR_BCEVAL_SPILL_LOCALS=0 turns the latter off. The cost is a bcEval_loop() stack frame 4 to 13% larger under gcc.\n\nmake check passes with both gcc versions. The patch is also submitted as https://github.com/r-devel/r-svn/pull/469, with the full measurements.",
+            "bug_id": 19303
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 4036,
+            "time": "2026-11-12T17:18:39Z",
+            "creation_time": "2026-11-12T17:18:39Z",
+            "bug_id": 19303,
+            "text": "Created attachment 4036\npatch: bcEval_loop() locals: reload after the inline-call SETJMP, keep four cold ones in memory",
+            "count": 1,
+            "tags": [],
+            "id": 104187,
+            "is_private": false
+          },
+          {
+            "time": "2026-11-12T17:18:40Z",
+            "attachment_id": 4037,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "id": 104188,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19303,
+            "text": "Created attachment 4037\nbenchmark: ns per iteration for ten byte code loops",
+            "count": 2,
+            "creation_time": "2026-11-12T17:18:40Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19303": [
+        {
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDkwODc3KQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC03NTM5LDIyICs3NTM5LDQ2IEBAIHN0YXRpYyBTRVhQIGJjRXZhbChTRVhQIGJvZHksIFNFWFAgcmhvKQogICByZXR1cm4gdmFsdWU7ICAKIH0KIAorLyogQSBmZXcgbG9jYWxzIG9mIGJjRXZhbF9sb29wIGFyZSBkZWxpYmVyYXRlbHkga2VwdCBpbiBtZW1vcnkgcmF0aGVyCisgICB0aGFuIGluIHJlZ2lzdGVyczsgdGhlaXIgZGVjbGFyYXRpb25zIHNheSB3aHkuIENvbXBpbGUgd2l0aAorICAgLURSX0JDRVZBTF9TUElMTF9MT0NBTFM9MCB0byBsZWF2ZSB0aGUgcGxhY2VtZW50IHRvIHRoZSBjb21waWxlciwKKyAgIGUuZy4gdG8gbWVhc3VyZSB0aGUgZWZmZWN0IHdpdGggYSBkaWZmZXJlbnQgY29tcGlsZXIuICovCisjaWZuZGVmIFJfQkNFVkFMX1NQSUxMX0xPQ0FMUworIyBkZWZpbmUgUl9CQ0VWQUxfU1BJTExfTE9DQUxTIDEKKyNlbmRpZgorI2lmIFJfQkNFVkFMX1NQSUxMX0xPQ0FMUworIyBkZWZpbmUgUl9CQ0VWQUxfU1BJTEwgdm9sYXRpbGUKKyNlbHNlCisjIGRlZmluZSBSX0JDRVZBTF9TUElMTAorI2VuZGlmCisKIHN0YXRpYyBTRVhQIGJjRXZhbF9sb29wKHN0cnVjdCBiY0V2YWxfbG9jYWxzICpwbG9jKQogewogICBJTklUSUFMSVpFX01BQ0hJTkUoKTsKIAogICBzdHJ1Y3QgYmNFdmFsX2xvY2FscyBsb2NhbHMgPSAqcGxvYzsKIAotICBTRVhQIGJvZHksIHJobzsKKyAgLyogS2VwdCBpbiByZWdpc3RlcnM6IG1vc3QgaW5zdHJ1Y3Rpb25zIHJlYWQgdGhlc2UuICovCisgIFNFWFAgcmhvOwogICBSX2JjY29uc3RzX3QgY29uc3RhbnRzOwogICBCQ09ERSAqcGMsICpjb2RlYmFzZTsKLSAgUl9iaW5kaW5nX2NhY2hlX3QgdmNhY2hlOwotICBSYm9vbGVhbiBzbWFsbGNhY2hlOworCisgIC8qIEtlcHQgaW4gbWVtb3J5IG9uIHB1cnBvc2U6IHdpdGggZmV3ZXIgdmFsdWVzIGxpdmUgaW4gcmVnaXN0ZXJzCisgICAgIGFjcm9zcyB0aGUgaW5zdHJ1Y3Rpb24gZGlzcGF0Y2gsIGNsYW5nIHN0b3BzIHNodWZmbGluZyByZWdpc3RlcnMKKyAgICAgYmVmb3JlIGV2ZXJ5IGluZGlyZWN0IGJyYW5jaC4gcmhvLCBjb25zdGFudHMgYW5kIGNvZGViYXNlIGFyZQorICAgICBub3QgaW5jbHVkZWQ7IHJlbG9hZGluZyB0aGVtIGFmdGVyIGVhY2ggY2xvc3VyZSBjYWxsIGNvc3RzIG1vcmUKKyAgICAgdGhhbiB0aGUgZGlzcGF0Y2ggc2F2ZXMuICovCisgIFJfQkNFVkFMX1NQSUxMIFNFWFAgYm9keTsKKyAgUl9CQ0VWQUxfU1BJTEwgUl9iaW5kaW5nX2NhY2hlX3QgdmNhY2hlOworICBSX0JDRVZBTF9TUElMTCBSYm9vbGVhbiBzbWFsbGNhY2hlOwogCiAgIFJFU1RPUkVfQkNFVkFMX0xPQ0FMUygmbG9jYWxzKTsKIAogICBCQ09ERSAqY3VycmVudHBjID0gTlVMTDsKLSAgdm9pZCAqb2xkYmNwYyA9IFJfQkNwYzsKKyAgLyogUmVhZCBvbmNlLCBvbiByZXR1cm4uIEtlcHQgaW4gbWVtb3J5IG9uIHB1cnBvc2U6IGl0IGlzIGxpdmUKKyAgICAgYWNyb3NzIHRoZSBTRVRKTVAgY2FsbHMsIGFuZCBnY2Mgb3RoZXJ3aXNlIGhvbGRzIGl0IGluIGEgcmVnaXN0ZXIKKyAgICAgYW5kIHdyaXRlcyBpdCB0byBpdHMgc3RhY2sgc2xvdCBiZWZvcmUgZXZlcnkgZGlzcGF0Y2guICovCisgIHZvaWQgKiBSX0JDRVZBTF9TUElMTCBvbGRiY3BjID0gUl9CQ3BjOwogICBSX0JDcGMgPSAmY3VycmVudHBjOwogCiAgIHN0YXRpYyBpbnQgZXZhbGNvdW50ID0gMDsKQEAgLTgwOTksNyArODEyMywxMSBAQCBzdGF0aWMgU0VYUCBiY0V2YWxfbG9vcChzdHJ1Y3QgYmNFdmFsX2xvY2FscyAqcGxvYykKIAkgIGFyZ3MgPSBDTE9TVVJFX0NBTExfRlJBTUVfQVJHUygpOwogCSAgaWYgKElOTElORV9DTE9TVVJFX0NBTExfT0soZnVuKSkgewogCSAgICAgIFNUQVJUX0JDRlJBTUVfQ0FMTCgpOwotCSAgICAgIHZvbGF0aWxlIFNFWFAgdmJvZHkgPSBib2R5OyAvLyBrZWVwIGdjYyAtV2Nsb2JiZXJlZCBoYXBweQorCSAgICAgIC8qIGdjYyBrZWVwcyBhIHZhcmlhYmxlIHRoYXQgaXMgbGl2ZSBhY3Jvc3MgYSBzZXRqbXAgY2FsbAorCQkgaW4gbWVtb3J5IGZvciB0aGUgd2hvbGUgZnVuY3Rpb24uIFJlbG9hZGluZyB0aGUgbG9jYWxzCisJCSBhZnRlciB0aGUgY2FsbCBtZWFucyBub25lIG9mIHRoZW0gaXMuICovCisJICAgICAgdm9sYXRpbGUgc3RydWN0IGJjRXZhbF9sb2NhbHMgdmxvY2FsczsKKwkgICAgICBTQVZFX0JDRVZBTF9MT0NBTFMoJnZsb2NhbHMpOwogCSAgICAgIGlmIChTRVRKTVAoQkNGUkFNRV9DTlRYVCgpLT5jam1wYnVmKSkgewogCQkgIFJDTlRYVCAqcGNudHh0ID0gQkNGUkFNRV9DTlRYVCgpOwogCQkgIGlmICghIHBjbnR4dC0+anVtcHRhcmdldCkgewpAQCAtODExNiw3ICs4MTQ0LDcgQEAgc3RhdGljIFNFWFAgYmNFdmFsX2xvb3Aoc3RydWN0IGJjRXZhbF9sb2NhbHMgKnBsb2MpCiAJCSAgRE9fSU5MSU5FX0NMT1NVUkVfQ0FMTF9SRVRVUk4oKTsKIAkgICAgICB9CiAJICAgICAgZWxzZSB7Ci0JCSAgYm9keSA9IHZib2R5OyAvLyBrZWVwIGdjYyAtV2Nsb2JiZXJlZCBoYXBweQorCQkgIFJFU1RPUkVfQkNFVkFMX0xPQ0FMUygmdmxvY2Fscyk7CiAJCSAgTkVYVCgpOwogCQkgIC8qIHJldHVybiBjbGVhbnVwIGlzIGluIERPX0lOTElORV9DTE9TVVJFX0NBTExfUkVUVVJOICovCiAJICAgICAgfQo=",
+          "creator": "kevinushey",
+          "is_patch": true,
+          "bug_id": 19303,
+          "file_name": "bceval-register-use.diff",
+          "summary": "patch: bcEval_loop() locals: reload after the inline-call SETJMP, keep four cold ones in memory",
+          "creation_time": "2026-11-12T17:18:39Z",
+          "id": 4036,
+          "is_private": false,
+          "size": 2765,
+          "last_change_time": "2026-11-12T17:18:39Z"
+        },
+        {
+          "size": 1765,
+          "last_change_time": "2026-11-12T17:18:40Z",
+          "id": 4037,
+          "is_private": false,
+          "summary": "benchmark: ns per iteration for ten byte code loops",
+          "creation_time": "2026-11-12T17:18:40Z",
+          "bug_id": 19303,
+          "file_name": "bceval-register-use-bench.R",
+          "is_patch": false,
+          "data": "IyMgQnl0ZSBjb2RlIGludGVycHJldGVyIHRpbWluZ3M6IG5zIHBlciBpdGVyYXRpb24sIGJlc3Qgb2YgNSBydW5zLgojIyBSdW4gd2l0aCBgUiAtLXZhbmlsbGEgLWYgYmNldmFsLXJlZ2lzdGVyLXVzZS1iZW5jaC5SYCBvbiB0d28gYnVpbGRzIG9mCiMjIFIgdGhhdCBkaWZmZXIgb25seSBpbiB0aGUgcGF0Y2ggKHNhbWUgY29tcGlsZXIsIHNhbWUgZmxhZ3MpLiBCYXNlIFIgb25seS4KCmYwIDwtIGZ1bmN0aW9uKCkgTlVMTApmMiA8LSBmdW5jdGlvbih4LCB5KSB4ICsgeQpmaWIgPC0gZnVuY3Rpb24oaykgaWYgKGsgPCAyKSBrIGVsc2UgZmliKGsgLSAxKSArIGZpYihrIC0gMikKCiMjIG5hbWUgPSBsaXN0KGZ1bmN0aW9uIG9mIG4sIG4sIG51bWJlciBvZiBpdGVyYXRpb25zIHRpbWVkKQpjYXNlcyA8LSBsaXN0KAogICAgImZvciAoaSBpbiAxOm4pIE5VTEwiID0KICAgICAgICBsaXN0KGZ1bmN0aW9uKG4pIGZvciAoaSBpbiAxOm4pIE5VTEwsIDVlNywgNWU3KSwKICAgICJ4ICsgMSIgPQogICAgICAgIGxpc3QoZnVuY3Rpb24obikgeyB4IDwtIDE7IGZvciAoaSBpbiAxOm4pIHggKyAxIH0sIDNlNywgM2U3KSwKICAgICJzIDwtIHMgKyBpICogMiAtIDEiID0KICAgICAgICBsaXN0KGZ1bmN0aW9uKG4pIHsgcyA8LSAwOyBmb3IgKGkgaW4gMTpuKSBzIDwtIHMgKyBpICogMiAtIDE7IHMgfSwgMmU3LCAyZTcpLAogICAgIndoaWxlIChpIDwgbikgaSA8LSBpICsgMSIgPQogICAgICAgIGxpc3QoZnVuY3Rpb24obikgeyBpIDwtIDA7IHdoaWxlIChpIDwgbikgaSA8LSBpICsgMTsgaSB9LCAyZTcsIDJlNyksCiAgICAieFtpXSA8LSB4W2kgLSAxTF0gKyAxIiA9CiAgICAgICAgbGlzdChmdW5jdGlvbihuKSB7IHggPC0gbnVtZXJpYyhuKTsgZm9yIChpIGluIDI6bikgeFtpXSA8LSB4W2kgLSAxTF0gKyAxOyB4W25dIH0sIDFlNywgMWU3KSwKICAgICJpZiAoaSAlJSAyTCA9PSAwTCkgayA8LSBrICsgMUwiID0KICAgICAgICBsaXN0KGZ1bmN0aW9uKG4pIHsgayA8LSAwTDsgZm9yIChpIGluIDE6bikgaWYgKGkgJSUgMkwgPT0gMEwpIGsgPC0gayArIDFMOyBrIH0sIDFlNywgMWU3KSwKICAgICJjKHgsIHkpIiA9CiAgICAgICAgbGlzdChmdW5jdGlvbihuKSB7IHggPC0gMTsgeSA8LSAyOyBmb3IgKGkgaW4gMTpuKSBjKHgsIHkpIH0sIDVlNiwgNWU2KSwKICAgICJmMCgpIiA9CiAgICAgICAgbGlzdChmdW5jdGlvbihuKSBmb3IgKGkgaW4gMTpuKSBmMCgpLCA1ZTYsIDVlNiksCiAgICAiZjIoeCwgeSkiID0KICAgICAgICBsaXN0KGZ1bmN0aW9uKG4pIHsgeCA8LSAxOyB5IDwtIDI7IGZvciAoaSBpbiAxOm4pIGYyKHgsIHkpIH0sIDJlNiwgMmU2KSwKICAgICMjIGZpYigyNykgbWFrZXMgNjM1NjIxIGNhbGxzCiAgICAiZmliKDI3KSwgcGVyIGNhbGwiID0KICAgICAgICBsaXN0KGZ1bmN0aW9uKG4pIGZvciAoaiBpbiAxOm4pIGZpYigyNyksIDUsIDUgKiA2MzU2MjEpCikKCnRpbWUxIDwtIGZ1bmN0aW9uKGNhc2UpIHsKICAgIGYgPC0gY29tcGlsZXI6OmNtcGZ1bihjYXNlW1sxTF1dKQogICAgYmVzdCA8LSBtaW4ocmVwbGljYXRlKDUsIHsgZ2MoRkFMU0UpOyBzeXN0ZW0udGltZShmKGNhc2VbWzJMXV0pKVtbImVsYXBzZWQiXV0gfSkpCiAgICAxZTkgKiBiZXN0IC8gY2FzZVtbM0xdXQp9CgpucyA8LSB2YXBwbHkoY2FzZXMsIHRpbWUxLCBudW1lcmljKDEpKQpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKY2F0KHNwcmludGYoIiUtMzJzICU4LjJmIG5zXG4iLCBuYW1lcyhucyksIG5zKSwgc2VwID0gIiIpCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-12 17:21:05"
+}

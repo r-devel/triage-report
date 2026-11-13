@@ -3,79 +3,78 @@
     "faults": [],
     "bugs": [
       {
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19298,
+        "deadline": {},
         "cc": [
           "gabembecker"
         ],
         "qa_contact": "",
-        "deadline": {},
-        "id": 19298,
-        "dupe_of": {},
-        "severity": "normal",
-        "creation_time": "2026-11-11T05:24:03Z",
-        "version": "R 4.6.x",
-        "whiteboard": "",
         "product": "R",
         "priority": "P5",
-        "classification": "Unclassified",
+        "version": "R 4.6.x",
+        "creation_time": "2026-11-11T05:24:03Z",
+        "whiteboard": "",
         "keywords": [],
         "depends_on": [],
         "is_open": true,
+        "classification": "Unclassified",
         "component": "Language",
         "assigned_to": "R-core",
-        "cc_detail": [
-          {
-            "id": 1299,
-            "name": "gabembecker",
-            "real_name": "Gabriel Becker"
-          }
-        ],
-        "last_change_time": "2026-11-11T18:42:54Z",
         "target_milestone": "---",
         "see_also": [],
-        "groups": [],
-        "assigned_to_detail": {
-          "name": "R-core",
-          "id": 16,
-          "real_name": "R-core"
-        },
-        "is_cc_accessible": true,
-        "summary": "Segfault at socketSelect",
+        "last_change_time": "2026-11-12T17:44:25Z",
+        "cc_detail": [
+          {
+            "real_name": "Gabriel Becker",
+            "name": "gabembecker",
+            "id": 1299
+          }
+        ],
         "url": "",
         "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "Segfault at socketSelect",
+        "status": "UNCONFIRMED",
         "resolution": "",
         "creator_detail": {
-          "name": "0599jiangyc",
+          "real_name": "Yuancheng Jiang",
           "id": 3797,
-          "real_name": "Yuancheng Jiang"
+          "name": "0599jiangyc"
         },
-        "status": "UNCONFIRMED",
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": false,
         "creator": "0599jiangyc",
         "is_creator_accessible": true,
-        "alias": [],
-        "platform": "Other",
-        "flags": [],
-        "op_sys": "Other",
-        "is_confirmed": false
+        "alias": []
       }
     ]
   },
   "comments": {
-    "comments": {},
     "bugs": {
       "19298": {
         "comments": [
           {
-            "is_markdown": true,
-            "creator": "0599jiangyc",
-            "time": "2026-11-11T05:24:03Z",
+            "tags": [],
             "attachment_id": {},
+            "is_private": false,
+            "time": "2026-11-11T05:24:03Z",
+            "id": 104167,
+            "creator": "0599jiangyc",
+            "creation_time": "2026-11-11T05:24:03Z",
+            "is_markdown": true,
             "count": 0,
             "text": "The following code:\n\n```\ns <- socketConnection(port = 8083L, open = \"\")\nsocketSelect(list(s), timeout = 0)\n```\n\nResulted in this output:\n\n```\n *** caught segfault ***\naddress 0x7e69dddd8df8, cause 'memory not mapped'\n\nTraceback:\n 1: socketSelect(list(s), timeout = 0)\nAn irrecoverable exception occurred. R is aborting now ...\nSegmentation fault (core dumped)\n```\n\nTo reproduce: \n```\nRscript -e 's <- socketConnection(port = 8083L, open = \"\"); socketSelect(list(s), timeout = 0)'\n```",
-            "bug_id": 19298,
-            "creation_time": "2026-11-11T05:24:03Z",
-            "is_private": false,
-            "id": 104167,
-            "tags": []
+            "bug_id": 19298
           },
           {
             "creator": "gabembecker",
@@ -83,22 +82,53 @@
             "attachment_id": {},
             "time": "2026-11-11T18:42:54Z",
             "creation_time": "2026-11-11T18:42:54Z",
-            "bug_id": 19298,
             "text": "This does not reproduce for me on mac in a fresh build of Rdevel:\n\n```\ngbecker@Gabriels-MacBook-Pro Rdevelraw % ~/local/Rdevelraw2/R.framework/Resources/bin/R\n\n<snip>\n\n> s <- socketConnection(port = 8083L, open = \"\")\n> socketSelect(list(s), timeout = 0)\n[1] FALSE\n> sessionInfo()\nR Under development (unstable) (2026-11-11 r90876)\nPlatform: aarch64-apple-darwin25.6.0\nRunning under: macOS Tahoe 26.6\n\nMatrix products: default\nBLAS:   /Users/gbecker/local/Rdevelraw2/R.framework/Versions/4.7/Resources/lib/libRblas.dylib \nLAPACK: /Users/gbecker/local/Rdevelraw2/R.framework/Versions/4.7/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1\n\nlocale:\n[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8\n\ntime zone: America/Los_Angeles\ntzcode source: internal\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base     \n\nloaded via a namespace (and not attached):\n[1] compiler_4.7.0\n```\n\n@Yuancheng what OS and R version were you using?",
+            "bug_id": 19298,
             "count": 1,
             "tags": [],
             "id": 104176,
             "is_private": false
+          },
+          {
+            "tags": [],
+            "attachment_id": 4041,
+            "is_private": false,
+            "id": 104194,
+            "time": "2026-11-12T17:44:25Z",
+            "creation_time": "2026-11-12T17:44:25Z",
+            "creator": "kevinushey",
+            "count": 2,
+            "is_markdown": false,
+            "bug_id": 19298,
+            "text": "Created attachment 4041\nsocketSelect(): reject unopened socket connections, initialize sockconn fields\n\nThis is an uninitialized read, so the result depends on what malloc() returns. in_R_newsock() leaves fd, pstart and pend for sock_open() to set, and do_sockselect() uses them without checking that the connection is open.\n\nOn macOS the struct comes back zeroed, so fd is 0 and the call quietly select()s on stdin; that is the FALSE in comment 1. On Linux a negative value gives the reported segfault (an abort on fortified builds such as Ubuntu's), which I can force with\n\n    GLIBC_TUNABLES=glibc.malloc.perturb=85 Rscript -e 's <- socketConnection(port = 8083L, open = \"\"); socketSelect(list(s), timeout = 0)'\n\nThe attached patch makes socketSelect() signal \"connection is not open\" for such a connection, initializes the three fields and adds a regression test. Patch also at https://github.com/r-devel/r-svn/pull/475"
           }
         ]
       }
-    }
+    },
+    "comments": {}
   },
   "attachments": {
     "attachments": {},
     "bugs": {
-      "19298": []
+      "19298": [
+        {
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2Nvbm5lY3Rpb25zLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vY29ubmVjdGlvbnMuYwkocmV2aXNpb24gOTA4NzcpCisrKyBzcmMvbWFpbi9jb25uZWN0aW9ucy5jCSh3b3JraW5nIGNvcHkpCkBAIC02OTE2LDYgKzY5MTYsOSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc29ja3NlbGVjdChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pCiAJUmNvbm5lY3Rpb24gY29ubiA9IGdldENvbm5lY3Rpb24oYXNJbnRlZ2VyKFZFQ1RPUl9FTFQoaW5zb2NrLCBpKSkpOwogCWlmICghc3RyY21wKGNvbm4tPmNsYXNzLCAic29ja2Nvbm4iKSkgewogCSAgICBSc29ja2Nvbm4gc2NwID0gY29ubi0+cHJpdmF0ZTsKKwkgICAgLyogdGhlIGRlc2NyaXB0b3IgYW5kIGlucHV0IGJ1ZmZlciBhcmUgb25seSBzZXQgdXAgYnkgc29ja19vcGVuKCkgKi8KKwkgICAgaWYgKCFjb25uLT5pc29wZW4pCisJCWVycm9yKF8oImNvbm5lY3Rpb24gaXMgbm90IG9wZW4iKSk7CiAJICAgIElOVEVHRVIoaW5zb2NrZmQpW2ldID0gc2NwLT5mZDsKIAkgICAgaWYgKCEgTE9HSUNBTCh3cml0ZSlbaV0gJiYgc2NwLT5wc3RhcnQgPCBzY3AtPnBlbmQpIHsKIAkJTE9HSUNBTCh2YWwpW2ldID0gVFJVRTsKSW5kZXg6IHNyYy9tb2R1bGVzL2ludGVybmV0L3NvY2tjb25uLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21vZHVsZXMvaW50ZXJuZXQvc29ja2Nvbm4uYwkocmV2aXNpb24gOTA4NzcpCisrKyBzcmMvbW9kdWxlcy9pbnRlcm5ldC9zb2NrY29ubi5jCSh3b3JraW5nIGNvcHkpCkBAIC0yNTEsNiArMjUxLDEwIEBAIFJjb25uZWN0aW9uIGluX1JfbmV3c29jayhjb25zdCBjaGFyICpob3N0LCBpbnQgcG9ydCwgaW50IHNlcnZlciwgaW50IHNlcnZlcmZkLAogICAgICgoUnNvY2tjb25uKW5ldy0+cHJpdmF0ZSktPiB0aW1lb3V0ID0gdGltZW91dDsKICAgICAoKFJzb2NrY29ubiluZXctPnByaXZhdGUpLT4gc2VydmVyZmQgPSBzZXJ2ZXJmZDsKICAgICAoKFJzb2NrY29ubiluZXctPnByaXZhdGUpLT4gb3B0aW9ucyA9IG9wdGlvbnM7CisgICAgLyogbm8gZGVzY3JpcHRvciBhbmQgbm90aGluZyBidWZmZXJlZCB1bnRpbCBzb2NrX29wZW4oKSAqLworICAgICgoUnNvY2tjb25uKW5ldy0+cHJpdmF0ZSktPiBmZCA9IC0xOworICAgICgoUnNvY2tjb25uKW5ldy0+cHJpdmF0ZSktPiBwc3RhcnQgPSAoKFJzb2NrY29ubiluZXctPnByaXZhdGUpLT4gaW5idWY7CisgICAgKChSc29ja2Nvbm4pbmV3LT5wcml2YXRlKS0+IHBlbmQgPSAoKFJzb2NrY29ubiluZXctPnByaXZhdGUpLT4gaW5idWY7CiAgICAgcmV0dXJuIG5ldzsKIH0KIApJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwODc3KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ0MzQsNiArNDQzNCwxNCBAQCBzdG9waWZub3QoaWRlbnRpY2FsKHIsIHBhc3RlKCInZGlmZnRpbWUnIG51bSIsIGZtdGQpKSkKICMjIHN0cigpIGRpZCAqbm90KiBvYmV5IGl0cyAnZGlnaXRzLmQnIGFyZ3VtZW50IGluICBSIDw9IDQuNi4qCiAKIAorIyMgc29ja2V0U2VsZWN0KCkgb24gYSBzb2NrZXQgY29ubmVjdGlvbiB0aGF0IGlzIG5vdCBvcGVuIC0tIFBSIzE5Mjk4CitzIDwtIHNvY2tldENvbm5lY3Rpb24ocG9ydCA9IDgwODNMLCBvcGVuID0gIiIpCittc2cgPC0gdHJ5Q21zZyhzb2NrZXRTZWxlY3QobGlzdChzKSwgdGltZW91dCA9IDApKQorY2xvc2UocykKK3N0b3BpZm5vdChpcy5jaGFyYWN0ZXIobXNnKSwgIWVuZ2xpc2hNc2dzIHx8IGdyZXBsKCJub3Qgb3BlbiIsIG1zZykpCisjIyB1c2VkIGFuIHVuaW5pdGlhbGl6ZWQgZmlsZSBkZXNjcmlwdG9yLCBwb3NzaWJseSBzZWdmYXVsdGluZywgaW4gUiA8PSA0LjYuMgorCisKIAogIyMga2VlcCBhdCBlbmQKIHJiaW5kKGxhc3QgPSAgcHJvYy50aW1lKCkgLSAucHQsCg==",
+          "is_private": false,
+          "id": 4041,
+          "last_change_time": "2026-11-12T17:44:25Z",
+          "size": 2155,
+          "file_name": "socketselect-unopened-socket.diff",
+          "bug_id": 19298,
+          "creation_time": "2026-11-12T17:44:25Z",
+          "summary": "socketSelect(): reject unopened socket connections, initialize sockconn fields"
+        }
+      ]
     }
   },
-  "source_changed": "2026-11-11 18:42:54"
+  "source_changed": "2026-11-12 17:44:25"
 }

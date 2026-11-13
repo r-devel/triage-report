@@ -1,0 +1,113 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "id": 19307,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P4",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-12T18:53:55Z",
+        "version": "R-devel (trunk)",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-11-12T18:54:06Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "Promises reachable from API-only C code via the ... object and CAR/CDR/TAG",
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "is_cc_accessible": true
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19307": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": false,
+            "text": "Package C code that sticks to the API can still get at promise objects, which the work in bug 18928 set out to keep away from packages (comment 7 there). The `...` binding is a DOTSXP whose CARs are promises, and R_getVarEx(R_DotsSymbol, env, FALSE, ...) returns it, as does any .Call argument built from get(\"...\"), env$... or as.list(env, all.names = TRUE). CAR() of it is a PROMSXP, and CAR/CDR/TAG on that read the value, code and environment, sidestepping the non-API PRVALUE/PRCODE/PRENV.\n\nReproducible example: attached as dots-promise-exposure-repro.R (it compiles a small .Call library); every route reports \"promise\", where the Dots API never hands one out. Checked on r90880.\n\nThis is used on CRAN: filearray walks the R_getVarEx() result with CAR() and collects the promises into a list, and this.path evaluates (function(...) get(\"...\"))(NULL) from C and reads the promise fields to obtain R_UnboundValue.\n\nHaving R_getVarEx() refuse `...` would not close this, since the R-level routes remain, and it would break rlang's env_clone(), which copies a frame's `...` through R_getVar() without opening it. Closing it seems to need the package-facing CAR/CDR/TAG (and setters) to reject DOTSXP and PROMSXP, which would break the two packages above, so I'm raising it as a design question without a patch.",
+            "bug_id": 19307,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T18:53:55Z",
+            "is_private": false,
+            "time": "2026-11-12T18:53:55Z",
+            "id": 104197,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-12T18:54:06Z",
+            "text": "Created attachment 4043\nreproducer: promises reachable through the ... object",
+            "bug_id": 19307,
+            "is_markdown": false,
+            "count": 1,
+            "tags": [],
+            "attachment_id": 4043,
+            "time": "2026-11-12T18:54:06Z",
+            "id": 104198,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19307": [
+        {
+          "is_patch": false,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "IyMgUHJvbWlzZXMgcmVhY2hhYmxlIGZyb20gQyBjb2RlIHRoYXQgdXNlcyBvbmx5IEFQSSBlbnRyeSBwb2ludHMuCiMjIENvbXBpbGVzIGEgc21hbGwgLkNhbGwgbGlicmFyeSBpbnRvIGEgdGVtcG9yYXJ5IGRpcmVjdG9yeS4KCnNyYyA8LSByIigKI2luY2x1ZGUgPFJpbnRlcm5hbHMuaD4KClNFWFAgZ2V0dmFyX2RvdHMoU0VYUCBlbnYpCnsKICAgIHJldHVybiBSX2dldFZhckV4KFJfRG90c1N5bWJvbCwgZW52LCBGQUxTRSwgUl9OaWxWYWx1ZSk7Cn0KClNFWFAgY2FyX3R5cGUoU0VYUCB4KQp7CiAgICByZXR1cm4gbWtTdHJpbmcodHlwZTJjaGFyKFRZUEVPRihDQVIoeCkpKSk7Cn0KCi8qIENBUi9DRFIvVEFHIG9mIHRoZSBmaXJzdCBwcm9taXNlIGluIGEgLi4uIG9iamVjdCAqLwpTRVhQIHByb21pc2VfZmllbGRzKFNFWFAgZG90cykKewogICAgU0VYUCBwID0gQ0FSKGRvdHMpOwogICAgU0VYUCBhbnMgPSBQUk9URUNUKGFsbG9jVmVjdG9yKFZFQ1NYUCwgMykpOwogICAgU0VUX1ZFQ1RPUl9FTFQoYW5zLCAwLCBTY2FsYXJMb2dpY2FsKENBUihwKSA9PSBSX1VuYm91bmRWYWx1ZSkpOwogICAgU0VUX1ZFQ1RPUl9FTFQoYW5zLCAxLCBDRFIocCkpOwogICAgU0VUX1ZFQ1RPUl9FTFQoYW5zLCAyLCBUQUcocCkpOwogICAgVU5QUk9URUNUKDEpOwogICAgcmV0dXJuIGFuczsKfQopIgoKZGlyIDwtIHRlbXBmaWxlKCJkb3RzcHJvbWlzZSIpCmRpci5jcmVhdGUoZGlyKQpjZmlsZSA8LSBmaWxlLnBhdGgoZGlyLCAiZG90c3Byb21pc2UuYyIpCndyaXRlTGluZXMoc3JjLCBjZmlsZSkKc28gPC0gZmlsZS5wYXRoKGRpciwgcGFzdGUwKCJkb3RzcHJvbWlzZSIsIC5QbGF0Zm9ybSRkeW5saWIuZXh0KSkKc3RhdHVzIDwtIHN5c3RlbTIoCiAgICBmaWxlLnBhdGgoUi5ob21lKCJiaW4iKSwgIlIiKSwKICAgIGMoIkNNRCIsICJTSExJQiIsICItbyIsIHNoUXVvdGUoc28pLCBzaFF1b3RlKGNmaWxlKSksCiAgICBzdGRvdXQgPSBGQUxTRQopCnN0b3BpZm5vdChzdGF0dXMgPT0gMCkKZHluLmxvYWQoc28pCgojIyAxLiBUaGUgLi4uIG9iamVjdCByZWFjaGVzIEMgY29kZSwgYW5kIENBUigpIG9mIGl0IGlzIGEgcHJvbWlzZS4KZiA8LSBmdW5jdGlvbiguLi4pIHsKICAgIGVudiA8LSBlbnZpcm9ubWVudCgpCiAgICBjKFJfZ2V0VmFyRXggPSAuQ2FsbCgiY2FyX3R5cGUiLCAuQ2FsbCgiZ2V0dmFyX2RvdHMiLCBlbnYpKSwKICAgICAgZ2V0ID0gLkNhbGwoImNhcl90eXBlIiwgZ2V0KCIuLi4iKSksCiAgICAgIGRvbGxhciA9IC5DYWxsKCJjYXJfdHlwZSIsIGVudiQuLi4pLAogICAgICBhcy5saXN0ID0gLkNhbGwoImNhcl90eXBlIiwgYXMubGlzdChlbnYsIGFsbC5uYW1lcyA9IFRSVUUpW1siLi4uIl1dKSkKfQp0eXBlcyA8LSBmKDEgKyAyKQpwcmludCh0eXBlcykKCiMjIDIuIENBUi9DRFIvVEFHIG9mIHRoYXQgcHJvbWlzZSByZWFkIHdoYXQgUFJWQUxVRS9QUkNPREUvUFJFTlYgd291bGQ6CiMjICAgIGFuIHVuZm9yY2VkIHZhbHVlLCB0aGUgZXhwcmVzc2lvbiAxICsgMiBhbmQgdGhlIGNhbGxlcidzIGVudmlyb25tZW50LgpnIDwtIGZ1bmN0aW9uKC4uLikgLkNhbGwoInByb21pc2VfZmllbGRzIiwgZ2V0KCIuLi4iKSkKZmllbGRzIDwtIGcoMSArIDIpCnN0cihmaWVsZHMpCgojIyBFeHBlY3RlZDogbm8gcm91dGUgaGFuZHMgb3V0IGEgUFJPTVNYUCAoYXMgd2l0aCBSX0RvdHNFbHQgYW5kIGZyaWVuZHMpLgpzdG9waWZub3QoIWFueSh0eXBlcyA9PSAicHJvbWlzZSIpKQo=",
+          "creator": "kevinushey",
+          "id": 4043,
+          "is_private": false,
+          "size": 1742,
+          "last_change_time": "2026-11-12T18:54:06Z",
+          "bug_id": 19307,
+          "file_name": "dots-promise-exposure-repro.R",
+          "summary": "reproducer: promises reachable through the ... object",
+          "creation_time": "2026-11-12T18:54:06Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-12 18:54:06"
+}
