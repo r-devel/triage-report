@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "dupe_of": {},
+        "severity": "enhancement",
+        "id": 19315,
+        "deadline": {},
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P4",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-14T02:20:09Z",
+        "whiteboard": "",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Wishlist",
+        "assigned_to": "R-core",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-11-14T02:20:27Z",
+        "cc_detail": [],
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "Reduce UseMethod() C stack use by moving error-message buffers out of the dispatch frames",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19315": {
+        "comments": [
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-11-14T02:20:09Z",
+            "attachment_id": {},
+            "count": 0,
+            "bug_id": 19315,
+            "text": "Every dispatch through UseMethod() keeps two error-message buffers on the C stack while the method runs:\n\n- char buf[8192] in dispatchMethod(), used only for the R_USEMETHOD_FORWARD_LOCALS=error message;\n- char cl[1024] in do_usemethod(), used only for the \"no applicable method\" error.\n\nThat is about 70% of the C stack one level of S3 recursion uses, so recursion through an S3 method is the shallowest kind in R.\n\nReproducible example: usemethod-stack-repro.R, attached, prints the depth reached before \"C stack usage is too close to the limit\". With an 8 MB stack on macOS arm64 (r90888, clang) it is 607 through UseMethod() against 1959 through do.call(); with the patch it is 2117.\n\nProposed patch: attached as usemethod-stack-buffer.diff, against r90888. It moves each buffer, with the code that uses it, into a helper kept out of line by a new R_NOINLINE macro in Defn.h (the counterpart of R_INLINE). The frames of dispatchMethod() and do_usemethod() shrink from 8368 and 1168 bytes to 144 and 112; the code is otherwise unchanged.\n\nmake check passes, and the error messages and the R_USEMETHOD_FORWARD_LOCALS settings behave as before. The patch is also submitted as https://github.com/r-devel/r-svn/pull/491, where CI results can be seen.",
+            "creation_time": "2026-11-14T02:20:09Z",
+            "is_private": false,
+            "id": 104228,
+            "tags": []
+          },
+          {
+            "is_private": false,
+            "id": 104229,
+            "time": "2026-11-14T02:20:26Z",
+            "attachment_id": 4058,
+            "tags": [],
+            "count": 1,
+            "is_markdown": false,
+            "bug_id": 19315,
+            "text": "Created attachment 4058\npatch: move the UseMethod() error-message buffers out of line; add R_NOINLINE",
+            "creation_time": "2026-11-14T02:20:26Z",
+            "creator": "kevinushey"
+          },
+          {
+            "tags": [],
+            "id": 104230,
+            "is_private": false,
+            "creation_time": "2026-11-14T02:20:27Z",
+            "text": "Created attachment 4059\nreproducer: recursion depth through UseMethod() and through do.call()",
+            "bug_id": 19315,
+            "count": 2,
+            "attachment_id": 4059,
+            "time": "2026-11-14T02:20:27Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19315": [
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL0RlZm4uaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9EZWZuLmgJKHJldmlzaW9uIDkwODg4KQorKysgc3JjL2luY2x1ZGUvRGVmbi5oCSh3b3JraW5nIGNvcHkpCkBAIC04Miw2ICs4MiwxNyBAQAogIyBlbmRpZgogI2VuZGlmCiAKKy8qIFRoZSBvcHBvc2l0ZSBvZiBSX0lOTElORTogZm9yIGEgZnVuY3Rpb24gdGhhdCBtdXN0IHN0YXkgb3V0IG9mIGxpbmUsCisgICBlLmcuIGJlY2F1c2UgaXQgaG9sZHMgYSBsYXJnZSBidWZmZXIgdGhhdCBzaG91bGQgbm90IGJlIHBhcnQgb2YgaXRzCisgICBjYWxsZXIncyBzdGFjayBmcmFtZS4gKi8KKyNkZWZpbmUgUl9OT0lOTElORQorI2lmZGVmIF9faGFzX2F0dHJpYnV0ZQorIyBpZiBfX2hhc19hdHRyaWJ1dGUobm9pbmxpbmUpCisjICB1bmRlZiBSX05PSU5MSU5FCisjICBkZWZpbmUgUl9OT0lOTElORSBfX2F0dHJpYnV0ZV9fKChub2lubGluZSkpCisjIGVuZGlmCisjZW5kaWYKKwogI2RlZmluZSBNQVhFTFRTSVpFIDgxOTIgLyogVXNlZCBhcyBhIGRlZmF1bHQgZm9yIHN0cmluZyBidWZmZXIgc2l6ZXMsCiAJCQkgICBhbmQgb2NjYXNpb25hbGx5IGFzIGEgbGltaXQuICovCiAKSW5kZXg6IHNyYy9tYWluL29iamVjdHMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9vYmplY3RzLmMJKHJldmlzaW9uIDkwODg4KQorKysgc3JjL21haW4vb2JqZWN0cy5jCSh3b3JraW5nIGNvcHkpCkBAIC0zNTEsNiArMzUxLDI0IEBAIFNFWFAgY3JlYXRlUzNWYXJzKFNFWFAgZG90R2VuZXJpYywgU0VYUCBkb3RHcm91cCwgU0VYUCBkb3RDbGFzcywgU0VYUCBkb3RNZXRob2QsCiAgICAgcmV0dXJuIHY7CiB9CiAKKyNpZm5kZWYgVVNFTUVUSE9EX0ZPUldBUkRfTE9DQUxTCisvKiBPdXQgb2YgbGluZTogaXRzIGJ1ZmZlciB3b3VsZCBvdGhlcndpc2UgYmUgcGFydCBvZiB0aGUgc3RhY2sgZnJhbWUKKyAgIG9mIGV2ZXJ5IFMzIGRpc3BhdGNoLiAqLworc3RhdGljIFJfTk9JTkxJTkUKK1NFWFAgZm9yd2FyZGVkVmFyRXJyb3JQcm9taXNlKFNFWFAgc3ltLCBjb25zdCBjaGFyICpnZW5lcmljKSB7CisKKyAgICBjaGFyIGJ1Zls4MTkyXTsKKworICAgIHNucHJpbnRmKGJ1Ziwgc2l6ZW9mKGJ1ZiksCisJICAgICAic3RvcChcImdldHRpbmcgVXNlTWV0aG9kIHZhcmlhYmxlICclcycgIgorCSAgICAgImZyb20gZ2VuZXJpYyAnJXMnOyAiCisJICAgICAidGhpcyBpcyBubyBsb25nZXIgc3VwcG9ydGVkXCIpIiwKKwkgICAgIENIQVIoUFJJTlROQU1FKHN5bSkpLAorCSAgICAgZ2VuZXJpYyk7CisKKyAgICByZXR1cm4gbWtQUk9NSVNFKFJfUGFyc2VTdHJpbmcoYnVmKSwgUl9HbG9iYWxFbnYpOworfQorI2VuZGlmCiAKIHN0YXRpYwogU0VYUCBkaXNwYXRjaE1ldGhvZChTRVhQIG9wLCBTRVhQIHN4cCwgU0VYUCBkb3RDbGFzcywgUkNOVFhUICpjcHRyLCBTRVhQIG1ldGhvZCwKQEAgLTQwNiw3ICs0MjQsNiBAQCBTRVhQIGRpc3BhdGNoTWV0aG9kKFNFWFAgb3AsIFNFWFAgc3hwLCBTRVhQIGRvdENsYXNzLCBSQ05UWFQgKmNwdHIsIFNFWFAgbWV0aG9kLAogCQkgICAgfQogCQl9CiAJCVNFWFAgdmFsOwotCQljaGFyIGJ1Zls4MTkyXTsKIAkJc3dpdGNoKG9wdGlvbikgewogCQljYXNlIDA6IC8vIGZvcndhcmQgYWxsLCBhcyBpbiB0aGUgcGFzdCBiZWZvcmUgUiA0LjQuMAogCQkgICAgVU5QUk9URUNUKDEpOyAvKiBuZXd2YXJzICovCkBAIC00MzksMTMgKzQ1Niw3IEBAIFNFWFAgZGlzcGF0Y2hNZXRob2QoU0VYUCBvcCwgU0VYUCBzeHAsIFNFWFAgZG90Q2xhc3MsIFJDTlRYVCAqY3B0ciwgU0VYUCBtZXRob2QsCiAJCQkJQ0hBUihQUklOVE5BTUUoVEFHKHMpKSksCiAJCQkJZ2VuZXJpYyk7CiAjZW5kaWYKLQkJICAgIHNucHJpbnRmKGJ1Ziwgc2l6ZW9mKGJ1ZiksCi0JCQkgICAgICJzdG9wKFwiZ2V0dGluZyBVc2VNZXRob2QgdmFyaWFibGUgJyVzJyAiCi0JCQkgICAgICJmcm9tIGdlbmVyaWMgJyVzJzsgIgotCQkJICAgICAidGhpcyBpcyBubyBsb25nZXIgc3VwcG9ydGVkXCIpIiwKLQkJCSAgICAgQ0hBUihQUklOVE5BTUUoVEFHKHMpKSksCi0JCQkgICAgIGdlbmVyaWMpOwotCQkgICAgdmFsID0gbWtQUk9NSVNFKFJfUGFyc2VTdHJpbmcoYnVmKSwgUl9HbG9iYWxFbnYpOworCQkgICAgdmFsID0gZm9yd2FyZGVkVmFyRXJyb3JQcm9taXNlKFRBRyhzKSwgZ2VuZXJpYyk7CiAJCSAgICBVTlBST1RFQ1QoMSk7IC8qIG5ld3ZhcnMgKi8KIAkJICAgIG5ld3ZhcnMgPSBQUk9URUNUKENPTlModmFsLCBuZXd2YXJzKSk7CiAJCSAgICBTRVRfVEFHKG5ld3ZhcnMsIFRBRyhzKSk7CkBAIC01MzAsNiArNTQxLDQ2IEBAIGludCB1c2VtZXRob2QoY29uc3QgY2hhciAqZ2VuZXJpYywgU0VYUCBvYmosIFNFWFAgY2FsbCwgU0VYUCBhcmdzLAogICAgIHJldHVybiAwOwogfQogCisvKiBPdXQgb2YgbGluZSwgZm9yIHRoZSBzYW1lIHJlYXNvbiBhcyBmb3J3YXJkZWRWYXJFcnJvclByb21pc2UoKS4gKi8KK05PUkVUIHN0YXRpYyBSX05PSU5MSU5FCit2b2lkIG5vQXBwbGljYWJsZU1ldGhvZEVycm9yKFNFWFAgY2FsbCwgU0VYUCBnZW5lcmljLCBTRVhQIG9iaikKK3sKKyNkZWZpbmUgQ0xMRU4gMTAyNAorICAgIGNoYXIgY2xbQ0xMRU5dID0gezB9OworICAgIFNFWFAga2xhc3MgPSBQUk9URUNUKFJfZGF0YV9jbGFzczIob2JqKSk7CisgICAgaW50IG5jbGFzcyA9IGxlbmd0aChrbGFzcyk7CisgICAgaWYoIW5jbGFzcykKKwllcnJvcmNhbGwoY2FsbCwgXygiaWxsZWdhbCBjbGFzcyBvZiBsZW5ndGggMCB3aGVuIHVzaW5nIG1ldGhvZCBmb3IgJyVzJyIpLAorCQkgIHRyYW5zbGF0ZUNoYXIoU1RSSU5HX0VMVChnZW5lcmljLCAwKSkpOworICAgIGNvbnN0IGNoYXIgKmNfbmFtZSA9IHRyYW5zbGF0ZUNoYXIoU1RSSU5HX0VMVChrbGFzcywgMCkpOworICAgIGlmIChuY2xhc3MgPT0gMSkgeworCXN0cm5jcHkoY2wsIGNfbmFtZSwgQ0xMRU4tMSk7IGNsW0NMTEVOLTFdID0gJ1wwJzsKKyAgICB9IGVsc2UgeyAvLyBuY2xhc3MgPj0gMgorCXNpemVfdCBjbF9jb3VudCA9IDM7IC8vIDMgOiAiYygiICsgXDAKKwlzdHJjcHkoY2wsICJjKCciKTsKKwlmb3IgKGludCBpID0gMDsgaSA8IG5jbGFzczsgaSsrKSB7CisJICAgIGlmKGkgPiAwKSB7CisJCWNfbmFtZSA9IHRyYW5zbGF0ZUNoYXIoU1RSSU5HX0VMVChrbGFzcywgaSkpOworCQljbF9jb3VudCArPSA0OyAvLyAiJywgJyIKKwkJaWYgKGNsX2NvdW50IDwgQ0xMRU4pIHN0cmNhdChjbCwgIicsICciKTsKKwkgICAgfQorCSAgICBzaXplX3QgbGVuX25tID0gc3RybGVuKGNfbmFtZSk7CisJICAgIGlmIChjbF9jb3VudCArIGxlbl9ubSA+PSBDTExFTikgeworCQljbF9jb3VudCArPSAyOworCQlpZihjbF9jb3VudCA8IENMTEVOKSBzdHJjYXQoY2wsICIuLiIpOworCQlicmVhazsKKwkgICAgfQorCSAgICAvLyBlbHNlCisJICAgIGNsX2NvdW50ICs9IGxlbl9ubTsKKwkgICAgc3RyY2F0KGNsLCBjX25hbWUpOworCX0KKwlpZiAoKytjbF9jb3VudCA8IENMTEVOKSBzdHJjYXQoY2wsICInIik7CisJaWYgKCsrY2xfY291bnQgPCBDTExFTikgc3RyY2F0KGNsLCAiKSIpOworICAgIH0KKyAgICBlcnJvcmNhbGwoY2FsbCwgXygibm8gYXBwbGljYWJsZSBtZXRob2QgZm9yICclcycgYXBwbGllZCB0byBhbiBvYmplY3Qgb2YgY2xhc3MgXCIlc1wiIiksCisJICAgICAgdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKGdlbmVyaWMsIDApKSwgY2wpOworfQorCiAvKiBOb3RlOiAiZG9fdXNlbWV0aG9kIiBpcyBub3QgdGhlIG9ubHkgZW50cnkgcG9pbnQgdG8KICAgICJ1c2VtZXRob2QiLiBUaGluZ3MgbGlrZSBbIGFuZCBbWyBjYWxsIHVzZW1ldGhvZCBkaXJlY3RseSwKICAgIGhlbmNlIGRvX3VzZW1ldGhvZCBzaG91bGQganVzdCBiZSBhbiBpbnRlcmZhY2UgdG8gdXNlbWV0aG9kLgpAQCAtNTgyLDQwICs2MzMsNyBAQCBTRVhQIGRvX3VzZW1ldGhvZChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCBlbnYpCiAJZmluZGNvbnRleHQoQ1RYVF9SRVRVUk4sIGVudiwgYW5zKTsgLyogZG9lcyBub3QgcmV0dXJuICovCiAgICAgfQogICAgIGVsc2UgeyAvLyBubyBtZXRob2QgZm91bmQKLSNkZWZpbmUgQ0xMRU4gMTAyNAotCWNoYXIgY2xbQ0xMRU5dID0gezB9OwotCVNFWFAga2xhc3MgPSBQUk9URUNUKFJfZGF0YV9jbGFzczIob2JqKSk7Ci0JaW50IG5jbGFzcyA9IGxlbmd0aChrbGFzcyk7Ci0JaWYoIW5jbGFzcykKLQkgICAgZXJyb3JjYWxsKGNhbGwsIF8oImlsbGVnYWwgY2xhc3Mgb2YgbGVuZ3RoIDAgd2hlbiB1c2luZyBtZXRob2QgZm9yICclcyciKSwKLQkJICAgICAgdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKGdlbmVyaWMsIDApKSk7Ci0JY29uc3QgY2hhciAqY19uYW1lID0gdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKGtsYXNzLCAwKSk7Ci0JaWYgKG5jbGFzcyA9PSAxKSB7Ci0JICAgIHN0cm5jcHkoY2wsIGNfbmFtZSwgQ0xMRU4tMSk7IGNsW0NMTEVOLTFdID0gJ1wwJzsKLQl9IGVsc2UgeyAvLyBuY2xhc3MgPj0gMgotCSAgICBzaXplX3QgY2xfY291bnQgPSAzOyAvLyAzIDogImMoIiArIFwwCi0JICAgIHN0cmNweShjbCwgImMoJyIpOwotCSAgICBmb3IgKGludCBpID0gMDsgaSA8IG5jbGFzczsgaSsrKSB7Ci0JCWlmKGkgPiAwKSB7Ci0JCSAgICBjX25hbWUgPSB0cmFuc2xhdGVDaGFyKFNUUklOR19FTFQoa2xhc3MsIGkpKTsKLQkJICAgIGNsX2NvdW50ICs9IDQ7IC8vICInLCAnIgotCQkgICAgaWYgKGNsX2NvdW50IDwgQ0xMRU4pIHN0cmNhdChjbCwgIicsICciKTsKLQkJfQotCQlzaXplX3QgbGVuX25tID0gc3RybGVuKGNfbmFtZSk7Ci0JCWlmIChjbF9jb3VudCArIGxlbl9ubSA+PSBDTExFTikgewotCQkgICAgY2xfY291bnQgKz0gMjsKLQkJICAgIGlmKGNsX2NvdW50IDwgQ0xMRU4pIHN0cmNhdChjbCwgIi4uIik7Ci0JCSAgICBicmVhazsKLQkJfQotCQkvLyBlbHNlCi0JCWNsX2NvdW50ICs9IGxlbl9ubTsKLQkJc3RyY2F0KGNsLCBjX25hbWUpOwotCSAgICB9Ci0JICAgIGlmICgrK2NsX2NvdW50IDwgQ0xMRU4pIHN0cmNhdChjbCwgIiciKTsKLQkgICAgaWYgKCsrY2xfY291bnQgPCBDTExFTikgc3RyY2F0KGNsLCAiKSIpOwotCX0KLQllcnJvcmNhbGwoY2FsbCwgXygibm8gYXBwbGljYWJsZSBtZXRob2QgZm9yICclcycgYXBwbGllZCB0byBhbiBvYmplY3Qgb2YgY2xhc3MgXCIlc1wiIiksCi0JCSAgdHJhbnNsYXRlQ2hhcihTVFJJTkdfRUxUKGdlbmVyaWMsIDApKSwgY2wpOworCW5vQXBwbGljYWJsZU1ldGhvZEVycm9yKGNhbGwsIGdlbmVyaWMsIG9iaik7CiAgICAgfQogfQogCg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-11-14T02:20:26Z",
+          "size": 5401,
+          "is_private": false,
+          "id": 4058,
+          "creation_time": "2026-11-14T02:20:26Z",
+          "summary": "patch: move the UseMethod() error-message buffers out of line; add R_NOINLINE",
+          "file_name": "usemethod-stack-buffer.diff",
+          "bug_id": 19315
+        },
+        {
+          "last_change_time": "2026-11-14T02:20:27Z",
+          "size": 991,
+          "is_private": false,
+          "id": 4059,
+          "creation_time": "2026-11-14T02:20:27Z",
+          "summary": "reproducer: recursion depth through UseMethod() and through do.call()",
+          "file_name": "usemethod-stack-repro.R",
+          "bug_id": 19315,
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "IyMgRGVwdGggb2YgcmVjdXJzaW9uIHRocm91Z2ggYW4gUzMgbWV0aG9kLCBhbmQgb2YgdGhlIHNhbWUgcmVjdXJzaW9uCiMjIHRocm91Z2ggZG8uY2FsbCgpLCBiZWZvcmUgdGhlIEMgc3RhY2sgY2hlY2sgZmlyZXMuCgpmIDwtIGZ1bmN0aW9uKG4pIFVzZU1ldGhvZCgiZiIpCmYuZGVmYXVsdCA8LSBmdW5jdGlvbihuKSBpZiAobiA9PSAwTCkgMEwgZWxzZSBmKG4gLSAxTCkKCmcgPC0gZnVuY3Rpb24obikgaWYgKG4gPT0gMEwpIDBMIGVsc2UgZG8uY2FsbChnLCBsaXN0KG4gLSAxTCkpCgpvcHRpb25zKGV4cHJlc3Npb25zID0gNWU1KQoKbWF4ZGVwdGggPC0gZnVuY3Rpb24oZnVuKSB7CiAgICBvayA8LSBmdW5jdGlvbihuKSBpcy5udWxsKHRyeUNhdGNoKHsgZnVuKG4pOyBOVUxMIH0sIGVycm9yID0gZnVuY3Rpb24oZSkgZSkpCiAgICBsbyA8LSAxMEwKICAgIGhpIDwtIDEwMDAwMEwKICAgIHdoaWxlIChoaSAtIGxvID4gMUwpIHsKICAgICAgICBtaWQgPC0gKGxvICsgaGkpICUvJSAyTAogICAgICAgIGlmIChvayhtaWQpKQogICAgICAgICAgICBsbyA8LSBtaWQKICAgICAgICBlbHNlCiAgICAgICAgICAgIGhpIDwtIG1pZAogICAgfQogICAgbG8KfQoKY2F0KCJDIHN0YWNrIHNpemU6IiwgQ3N0YWNrX2luZm8oKVtbInNpemUiXV0sICJcbiIpCmNhdCgibWVzc2FnZSBhdCB0aGUgbGltaXQ6IiwgdHJ5Q2F0Y2goZigxMDAwMDBMKSwgZXJyb3IgPSBjb25kaXRpb25NZXNzYWdlKSwgIlxuIikKY2F0KCJVc2VNZXRob2QoKSByZWN1cnNpb24gZGVwdGg6IiwgbWF4ZGVwdGgoZiksICJcbiIpCmNhdCgiZG8uY2FsbCgpIHJlY3Vyc2lvbiBkZXB0aDogICIsIG1heGRlcHRoKGcpLCAiXG4iKQoKIyMgUi1kZXZlbCByOTA4ODgsIG1hY09TIGFybTY0LCBjbGFuZywgOCBNQiBzdGFjazoKIyMgICBVc2VNZXRob2QoKSA2MDcsIGRvLmNhbGwoKSAxOTU5CiMjIHdpdGggdGhlIHBhdGNoOgojIyAgIFVzZU1ldGhvZCgpIDIxMTcsIGRvLmNhbGwoKSAxOTU5Cg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-14 02:20:27"
+}

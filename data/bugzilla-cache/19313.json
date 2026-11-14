@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "product": "R",
+        "priority": "P5",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-13T14:29:11Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19313,
+        "qa_contact": "",
+        "cc": [],
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "summary": "C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-13T14:29:11Z",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": false,
+        "op_sys": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "jeroenooms",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Jeroen Ooms",
+          "id": 610,
+          "name": "jeroenooms"
+        }
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19313": {
+        "comments": [
+          {
+            "creator": "jeroenooms",
+            "is_markdown": true,
+            "attachment_id": 4053,
+            "time": "2026-11-13T14:29:11Z",
+            "creation_time": "2026-11-13T14:29:11Z",
+            "count": 0,
+            "bug_id": 19313,
+            "text": "Created attachment 4053\nfix stack limit\n\nsetup_Rmainloop() in src/main/main.c discards any C stack limit above\n1e8 bytes:\n\n  if(R_CStackLimit > 100000000U)\n      R_CStackLimit = (uintptr_t)-1;\n\nwhich turns off all C stack checking, including R_CheckStack2(). The\ndefault stack limit on FreeBSD is 512MB, so on a stock FreeBSD system\nCstack_info() returns NA and stack overflows segfault instead of raising\nan error. In particular, tests/reg-tests-1e.R crashes in the PR#19188\ntest: format(\"é\", width = 2^31 - 3) allocates a ~2GB VLA in do_format()\nthat R_CheckStack2() should reject.\n\nThis reproduces on Linux:\n\n  $ ulimit -s 524288\n  $ Rscript -e 'format(\"é\", width = 2^31 - 3)'\n   *** caught segfault ***\n\nwhereas with the default 8MB limit it gives\n\"C stack usage ... is too close to the limit\".\n\nThe comment says the check exists for bogus limits and for 32-bit\nplatforms, where casting to intptr_t needs the limit to be below 2^31.\nOn 64-bit platforms a large limit is real. The attached patch keeps the\nexisting behaviour on 32-bit platforms. On 64-bit platforms it caps the\nlimit at INT_MAX instead of disabling the checks, which keeps\nCstack_info()'s int result in range.\n\nCrash logs on FreeBSD before this patch: https://github.com/r-devel/r-svn/actions/runs/43285958432/job/131419332100\nSuccess on FreeBSD after this patch: https://github.com/r-devel/r-svn/actions/runs/43383903100/job/131747763356",
+            "tags": [],
+            "is_private": false,
+            "id": 104216
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19313": [
+        {
+          "id": 4053,
+          "is_private": false,
+          "size": 897,
+          "last_change_time": "2026-11-13T14:29:11Z",
+          "bug_id": 19313,
+          "file_name": "cstack.patch",
+          "summary": "fix stack limit",
+          "creation_time": "2026-11-13T14:29:11Z",
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9tYWluL21haW4uYyBiL3NyYy9tYWluL21haW4uYwppbmRleCAwMGY2MDFjLi5jYTg3NGNlIDEwMDY0NAotLS0gYS9zcmMvbWFpbi9tYWluLmMKKysrIGIvc3JjL21haW4vbWFpbi5jCkBAIC04NzAsOSArODcwLDEzIEBAIHZvaWQgc2V0dXBfUm1haW5sb29wKHZvaWQpCiAKICAgICAvKiBJbiBjYXNlIHRoaXMgaXMgYSBzaWxseSBsaW1pdDogMl4zMiAtMyBoYXMgYmVlbiBzZWVuIGFuZAogICAgICAqIGNhc3RpbmcgdG8gaW50cHRyX3IgcmVsaWVzIG9uIHRoaXMgYmVpbmcgc21hbGxlciB0aGFuIDJeMzEgb24gYQotICAgICAqIDMyLWJpdCBwbGF0Zm9ybS4gKi8KLSAgICBpZihSX0NTdGFja0xpbWl0ID4gMTAwMDAwMDAwVSkKKyAgICAgKiAzMi1iaXQgcGxhdGZvcm0uICBPbiA2NC1iaXQgcGxhdGZvcm1zIGxhcmdlIGxpbWl0cyBhcmUgcmVhbAorICAgICAqIChGcmVlQlNEIGRlZmF1bHRzIHRvIDUxMk1CKTogY2FwIHRoZW0gdG8ga2VlcCBDc3RhY2tfaW5mbygpIGluCisgICAgICogaW50IHJhbmdlIHJhdGhlciB0aGFuIGRpc2FibGluZyB0aGUgc3RhY2sgY2hlY2tzLiAqLworICAgIGlmKHNpemVvZih2b2lkICopID09IDQgJiYgUl9DU3RhY2tMaW1pdCA+IDEwMDAwMDAwMFUpCiAJUl9DU3RhY2tMaW1pdCA9ICh1aW50cHRyX3QpLTE7CisgICAgZWxzZSBpZihSX0NTdGFja0xpbWl0ICE9IC0xICYmIFJfQ1N0YWNrTGltaXQgPiBJTlRfTUFYKQorCVJfQ1N0YWNrTGltaXQgPSBJTlRfTUFYOwogICAgIC8qIG1ha2Ugc3VyZSB3ZSBoYXZlIGVub3VnaCBoZWFkIHJvb20gdG8gaGFuZGxlIGVycm9ycyAqLwogICAgIGlmKFJfQ1N0YWNrTGltaXQgIT0gLTEpCiAJUl9DU3RhY2tMaW1pdCA9ICh1aW50cHRyX3QpKDAuOTUgKiBSX0NTdGFja0xpbWl0KTsK",
+          "creator": "jeroenooms"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-13 14:29:11"
+}

@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "status": "NEW",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "cc_detail": [],
+        "last_change_time": "2026-11-14T05:15:10Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": ".C() bounds-check errors print an uninitialised routine name when .NAME is a NativeSymbolInfo",
+        "url": "",
+        "blocks": [],
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19318,
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-14T05:14:40Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P4"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19318": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2026-11-14T05:14:40Z",
+            "creation_time": "2026-11-14T05:14:40Z",
+            "count": 0,
+            "bug_id": 19318,
+            "text": "When .NAME is a NativeSymbolInfo or an address without registration information, such as the result of getNativeSymbolInfo(\"foo\"), the options(CBoundsCheck = TRUE) errors of .C() and .Fortran() name the routine with uninitialised memory. The R_CHECK_CONSTANTS=5 report of .Call() does the same. Both are there to track down memory errors in compiled code, and the read runs on until it meets a zero byte.\n\nReproducible example: attached as dotcode-routine-name-repro.R (needs a C compiler). It prints, for example, 'array over-run in .C(\"p\\xa9\\xea\"u\") in integer argument 1' where 'array over-run in .C(\"overrun\") in integer argument 1' is expected.\n\nAnalysis:\n\nThe name buffer of do_dotCode() and do_dotcall() in src/main/dotcode.c is filled for a string and, by checkValidSymbolId(), for a registered native symbol. For a bare address it is left unset (r90888).\n\nProposed patch: attached as dotcode-routine-name.diff. It takes the name from the NativeSymbolInfo when there is one and leaves an empty name for an address on its own. make check passes.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/492, where CI results can be seen.",
+            "tags": [],
+            "is_private": false,
+            "id": 104239
+          },
+          {
+            "attachment_id": 4066,
+            "tags": [],
+            "id": 104240,
+            "time": "2026-11-14T05:14:55Z",
+            "is_private": false,
+            "creation_time": "2026-11-14T05:14:55Z",
+            "creator": "kevinushey",
+            "bug_id": 19318,
+            "text": "Created attachment 4066\npatch: set the routine name when .NAME is a NativeSymbolInfo or address",
+            "is_markdown": false,
+            "count": 1
+          },
+          {
+            "is_markdown": false,
+            "count": 2,
+            "text": "Created attachment 4067\nreproducer (needs a C compiler)",
+            "bug_id": 19318,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-14T05:15:10Z",
+            "is_private": false,
+            "time": "2026-11-14T05:15:10Z",
+            "id": 104241,
+            "tags": [],
+            "attachment_id": 4067
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19318": [
+        {
+          "last_change_time": "2026-11-14T05:14:55Z",
+          "size": 1348,
+          "is_private": false,
+          "id": 4066,
+          "creation_time": "2026-11-14T05:14:55Z",
+          "summary": "patch: set the routine name when .NAME is a NativeSymbolInfo or address",
+          "file_name": "dotcode-routine-name.diff",
+          "bug_id": 19318,
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2RvdGNvZGUuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9kb3Rjb2RlLmMJKHJldmlzaW9uIDkwODg4KQorKysgc3JjL21haW4vZG90Y29kZS5jCSh3b3JraW5nIGNvcHkpCkBAIC05OSw3ICs5OSw5IEBAIHN0YXRpYyBSX0lOTElORSBib29sIGlzTmF0aXZlU3ltYm9sSW5mbyhTRVhQIG9wKQogICAgICAgKGUuZy4gZ2V0TmF0aXZlU3ltYm9sSW5mbygiZm9vIikkYWRkcmVzcykKICAgIGMpIG9yIGEgTmF0aXZlU3ltYm9sSW5mbyBpdHNlbGYgIChlLmcuIGdldE5hdGl2ZVN5bWJvbEluZm8oImZvbyIpKQogCi0gICBJdCBjb3BpZXMgdGhlIHN5bWJvbCBuYW1lIHRvIGJ1Zi4KKyAgIEl0IGNvcGllcyB0aGUgc3ltYm9sIG5hbWUgdG8gYnVmLiAgQW4gYWRkcmVzcyB3aXRob3V0IHJlZ2lzdHJhdGlvbgorICAgaW5mb3JtYXRpb24gY2FycmllcyBubyBuYW1lOiB0aGUgbmFtZSBpcyB0aGVuIHRha2VuIGZyb20gdGhlCisgICBOYXRpdmVTeW1ib2xJbmZvIGlmIHRoZXJlIGlzIG9uZSwgYW5kIGlzIGVtcHR5IG90aGVyd2lzZS4KIAogICAgTkI6IGluIHRoZSBsYXN0IHR3byBjYXNlcyBpdCBzZXRzIGZ1biBhbmQgc3ltYm9sIGFzIHdlbGwhCiAgKi8KQEAgLTE2MiwxMSArMTY0LDI2IEBAIGNoZWNrVmFsaWRTeW1ib2xJZChTRVhQIG9wLCBTRVhQIGNhbGwsIERMX0ZVTkMgKmZ1biwKIAkJZXJyb3IoXygic3ltYm9sICclcycgaXMgdG9vIGxvbmciKSwgcCk7CiAJICAgIG1lbWNweShidWYsIHAsIHN0cmxlbihwKSsxKTsKIAl9CisJZWxzZSBpZiAoYnVmKSB7CisJICAgIGJ1ZlswXSA9ICdcMCc7CisJfQogCiAJcmV0dXJuOwogICAgIH0KICAgICBlbHNlIGlmKGlzTmF0aXZlU3ltYm9sSW5mbyhvcCkpIHsKIAljaGVja1ZhbGlkU3ltYm9sSWQoVkVDVE9SX0VMVChvcCwgMSksIGNhbGwsIGZ1biwgc3ltYm9sLCBidWYpOworCisJU0VYUCBuYW1lID0gVkVDVE9SX0VMVChvcCwgMCk7CisJaWYgKGJ1ZiAmJiBidWZbMF0gPT0gJ1wwJyAmJiBpc1ZhbGlkU3RyaW5nKG5hbWUpKSB7CisJICAgIC8qIG9ubHkgdXNlZCBpbiBtZXNzYWdlcywgc28gdHJ1bmNhdGUgcmF0aGVyIHRoYW4gZmFpbCAqLworCSAgICBjb25zdCBjaGFyICpwID0gQ0hBUihTVFJJTkdfRUxUKG5hbWUsIDApKTsKKwkgICAgc2l6ZV90IG4gPSBzdHJsZW4ocCk7CisJICAgIGlmIChuID49IE1heFN5bWJvbEJ5dGVzKQorCQluID0gTWF4U3ltYm9sQnl0ZXMgLSAxOworCSAgICBtZW1jcHkoYnVmLCBwLCBuKTsKKwkgICAgYnVmW25dID0gJ1wwJzsKKwl9CisKIAlyZXR1cm47CiAgICAgfQogCg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false
+        },
+        {
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "IyMgVGhlIG9wdGlvbnMoQ0JvdW5kc0NoZWNrID0gVFJVRSkgZXJyb3JzIG9mIC5DKCkgbmFtZSB0aGUgcm91dGluZSB3aXRoCiMjIHVuaW5pdGlhbGlzZWQgbWVtb3J5IHdoZW4gLk5BTUUgaXMgYSBOYXRpdmVTeW1ib2xJbmZvIG9yIGFuIGFkZHJlc3MuCiMjIE5lZWRzIGEgQyBjb21waWxlci4KCmRpciA8LSB0ZW1wZmlsZSgicmVwcm8iKQpkaXIuY3JlYXRlKGRpcikKd3JpdGVMaW5lcyhyIigKLyogd3JpdGVzIG9uZSBlbGVtZW50IHBhc3QgdGhlIGVuZCBvZiBpdHMgYXJndW1lbnQgKi8Kdm9pZCBvdmVycnVuKGludCAqeCkKewogICAgeFsxXSA9IDA7Cn0KKSIsIGZpbGUucGF0aChkaXIsICJvdmVycnVuLmMiKSkKCm93ZCA8LSBzZXR3ZChkaXIpCnN5c3RlbTIoZmlsZS5wYXRoKFIuaG9tZSgiYmluIiksICJSIiksIGMoIkNNRCIsICJTSExJQiIsICJvdmVycnVuLmMiKSwgc3Rkb3V0ID0gRkFMU0UpCnNldHdkKG93ZCkKZHluLmxvYWQoZmlsZS5wYXRoKGRpciwgcGFzdGUwKCJvdmVycnVuIiwgLlBsYXRmb3JtJGR5bmxpYi5leHQpKSkKCm9wdGlvbnMoQ0JvdW5kc0NoZWNrID0gVFJVRSkKbXNnIDwtIGZ1bmN0aW9uKG5hbWUpIHRyeUNhdGNoKC5DKG5hbWUsIDFMKSwgZXJyb3IgPSBjb25kaXRpb25NZXNzYWdlKQppbmZvIDwtIGdldE5hdGl2ZVN5bWJvbEluZm8oIm92ZXJydW4iKQoKIyMgYnkgbmFtZToKIyMgWzFdICJhcnJheSBvdmVyLXJ1biBpbiAuQyhcIm92ZXJydW5cIikgaW4gaW50ZWdlciBhcmd1bWVudCAxXG4iCmJ5X25hbWUgPC0gbXNnKCJvdmVycnVuIikKcHJpbnQoYnlfbmFtZSkKCiMjIGJ5IE5hdGl2ZVN5bWJvbEluZm86IEZBTFNFLCBleHBlY3RlZCBUUlVFCmJ5X2luZm8gPC0gbXNnKGluZm8pCnByaW50KGJ5X2luZm8pCnByaW50KGlkZW50aWNhbChieV9pbmZvLCBieV9uYW1lKSkKCiMjIGJ5IGFkZHJlc3M6IEZBTFNFIHVubGVzcyB0aGUgbWVtb3J5IGhhcHBlbnMgdG8gc3RhcnQgd2l0aCBhIHplcm8gYnl0ZSwKIyMgZXhwZWN0ZWQgVFJVRQpieV9hZGRyZXNzIDwtIG1zZyhpbmZvJGFkZHJlc3MpCnByaW50KGJ5X2FkZHJlc3MpCnByaW50KGlkZW50aWNhbChieV9hZGRyZXNzLCBzdWIoIm92ZXJydW4iLCAiIiwgYnlfbmFtZSkpKQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "last_change_time": "2026-11-14T05:15:10Z",
+          "size": 1112,
+          "is_private": false,
+          "id": 4067,
+          "creation_time": "2026-11-14T05:15:10Z",
+          "summary": "reproducer (needs a C compiler)",
+          "file_name": "dotcode-routine-name-repro.R",
+          "bug_id": 19318
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-14 05:15:10"
+}

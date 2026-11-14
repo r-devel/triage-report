@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "component": "Wishlist",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-14T03:37:50Z",
+        "priority": "P4",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 19316,
+        "deadline": {},
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "summary": "Improve closure call and string hashing performance: cheaper begincontext() and inline vmaxget()/vmaxset() within R",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-11-14T03:38:18Z",
+        "see_also": [],
+        "target_milestone": "---"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19316": {
+        "comments": [
+          {
+            "bug_id": 19316,
+            "text": "begincontext() calls R_BCRelPC() and vmaxget() while its seven arguments are still live, so they are saved around those calls on every closure call. Also, vmaxget() and vmaxset() are out-of-line calls even inside R, including in per-element loops such as the string hashing in unique.c.\n\nTimings: context-setup-vmax-bench.R, attached, prints ns per call or per element for four cases. On aarch64 macOS (Apple clang 21, r90887), an empty closure call is about 9% faster, and duplicated() and match() on UTF-8 strings about 10%.\n\nProposed patch: attached as context-setup-vmax-inline.diff, against r90887. begincontext() stores its arguments first and calls the accessors last. A file linked into R itself can define INLINE_VMAX before including Defn.h to get inline vmaxget() and vmaxset(); context.c and unique.c do. R_VStack becomes a hidden global (with an Rdll.hide entry), so nothing new is exported and packages keep calling the functions. Files that do not opt in are unaffected; eval.c compiles to the same instructions as before.\n\nmake check passes on macOS, and CI passes on Linux, macOS and Windows. The patch is also submitted as https://github.com/r-devel/r-svn/pull/488, with the full measurements.",
+            "count": 0,
+            "is_markdown": false,
+            "creation_time": "2026-11-14T03:37:50Z",
+            "creator": "kevinushey",
+            "id": 104231,
+            "time": "2026-11-14T03:37:50Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "is_private": false,
+            "time": "2026-11-14T03:38:06Z",
+            "id": 104232,
+            "tags": [],
+            "attachment_id": 4060,
+            "is_markdown": false,
+            "count": 1,
+            "text": "Created attachment 4060\npatch: store begincontext() arguments first; inline vmaxget()/vmaxset() for files in R that opt in",
+            "bug_id": 19316,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-14T03:38:06Z"
+          },
+          {
+            "is_private": false,
+            "id": 104233,
+            "tags": [],
+            "count": 2,
+            "bug_id": 19316,
+            "text": "Created attachment 4061\nbenchmark: ns per call or per element for four cases",
+            "creation_time": "2026-11-14T03:38:18Z",
+            "time": "2026-11-14T03:38:18Z",
+            "attachment_id": 4061,
+            "is_markdown": false,
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19316": [
+        {
+          "is_private": false,
+          "id": 4060,
+          "last_change_time": "2026-11-14T03:38:06Z",
+          "size": 3869,
+          "file_name": "context-setup-vmax-inline.diff",
+          "bug_id": 19316,
+          "creation_time": "2026-11-14T03:38:06Z",
+          "summary": "patch: store begincontext() arguments first; inline vmaxget()/vmaxset() for files in R that opt in",
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9nbnV3aW4zMi9SZGxsLmhpZGUKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL2dudXdpbjMyL1JkbGwuaGlkZQkocmV2aXNpb24gOTA4ODcpCisrKyBzcmMvZ251d2luMzIvUmRsbC5oaWRlCSh3b3JraW5nIGNvcHkpCkBAIC0yNjAsNiArMjYwLDcgQEAKICBSX1Vud2luZEhhbmRsZXJTdGFjawogIFJfVXNlTmFtZXNTeW1ib2wKICBSX1ZTaXplCisgUl9WU3RhY2sKICBSX1ZlcmJvc2UKICBSX1dhcm5MZW5ndGgKICBSX1dhcm5pbmdzCkluZGV4OiBzcmMvaW5jbHVkZS9SaW5saW5lZGZ1bnMuaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9SaW5saW5lZGZ1bnMuaAkocmV2aXNpb24gOTA4ODcpCisrKyBzcmMvaW5jbHVkZS9SaW5saW5lZGZ1bnMuaAkod29ya2luZyBjb3B5KQpAQCAtNjYsNiArNjYsMjUgQEAKICMgZGVmaW5lIEhJRERFTgogI2VuZGlmIC8qIGlmZGVmIENPTVBJTElOR19SICovCiAKKy8qIEZpbGVzIGxpbmtlZCBpbnRvIFIgaXRzZWxmIGNhbiBkZWZpbmUgSU5MSU5FX1ZNQVggYmVmb3JlIGluY2x1ZGluZworICAgRGVmbi5oIHRvIGlubGluZSB0aGVzZSBhY2Nlc3NvcnMuIFJfVlN0YWNrIGlzIG5vdCBleHBvcnRlZCwgc28gb3RoZXIKKyAgIGNvZGUgbXVzdCBjYWxsIHRoZSBmdW5jdGlvbnMuIFRoZXkgYXJlIGFscmVhZHkgZGVjbGFyZWQgZXh0ZXJuIGluCisgICBSX2V4dC9NZW1vcnkuaCwgc28gdXNlIHRoZSBHTlUgaW5saW5lIGNvbnZlbnRpb24gYWJvdmUgcmF0aGVyIHRoYW4KKyAgIHRoZSBDOTkgY29udmVudGlvbiBiZWxvdy4gKi8KKyNpZiBkZWZpbmVkKElOTElORV9WTUFYKSB8fCBkZWZpbmVkKENPTVBJTElOR19SKQorZXh0ZXJuIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBSX1ZTdGFjazsKKworSU5MSU5FX0ZVTiB2b2lkICp2bWF4Z2V0KHZvaWQpCit7CisgICAgcmV0dXJuICh2b2lkICopIFJfVlN0YWNrOworfQorCitJTkxJTkVfRlVOIHZvaWQgdm1heHNldChjb25zdCB2b2lkICp2bWF4KQoreworICAgIFJfVlN0YWNrID0gKFNFWFApIHZtYXg7Cit9CisjZW5kaWYKKwogI2lmIEM5OV9JTkxJTkVfU0VNQU5USUNTCiAjIHVuZGVmIElOTElORV9GVU4KICMgaWZkZWYgQ09NUElMSU5HX1IKSW5kZXg6IHNyYy9tYWluL2NvbnRleHQuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9jb250ZXh0LmMJKHJldmlzaW9uIDkwODg3KQorKysgc3JjL21haW4vY29udGV4dC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMDcsNiArMTA3LDcgQEAKICNpbmNsdWRlIDxjb25maWcuaD4KICNlbmRpZgogCisjZGVmaW5lIElOTElORV9WTUFYCiAjZGVmaW5lIFJfVVNFX1NJR05BTFMgMQogI2luY2x1ZGUgPERlZm4uaD4KICNpbmNsdWRlIDxJbnRlcm5hbC5oPgpAQCAtMjU0LDcgKzI1NSw2IEBAIHZvaWQgYmVnaW5jb250ZXh0KFJDTlRYVCAqIGNwdHIsIGludCBmbGFncywKIHsKICAgICBjcHRyLT5jc3RhY2t0b3AgPSBSX1BQU3RhY2tUb3A7CiAgICAgY3B0ci0+Z2NlbmFibGVkID0gUl9HQ0VuYWJsZWQ7Ci0gICAgY3B0ci0+cmVscGMgPSBSX0JDUmVsUEMoUl9CQ2JvZHksIFJfQkNwYyk7CiAgICAgY3B0ci0+YmNwYyA9IFJfQkNwYzsKICAgICBjcHRyLT5iY2JvZHkgPSBSX0JDYm9keTsKICAgICBjcHRyLT5iY2ZyYW1lID0gUl9CQ0ZyYW1lOwpAQCAtMjY4LDcgKzI2OCw2IEBAIHZvaWQgYmVnaW5jb250ZXh0KFJDTlRYVCAqIGNwdHIsIGludCBmbGFncywKICAgICBjcHRyLT5jZW5kID0gTlVMTDsKICAgICBjcHRyLT5wcm9tYXJncyA9IHByb21hcmdzOwogICAgIGNwdHItPmNhbGxmdW4gPSBjYWxsZnVuOwotICAgIGNwdHItPnZtYXggPSB2bWF4Z2V0KCk7CiAgICAgY3B0ci0+aW50c3VzcCA9IFJfaW50ZXJydXB0c19zdXNwZW5kZWQ7CiAgICAgY3B0ci0+aGFuZGxlcnN0YWNrID0gUl9IYW5kbGVyU3RhY2s7CiAgICAgY3B0ci0+cmVzdGFydHN0YWNrID0gUl9SZXN0YXJ0U3RhY2s7CkBAIC0yODIsNiArMjgxLDEyIEBAIHZvaWQgYmVnaW5jb250ZXh0KFJDTlRYVCAqIGNwdHIsIGludCBmbGFncywKICAgICBjcHRyLT5qdW1wdGFyZ2V0ID0gTlVMTDsKICAgICBjcHRyLT5qdW1wbWFzayA9IDA7CiAKKyAgICAvKiBTdG9yZSB0aGUgYXJndW1lbnRzIGJlZm9yZSBjYWxsaW5nIHRoZXNlIGFjY2Vzc29ycywgc28gdGhleSBkbyBub3QKKyAgICAgICBoYXZlIHRvIGJlIHByZXNlcnZlZCBhY3Jvc3MgdGhlIGNhbGxzLiBOZWl0aGVyIGFjY2Vzc29yIGFsbG9jYXRlcworICAgICAgIG9yIGNoYW5nZXMgaW50ZXJwcmV0ZXIgc3RhdGUuICovCisgICAgY3B0ci0+cmVscGMgPSBSX0JDUmVsUEMoUl9CQ2JvZHksIFJfQkNwYyk7CisgICAgY3B0ci0+dm1heCA9IHZtYXhnZXQoKTsKKwogICAgIFJfR2xvYmFsQ29udGV4dCA9IGNwdHI7CiB9CiAKSW5kZXg6IHNyYy9tYWluL21lbW9yeS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL21lbW9yeS5jCShyZXZpc2lvbiA5MDg4NykKKysrIHNyYy9tYWluL21lbW9yeS5jCSh3b3JraW5nIGNvcHkpCkBAIC01MDYsNyArNTA2LDcgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX21heE5TaXplKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykKIAogLyogTWlzY2VsbGFuZW91cyBHbG9iYWxzLiAqLwogCi1zdGF0aWMgU0VYUCBSX1ZTdGFjayA9IE5VTEw7CQkvKiBSX2FsbG9jIHN0YWNrIHBvaW50ZXIgKi8KK2F0dHJpYnV0ZV9oaWRkZW4gU0VYUCBSX1ZTdGFjayA9IE5VTEw7CS8qIFJfYWxsb2Mgc3RhY2sgcG9pbnRlciAqLwogc3RhdGljIFNFWFAgUl9QcmVjaW91c0xpc3QgPSBOVUxMOyAgICAgIC8qIExpc3Qgb2YgUGVyc2lzdGVudCBPYmplY3RzICovCiBzdGF0aWMgUl9zaXplX3QgUl9MYXJnZVZhbGxvY1NpemUgPSAwOwogc3RhdGljIFJfc2l6ZV90IFJfU21hbGxWYWxsb2NTaXplID0gMDsKQEAgLTIzMTgsMTYgKzIzMTgsNiBAQCBhdHRyaWJ1dGVfaGlkZGVuIHZvaWQgSW5pdE1lbW9yeSh2b2lkKQogICAgYWxsb2NhdGVzIG9mZiB0aGUgaGVhcCBhcyBSQVdTWFAvUkVBTFNYUCBhbmQgbWFpbnRhaW5zIHRoZSBzdGFjayBvZgogICAgYWxsb2NhdGlvbnMgdGhyb3VnaCB0aGUgQVRUUklCIHBvaW50ZXIuICBUaGUgc3RhY2sgcG9pbnRlciBSX1ZTdGFjawogICAgaXMgdHJhY2VkIGJ5IHRoZSBjb2xsZWN0b3IuICovCi12b2lkICp2bWF4Z2V0KHZvaWQpCi17Ci0gICAgcmV0dXJuICh2b2lkICopIFJfVlN0YWNrOwotfQotCi12b2lkIHZtYXhzZXQoY29uc3Qgdm9pZCAqb3ZtYXgpCi17Ci0gICAgUl9WU3RhY2sgPSAoU0VYUCkgb3ZtYXg7Ci19Ci0KIGNoYXIgKlJfYWxsb2Moc2l6ZV90IG5lbGVtLCBpbnQgZWx0c2l6ZSkKIHsKICAgICBSX3NpemVfdCBzaXplID0gbmVsZW0gKiBlbHRzaXplOwpJbmRleDogc3JjL21haW4vdW5pcXVlLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vdW5pcXVlLmMJKHJldmlzaW9uIDkwODg3KQorKysgc3JjL21haW4vdW5pcXVlLmMJKHdvcmtpbmcgY29weSkKQEAgLTI0LDYgKzI0LDcgQEAKICNpbmNsdWRlIDxjb25maWcuaD4KICNlbmRpZgogCisjZGVmaW5lIElOTElORV9WTUFYCiAjZGVmaW5lIFJfVVNFX1NJR05BTFMgMQogI2luY2x1ZGUgPERlZm4uaD4KICNpbmNsdWRlIDxJbnRlcm5hbC5oPgo="
+        },
+        {
+          "is_patch": false,
+          "data": "IyMgQ2xvc3VyZSBjYWxsIGFuZCBzdHJpbmcgaGFzaGluZyB0aW1pbmdzOiBucyBwZXIgY2FsbCBvciBwZXIgZWxlbWVudAojIyAobG9vcCBvdmVyaGVhZCBpbmNsdWRlZCksIGJlc3Qgb2YgNSBydW5zLgojIyBSdW4gd2l0aCBgUiAtLXZhbmlsbGEgLWYgY29udGV4dC1zZXR1cC12bWF4LWJlbmNoLlJgIG9uIHR3byBidWlsZHMgb2YKIyMgUiB0aGF0IGRpZmZlciBvbmx5IGluIHRoZSBwYXRjaCAoc2FtZSBjb21waWxlciwgc2FtZSBmbGFncykuIEJhc2UgUiBvbmx5LgoKZjAgPC0gZnVuY3Rpb24oKSBOVUxMCmYxIDwtIGZ1bmN0aW9uKHgpIHgKbiA8LSA1ZTYKCnRpbWVfbnMgPC0gZnVuY3Rpb24oZXhwciwgdW5pdHMpIHsKICAgIHNlY3MgPC0gcmVwbGljYXRlKDUsIHsgZ2MoRkFMU0UpOyBzeXN0ZW0udGltZShldmFsKGV4cHIsIGdsb2JhbGVudigpKSlbWyJlbGFwc2VkIl1dIH0pCiAgICAxZTkgKiBtaW4oc2VjcykgLyB1bml0cwp9CgpucyA8LSBudW1lcmljKCkKCiMjIGNsb3N1cmUgY2FsbHMgbWFkZSBieSBhIGxvb3AgYXQgdG9wIGxldmVsOiBldmVyeSBjYWxsIHNldHMgdXAgYSBjb250ZXh0CmZvciAoY2FsbCBpbiBjKCJmMCgpIiwgImYxKDFMKSIpKSB7CiAgICBsb29wIDwtIHBhcnNlKHRleHQgPSBzcHJpbnRmKCJmb3IgKGkgaW4gMTpuKSAlcyIsIGNhbGwpKVtbMUxdXQogICAgbnNbW3Bhc3RlKCJjYWxsOiIsIGNhbGwpXV0gPC0gdGltZV9ucyhsb29wLCBuKQp9CgojIyBwZXItZWxlbWVudCBsb29wcyB0aGF0IHJlYWQgYW5kIHJlc2V0IHRoZSBSX2FsbG9jIHN0YWNrIHBvaW50ZXIsIG92ZXIKIyMgMjAwMDAwIHNob3J0IFVURi04IHN0cmluZ3MKdXRmOCA8LSByZXAoZW5jMnV0ZjgocGFzdGUwKCJcdTAwZTl0XHUwMGU5IiwgMToxMDAwKSksIDIwMEwpCnRhYmxlIDwtIHVuaXF1ZSh1dGY4KQpsZW4gPC0gbGVuZ3RoKHV0ZjgpCnN0b3BpZm5vdChhbGwoRW5jb2RpbmcodXRmOCkgPT0gIlVURi04IikpCgpuc1tbImR1cGxpY2F0ZWQodXRmOCksIHBlciBlbGVtZW50Il1dIDwtCiAgICB0aW1lX25zKHF1b3RlKGZvciAoayBpbiAxOjUwKSBkdXBsaWNhdGVkKHV0ZjgpKSwgNTAgKiBsZW4pCm5zW1sibWF0Y2godXRmOCwgdGFibGUpLCBwZXIgZWxlbWVudCJdXSA8LQogICAgdGltZV9ucyhxdW90ZShmb3IgKGsgaW4gMTo1MCkgbWF0Y2godXRmOCwgdGFibGUpKSwgNTAgKiBsZW4pCgpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKY2F0KHNwcmludGYoIiUtMzZzICU4LjJmIG5zXG4iLCBuYW1lcyhucyksIG5zKSwgc2VwID0gIiIpCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "size": 1273,
+          "last_change_time": "2026-11-14T03:38:18Z",
+          "id": 4061,
+          "is_private": false,
+          "summary": "benchmark: ns per call or per element for four cases",
+          "creation_time": "2026-11-14T03:38:18Z",
+          "bug_id": 19316,
+          "file_name": "context-setup-vmax-bench.R"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-14 03:38:18"
+}

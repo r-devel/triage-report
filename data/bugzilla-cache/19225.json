@@ -1,0 +1,140 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "0599jiangyc",
+        "status": "TRIAGED",
+        "resolution": "",
+        "creator_detail": {
+          "id": 3797,
+          "name": "0599jiangyc",
+          "real_name": "Yuancheng Jiang"
+        },
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "as.list(<environment>) returns misaligned names/values (or an internal SET_VECTOR_ELT error) when an active binding modifies the environment",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [
+          {
+            "name": "elin.waring",
+            "id": 3299,
+            "real_name": "Elin Waring"
+          },
+          {
+            "name": "gabembecker",
+            "id": 1299,
+            "real_name": "Gabriel Becker"
+          }
+        ],
+        "last_change_time": "2026-11-13T21:19:51Z",
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Language",
+        "product": "R",
+        "priority": "P5",
+        "version": "R 4.6.x",
+        "creation_time": "2026-10-16T18:06:21Z",
+        "whiteboard": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19225,
+        "cc": [
+          "elin.waring",
+          "gabembecker"
+        ],
+        "qa_contact": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19225": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "id": 103872,
+            "time": "2026-10-16T18:06:21Z",
+            "is_private": false,
+            "creation_time": "2026-10-16T18:06:21Z",
+            "creator": "0599jiangyc",
+            "bug_id": 19225,
+            "text": "The following code:\n\n```\ne <- new.env()\ne$x <- \"X\"; e$y <- \"Y\"\nmakeActiveBinding(\"a\", function() { if (exists(\"y\", e, inherits = FALSE)) rm(\"y\", envir = e); \"A\" }, e)\nstr(as.list(e, sorted = TRUE))\n```\n\nResulted in this output (no error, wrong result: `a` gets the value of the removed `y`, and `\"A\"` is lost):\n\n```\nList of 2\n $ a: chr \"Y\"\n $ x: chr \"X\"\n```\n\nIf the active binding instead *adds* a variable, `as.list()` fails with an internal error:\n\n```\ne <- new.env()\nmakeActiveBinding(\"a\", function() { assign(\"b\", 1, envir = e); 1 }, e)\nx <- as.list(e)\n```\n\n```\nError in as.list.environment(e) :\n  attempt to set index 1/1 in SET_VECTOR_ELT\nCalls: as.list -> as.list.environment\n```\n\n(with `new.env(hash = FALSE)` the error is `attempt to set index 1/1 in SET_STRING_ELT`).\n\n`do_env2list()` (src/main/envir.c) computes the length of the environment, allocates `names` and `ans`, then fills the values with `FrameValues()`/`HashTableValues()`, and fills the names in a second pass. Filling the values forces active bindings (and promises), which can run arbitrary R code that changes the environment between the sizing step and the two fill passes. Growth runs into the bounds check in SET_VECTOR_ELT/SET_STRING_ELT. Shrinkage leaves the names and values out of step without any error. `eapply()` and `mget()` might be affected in the same way; I have not checked them.\n\nA possible fix: collect the bindings (symbols and binding cells) first, then force the values, or re-check the length after forcing and signal a proper R-level error.\n\nReproduced on R-devel and on R 4.6.1:\n\n```\nRscript --vanilla ./min.R\n```\n\nCommit:\n```\nR-devel r90659 (r-devel/r-svn cf22bdf, 2026-10-10); also R 4.6.1 (Docker r-base:latest)\n```\n\nBuild configuration:\n```\n../configure CC=\"clang-18 -fsanitize=address -fno-omit-frame-pointer\" CXX=\"clang++-18 -fsanitize=address -fno-omit-frame-pointer\" \\\n  FC=gfortran F77=gfortran CFLAGS=\"-O1 -g\" CXXFLAGS=\"-O1 -g\" \\\n  --enable-strict-barrier --with-recommended-packages=no \\\n  --with-x=no --with-tcltk=no --with-cairo=no --with-aqua=no \\\n  --disable-java --disable-nls --disable-openmp\n(also stock R 4.6.1 from the r-base Docker image)\n```\n\nOperating System:\n```\nUbuntu 24.04.4 LTS (Docker), x86_64\n```",
+            "is_markdown": true,
+            "count": 0
+          },
+          {
+            "bug_id": 19225,
+            "text": "\n*First part*\n\nReformatted the code \n\n (Apologies that markdown code fencing isn't completely working for me here)\n\n\n\n\n``` \n# Original code\n    e <- new.env() \n    e$x <- \"X\"  \n    e$y <- \"Y\"  \n\n\n    makeActiveBinding(\"a\", function() {   \n        if (exists(\"y\", e, inherits = FALSE)) {  \n            rm(\"y\", envir = e)  \n          } else {  \n           \"A\"   \n          }  \n        },  \n       e)  \n   str(as.list(e, sorted = TRUE))  \n\n```\n\n\n\nList of 2\n  $ a: chr \"Y\"  \n  $ x: chr \"X\"  \n\n\nLooking at the condition in the function\n\n\n```\n# Condition\n   e <- new.env()\n   e$x <- \"X\"\n   e$y <- \"Y\"\n\n   exists(\"y\", e, inherits = FALSE)\n\n```\n\nTRUE\n\nSo I'd be expecting the \"y\" to be removed.  Can you clarify what I am misunderstanding? \n\n\n\n\n*For the second part* \n\n```\ne <- new.env()\nmakeActiveBinding(\"a\", function() {     \n       assign(\"b\", 1, envir = e)\n        1 }, \n        e)\n\n\n\n```\n\nAs written I get the same error. I think the problem comes from having the\nenvir parameter set in the `assign()` to the same name as the `makeActiveBinding()` parameter.\n\n```\nmakeActiveBinding(\"a\", function() {     \n   assign(\"b\", 1)\n     1 }, \n     e)\nas.list(e)\n```\n> $a\n>  [1] 1\n\nWhich I think is what you are expecting.   I think that the problem is happening when e is used twice. \n\n\n```\n e <- new.env()\n f <- new.env() \nmakeActiveBinding(\"a\", function() {     \n    assign(\"b\", 1, envir = f)\n    1 }, \n    e)\nas.list(e)\n```\n> $a\n> [1] 1\n\n```\n as.list(f)\n```\n> $b\n> [1] 1\n\nI have to say, I'm not really sure what I would expect in this case, but I think it is pointing to where the problem is happening. \nIf nothing else, I'd expect a clear error message.",
+            "is_markdown": true,
+            "count": 1,
+            "creation_time": "2026-10-19T19:49:53Z",
+            "creator": "elin.waring",
+            "id": 103902,
+            "time": "2026-10-19T19:49:53Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "creation_time": "2026-11-13T21:17:15Z",
+            "bug_id": 19225,
+            "text": "Created attachment 4056\ntransiently lock environment during as.list.environment and eapply\n\nThe issue ultimately comes down to the fact that `env2list` (the c function `as.list` calls, precomputes the size of the list needed (ie how many symbols are bound in `e`) before evaluating those symbols (and thus triggering the active binding), thus as is walks the environment in this case, populating the list, it will reach the number of elements it thought it would have - and thus preallocated the list for - ie that were there before the active binding fired, and then find another. When it attempts to add that new one to the result list, it gets an index out of bounds error.\n\nIn particular, for the non-sorted (default) case, `ans` (the SEXP returned) is allocated via these lines:\n\n```\n// k := length(env) = envxlength(env) :\n    if (env == R_BaseEnv || env == R_BaseNamespace)\n\tk = BuiltinSize(all, 0);\n    else if (HASHTAB(env) != R_NilValue)\n\tk = HashTableSize(HASHTAB(env), all);\n    else\n\tk = FrameSize(FRAME(env), all);\n\n    PROTECT(names = allocVector(STRSXP, k));\n    PROTECT(ans = allocVector(VECSXP, k));\n```\n(3358-3367)\n\n`FrameSize`/`HashTableSize` do *not* fire active bindings, so b is not created, so k represents the pre-binding-firing size (1 for our replication code). \n\n`k` is not then used for a `for` loop, but rather reinitialized and used as a count in a `while` loop (it would be twice, but the first one is the one that fails).\n\nfirst, when retrieving the values, here:\n\n```c\n   k = 0;\n    if (env == R_BaseEnv || env == R_BaseNamespace)\n\tBuiltinValues(all, 0, ans, &k);\n    else if (HASHTAB(env) != R_NilValue)\n\tHashTableValues(HASHTAB(env), all, ans, &k);\n    else\n\tFrameValues(FRAME(env), all, ans, &k);\n```\n3369-3375\n\nFrameValues is defined like so:\n```c\nstatic void FrameValues(SEXP frame, int all, SEXP values, int *indx)\n{\n    if (all) {\n\twhile (frame != R_NilValue) {\n#         define DO_FrameValues\t\t\t\t\t\t\\\n\t    SEXP value = BINDING_VALUE(frame);\t\t\t\t\\\n\t    if (TYPEOF(value) == PROMSXP) {\t\t\t\t\\\n\t\tPROTECT(value);\t\t\t\t\t\t\\\n\t\tvalue = eval(value, R_GlobalEnv);\t\t\t\\\n\t\tUNPROTECT(1);\t\t\t\t\t\t\\\n\t    }\t\t\t\t\t\t\t\t\\\n\t    SET_VECTOR_ELT(values, *indx, lazy_duplicate(value));\t\\\n\t    (*indx)++\n\n\t    DO_FrameValues;\n\t    frame = CDR(frame);\n\t}\n    } else {\n\twhile (frame != R_NilValue) {\n\t    if (NONEMPTY_(frame)) {\n\t\tDO_FrameValues;\n\t    }\n\t    frame = CDR(frame);\n\t}\n    }\n}\n\n```\n\n(`HashTableValues` simply calls `FrameValues` on chunks of the hash table). \n\nNotice that this is a *while* loop which contains *`BINDING_VALUE(frame)`*, but it is populating *`values`* (`ans`) which, recall is of length pre-active-binding k. \n\nThus when BINDING_VALUE(frame) grabs `a`, and fires the binding, it assigns into the environment currently being walked, then returns the value which is placed in `values` and `indx` is incremented **to the pre-computed value of k, which is out of bounds given 0-based indexing**, then the while loop checks if there are more bound values ***finds that there (now) are*** and continues. When it now finds the value of b and attempts to put it into `values`, its attempting to write out of bounds, thus the error. (though it does seem like the error message has an off by one error, really its attempting to write to element 2/1, or position 1/0).\n\nAllowing for this type of situation to succeed would be possible (e.g., by detecting if `indx` inside `FrameValues` gets too big and resizing `values` if it does), but I'm not convinced it would be desirable. This really seems like something you should not be doing. Note the case where `b` already exists and would just have its value *changed* already works, so active bindings that hold onto and increment a counter would already work even in this case wehre the counter is placed in the same environment as the binding (already a pretty strange thing to do i think).\n\nInstead the attached patch transiently locks and then unlocks (if it was previously unlocked) the environment passed to `as.list.environment` and `eapply` down in C code. Tests included.\n\nAfter the patch you get a (somewhat) nicer error message:\n\n```\n> e <- new.env()\n> makeActiveBinding(\"a\", function() { assign(\"b\", 1, envir = e); 1 }, e)\n> x <- as.list(e)\nError in assign(\"b\", 1, envir = e) : \n  cannot add bindings to a locked environment\n```\n\nDocumentation has been updated to indicate the transient locking that informs the new error message.",
+            "count": 2,
+            "tags": [],
+            "id": 104222,
+            "is_private": false,
+            "creator": "gabembecker",
+            "is_markdown": true,
+            "attachment_id": 4056,
+            "time": "2026-11-13T21:17:15Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19225": [
+        {
+          "summary": "transiently lock environment during as.list.environment and eapply",
+          "creation_time": "2026-11-13T21:17:15Z",
+          "bug_id": 19225,
+          "file_name": "active_binding_19225.diff",
+          "size": 7249,
+          "last_change_time": "2026-11-13T21:17:15Z",
+          "id": 4056,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2Jhc2UvbWFuL2VhcHBseS5SZAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9iYXNlL21hbi9lYXBwbHkuUmQJKHJldmlzaW9uIDkwODc2KQorKysgc3JjL2xpYnJhcnkvYmFzZS9tYW4vZWFwcGx5LlJkCSh3b3JraW5nIGNvcHkpCkBAIC0yNyw2ICsyNyw5IEBACiAgIGNhbiByZXF1ZXN0IHRoYXQgYWxsIG5hbWVkIG9iamVjdHMgYXJlIHVzZWQgKG5vcm1hbGx5IG5hbWVzIHRoYXQgYmVnaW4KICAgd2l0aCBhIGRvdCBhcmUgbm90KS4gIFRoZSBvdXRwdXQgaXMgbm90IHNvcnRlZCBhbmQgbm8gZW5jbG9zaW5nCiAgIGVudmlyb25tZW50cyBhcmUgc2VhcmNoZWQuCisKKyAgVW5sb2NrZWQgZW52aXJvbm1lbnRzIGFyZSB0ZW1wb3JhcmlseSBsb2NrZWQgZHVyaW5nIHZhbHVlIHJldHJpZXZhbCBhbmQKKyAgdGhlbiB1bmxvY2tlZCB1cG9uIGNvbXBsZXRpb24gb3IgZXJyb3IuCiB9CiBcdmFsdWV7CiAgIEEgbmFtZWQgKHVubGVzcyBcY29kZXtVU0UuTkFNRVMgPSBGQUxTRX0pIGxpc3QuICBOb3RlIHRoYXQgdGhlIG9yZGVyIG9mCkluZGV4OiBzcmMvbGlicmFyeS9iYXNlL21hbi9saXN0LlJkCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL2xpc3QuUmQJKHJldmlzaW9uIDkwODc2KQorKysgc3JjL2xpYnJhcnkvYmFzZS9tYW4vbGlzdC5SZAkod29ya2luZyBjb3B5KQpAQCAtNzgsOCArNzgsOSBAQAogICBUaGUgXGNvZGV7IlxsaW5re2Vudmlyb25tZW50fSJ9IG1ldGhvZCBmb3IgXGNvZGV7YXMubGlzdH0gY29waWVzIHRoZQogICBuYW1lLXZhbHVlIHBhaXJzIChmb3IgbmFtZXMgbm90IGJlZ2lubmluZyB3aXRoIGEgZG90KSBmcm9tIGFuCiAgIGVudmlyb25tZW50IHRvIGEgbmFtZWQgbGlzdC4gIFRoZSB1c2VyIGNhbiByZXF1ZXN0IHRoYXQgYWxsIG5hbWVkCi0gIG9iamVjdHMgYXJlIGNvcGllZC4gIFVubGVzcyBcY29kZXtzb3J0ZWQgPSBUUlVFfSwgdGhlIGxpc3QgaXMgaW4gbm8KLSAgcGFydGljdWxhciBvcmRlciAodGhlIG9yZGVyCisgIG9iamVjdHMgYXJlIGNvcGllZC4gIFVubG9ja2VkIGVudmlyb25tZW50cyBhcmUgdGVtcG9yYXJpbHkgbG9ja2VkIGR1cmluZworICB2YWx1ZSByZXRyaWV2YWwgYW5kIHRoZW4gdW5sb2NrZWQgdXBvbiBjb21wbGV0aW9uIG9yIGVycm9yLiAgVW5sZXNzCisgIFxjb2Rle3NvcnRlZCA9IFRSVUV9LCB0aGUgbGlzdCBpcyBpbiBubyBwYXJ0aWN1bGFyIG9yZGVyICh0aGUgb3JkZXIKICAgZGVwZW5kcyBvbiB0aGUgb3JkZXIgb2YgY3JlYXRpb24gb2Ygb2JqZWN0cyBhbmQgd2hldGhlciB0aGUKICAgZW52aXJvbm1lbnQgaXMgaGFzaGVkKS4gIE5vIGVuY2xvc2luZyBlbnZpcm9ubWVudHMgYXJlIHNlYXJjaGVkLgogICAoT2JqZWN0cyBjb3BpZWQgYXJlIGR1cGxpY2F0ZWQgc28gdGhpcyBjYW4gYmUgYW4gZXhwZW5zaXZlIG9wZXJhdGlvbi4pCkluZGV4OiBzcmMvbWFpbi9lbnZpci5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL2VudmlyLmMJKHJldmlzaW9uIDkwODc2KQorKysgc3JjL21haW4vZW52aXIuYwkod29ya2luZyBjb3B5KQpAQCAtMzMyOCw2ICszMzI4LDM0IEBACiAgICAgcmV0dXJuIHZhbDsJCQkgCiB9CiAKK3R5cGVkZWYgc3RydWN0IHsKKyAgICBTRVhQIGVudjsKKyAgICBpbnQgYWxsOworICAgIFNFWFAgdmFsdWVzOworICAgIGludCAqaW5keDsKKyAgICBib29sIHRvdW5sb2NrOworfSB2YWx1ZXNfZGF0YTsKKworI2RlZmluZSBVTkxPQ0tfRlJBTUUoZSkgU0VUX0VOVkZMQUdTKGUsIEVOVkZMQUdTKGUpICYgKH4gRlJBTUVfTE9DS19NQVNLKSkKK3N0YXRpYyB2b2lkIHVubG9ja19jbGVhbnVwKHZvaWQgKmRhdGEsIFJib29sZWFuIGp1bXApCit7CisgICAgdmFsdWVzX2RhdGEgKmQgPSAodmFsdWVzX2RhdGEgKikgZGF0YTsKKyAgICBpZiAoZC0+dG91bmxvY2spCisJVU5MT0NLX0ZSQU1FKGQtPmVudik7Cit9CisvLyBzaW5jZSB0aGlzIHdhcyBpbnRlbnRpb25hbGx5IG5vdCBleHBvcnRlZCB3ZSB1bmRlZmluZSBpdCBhZnRlciB1c2UuCisjdW5kZWYgVU5MT0NLX0ZSQU1FCisKK3N0YXRpYyBTRVhQIHJ1bl9mcmFtZV92YWx1ZXModm9pZCAqcCkKK3sKKyAgICB2YWx1ZXNfZGF0YSAqZCA9ICh2YWx1ZXNfZGF0YSAqKSBwOworICAgIGlmIChIQVNIVEFCKGQtPmVudikgIT0gUl9OaWxWYWx1ZSkKKwlIYXNoVGFibGVWYWx1ZXMoSEFTSFRBQihkLT5lbnYpLCBkLT5hbGwsIGQtPnZhbHVlcywgZC0+aW5keCk7CisgICAgZWxzZQorCUZyYW1lVmFsdWVzKEZSQU1FKGQtPmVudiksIGQtPmFsbCwgZC0+dmFsdWVzLCBkLT5pbmR4KTsKKyAgICByZXR1cm4gUl9OaWxWYWx1ZTsKK30KKwogLyogdHJhbnNmb3JtIGFuIGVudmlyb25tZW50IGludG8gYSBuYW1lZCBsaXN0OiBhcy5saXN0LmVudmlyb25tZW50KC4pICovCiAKIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBkb19lbnYybGlzdChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pCkBAIC0zMzY5LDEwICszMzk3LDE1IEBACiAgICAgayA9IDA7CiAgICAgaWYgKGVudiA9PSBSX0Jhc2VFbnYgfHwgZW52ID09IFJfQmFzZU5hbWVzcGFjZSkKIAlCdWlsdGluVmFsdWVzKGFsbCwgMCwgYW5zLCAmayk7Ci0gICAgZWxzZSBpZiAoSEFTSFRBQihlbnYpICE9IFJfTmlsVmFsdWUpCi0JSGFzaFRhYmxlVmFsdWVzKEhBU0hUQUIoZW52KSwgYWxsLCBhbnMsICZrKTsKLSAgICBlbHNlCi0JRnJhbWVWYWx1ZXMoRlJBTUUoZW52KSwgYWxsLCBhbnMsICZrKTsKKyAgICBlbHNlIHsgLy8gaGFuZGxlcyBoYXNoIGFuZCBub24taGFzaCBjYXNlCisJYm9vbCBsb2NrZWQgPSBGUkFNRV9JU19MT0NLRUQoZW52KTsKKwkvLyBwcmV2ZW50IGZhci1mZXRjaGVkIGFjdGl2ZSBiaW5kaW5nIHNoZW5hbmlnYW5zIChQUiMxOTIyNSkKKyAgICBpZiAoIWxvY2tlZCkKKwkgICAgUl9Mb2NrRW52aXJvbm1lbnQoZW52LCBGQUxTRSk7CisJdmFsdWVzX2RhdGEgZCA9IHtlbnYsIGFsbCwgYW5zLCAmaywgIWxvY2tlZH07CisgICAgLy8gdW5sb2NrX2NsZWFudXAgaXMgYSBuby1vcCBpZiAhbG9ja2VkCisJUl9VbndpbmRQcm90ZWN0KHJ1bl9mcmFtZV92YWx1ZXMsICZkLCB1bmxvY2tfY2xlYW51cCwgJmQsIE5VTEwpOworICAgIH0KIAogICAgIGsgPSAwOwogICAgIGlmIChlbnYgPT0gUl9CYXNlRW52IHx8IGVudiA9PSBSX0Jhc2VOYW1lc3BhY2UpCkBAIC0zNDU3LDEwICszNDkwLDE1IEBACiAgICAgazIgPSAwOwogICAgIGlmIChlbnYgPT0gUl9CYXNlRW52IHx8IGVudiA9PSBSX0Jhc2VOYW1lc3BhY2UpCiAJQnVpbHRpblZhbHVlcyhhbGwsIDAsIHRtcDIsICZrMik7Ci0gICAgZWxzZSBpZiAoSEFTSFRBQihlbnYpICE9IFJfTmlsVmFsdWUpCi0JSGFzaFRhYmxlVmFsdWVzKEhBU0hUQUIoZW52KSwgYWxsLCB0bXAyLCAmazIpOwotICAgIGVsc2UKLQlGcmFtZVZhbHVlcyhGUkFNRShlbnYpLCBhbGwsIHRtcDIsICZrMik7CisgICAgZWxzZSB7CisJYm9vbCBsb2NrZWQgPSBGUkFNRV9JU19MT0NLRUQoZW52KTsKKwkvLyBwcmV2ZW50IGZhci1mZXRjaGVkIGFjdGl2ZSBiaW5kaW5nIHNoZW5hbmlnYW5zIChQUiMxOTIyNSkKKyAgICBpZiAoIWxvY2tlZCkKKwkgICAgUl9Mb2NrRW52aXJvbm1lbnQoZW52LCBGQUxTRSk7CisJdmFsdWVzX2RhdGEgZCA9IHtlbnYsIGFsbCwgdG1wMiwgJmsyLCAhbG9ja2VkfTsKKyAgICAvLyB1bmxvY2tfY2xlYW51cCBpcyBhIG5vLW9wIGlmICFsb2NrZWQKKwlSX1Vud2luZFByb3RlY3QocnVuX2ZyYW1lX3ZhbHVlcywgJmQsIHVubG9ja19jbGVhbnVwLCAmZCwgTlVMTCk7CisgICAgfQogCiAgICAgU0VYUCBYc3ltID0gaW5zdGFsbCgiWCIpOwogICAgIFNFWFAgaXN5bSA9IGluc3RhbGwoImkiKTsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDg3NikKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NDM0LDcgKzQ0MzQsMTAxIEBACiAjIyBzdHIoKSBkaWQgKm5vdCogb2JleSBpdHMgJ2RpZ2l0cy5kJyBhcmd1bWVudCBpbiAgUiA8PSA0LjYuKgogCiAKKyMjIGFzLmxpc3QuZW52aXJvbm1lbnQgbm93IHRlbXBvcmFyaWx5IGxvY2tzIHRoZSBlbnZpcm9ubWVudCB3aGlsZSB3YWxraW5nIGl0cworIyMgY29udGVudHMgdG8gYXZvaWQgYWN0aXZlIGJpbmRpbmdzIHRoYXQgYmluZCBuZXcgc3ltYm9scyBkdXJpbmcgdGhlIHdhbGsgKFBSIzE5MjI1KQorY2hlY2tFbnZPayA8LSBmdW5jdGlvbihoYXNoID0gVFJVRSkgeworICAgIGUgPC0gbmV3LmVudihoYXNoID0gaGFzaCkKKyAgICBtYWtlQWN0aXZlQmluZGluZygiYSIsIGZ1bmN0aW9uKCkgeworICAgICBhc3NpZ24oImIiLCAxLCBlbnZpciA9IGUpCisgICAgMQorfSwgZSkKKyAgICB4IDwtIHRyeUNhdGNoKGFzLmxpc3QoZSksIGVycm9yID0gZnVuY3Rpb24oZSkgZSkKKyAgICBzdG9waWZub3QoCisgICAgICAgIGluaGVyaXRzKHgsICJlcnJvciIpLAorICAgICAgICBncmVwbCgiY2Fubm90IGFkZCBiaW5kaW5ncyB0byBhIGxvY2tlZCBlbnZpcm9ubWVudCIsIGFzLmNoYXJhY3Rlcih4KSwgZml4ZWQgPSBUUlVFKSwKKyAgICAgICAgaWRlbnRpY2FsKG5hbWVzKGUpLCAiYSIpLAorICAgICAgICAhZW52aXJvbm1lbnRJc0xvY2tlZChlKSAjIyBkb2Vzbid0IHJlbWFpbiBsb2NrZWQKKyAgICApCiAKKyAgICB4MiA8LSB0cnlDYXRjaChlYXBwbHkoZSwgaWRlbnRpdHkpLCBlcnJvciA9IGZ1bmN0aW9uKGUpIGUpCisgICAgc3RvcGlmbm90KAorICAgICAgICBpbmhlcml0cyh4MiwgImVycm9yIiksCisgICAgICAgIGdyZXBsKCJjYW5ub3QgYWRkIGJpbmRpbmdzIHRvIGEgbG9ja2VkIGVudmlyb25tZW50IiwgYXMuY2hhcmFjdGVyKHgyKSwgZml4ZWQgPSBUUlVFKSwKKyAgICAgICAgaWRlbnRpY2FsKG5hbWVzKGUpLCAiYSIpLAorICAgICAgICAhZW52aXJvbm1lbnRJc0xvY2tlZChlKSAjIyBkb2Vzbid0IHJlbWFpbiBsb2NrZWQKKyAgICApCisKKworICAgICMjIGVudmlyb25tZW50IGRvZXMgKm5vdCogcmVtYWluIGxvY2tlZCBhZnRlciB0aGUgbG9uZ2ptcAorICAgIGUkYiA8LSA1CisKKyAgICAjIyBhY3RpdmUgYmluZGluZ3MgKmNhbiogbW9kaWZ5IHZhbHVlcyBmb3IgYWxyZWFkeSBleGlzdGluZyBzeW1ib2xzCisgICAgIyMgYiBub3cgZXhpc3RzIHByaW9yIHRvIHRoZSB0cmF2ZXJzYWwgc3RhcnRpbmcKKyAgICB4MyA8LSBhcy5saXN0KGUpCisgICAgIyMgYiB3aWxsIGJlIG9uZSBiZWNhdXNlIGEncyBhY3RpdmUgYmluZGluZyBmaXJlcyBhbmQgY2hhbmdlcyBpdHMgdmFsdWUgaW4gcGxhY2UKKyAgICBzdG9waWZub3QoCisgICAgICAgIGlzLmxpc3QoeDMpLAorICAgICAgICB4MyRhID09IDEsCisgICAgICAgICFlbnZpcm9ubWVudElzTG9ja2VkKGUpCisgICAgKQorCisgICAgZSRiIDwtIDUKKyAgICB4NCA8LSBlYXBwbHkoZSwgaWRlbnRpdHkpCisgICAgc3RvcGlmbm90KAorICAgICAgICBpcy5saXN0KHg0KSwKKyAgICAgICAgeDQkYSA9PSAxLAorICAgICAgICAhZW52aXJvbm1lbnRJc0xvY2tlZChlKQorICAgICkKKworICAgIGUyIDwtIG5ldy5lbnYoaGFzaCA9IGhhc2gpCisgICAgbWFrZUFjdGl2ZUJpbmRpbmcoImEiLCBmdW5jdGlvbigpIHsKKyAgICAgYXNzaWduKCJiIiwgMSwgZW52aXIgPSBlMikKKyAgICAxCit9LCBlMikKKyAgICBsb2NrRW52aXJvbm1lbnQoZTIpCisKKyAgICAjIyBpcyBwcmlvciBsb2NrIHJldGFpbmVkIGluIGNhc2Ugb2YgZXJyb3IKKyAgICB4NSA8LSB0cnlDYXRjaChhcy5saXN0KGUyKSwgZXJyb3IgPSBmdW5jdGlvbihlKSBlKQorICAgIHN0b3BpZm5vdCgKKyAgICAgICAgaW5oZXJpdHMoeDUsICJlcnJvciIpLAorICAgICAgICBncmVwbCgiY2Fubm90IGFkZCBiaW5kaW5ncyB0byBhIGxvY2tlZCBlbnZpcm9ubWVudCIsIGFzLmNoYXJhY3Rlcih4NSksIGZpeGVkID0gVFJVRSksCisgICAgICAgIGlkZW50aWNhbChuYW1lcyhlMiksICJhIiksCisgICAgICAgIGVudmlyb25tZW50SXNMb2NrZWQoZTIpICMjIGxvY2sgaXMgbm90IHRlbXBvcmFyeSBzbyBzaG91bGQgcmVtYWluCisgICAgKQorCisgICAgeDYgPC0gdHJ5Q2F0Y2goZWFwcGx5KGUyLCBpZGVudGl0eSksIGVycm9yID0gZnVuY3Rpb24oZSkgZSkKKyAgICBzdG9waWZub3QoCisgICAgICAgIGluaGVyaXRzKHg2LCAiZXJyb3IiKSwKKyAgICAgICAgZ3JlcGwoImNhbm5vdCBhZGQgYmluZGluZ3MgdG8gYSBsb2NrZWQgZW52aXJvbm1lbnQiLCBhcy5jaGFyYWN0ZXIoeDYpLCBmaXhlZCA9IFRSVUUpLAorICAgICAgICBlbnZpcm9ubWVudElzTG9ja2VkKGUyKSAjIyByZW1haW5zIGxvY2tlZAorICAgICkKKworICAgICMjIGlzIHByaW9yIGxvY2sgcmV0YWluZWQgaW4gY2FzZSBvZiBubyBlcnJvcgorICAgIGUzIDwtIG5ldy5lbnYoaGFzaCA9IGhhc2gpCisgICAgbWFrZUFjdGl2ZUJpbmRpbmcoImEiLCBmdW5jdGlvbigpIHsKKyAgICAgYXNzaWduKCJiIiwgMSwgZW52aXIgPSBlMykKKyAgICAxCisgICAgfSwgZTMpCisKKyAgICBlMyRiIDwtIDUKKyAgICBsb2NrRW52aXJvbm1lbnQoZTMpCisgICAgeDcgPC0gdHJ5Q2F0Y2goYXMubGlzdChlMyksIGVycm9yID0gZnVuY3Rpb24oZSkgZSkKKyAgICBzdG9waWZub3QoCisgICAgICAgIGlzLmxpc3QoeDcpLAorICAgICAgICB4NyRhID09IDEsCisgICAgICAgIGVudmlyb25tZW50SXNMb2NrZWQoZTMpICMjIHJlbWFpbnMgbG9ja2VkCisgICAgKQorICAgIHg4IDwtIHRyeUNhdGNoKGVhcHBseShlMywgaWRlbnRpdHkpLCBlcnJvciA9IGZ1bmN0aW9uKGUpIGUpCisgICAgc3RvcGlmbm90KAorICAgICAgICBpcy5saXN0KHg4KSwKKyAgICAgICAgZW52aXJvbm1lbnRJc0xvY2tlZChlMykgIyMgcmVtYWlucyBsb2NrZWQKKyAgICApCisKK30KKworY2hlY2tFbnZPayhoYXNoID0gVFJVRSkKK2NoZWNrRW52T2soaGFzaCA9IEZBTFNFKQorCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwKICAgICAgIHRvdGFsID0gcHJvYy50aW1lKCkpCg==",
+          "creator": "gabembecker",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": true
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-13 21:19:51"
+}

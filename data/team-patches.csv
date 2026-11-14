@@ -26,6 +26,8 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19123,Memory leak in `scan()` when a field fails type conversion,Low-level,kevinushey,NEW,2026-08-04 14:45:42 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19123
 19157,unserialize() leaks the CHARSXP read buffer when the stream errors mid-string,Low-level,kevinushey,NEW,2026-09-03 21:10:43 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19157
 19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19209
+19314,speed up integer and mixed integer/double arithmetic loops,Low-level,kevinushey,NEW,2026-11-13 17:54:13 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19314
+19318,.C() bounds-check errors print an uninitialised routine name when .NAME is a NativeSymbolInfo,Low-level,kevinushey,NEW,2026-11-14 05:14:55 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19318
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19092
 18039,Wishlist: allow Sys.setenv() to accept named vector,Wishlist,kevinushey,UNCONFIRMED,2021-01-27 05:50:20 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18039
 19028,Should object.size() be ALTREP aware?,Wishlist,kevinushey,NEW,2026-03-24 19:00:53 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19028
@@ -37,6 +39,9 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19303,Improve bcEval_loop() performance by intentionally spilling rarely-used variables,Wishlist,kevinushey,NEW,2026-11-12 17:18:39 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19303
 19304,Improve closure call performance by searching unhashed frames inline in GET_BINDING_CELL(),Wishlist,kevinushey,NEW,2026-11-12 17:32:41 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19304
 19309,Improve closure call performance by matching untagged arguments by position in one pass,Wishlist,kevinushey,NEW,2026-11-12 19:49:35 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19309
+19315,Reduce UseMethod() C stack use by moving error-message buffers out of the dispatch frames,Wishlist,kevinushey,NEW,2026-11-14 02:20:26 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19315
+19316,Improve closure call and string hashing performance: cheaper begincontext() and inline vmaxget()/vmaxset() within R,Wishlist,kevinushey,NEW,2026-11-14 03:38:06 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19316
+19317,Reduce C stack use of eval() and bcEval_loop() by moving the builtin-call context out of their frames,Wishlist,kevinushey,NEW,2026-11-14 04:53:48 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19317
 18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18705
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,P5,P5,maechler,https://bugs.r-project.org/show_bug.cgi?id=18583
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18096
@@ -44,6 +49,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19096,Update handling of overflow in integer operations,Low-level,michaelchirico4,NEW,2026-06-30 17:39:29 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19096
 19125,Integer arithmetic means '%z' for minute-level offsets is incorrect,Low-level,michaelchirico4,NEW,2026-08-04 17:34:22 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19125
 19145,MSan issue in context.c reading uninitialized state,Low-level,michaelchirico4,NEW,2026-09-01 05:37:00 +0000,2,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19145
+19313,"C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults",Low-level,jeroenooms,UNCONFIRMED,2026-11-13 14:29:11 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19313
 18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18938
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18958
 19079,"S4 packages with group methods error with ""subscript out of bounds"" under unloadNamespace with Imports: methods",S4methods,michaelchirico4,NEW,2026-05-29 06:28:25 +0000,2,P5,P5,lawrence,https://bugs.r-project.org/show_bug.cgi?id=19079

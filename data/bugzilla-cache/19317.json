@@ -1,0 +1,200 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "qa_contact": "",
+        "cc": [],
+        "deadline": {},
+        "id": 19317,
+        "severity": "enhancement",
+        "dupe_of": {},
+        "whiteboard": "",
+        "creation_time": "2026-11-14T04:53:20Z",
+        "version": "R-devel (trunk)",
+        "priority": "P4",
+        "product": "R",
+        "component": "Wishlist",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc_detail": [],
+        "last_change_time": "2026-11-14T04:53:49Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "Reduce C stack use of eval() and bcEval_loop() by moving the builtin-call context out of their frames",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19317": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": {},
+            "time": "2026-11-14T04:53:20Z",
+            "creation_time": "2026-11-14T04:53:20Z",
+            "count": 0,
+            "bug_id": 19317,
+            "text": "eval(), R_forceAndCall() and bcEval_loop() each keep an RCNTXT in their stack frame for the builtin-call context, which is set up only while profiling or (in the first two) for foreign calls such as .Call(). One such frame is held per level whenever R code recurses through C: do.call(), lapply(), eval(), S3 dispatch.\n\nReproducible example: builtin-context-stack-repro.R, attached, prints the depth reached before \"C stack usage is too close to the limit\". With an 8 MB stack on macOS arm64 (r90883, clang) it is 1959 through do.call(), 1936 through lapply() and 1750 through eval(); with the patch 2833, 2770 and 2418.\n\nProposed patch: attached as builtin-context-helper.diff, against r90883. It moves the context, with the begincontext()/endcontext() sequence, into one helper shared by the three callers and kept out of line with R_NOINLINE (the macro from the patch in bug 19315; the Defn.h hunk is identical). The three frames shrink from 592, 528 and 1712 bytes to 160, 112 and 1328; when a context is created is unchanged.\n\nmake check passes, and tracebacks and error calls from foreign calls are as before. The patch is also submitted as https://github.com/r-devel/r-svn/pull/484, where CI results can be seen.",
+            "tags": [],
+            "is_private": false,
+            "id": 104234
+          },
+          {
+            "is_private": false,
+            "id": 104235,
+            "time": "2026-11-14T04:53:34Z",
+            "attachment_id": 4062,
+            "tags": [],
+            "count": 1,
+            "is_markdown": false,
+            "bug_id": 19317,
+            "text": "Created attachment 4062\npatch: move the builtin-call context into a shared out-of-line helper; add R_NOINLINE",
+            "creation_time": "2026-11-14T04:53:34Z",
+            "creator": "kevinushey"
+          },
+          {
+            "count": 2,
+            "is_markdown": false,
+            "bug_id": 19317,
+            "text": "Created attachment 4063\nreproducer: recursion depth through do.call(), lapply() and eval()",
+            "creation_time": "2026-11-14T04:53:34Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 104236,
+            "time": "2026-11-14T04:53:34Z",
+            "tags": [],
+            "attachment_id": 4063
+          },
+          {
+            "id": 104237,
+            "is_private": false,
+            "tags": [],
+            "text": "Created attachment 4064\npatch: allocate builtin-call contexts on the node stack (applies on top of attachment 4062)\n\nA possible further step, on top of attachment 4062: builtin-context-pool.diff, attached, allocates the builtin context on the byte code node stack, as is done for inlined closure calls, instead of in the helper's frame. That frame shrinks from 512 bytes to 80, and with an 8 MB stack, recursion through a foreign call from interpreted code or forceAndCall(), or through a builtin call while profiling, gets 7 to 12% deeper. There is no speed benefit.\n\nIt is a trade-off, though: each active context takes 448 bytes of node stack, so with a 64 MB C stack the node stack runs out first and the same recursion gets shallower (from 14531 to 6658 levels while profiling; builtin-context-pool-repro.R, attached).\n\nmake check passes. Patch also at https://github.com/r-devel/r-svn/pull/485.",
+            "bug_id": 19317,
+            "count": 3,
+            "creation_time": "2026-11-14T04:53:48Z",
+            "time": "2026-11-14T04:53:48Z",
+            "attachment_id": 4064,
+            "is_markdown": false,
+            "creator": "kevinushey"
+          },
+          {
+            "text": "Created attachment 4065\nreproducer: recursion depth through builtin calls that get a context",
+            "bug_id": 19317,
+            "count": 4,
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-14T04:53:49Z",
+            "time": "2026-11-14T04:53:49Z",
+            "id": 104238,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 4065
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19317": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9pbmNsdWRlL0RlZm4uaAo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvaW5jbHVkZS9EZWZuLmgJKHJldmlzaW9uIDkwODgzKQorKysgc3JjL2luY2x1ZGUvRGVmbi5oCSh3b3JraW5nIGNvcHkpCkBAIC04Miw2ICs4MiwxNyBAQAogIyBlbmRpZgogI2VuZGlmCiAKKy8qIFRoZSBvcHBvc2l0ZSBvZiBSX0lOTElORTogZm9yIGEgZnVuY3Rpb24gdGhhdCBtdXN0IHN0YXkgb3V0IG9mIGxpbmUsCisgICBlLmcuIGJlY2F1c2UgaXQgaG9sZHMgYSBsYXJnZSBidWZmZXIgdGhhdCBzaG91bGQgbm90IGJlIHBhcnQgb2YgaXRzCisgICBjYWxsZXIncyBzdGFjayBmcmFtZS4gKi8KKyNkZWZpbmUgUl9OT0lOTElORQorI2lmZGVmIF9faGFzX2F0dHJpYnV0ZQorIyBpZiBfX2hhc19hdHRyaWJ1dGUobm9pbmxpbmUpCisjICB1bmRlZiBSX05PSU5MSU5FCisjICBkZWZpbmUgUl9OT0lOTElORSBfX2F0dHJpYnV0ZV9fKChub2lubGluZSkpCisjIGVuZGlmCisjZW5kaWYKKwogI2RlZmluZSBNQVhFTFRTSVpFIDgxOTIgLyogVXNlZCBhcyBhIGRlZmF1bHQgZm9yIHN0cmluZyBidWZmZXIgc2l6ZXMsCiAJCQkgICBhbmQgb2NjYXNpb25hbGx5IGFzIGEgbGltaXQuICovCiAKSW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDkwODgzKQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMDc2LDYgKzEwNzYsMjIgQEAgc3RhdGljIHZvaWQgaGFuZGxlX2V2YWxfZGVwdGhfb3ZlcmZsb3codm9pZCkKICAgICBSX3NpZ25hbEVycm9yQ29uZGl0aW9uKGNvbmQsIFJfTmlsVmFsdWUpOwogfQogCisvKiBLZWVwIHRoZSBjb250ZXh0IGZvciBwcm9maWxpbmcgYW5kIGZvcmVpZ24tY2FsbCB0cmFjZWJhY2tzIG9mZiB0aGUKKyAgIGV2YWx1YXRvcnMnIHN0YWNrcyB3aGVuIGl0IGlzIG5vdCBuZWVkZWQuICovCitzdGF0aWMgUl9OT0lOTElORQorU0VYUCBldmFsX2J1aWx0aW5fd2l0aF9jb250ZXh0KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykKK3sKKyAgICBSQ05UWFQgY250eHQ7CisgICAgU0VYUCBvbGRyZWYgPSBSX1NyY3JlZjsKKyAgICBiZWdpbmNvbnRleHQoJmNudHh0LCBDVFhUX0JVSUxUSU4sIGNhbGwsCisJCSBSX0Jhc2VFbnYsIFJfQmFzZUVudiwgUl9OaWxWYWx1ZSwgUl9OaWxWYWx1ZSk7CisgICAgUl9TcmNyZWYgPSBOVUxMOworICAgIFNFWFAgdmFsdWUgPSBQUklNRlVOKG9wKSAoY2FsbCwgb3AsIGFyZ3MsIHJobyk7CisgICAgUl9TcmNyZWYgPSBvbGRyZWY7CisgICAgZW5kY29udGV4dCgmY250eHQpOworICAgIHJldHVybiB2YWx1ZTsKK30KKwogLyogUmV0dXJuIHZhbHVlIG9mICJlIiBldmFsdWF0ZWQgaW4gInJobyIuICovCiAKIC8qIHNvbWUgcGxhY2VzLCBlLmcuIGRlcGFyc2UyYnVmZiwgY2FsbCB0aGlzIHdpdGggYSBwcm9taXNlIGFuZCByaG8gPSBOVUxMICovCkBAIC0xMjQ1LDE5ICsxMjYxLDEyIEBAIFNFWFAgZXZhbChTRVhQIGUsIFNFWFAgcmhvKQogCWVsc2UgaWYgKFRZUEVPRihvcCkgPT0gQlVJTFRJTlNYUCkgewogCSAgICBpbnQgc2F2ZSA9IFJfUFBTdGFja1RvcCwgZmxhZyA9IFBSSU1QUklOVChvcCk7CiAJICAgIGNvbnN0IHZvaWQgKnZtYXggPSB2bWF4Z2V0KCk7Ci0JICAgIFJDTlRYVCBjbnR4dDsKIAkgICAgUFJPVEVDVCh0bXAgPSBldmFsTGlzdChDRFIoZSksIHJobywgZSwgMCkpOwogCSAgICBpZiAoZmxhZyA8IDIpIFJfVmlzaWJsZSA9IGZsYWcgIT0gMTsKIAkgICAgLyogV2UgdXNlZCB0byBpbnNlcnQgYSBjb250ZXh0IG9ubHkgaWYgcHJvZmlsaW5nLAogCSAgICAgICBidXQgaGVscHMgZm9yIHRyYWNlYmFja3Mgb24gLkMgZXRjLiAqLwogCSAgICBpZiAoUl9Qcm9maWxpbmcgfHwgKFBQSU5GTyhvcCkua2luZCA9PSBQUF9GT1JFSUdOKSkgewotCQlTRVhQIG9sZHJlZiA9IFJfU3JjcmVmOwotCQliZWdpbmNvbnRleHQoJmNudHh0LCBDVFhUX0JVSUxUSU4sIGUsCi0JCQkgICAgIFJfQmFzZUVudiwgUl9CYXNlRW52LCBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKLQkJUl9TcmNyZWYgPSBOVUxMOwotCQl0bXAgPSBQUklNRlVOKG9wKSAoZSwgb3AsIHRtcCwgcmhvKTsKLQkJUl9TcmNyZWYgPSBvbGRyZWY7Ci0JCWVuZGNvbnRleHQoJmNudHh0KTsKKwkJdG1wID0gZXZhbF9idWlsdGluX3dpdGhfY29udGV4dChlLCBvcCwgdG1wLCByaG8pOwogCSAgICB9IGVsc2UgewogCQl0bXAgPSBQUklNRlVOKG9wKSAoZSwgb3AsIHRtcCwgcmhvKTsKIAkgICAgfQpAQCAtMjQzNywxNCArMjQ0Niw3IEBAIFNFWFAgUl9mb3JjZUFuZENhbGwoU0VYUCBlLCBpbnQgbiwgU0VYUCByaG8pCiAJLyogV2UgdXNlZCB0byBpbnNlcnQgYSBjb250ZXh0IG9ubHkgaWYgcHJvZmlsaW5nLAogCSAgIGJ1dCBoZWxwcyBmb3IgdHJhY2ViYWNrcyBvbiAuQyBldGMuICovCiAJaWYgKFJfUHJvZmlsaW5nIHx8IChQUElORk8oZnVuKS5raW5kID09IFBQX0ZPUkVJR04pKSB7Ci0JICAgIFJDTlRYVCBjbnR4dDsKLQkgICAgU0VYUCBvbGRyZWYgPSBSX1NyY3JlZjsKLQkgICAgYmVnaW5jb250ZXh0KCZjbnR4dCwgQ1RYVF9CVUlMVElOLCBlLAotCQkJIFJfQmFzZUVudiwgUl9CYXNlRW52LCBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKLQkgICAgUl9TcmNyZWYgPSBOVUxMOwotCSAgICB0bXAgPSBQUklNRlVOKGZ1bikgKGUsIGZ1biwgdG1wLCByaG8pOwotCSAgICBSX1NyY3JlZiA9IG9sZHJlZjsKLQkgICAgZW5kY29udGV4dCgmY250eHQpOworCSAgICB0bXAgPSBldmFsX2J1aWx0aW5fd2l0aF9jb250ZXh0KGUsIGZ1biwgdG1wLCByaG8pOwogCX0gZWxzZSB7CiAJICAgIHRtcCA9IFBSSU1GVU4oZnVuKSAoZSwgZnVuLCB0bXAsIHJobyk7CiAJfQpAQCAtODE0MiwxNCArODE0NCw3IEBAIHN0YXRpYyBTRVhQIGJjRXZhbF9sb29wKHN0cnVjdCBiY0V2YWxfbG9jYWxzICpwbG9jKQogCVJfVmlzaWJsZSA9IGZsYWcgIT0gMTsKIAlTRVhQIHZhbHVlOwogCWlmIChSX1Byb2ZpbGluZyAmJiBJU19UUlVFX0JVSUxUSU4oZnVuKSkgewotCSAgICBSQ05UWFQgY250eHQ7Ci0JICAgIFNFWFAgb2xkcmVmID0gUl9TcmNyZWY7Ci0JICAgIGJlZ2luY29udGV4dCgmY250eHQsIENUWFRfQlVJTFRJTiwgY2FsbCwKLQkJCSBSX0Jhc2VFbnYsIFJfQmFzZUVudiwgUl9OaWxWYWx1ZSwgUl9OaWxWYWx1ZSk7Ci0JICAgIFJfU3JjcmVmID0gTlVMTDsKLQkgICAgdmFsdWUgPSBQUklNRlVOKGZ1bikgKGNhbGwsIGZ1biwgYXJncywgcmhvKTsKLQkgICAgUl9TcmNyZWYgPSBvbGRyZWY7Ci0JICAgIGVuZGNvbnRleHQoJmNudHh0KTsKKwkgICAgdmFsdWUgPSBldmFsX2J1aWx0aW5fd2l0aF9jb250ZXh0KGNhbGwsIGZ1biwgYXJncywgcmhvKTsKIAl9IGVsc2UgewogCSAgICB2YWx1ZSA9IFBSSU1GVU4oZnVuKSAoY2FsbCwgZnVuLCBhcmdzLCByaG8pOwogCX0K",
+          "creator": "kevinushey",
+          "id": 4062,
+          "is_private": false,
+          "size": 3546,
+          "last_change_time": "2026-11-14T04:53:34Z",
+          "bug_id": 19317,
+          "file_name": "builtin-context-helper.diff",
+          "summary": "patch: move the builtin-call context into a shared out-of-line helper; add R_NOINLINE",
+          "creation_time": "2026-11-14T04:53:34Z"
+        },
+        {
+          "summary": "reproducer: recursion depth through do.call(), lapply() and eval()",
+          "creation_time": "2026-11-14T04:53:34Z",
+          "bug_id": 19317,
+          "file_name": "builtin-context-stack-repro.R",
+          "size": 1067,
+          "last_change_time": "2026-11-14T04:53:34Z",
+          "id": 4063,
+          "is_private": false,
+          "data": "IyMgRGVwdGggb2YgcmVjdXJzaW9uIHRocm91Z2ggZG8uY2FsbCgpLCBsYXBwbHkoKSBhbmQgZXZhbCgpIGJlZm9yZSB0aGUKIyMgQyBzdGFjayBjaGVjayBmaXJlcy4KCmcgPC0gZnVuY3Rpb24obikgaWYgKG4gPT0gMEwpIDBMIGVsc2UgZG8uY2FsbChnLCBsaXN0KG4gLSAxTCkpCmggPC0gZnVuY3Rpb24obikgaWYgKG4gPT0gMEwpIDBMIGVsc2UgbGFwcGx5KG4gLSAxTCwgaClbWzFMXV0KZSA8LSBmdW5jdGlvbihuKSBpZiAobiA9PSAwTCkgMEwgZWxzZSBldmFsKHF1b3RlKGUobiAtIDFMKSkpCgpvcHRpb25zKGV4cHJlc3Npb25zID0gNWU1KQoKbWF4ZGVwdGggPC0gZnVuY3Rpb24oZnVuKSB7CiAgICBvayA8LSBmdW5jdGlvbihuKSBpcy5udWxsKHRyeUNhdGNoKHsgZnVuKG4pOyBOVUxMIH0sIGVycm9yID0gZnVuY3Rpb24oZSkgZSkpCiAgICBsbyA8LSAxMEwKICAgIGhpIDwtIDEwMDAwMEwKICAgIHdoaWxlIChoaSAtIGxvID4gMUwpIHsKICAgICAgICBtaWQgPC0gKGxvICsgaGkpICUvJSAyTAogICAgICAgIGlmIChvayhtaWQpKQogICAgICAgICAgICBsbyA8LSBtaWQKICAgICAgICBlbHNlCiAgICAgICAgICAgIGhpIDwtIG1pZAogICAgfQogICAgbG8KfQoKY2F0KCJDIHN0YWNrIHNpemU6IiwgQ3N0YWNrX2luZm8oKVtbInNpemUiXV0sICJcbiIpCmNhdCgibWVzc2FnZSBhdCB0aGUgbGltaXQ6IiwgdHJ5Q2F0Y2goZygxMDAwMDBMKSwgZXJyb3IgPSBjb25kaXRpb25NZXNzYWdlKSwgIlxuIikKY2F0KCJkby5jYWxsKCkgcmVjdXJzaW9uIGRlcHRoOiIsIG1heGRlcHRoKGcpLCAiXG4iKQpjYXQoImxhcHBseSgpIHJlY3Vyc2lvbiBkZXB0aDogIiwgbWF4ZGVwdGgoaCksICJcbiIpCmNhdCgiZXZhbCgpIHJlY3Vyc2lvbiBkZXB0aDogICAiLCBtYXhkZXB0aChlKSwgIlxuIikKCiMjIFItZGV2ZWwgcjkwODgzLCBtYWNPUyBhcm02NCwgY2xhbmcsIDggTUIgc3RhY2s6CiMjICAgZG8uY2FsbCgpIDE5NTksIGxhcHBseSgpIDE5MzYsIGV2YWwoKSAxNzUwCiMjIHdpdGggdGhlIHBhdGNoOgojIyAgIGRvLmNhbGwoKSAyODMzLCBsYXBwbHkoKSAyNzcwLCBldmFsKCkgMjQxOAo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_patch": false
+        },
+        {
+          "is_private": false,
+          "id": 4064,
+          "last_change_time": "2026-11-14T04:53:48Z",
+          "size": 1709,
+          "file_name": "builtin-context-pool.diff",
+          "bug_id": 19317,
+          "creation_time": "2026-11-14T04:53:48Z",
+          "summary": "patch: allocate builtin-call contexts on the node stack (applies on top of attachment 4062)",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2V2YWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ldmFsLmMJKHJldmlzaW9uIDkwODgzKQorKysgc3JjL21haW4vZXZhbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMDc2LDIxICsxMDc2LDcgQEAgc3RhdGljIHZvaWQgaGFuZGxlX2V2YWxfZGVwdGhfb3ZlcmZsb3codm9pZCkKICAgICBSX3NpZ25hbEVycm9yQ29uZGl0aW9uKGNvbmQsIFJfTmlsVmFsdWUpOwogfQogCi0vKiBLZWVwIHRoZSBjb250ZXh0IGZvciBwcm9maWxpbmcgYW5kIGZvcmVpZ24tY2FsbCB0cmFjZWJhY2tzIG9mZiB0aGUKLSAgIGV2YWx1YXRvcnMnIHN0YWNrcyB3aGVuIGl0IGlzIG5vdCBuZWVkZWQuICovCi1zdGF0aWMgUl9OT0lOTElORQotU0VYUCBldmFsX2J1aWx0aW5fd2l0aF9jb250ZXh0KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykKLXsKLSAgICBSQ05UWFQgY250eHQ7Ci0gICAgU0VYUCBvbGRyZWYgPSBSX1NyY3JlZjsKLSAgICBiZWdpbmNvbnRleHQoJmNudHh0LCBDVFhUX0JVSUxUSU4sIGNhbGwsCi0JCSBSX0Jhc2VFbnYsIFJfQmFzZUVudiwgUl9OaWxWYWx1ZSwgUl9OaWxWYWx1ZSk7Ci0gICAgUl9TcmNyZWYgPSBOVUxMOwotICAgIFNFWFAgdmFsdWUgPSBQUklNRlVOKG9wKSAoY2FsbCwgb3AsIGFyZ3MsIHJobyk7Ci0gICAgUl9TcmNyZWYgPSBvbGRyZWY7Ci0gICAgZW5kY29udGV4dCgmY250eHQpOwotICAgIHJldHVybiB2YWx1ZTsKLX0KK3N0YXRpYyBTRVhQIGV2YWxfYnVpbHRpbl93aXRoX2NvbnRleHQoU0VYUCwgU0VYUCwgU0VYUCwgU0VYUCk7CiAKIC8qIFJldHVybiB2YWx1ZSBvZiAiZSIgZXZhbHVhdGVkIGluICJyaG8iLiAqLwogCkBAIC01NTg3LDYgKzU1NzMsMjQgQEAgc3RhdGljIFJfSU5MSU5FIHZvaWQgQkNOUE9QX0FORF9FTkRfQ05UWFQodm9pZCkgewogICAgIEJDTlBPUF9BTExPQyhzaXplb2YoUkNOVFhUKSk7CiB9CiAKKy8qIFVzZSB0aGUgbm9kZSBzdGFjayBhcyBhIHBvb2wgZm9yIGJ1aWx0aW4gY29udGV4dHMuIEFjdGl2ZSBjb250ZXh0cworICAgaGF2ZSBzdGFibGUgYWRkcmVzc2VzLCBhbmQgYSBub24tbG9jYWwganVtcCByZXN0b3JlcyB0aGUgbm9kZSBzdGFjaworICAgcG9zaXRpb24gc2F2ZWQgaW4gdGhlIHRhcmdldCBjb250ZXh0LiAqLworc3RhdGljIFJfTk9JTkxJTkUKK1NFWFAgZXZhbF9idWlsdGluX3dpdGhfY29udGV4dChTRVhQIGNhbGwsIFNFWFAgb3AsIFNFWFAgYXJncywgU0VYUCByaG8pCit7CisgICAgUkNOVFhUICpjbnR4dCA9IEJDTkFMTE9DX0NOVFhUKCk7CisgICAgU0VYUCBvbGRyZWYgPSBSX1NyY3JlZjsKKyAgICBiZWdpbmNvbnRleHQoY250eHQsIENUWFRfQlVJTFRJTiwgY2FsbCwKKwkJIFJfQmFzZUVudiwgUl9CYXNlRW52LCBSX05pbFZhbHVlLCBSX05pbFZhbHVlKTsKKyAgICBSX1NyY3JlZiA9IE5VTEw7CisgICAgU0VYUCB2YWx1ZSA9IFBSSU1GVU4ob3ApIChjYWxsLCBvcCwgYXJncywgcmhvKTsKKyAgICBSX1NyY3JlZiA9IG9sZHJlZjsKKyAgICBlbmRjb250ZXh0KGNudHh0KTsKKyAgICBCQ05QT1BfQUxMT0Moc2l6ZW9mKFJDTlRYVCkpOworICAgIHJldHVybiB2YWx1ZTsKK30KKwogc3RhdGljIFNFWFAgYnl0ZWNvZGVFeHByKFNFWFAgZSkKIHsKICAgICBpZiAoaXNCeXRlQ29kZShlKSkgewo="
+        },
+        {
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "IyMgRGVwdGggb2YgcmVjdXJzaW9uIHRocm91Z2ggYSBidWlsdGluIGNhbGwgdGhhdCBnZXRzIGEgY29udGV4dAojIyAoYSBmb3JlaWduIGNhbGwgZnJvbSBpbnRlcnByZXRlZCBjb2RlIG9yIHRocm91Z2ggZm9yY2VBbmRDYWxsKCksIG9yCiMjIGFueSBidWlsdGluIGNhbGwgd2hpbGUgcHJvZmlsaW5nKSBiZWZvcmUgdGhlIEMgc3RhY2sgY2hlY2sgZmlyZXMuCiMjIE5lZWRzIGEgQyBjb21waWxlcjogdGhlIGZvcmVpZ24gZnVuY3Rpb24gY2FsbGVkIGlzIGJ1aWx0IGhlcmUuCgpkaXIgPC0gdGVtcGZpbGUoImN0eHByb2JlIikKZGlyLmNyZWF0ZShkaXIpCndyaXRlTGluZXMociIoCiNpbmNsdWRlIDxSaW50ZXJuYWxzLmg+CgpTRVhQIGN0eF9ldmFsKFNFWFAgZXhwciwgU0VYUCBlbnYpCnsKICAgIHJldHVybiBSZl9ldmFsKGV4cHIsIGVudik7Cn0KClNFWFAgY3R4X2V2YWxfZXh0KFNFWFAgYXJncykKewogICAgYXJncyA9IENEUihhcmdzKTsKICAgIHJldHVybiBSZl9ldmFsKENBUihhcmdzKSwgQ0FEUihhcmdzKSk7Cn0KKSIsIGZpbGUucGF0aChkaXIsICJjdHhwcm9iZS5jIikpCgpvd2QgPC0gc2V0d2QoZGlyKQpzdGF0dXMgPC0gc3lzdGVtMihmaWxlLnBhdGgoUi5ob21lKCJiaW4iKSwgIlIiKSwgYygiQ01EIiwgIlNITElCIiwgImN0eHByb2JlLmMiKSwKICAgICAgICAgICAgICAgICAgc3Rkb3V0ID0gRkFMU0UsIHN0ZGVyciA9IEZBTFNFKQpzZXR3ZChvd2QpCnN0b3BpZm5vdChzdGF0dXMgPT0gMEwpCmR5bi5sb2FkKGZpbGUucGF0aChkaXIsIHBhc3RlMCgiY3R4cHJvYmUiLCAuUGxhdGZvcm0kZHlubGliLmV4dCkpKQoKaW52aXNpYmxlKGNvbXBpbGVyOjplbmFibGVKSVQoMCkpCm9wdGlvbnMoZXhwcmVzc2lvbnMgPSA1ZTUpCgojIyBpbnRlcnByZXRlZDogZXZhbCgpIG1ha2VzIHRoZSBjb250ZXh0CmYgPC0gZnVuY3Rpb24obikKICAgIGlmIChuID09IDBMKSAwTCBlbHNlIC5DYWxsKCJjdHhfZXZhbCIsIHF1b3RlKGYobiAtIDFMKSksIGVudmlyb25tZW50KCksIFBBQ0tBR0UgPSAiY3R4cHJvYmUiKQoKIyMgLkNhbGwgYXMgRlVOOiBSX2ZvcmNlQW5kQ2FsbCgpIG1ha2VzIHRoZSBjb250ZXh0CmcgPC0gY29tcGlsZXI6OmNtcGZ1bihmdW5jdGlvbihuKQogICAgaWYgKG4gPT0gMEwpIDBMIGVsc2UgbGFwcGx5KCJjdHhfZXZhbCIsIC5DYWxsLCBxdW90ZShnKG4gLSAxTCkpLCBlbnZpcm9ubWVudCgpLCBQQUNLQUdFID0gImN0eHByb2JlIilbWzFMXV0pCgojIyBjb21waWxlZDogdGhlIGJ5dGUgY29kZSBpbnRlcnByZXRlciBtYWtlcyB0aGUgY29udGV4dCB3aGlsZSBwcm9maWxpbmcKaCA8LSBjb21waWxlcjo6Y21wZnVuKGZ1bmN0aW9uKG4pCiAgICBpZiAobiA9PSAwTCkgMEwgZWxzZSAuRXh0ZXJuYWwoImN0eF9ldmFsX2V4dCIsIHF1b3RlKGgobiAtIDFMKSksIGVudmlyb25tZW50KCksIFBBQ0tBR0UgPSAiY3R4cHJvYmUiKSkKCm1heGRlcHRoIDwtIGZ1bmN0aW9uKGZ1bikgewogICAgb2sgPC0gZnVuY3Rpb24obikgaXMubnVsbCh0cnlDYXRjaCh7IGZ1bihuKTsgTlVMTCB9LCBlcnJvciA9IGZ1bmN0aW9uKGUpIGUpKQogICAgbG8gPC0gMTBMCiAgICBoaSA8LSAxMDAwMDBMCiAgICB3aGlsZSAoaGkgLSBsbyA+IDFMKSB7CiAgICAgICAgbWlkIDwtIChsbyArIGhpKSAlLyUgMkwKICAgICAgICBpZiAob2sobWlkKSkKICAgICAgICAgICAgbG8gPC0gbWlkCiAgICAgICAgZWxzZQogICAgICAgICAgICBoaSA8LSBtaWQKICAgIH0KICAgIGxvCn0KCmNhdCgiQyBzdGFjayBzaXplOiIsIENzdGFja19pbmZvKClbWyJzaXplIl1dLCAiXG4iKQpjYXQoIm1lc3NhZ2UgYXQgdGhlIGxpbWl0OiIsIHRyeUNhdGNoKGYoMTAwMDAwTCksIGVycm9yID0gY29uZGl0aW9uTWVzc2FnZSksICJcbiIpCmNhdCgiaW50ZXJwcmV0ZWQgLkNhbGwoKSByZWN1cnNpb24gZGVwdGg6ICAgICAiLCBtYXhkZXB0aChmKSwgIlxuIikKY2F0KCJsYXBwbHkoRlVOID0gLkNhbGwpIHJlY3Vyc2lvbiBkZXB0aDogICAgICIsIG1heGRlcHRoKGcpLCAiXG4iKQpjYXQoIi5FeHRlcm5hbCgpIHJlY3Vyc2lvbiBkZXB0aDogICAgICAgICAgICAgIiwgbWF4ZGVwdGgoaCksICJcbiIpCgpwcm9maWxlIDwtIHRlbXBmaWxlKCkKUnByb2YocHJvZmlsZSkKY2F0KCIuRXh0ZXJuYWwoKSByZWN1cnNpb24gZGVwdGgsIHByb2ZpbGluZzogICIsIG1heGRlcHRoKGgpLCAiXG4iKQpzdXBwcmVzc1dhcm5pbmdzKFJwcm9mKE5VTEwpKQp1bmxpbmsoYyhwcm9maWxlLCBkaXIpLCByZWN1cnNpdmUgPSBUUlVFKQoKIyMgUi1kZXZlbCByOTA4ODMgd2l0aCBidWlsdGluLWNvbnRleHQtaGVscGVyLmRpZmYsIG1hY09TIGFybTY0LCBjbGFuZywKIyMgOCBNQiBzdGFjazoKIyMgICBpbnRlcnByZXRlZCAuQ2FsbCgpIDE5MjcsIGxhcHBseShGVU4gPSAuQ2FsbCkgMTM1NiwKIyMgICAuRXh0ZXJuYWwoKSAyMDQ2LCB3aGlsZSBwcm9maWxpbmcgMTgwNwojIyB3aXRoIGJ1aWx0aW4tY29udGV4dC1wb29sLmRpZmYgYXMgd2VsbDoKIyMgICBpbnRlcnByZXRlZCAuQ2FsbCgpIDIxNTMsIGxhcHBseShGVU4gPSAuQ2FsbCkgMTQ2NSwKIyMgICAuRXh0ZXJuYWwoKSAyMDQ2LCB3aGlsZSBwcm9maWxpbmcgMjAwNQojIwojIyBUaGUgc2FtZSB3aXRoIGEgNjQgTUIgc3RhY2sgKHVsaW1pdCAtcyA2NTUyMCksIHdoZXJlIHRoZSBub2RlIHN0YWNrCiMjIGJlY29tZXMgdGhlIGxpbWl0OgojIyAgIGxhcHBseShGVU4gPSAuQ2FsbCkgMzc5MSwgLkV4dGVybmFsKCkgd2hpbGUgcHJvZmlsaW5nIDE0NTMxCiMjIHdpdGggYnVpbHRpbi1jb250ZXh0LXBvb2wuZGlmZiBhcyB3ZWxsOgojIyAgIGxhcHBseShGVU4gPSAuQ2FsbCkgMjc5OSwgLkV4dGVybmFsKCkgd2hpbGUgcHJvZmlsaW5nIDY2NTgK",
+          "creator": "kevinushey",
+          "is_patch": false,
+          "bug_id": 19317,
+          "file_name": "builtin-context-pool-repro.R",
+          "summary": "reproducer: recursion depth through builtin calls that get a context",
+          "creation_time": "2026-11-14T04:53:49Z",
+          "id": 4065,
+          "is_private": false,
+          "size": 2859,
+          "last_change_time": "2026-11-14T04:53:49Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-14 04:53:49"
+}

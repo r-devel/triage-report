@@ -1,0 +1,253 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "CONFIRMED",
+        "creator_detail": {
+          "id": 3463,
+          "name": "bertcarnell",
+          "real_name": "Rob Carnell"
+        },
+        "resolution": "",
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "flags": [],
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "creator": "bertcarnell",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-11-13T21:38:10Z",
+        "cc_detail": [
+          {
+            "real_name": "Elin Waring",
+            "id": 3299,
+            "name": "elin.waring"
+          },
+          {
+            "real_name": "Gabriel Becker",
+            "name": "gabembecker",
+            "id": 1299
+          },
+          {
+            "real_name": "Simon Urbanek",
+            "id": 5,
+            "name": "simon.urbanek"
+          }
+        ],
+        "blocks": [],
+        "url": "",
+        "summary": "Merge does not treat string \"NA\" as intended",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "component": "Language",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 18366,
+        "deadline": {},
+        "cc": [
+          "elin.waring",
+          "gabembecker",
+          "simon.urbanek"
+        ],
+        "qa_contact": "",
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 4.2.x",
+        "creation_time": "2022-06-21T00:22:26Z"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "18366": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2022-06-21T00:22:26Z",
+            "id": 98834,
+            "creator": "bertcarnell",
+            "creation_time": "2022-06-21T00:22:26Z",
+            "count": 0,
+            "is_markdown": true,
+            "text": "Merge is documented to treat <NA> as a value to be matched across data sets.\n\n```\n## example of using 'incomparables' from ?merge\nx <- data.frame(k1 = c(NA,NA,3,4,5), k2 = c(1,NA,NA,4,5), data = 1:5)\ny <- data.frame(k1 = c(NA,2,NA,4,5), k2 = c(NA,NA,3,4,5), data = 1:5)\nmerge(x, y, by = c(\"k1\",\"k2\")) # NA's match\n```\n\nHowever, if one set has `<NA>` and the other has a character `\"NA\"`, they are incorrectly matched.  `merge` is different from `dplyr::join` and `sqldf` on this.\n\n```\nx <- data.frame(k1 = c(\"NA\",\"NA\",\"3\",\"4\",\"5\"), k2 = c(\"1\",\"NA\",\"NA\",\"4\",\"5\"), data = 1:5)\ny <- data.frame(k1 = c(NA,\"2\",NA,\"4\",\"5\"), k2 = c(NA,NA,\"3\",\"4\",\"5\"), data = 1:5)\nmerge(x, y, by = c(\"k1\",\"k2\")) # NA's match when they shouldn't\n```\n\nAnother example:\n\n```\n# performs as documented, with <NA> matching across data.frames\nX1 <- data.frame(a=c(NA, \"AN\"), b=c(2,3), stringsAsFactors=FALSE)\nY1 <- data.frame(a=c(\"no\", NA, \"AN\"), b=c(1,2,3), d=c(\"do\",\"stuff\",\"more\"), stringsAsFactors=FALSE)\nall(merge(X1, Y1, by=c(\"a\", \"b\"))$d == c(\"more\", \"stuff\"))\nall(merge(X1, Y1, by=c(\"a\", \"b\"), all.x = TRUE)$d == c(\"more\", \"stuff\"))\n\n# does not perform as expected\n#   Do not expect <NA> to match \"NA\"\nY1 <- data.frame(a=c(\"no\", \"NA\", \"AN\"), b=c(1,2,3), d=c(\"do\",\"stuff\",\"more\"), stringsAsFactors=FALSE)\n!any(is.na(Y1$a))\nall.equal(merge(X1, Y1, by=c(\"a\", \"b\"))$d, c(\"more\", NA)) # FALSE\nall.equal(merge(X1, Y1, by=c(\"a\", \"b\"), all.x = TRUE)$d, c(\"more\", NA)) # FALSE\n\n# check dplyr join methods - works as expected\nrequire(dplyr)\nall.equal(X1 %>% dplyr::inner_join(Y1, by = c(\"a\", \"b\")) %>% dplyr::select(d) %>% unlist(),\n          c(\"more\"), check.attributes=FALSE)\nall.equal(X1 %>% dplyr::left_join(Y1, by = c(\"a\", \"b\")) %>% dplyr::select(d) %>% unlist(),\n          c(NA, \"more\"), check.attributes=FALSE)\n\n# check sqldf join methods - works as expected\nrequire(sqldf)\nall.equal(sqldf::sqldf(\"select t2.* from X1 as t1 join Y1 as t2 on t1.a = t2.a and t1.b = t2.b\")$d,\n          c(\"more\"), check.attributes=FALSE)\nall.equal(sqldf::sqldf(\"select t2.* from X1 as t1 left join Y1 as t2 on t1.a = t2.a and t1.b = t2.b\")$d,\n          c(NA, \"more\"), check.attributes=FALSE)\n```",
+            "bug_id": 18366
+          },
+          {
+            "attachment_id": {},
+            "time": "2022-06-21T01:18:21Z",
+            "creator": "simon.urbanek",
+            "is_markdown": true,
+            "tags": [],
+            "id": 98835,
+            "is_private": false,
+            "creation_time": "2022-06-21T01:18:21Z",
+            "text": "Given the verbosity (and superfluous content) in the report the distilled information from the report is:\n\n`merge()` on two or more columns treat character vector elements `\"NA\"` and `NA` as matching. Simple reproducible example:\n\n```\n> merge(data.frame(a=\"NA\", b=\"\", b=1), data.frame(a=NA, b=\"\", c=3))\n   a b b.1 c\n1 NA     1 3\n```\nthe expected result is 0 rows.\n\n\nThis is due to the fact that multi-column matches are performed on a single column created by `paste()`-ing the columns with `sep=\"\\r\"` so `NA_character_` and `\"NA\"` yield identical content. For the same reason there are specific incorrect matches if `\"\\r\"` occurs in the payload, e.g.:\n\n```\n> merge(data.frame(a=\"1\\r2\", b=\"\", b=1), data.frame(a=\"1\", b=\"2\\r\", c=3))\n     a b b.1 c\n1 1\\r2     1 3\n\n```\nagain, expected result is 0 rows.\n\nGiven that this is by design either the documentation should be updated or the multi-column implementation design should be revised.",
+            "bug_id": 18366,
+            "count": 1
+          },
+          {
+            "attachment_id": {},
+            "time": "2022-06-22T15:21:50Z",
+            "creator": "bertcarnell",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 98846,
+            "creation_time": "2022-06-22T15:21:50Z",
+            "count": 2,
+            "bug_id": 18366,
+            "text": "Apologies for verbosity and superfluous content.  As a simple solution, I suggest a warning or error any time there are a mix of `'NA'` and `NA_character_` in the data, or any time the data contains `\\r`.  I agree the more comprehensive solution would require a rewrite of the multi-column merge.  I don't think this can be solved by documentation alone.\n\nStarting around line 99 of `src/library/base/r/merge.R`\n\n```\n        if (!is.null(incomparables))\n          stop(\"'incomparables' is supported only for merging on a single column\")\n        ## Do these together for consistency in as.character.\n        ## Use same set of names.\n        bx <- x[, by.x, drop=FALSE]; by <- y[, by.y, drop=FALSE]\n        ########################################################################\n        if ( (any(bx == \"NA\") & any(is.na(by))) |\n             (any(is.na(bx)) & any(by == \"NA\")) )\n          warning(\"Merge data contains a mix of 'NA' and NA_character_ values.  These values will match, perhaps unintentionally\")\n        if (any(grepl(\"\\r\", bx)) | any(grepl(\"\\r\", by)))\n          warning(\"Merge data contains \\\\r.  This may cause unintended merge behavior\")\n        ########################################################################\n        names(bx) <- names(by) <- paste0(\"V\", seq_len(ncol(bx)))\n        bz <- do.call(\"paste\", c(rbind(bx, by), sep = \"\\r\"))\n        bx <- bz[seq_len(nx)]\n        by <- bz[nx + seq_len(ny)]\n```"
+          },
+          {
+            "id": 98859,
+            "time": "2022-06-27T01:11:05Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "bug_id": 18366,
+            "text": "Instead of just just issuing warnings, I implemented the full change to merge that corrects the behavior in the bug report.  The patch passes all existing checks as well as new tests.  I used the `r-devel/r-svn` project on `github` to create the PR.  \n\n- [PR link](https://github.com/r-devel/r-svn/pull/89)\n- [diff link](https://patch-diff.githubusercontent.com/raw/r-devel/r-svn/pull/89.diff)",
+            "count": 3,
+            "is_markdown": true,
+            "creation_time": "2022-06-27T01:11:05Z",
+            "creator": "bertcarnell"
+          },
+          {
+            "id": 98860,
+            "time": "2022-06-27T01:12:20Z",
+            "is_private": false,
+            "attachment_id": 3037,
+            "tags": [],
+            "bug_id": 18366,
+            "text": "Created attachment 3037\nProposed Patch for merge against multiple columns",
+            "count": 4,
+            "is_markdown": true,
+            "creation_time": "2022-06-27T01:12:20Z",
+            "creator": "bertcarnell"
+          },
+          {
+            "is_private": false,
+            "time": "2022-09-18T03:28:58Z",
+            "id": 99040,
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 5,
+            "text": "This is something that changed with the change to StringsAsFactors =FALSE, . So at some point it made sense that\n\n\n```\nmerge(data.frame(a=\"NA\", b=\"\", b=1, StringsAsFactors = TRUE), data.frame(a=NA, b=\"\", c=3))\n\n```\n>     a b b.1 c\n>  1 NA     1 3\n\nBecause when you read a text file the NAs for a factor end up indistinguishable from the string \"NA\", so I'm sure that made sense just like StringsAsFactors=TRUE made sense at that time.\n\nI am not sure about all the other technicalities, but I think the change in behavior shouldn't be taken lightly and that \"expected behavior\" may really depend on the user.",
+            "bug_id": 18366,
+            "creator": "elin.waring",
+            "creation_time": "2022-09-18T03:28:58Z"
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "time": "2022-09-18T03:42:47Z",
+            "id": 99041,
+            "is_private": false,
+            "creator": "elin.waring",
+            "creation_time": "2022-09-18T03:42:47Z",
+            "text": "Sorry so just thinking it through, maybe this is something that was missed when the change of the default was made.",
+            "bug_id": 18366,
+            "count": 6,
+            "is_markdown": true
+          },
+          {
+            "is_private": false,
+            "id": 103624,
+            "time": "2026-09-12T03:06:58Z",
+            "attachment_id": {},
+            "tags": [],
+            "is_markdown": true,
+            "count": 7,
+            "bug_id": 18366,
+            "text": "I just ran through some tests on this.\nThe initial report that merge matches \"NA\" with NA is not correct.\n\nTo simplify the test case even more:\n\n```\nmerge(data.frame(a=\"NA\"), data.frame(a=NA))\n[1] a\n<0 rows> (or 0-length row.names)\n\n```\n\nAs comment 1 points out, the issue becomes apparent when there is more than one variable in the data frames and there are two variables have the same name with matching values.\n\n```\nmerge(data.frame(a=\"NA\", b=\"\"), data.frame(a=NA, b=\"\")) \n   a b\n1 NA  \n```\nwhere we would expect 0 rows.\n\nUsing `incomparables` only works when exactly one column is used to match.\n\n```\n> merge(data.frame(a=\"NA\", b=\"\"), data.frame(a=NA, b=\"\"), by = \"a\", incomparables = NA) \n[1] a   b.x b.y\n<0 rows> (or 0-length row.names)\n> merge(data.frame(a=\"NA\", b=\"\"), data.frame(a=NA, b=\"\"), by = \"b\", incomparables = NA) \n  b a.x a.y\n1    NA  NA\n\n```\n\nand that works as expected.  \n\n```\n> class(NA)\n[1] \"logical\"\n\n```\nmeans that a is a character in the first (x) data frame and logical in the second (y).\n\n```\n> as.logical(\"a\")\n[1] NA\n```\n\n`?merge` doesn't seem to discuss what will happen when there are columns with the same name but different classes.  Looking around, I found lots of advice to check that your by columns are of the same class before merging because the results of not doing so may be unexpected.  I think that is the case here. \n\nTo me, adding something to the documentation saying this would make sense.",
+            "creation_time": "2026-09-12T03:06:58Z",
+            "creator": "elin.waring"
+          },
+          {
+            "count": 8,
+            "is_markdown": true,
+            "bug_id": 18366,
+            "text": "Created attachment 3852\nProposed documentation patch for merge()\n\nThis adds a note about merging when classes don't match and an example",
+            "creation_time": "2026-09-14T03:48:23Z",
+            "creator": "elin.waring",
+            "is_private": false,
+            "id": 103632,
+            "time": "2026-09-14T03:48:23Z",
+            "attachment_id": 3852,
+            "tags": []
+          },
+          {
+            "time": "2026-11-13T21:38:10Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "gabembecker",
+            "id": 104223,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 18366,
+            "text": "With respect to changing design for the multiple-column merge, theres one aspect of the proposed patch I am not convinced by: the same valueset for `incomparables` is used for all columns; I don't know that that is a constraint we would want.\n\nIn the case of single column matching, where `incomparables` is used is unambiguous, you use it in the columns being matched (duh), but just like you might want different values of that in different merge columns that merge on different columns, you could want different values to be *treated as incomparable* for different individual matching operations in a multi-column merge, right?\n\nOne extension to the proposed patch (which I haven't tested in detail yet), would be to detect the incomoparables with multi-column merge case (already done to throw the current error) and either:\n\na) assert that `incomparables` must be a *named list* of vector values, with all names matching one of the columns being merged on, or\nb) allow a vector in addition to a named list, and apply the vector for all merge columns but throw a warning that you're doing so. \n\n(b) wouldn't break any code that works now (by throwing a new warning) because setting `incomparables` with a multi-column merge is currently an error.\n\nIts possible (a) could be extended to allow for a default/universal-if-not-otherwise-set value, though the design might bet a bit muddier for it. \n\n@Simon or other R-core members, is either of the above something you'd like Rob or me to work up for consideration?",
+            "count": 9,
+            "creation_time": "2026-11-13T21:38:10Z"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "18366": [
+        {
+          "bug_id": 18366,
+          "file_name": "bug_13866_merge_NA_patch.diff",
+          "summary": "Proposed Patch for merge against multiple columns",
+          "creation_time": "2022-06-27T01:12:20Z",
+          "id": 3037,
+          "is_private": false,
+          "size": 5079,
+          "last_change_time": "2022-06-27T01:12:20Z",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvUi9tZXJnZS5SIGIvc3JjL2xpYnJhcnkvYmFzZS9SL21lcmdlLlIKaW5kZXggODg4ODQyMDZkOS4uMzdmMDczYmU0MCAxMDA2NDQKLS0tIGEvc3JjL2xpYnJhcnkvYmFzZS9SL21lcmdlLlIKKysrIGIvc3JjL2xpYnJhcnkvYmFzZS9SL21lcmdlLlIKQEAgLTk2LDIxICs5NiwzMyBAQCBtZXJnZS5kYXRhLmZyYW1lIDwtCiAgICAgICAgIGlmKGwuYiA9PSAxTCkgeyAgICAgICAgICAgICAgICAgICMgKGJlIGZhc3RlcikKICAgICAgICAgICAgIGJ4IDwtIHhbLCBieS54XTsgaWYoaXMuZmFjdG9yKGJ4KSkgYnggPC0gYXMuY2hhcmFjdGVyKGJ4KQogICAgICAgICAgICAgYnkgPC0geVssIGJ5LnldOyBpZihpcy5mYWN0b3IoYnkpKSBieSA8LSBhcy5jaGFyYWN0ZXIoYnkpCisgICAgICAgICAgICBjb21tIDwtIG1hdGNoKGJ4LCBieSwgMEwpCisgICAgICAgICAgICBieHkgPC0gYnhbY29tbSA+IDBMXSAgICAgICAgICAgICAjIHRoZSBrZXlzIHdoaWNoIGFyZSBpbiBib3RoCisgICAgICAgICAgICB4aW5kcyA8LSBtYXRjaChieCwgYnh5LCAwTCwgaW5jb21wYXJhYmxlcykKKyAgICAgICAgICAgIHlpbmRzIDwtIG1hdGNoKGJ5LCBieHksIDBMLCBpbmNvbXBhcmFibGVzKQogICAgICAgICB9IGVsc2UgewotICAgICAgICAgICAgaWYgKCFpcy5udWxsKGluY29tcGFyYWJsZXMpKQotICAgICAgICAgICAgICAgIHN0b3AoIidpbmNvbXBhcmFibGVzJyBpcyBzdXBwb3J0ZWQgb25seSBmb3IgbWVyZ2luZyBvbiBhIHNpbmdsZSBjb2x1bW4iKQotICAgICAgICAgICAgIyMgRG8gdGhlc2UgdG9nZXRoZXIgZm9yIGNvbnNpc3RlbmN5IGluIGFzLmNoYXJhY3Rlci4KLSAgICAgICAgICAgICMjIFVzZSBzYW1lIHNldCBvZiBuYW1lcy4KICAgICAgICAgICAgIGJ4IDwtIHhbLCBieS54LCBkcm9wPUZBTFNFXTsgYnkgPC0geVssIGJ5LnksIGRyb3A9RkFMU0VdCi0gICAgICAgICAgICBuYW1lcyhieCkgPC0gbmFtZXMoYnkpIDwtIHBhc3RlMCgiViIsIHNlcV9sZW4obmNvbChieCkpKQotICAgICAgICAgICAgYnogPC0gZG8uY2FsbCgicGFzdGUiLCBjKHJiaW5kKGJ4LCBieSksIHNlcCA9ICJcciIpKQotICAgICAgICAgICAgYnggPC0gYnpbc2VxX2xlbihueCldCi0gICAgICAgICAgICBieSA8LSBieltueCArIHNlcV9sZW4obnkpXQorICAgICAgICAgICAgCisgICAgICAgICAgICAjIG1hdGNoIG9uIG11bHRpcGxlIGNvbHVtbnMKKyAgICAgICAgICAgIG1hdGNoX211bHRpcGxlIDwtIGZ1bmN0aW9uKHgsIHksIG5vbWF0Y2gsIGluY29tcGFyYWJsZXMpCisgICAgICAgICAgICB7CisgICAgICAgICAgICAgIGluZG0gPC0gbWF0cml4KE5BLCBucm93KHgpLCBuY29sKHgpKQorICAgICAgICAgICAgICBmb3IgKGkgaW4gMTpuY29sKHgpKQorICAgICAgICAgICAgICB7CisgICAgICAgICAgICAgICAgaW5kbVssaV0gPC0gbWF0Y2goYXMuY2hhcmFjdGVyKHhbLGldKSwgYXMuY2hhcmFjdGVyKHlbLGldKSwgCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbm9tYXRjaCA9IG5vbWF0Y2gsIGluY29tcGFyYWJsZXMgPSBpbmNvbXBhcmFibGVzKQorICAgICAgICAgICAgICB9CisgICAgICAgICAgICAgIHJldHVybihhcHBseShpbmRtLCAxLCBmdW5jdGlvbih3KSBpZmVsc2UoYWxsKHcgPT0gd1sxXSkgJiB3WzFdICE9IG5vbWF0Y2gsIHdbMV0sIG5vbWF0Y2gpKSkKKyAgICAgICAgICAgIH0KKyAgICAgICAgICAgICMgZmluZCB0aGUgcm93cyBpbiBjb21tb24KKyAgICAgICAgICAgIGNvbW0gPC0gbWF0Y2hfbXVsdGlwbGUoYngsIGJ5LCBub21hdGNoID0gMEwsIGluY29tcGFyYWJsZXMgPSBpbmNvbXBhcmFibGVzKQorICAgICAgICAgICAgYnh5IDwtIGJ4W2NvbW0gPiAwTCxdCisgICAgICAgICAgICAjIGZpbmQgdGhlIHJvd3MgZnJvbSBlYWNoIG1hdHJpeCB0aGF0IG1hdGNoIHRoZSByb3dzIGluIGNvbW1vbgorICAgICAgICAgICAgeGluZHMgPC0gbWF0Y2hfbXVsdGlwbGUoYngsIGJ4eSwgbm9tYXRjaCA9IDBMLCBpbmNvbXBhcmFibGVzID0gaW5jb21wYXJhYmxlcykKKyAgICAgICAgICAgIHlpbmRzIDwtIG1hdGNoX211bHRpcGxlKGJ5LCBieHksIG5vbWF0Y2ggPSAwTCwgaW5jb21wYXJhYmxlcyA9IGluY29tcGFyYWJsZXMpCisgICAgICAgICAgICAjIGJ4IG5lZWRzIHRvIGJlIHNpbmdsZSB2ZWN0b3JzIGZvciBzb3J0aW5nIGxhdGVyCisgICAgICAgICAgICBieCA8LSBhcHBseShieCwgMSwgZnVuY3Rpb24odykgcGFzdGUwKHcsIGNvbGxhcHNlID0gIiIpKQogICAgICAgICB9Ci0gICAgICAgIGNvbW0gPC0gbWF0Y2goYngsIGJ5LCAwTCkKLSAgICAgICAgYnh5IDwtIGJ4W2NvbW0gPiAwTF0gICAgICAgICAgICAgIyB0aGUga2V5cyB3aGljaCBhcmUgaW4gYm90aAotICAgICAgICB4aW5kcyA8LSBtYXRjaChieCwgYnh5LCAwTCwgaW5jb21wYXJhYmxlcykKLSAgICAgICAgeWluZHMgPC0gbWF0Y2goYnksIGJ4eSwgMEwsIGluY29tcGFyYWJsZXMpCiAgICAgICAgIGlmKG54ID4gMEwgJiYgbnkgPiAwTCkKICAgICAgICAgICAgIG0gPC0gLkludGVybmFsKG1lcmdlKHhpbmRzLCB5aW5kcywgYWxsLngsIGFsbC55KSkKICAgICAgICAgZWxzZQpAQCAtMTc0LDEyICsxODYsMTQgQEAgbWVyZ2UuZGF0YS5mcmFtZSA8LQogICAgICAgICAgICAgICAgICAgICAgICAgIiBpcyBkdXBsaWNhdGVkIGluIHRoZSByZXN1bHQiLCBkb21haW4gPSBOQSkKICAgICAgICAgcmVzIDwtIGNiaW5kKHgsIHkpCiAKLSAgICAgICAgaWYgKHNvcnQpCi0JICAgIHJlcyA8LSByZXNbaWYoYWxsLnggfHwgYWxsLnkpIHsKLQkJCSAgIHggPC0geFssIHNlcV9sZW4obC5iKSwgZHJvcCA9IEZBTFNFXQotCQkJICAgYXR0cmlidXRlcyh4KSA8LSBOVUxMCi0JCQkgICBkby5jYWxsKCJvcmRlciIsIHgpCi0JCSAgICAgICB9IGVsc2Ugc29ydC5saXN0KGJ4W20keGldKSwsIGRyb3AgPSBGQUxTRV0KKyAgICAgICAgaWYgKHNvcnQgJiYgbnJvdyhyZXMpID4gMSkKKyAgICAgICAgeworICAgICAgICAgIHJlcyA8LSByZXNbaWYoYWxsLnggfHwgYWxsLnkpIHsKKyAgICAgICAgICAgIHggPC0geFssIHNlcV9sZW4obC5iKSwgZHJvcCA9IEZBTFNFXQorICAgICAgICAgICAgYXR0cmlidXRlcyh4KSA8LSBOVUxMCisgICAgICAgICAgICBkby5jYWxsKCJvcmRlciIsIHgpCisgICAgICAgICAgfSBlbHNlIHNvcnQubGlzdChieFttJHhpXSksLCBkcm9wID0gRkFMU0VdCisgICAgICAgIH0KICAgICB9CiAgICAgYXR0cihyZXMsICJyb3cubmFtZXMiKSA8LSAuc2V0X3Jvd19uYW1lcyhucm93KHJlcykpCiAgICAgcmVzCmRpZmYgLS1naXQgYS9zcmMvbGlicmFyeS9iYXNlL21hbi9tZXJnZS5SZCBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21lcmdlLlJkCmluZGV4IGFmMjAwNzc1NDEuLjcyY2VhNTQ2MWIgMTAwNjQ0Ci0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21lcmdlLlJkCisrKyBiL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21lcmdlLlJkCkBAIC00Nyw4ICs0Nyw3IEBAIG1lcmdlKHgsIHksIFxkb3RzKQogICAgIG1vcmUgY2FzZXMgdG8gYXZvaWQgZHVwbGljYXRlZCBjb2x1bW4gbmFtZXMgaW4gdGhlIHJlc3VsdC4gIFRoaXMKICAgICB3YXMgaW1wbGljaXRseSBmYWxzZSBiZWZvcmUgXFIgdmVyc2lvbiAzLjUuMC59CiAgIFxpdGVte2luY29tcGFyYWJsZXN9e3ZhbHVlcyB3aGljaCBjYW5ub3QgYmUgbWF0Y2hlZC4gIFNlZQotICAgIFxjb2Rle1xsaW5re21hdGNofX0uICBUaGlzIGlzIGludGVuZGVkIHRvIGJlIHVzZWQgZm9yIG1lcmdpbmcgb24gb25lCi0gICAgY29sdW1uLCBzbyB0aGVzZSBhcmUgaW5jb21wYXJhYmxlIHZhbHVlcyBvZiB0aGF0IGNvbHVtbi59CisgICAgXGNvZGV7XGxpbmt7bWF0Y2h9fS59CiAgIFxpdGVte1xkb3RzfXthcmd1bWVudHMgdG8gYmUgcGFzc2VkIHRvIG9yIGZyb20gbWV0aG9kcy59CiB9CiBcZGV0YWlsc3sKZGlmZiAtLWdpdCBhL3Rlc3RzL3JlZy10ZXN0cy0xZC5SIGIvdGVzdHMvcmVnLXRlc3RzLTFkLlIKaW5kZXggMDFmMjJjODFmYi4uMTU3NDY4Y2Q4MyAxMDA2NDQKLS0tIGEvdGVzdHMvcmVnLXRlc3RzLTFkLlIKKysrIGIvdGVzdHMvcmVnLXRlc3RzLTFkLlIKQEAgLTU5OTcsNyArNTk5NywxNyBAQCBhc3NlcnRFcnJWKCBoZWFkKGxldHRlcnMsICIzIikgKQogc3RvcGlmbm90KGlkZW50aWNhbCgiYSIsIGhlYWQobGV0dGVycywgVFJVRSkpKQogIyMga2VlcCB0cmVhdGluZyA8bG9naWNhbD4gbiAgYXMgaW50ZWdlcgogCi0KKyMjIEJ1ZyAxODM2NiAtIE1lcmdlIGRvZXMgbm90IHRyZWF0IHN0cmluZyAiTkEiIGFzIGludGVuZGVkIChSIDw9IDQuMi4wKQorc3RvcGlmbm90KG5yb3cobWVyZ2UoZGF0YS5mcmFtZShhID0gIk5BIiwgYiA9ICIyIiwgZCA9IDEpLCBkYXRhLmZyYW1lKGEgPSBOQSwgYiA9ICIyIiwgZSA9IDMpKSkgPT0gMCkKK3N0b3BpZm5vdChucm93KG1lcmdlKGRhdGEuZnJhbWUoYSA9ICIxXHIyIiwgYiAgPSAiIiwgZCA9IDEpLCBkYXRhLmZyYW1lKGEgPSAiMSIsIGIgPSAiMlxyIiwgYyA9IDMpKSkgPT0gMCkKKyMgZnJvbSBtZXJnZSBleGFtcGxlcworeCA8LSBkYXRhLmZyYW1lKGsxID0gYyhOQSxOQSwzLDQsNSksIGsyID0gYygxLE5BLE5BLDQsNSksIGRhdGEgPSAxOjUpCit5IDwtIGRhdGEuZnJhbWUoazEgPSBjKE5BLDIsTkEsNCw1KSwgazIgPSBjKE5BLE5BLDMsNCw1KSwgZGF0YSA9IDE6NSkKK3N0b3BpZm5vdChucm93KG1lcmdlKHgsIHksIGJ5ID0gYygiazEiLCJrMiIpKSkgPT0gMykgIyBOQSdzIG1hdGNoCitzdG9waWZub3QobnJvdyhtZXJnZSh4LCB5LCBieSA9ICJrMSIpKSA9PSA2KSAjIE5BJ3MgbWF0Y2gsIHNvIDYgcm93cworc3RvcGlmbm90KG5yb3cobWVyZ2UoeCwgeSwgYnkgPSAiazIiLCBpbmNvbXBhcmFibGVzID0gTkEpKSA9PSAyKSAjIDIgcm93cworc3RvcGlmbm90KG5yb3cobWVyZ2UoeCwgeSwgYnkgPSBjKCJrMSIsImsyIiksIGluY29tcGFyYWJsZXMgPSBOQSkpID09IDIpCisjIyBmaXJzdCB0d28gYW5kIHRoZSBsYXN0IG9uZSBmYWlsZWQgaW4gUiA8PSA0LjIuMAogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwt",
+          "creator": "bertcarnell",
+          "is_patch": true
+        },
+        {
+          "is_patch": true,
+          "data": "RnJvbSBmNjZjYTNhM2YwMmMyMTVmMTdmMmI5NzM5MzY4NDVhNjI2NWQxZGUwIE1vbiBTZXAgMTcgMDA6MDA6MDAgMjAwMQ0KRnJvbTogRWxpbiBXYXJpbmcgPGVsaW4ud2FyaW5nQGdtYWlsLmNvbT4NCkRhdGU6IFN1biwgMTMgU2VwIDIwMjYgMjM6NDQ6MTIgLTA0MDANClN1YmplY3Q6IFtQQVRDSF0gVXBkYXRlIG1lcmdlLlJkDQoNCi0tLQ0KIHNyYy9saWJyYXJ5L2Jhc2UvbWFuL21lcmdlLlJkIHwgOCArKysrKysrKw0KIDEgZmlsZSBjaGFuZ2VkLCA4IGluc2VydGlvbnMoKykNCg0KZGlmZiAtLWdpdCBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21lcmdlLlJkIGIvc3JjL2xpYnJhcnkvYmFzZS9tYW4vbWVyZ2UuUmQNCmluZGV4IGM4ZTkyYzUyOGIwLi5hYzdhODJlODFkYyAxMDA2NDQNCi0tLSBhL3NyYy9saWJyYXJ5L2Jhc2UvbWFuL21lcmdlLlJkDQorKysgYi9zcmMvbGlicmFyeS9iYXNlL21hbi9tZXJnZS5SZA0KQEAgLTEwNiw2ICsxMDYsMTAgQEAgbWVyZ2UoeCwgeSwgXGRvdHMpDQogICBDdXJyZW50bHkgbG9uZyB2ZWN0b3JzIGFyZSBub3QgYWNjZXB0ZWQgZm9yIGlucHV0cywgd2hpY2ggYXJlIHRodXMNCiAgIHJlc3RyaWN0ZWQgdG8gbGVzcyB0aGFuIDJeMzEgcm93cy4gVGhhdCByZXN0cmljdGlvbiBhbHNvIGFwcGxpZXMgdG8NCiAgIHRoZSByZXN1bHQgZm9yIDMyLWJpdCBwbGF0Zm9ybXMuDQorDQorICBDb2x1bW5zIHVzZWQgaW4gbWVyZ2luZyBidXQgYXJlIG9mIGRpZmZlcmVudCBjbGFzc2VzIGFyZSBtZXJnZWQNCisgIHVzaW5nIFIncyBjb2VyY2lvbiBydWxlcy4gUmVzdWx0cyBtYXkgYmUgdW5leHBlY3RlZC4gRW5zdXJpbmcgdGhhdCBtZXJnZQ0KKyAgY29sdW1ucyBhcmUgdGhlIHNhbWUgY2xhc3MgcHJpb3IgdG8gbWVyZ2luZyBpcyByZWNvbW1lbmRlZC4NCiB9DQogDQogXHZhbHVlew0KQEAgLTE2NSw1ICsxNjksOSBAQCBtZXJnZSh4LCB5LCBieSA9IGMoImsxIiwiazIiKSkgIyBOQXMgbWF0Y2gNCiBtZXJnZSh4LCB5LCBieSA9ICJrMSIpICMgTkFzIG1hdGNoLCBzbyA2IHJvd3MNCiBtZXJnZSh4LCB5LCBieSA9ICJrMiIsIGluY29tcGFyYWJsZXMgPSBOQSkgIyAyIHJvd3MNCiB9DQorIyMgZXhhbXBsZSBvZiBtZXJnaW5nIHdpdGggZGlmZmVyaW5nIGNsYXNzZXMuDQorbWVyZ2UoZGF0YS5mcmFtZShhPSIzIiwgYj0iIiksIGRhdGEuZnJhbWUoYT0zLCBiPSIiKSkNCittZXJnZShkYXRhLmZyYW1lKGE9MywgYj0iIiksIGRhdGEuZnJhbWUoYT0iMyIsIGI9IiIpKQ0KKw0KIFxrZXl3b3Jke2FycmF5fQ0KIFxrZXl3b3Jke21hbmlwfQ==",
+          "creator": "elin.waring",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "size": 1282,
+          "last_change_time": "2026-09-14T03:48:23Z",
+          "id": 3852,
+          "is_private": false,
+          "summary": "Proposed documentation patch for merge()",
+          "creation_time": "2026-09-14T03:48:23Z",
+          "bug_id": 18366,
+          "file_name": "file_18366.txt"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-13 21:38:10"
+}

@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-13._
+_Automatically generated from the R Bugzilla dump updated 2026-11-14._
 
 ## Triaged bugs
 
@@ -20,6 +20,7 @@ _Core developers in CC should not be assumed responsible for action._
 * [Bug 18911](https://bugs.r-project.org/show_bug.cgi?id=18911) — cleanup tcltk (2026-09-19)
 * [Bug 19098](https://bugs.r-project.org/show_bug.cgi?id=19098) — Ctrl-D does not exit R console on Windows (2026-09-22, in CC: tierney)
 * [Bug 19265](https://bugs.r-project.org/show_bug.cgi?id=19265) — Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper (2026-10-31)
+* [Bug 19225](https://bugs.r-project.org/show_bug.cgi?id=19225) — as.list(<environment>) returns misaligned names/values (or an internal SET_VECTOR_ELT error) when an active binding modifies the environment (2026-11-13)
 
 ### Recommended closures
 
@@ -113,6 +114,8 @@ These Triage Team patches can wait their turn.
 * [Bug 19123](https://bugs.r-project.org/show_bug.cgi?id=19123) — Memory leak in `scan()` when a field fails type conversion (2026-08-04)
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
+* [Bug 19314](https://bugs.r-project.org/show_bug.cgi?id=19314) — speed up integer and mixed integer/double arithmetic loops (2026-11-13)
+* [Bug 19318](https://bugs.r-project.org/show_bug.cgi?id=19318) — .C() bounds-check errors print an uninitialised routine name when .NAME is a NativeSymbolInfo (2026-11-14)
 
 #### Mac GUI / Mac specific
 
@@ -130,6 +133,9 @@ These Triage Team patches can wait their turn.
 * [Bug 19303](https://bugs.r-project.org/show_bug.cgi?id=19303) — Improve bcEval_loop() performance by intentionally spilling rarely-used variables (2026-11-12)
 * [Bug 19304](https://bugs.r-project.org/show_bug.cgi?id=19304) — Improve closure call performance by searching unhashed frames inline in GET_BINDING_CELL() (2026-11-12)
 * [Bug 19309](https://bugs.r-project.org/show_bug.cgi?id=19309) — Improve closure call performance by matching untagged arguments by position in one pass (2026-11-12)
+* [Bug 19315](https://bugs.r-project.org/show_bug.cgi?id=19315) — Reduce UseMethod() C stack use by moving error-message buffers out of the dispatch frames (2026-11-14)
+* [Bug 19316](https://bugs.r-project.org/show_bug.cgi?id=19316) — Improve closure call and string hashing performance: cheaper begincontext() and inline vmaxget()/vmaxset() within R (2026-11-14)
+* [Bug 19317](https://bugs.r-project.org/show_bug.cgi?id=19317) — Reduce C stack use of eval() and bcEval_loop() by moving the builtin-call context out of their frames (2026-11-14)
 
 ### P5
 
@@ -150,6 +156,7 @@ These patches have not yet been prioritised.
 * [Bug 19096](https://bugs.r-project.org/show_bug.cgi?id=19096) — Update handling of overflow in integer operations (2026-06-30)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
+* [Bug 19313](https://bugs.r-project.org/show_bug.cgi?id=19313) — C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults (2026-11-13)
 
 #### Misc
 

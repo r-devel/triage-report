@@ -1,0 +1,121 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "cc_detail": [
+          {
+            "real_name": "Sebastian Meyer",
+            "name": "seb.meyer",
+            "id": 274
+          }
+        ],
+        "last_change_time": "2026-11-13T16:43:28Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "format() wrong for subnormal numbers with double-precision powl() (musl aarch64)",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Jeroen Ooms",
+          "id": 610,
+          "name": "jeroenooms"
+        },
+        "status": "CONFIRMED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "jeroenooms",
+        "flags": [],
+        "platform": "arm64/M1",
+        "op_sys": "Linux",
+        "is_confirmed": true,
+        "qa_contact": "",
+        "cc": [
+          "seb.meyer"
+        ],
+        "dupe_of": {},
+        "severity": "normal",
+        "id": 19312,
+        "deadline": {},
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-13T14:13:46Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "System-specific",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19312": {
+        "comments": [
+          {
+            "is_markdown": false,
+            "count": 0,
+            "bug_id": 19312,
+            "text": "Created attachment 4052\nPatch case where kp <= R_dec_min_exponent\n\nOn aarch64 with musl libc (Alpine Linux), subnormal numbers are printed\nincorrectly:\n\n  > print(1.2e-313)\n  [1] 1.200000e-313                     # expected 1.2e-313\n  > as.character(c(1.2e-313, 1.4e-313))\n  [1] \"1e-313\" \"1e-313\"\n\nThis makes `tests/reg-tests-1d.R` fail (\"very small ranges\" pretty() check:\n`rEd <= ... are not all TRUE)`, because distinct values format identically.\n\nCause: scientific() in `src/main/format.c` computes `powl(10.0, kp)`, with `kp`\ndown to about -338 for subnormal x. On aarch64 `long double` is IEEE quad,\nand musl's `powl()` for 113-bit long double is a stub that calls the double\npow() (musl `src/math/powl.c`: \"TODO: broken implementation to make things\ncompile\"). So 10^kp loses precision below DBL_MIN, or underflows to 0:\n`powl(10, -319) = 9.99988867e-320`, `powl(10, -327) = 0`.\n\nFix (attached): when `kp <= R_dec_min_exponent`, compute 10^kp as the\nproduct of two powl() calls with normal-range exponents. The product is\nformed in long double, so it does not underflow. This only affects x\nbelow ~1e-293. On platforms with a correct powl() the result is\nunchanged: on Debian aarch64 (glibc), output of print()/format()/\nas.character() was byte-identical before and after the patch, for edge\ncases and for 1e5 random subnormals. With the patch, R-devel on Alpine\naarch64 passes make check-all.\n\n\nCheck log *before* the patch: https://github.com/r-devel/r-svn/actions/runs/43283038054/job/131409079104\nCheck log *after* the patch: https://github.com/r-devel/r-svn/actions/runs/43354397036/job/131652819091",
+            "creation_time": "2026-11-13T14:13:46Z",
+            "creator": "jeroenooms",
+            "is_private": false,
+            "id": 104215,
+            "time": "2026-11-13T14:13:46Z",
+            "tags": [],
+            "attachment_id": 4052
+          },
+          {
+            "count": 1,
+            "is_markdown": true,
+            "bug_id": 19312,
+            "text": "Confirmed using an Alpine image on a Pi, where\n\n    (.Machine$longdouble.digits == 113) && grepl(\"musl\", R.version$os)",
+            "creation_time": "2026-11-13T16:43:28Z",
+            "creator": "seb.meyer",
+            "is_private": false,
+            "id": 104217,
+            "time": "2026-11-13T16:43:28Z",
+            "tags": [],
+            "attachment_id": {}
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19312": [
+        {
+          "is_patch": true,
+          "data": "ZGlmZiAtLWdpdCBhL3NyYy9tYWluL2Zvcm1hdC5jIGIvc3JjL21haW4vZm9ybWF0LmMKaW5kZXggZTc2NGIwNy4uNTFmYjJkNyAxMDA2NDQKLS0tIGEvc3JjL21haW4vZm9ybWF0LmMKKysrIGIvc3JjL21haW4vZm9ybWF0LmMKQEAgLTM1MSw2ICszNTEsMTEgQEAgc2NpZW50aWZpYyhjb25zdCBkb3VibGUgKngsIGludCAqbmVnLCBpbnQgKmtwb3dlciwgaW50ICpuc2lnLCBib29sICpyb3VuZGluZ3dpZGUKICAgICAgICAgfQogIyAgaWZkZWYgSEFWRV9QT1dMCiAJLy8gcG93bCBpcyBDOTkgYnV0IG9ubHkgYWRkZWQgdG8gRnJlZUJTRCBpbiAyMDE3LgorCS8vIFNwbGl0IHN1Ym5vcm1hbCBwb3dlcnMgaW50byB0d28gbm9ybWFsIGhhbHZlczogc29tZSBwb3dsKCkKKwkvLyBpbXBsZW1lbnRhdGlvbnMgKG11c2wgb24gYWFyY2g2NCkgb25seSBoYXZlIGRvdWJsZSBwcmVjaXNpb24uCisJZWxzZSBpZiAoa3AgPD0gUl9kZWNfbWluX2V4cG9uZW50KQorCSAgICByX3ByZWMgLz0gcG93bCgxMC4wLCAobG9uZyBkb3VibGUpIChrcC8yKSkgKgorCQlwb3dsKDEwLjAsIChsb25nIGRvdWJsZSkgKGtwIC0ga3AvMikpOwogCWVsc2UKICAgICAgICAgICAgIHJfcHJlYyAvPSBwb3dsKDEwLjAsIChsb25nIGRvdWJsZSkga3ApOwogIyAgZWxzZQo=",
+          "creator": "jeroenooms",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "size": 644,
+          "last_change_time": "2026-11-13T14:13:46Z",
+          "id": 4052,
+          "is_private": false,
+          "summary": "Patch case where kp <= R_dec_min_exponent",
+          "creation_time": "2026-11-13T14:13:46Z",
+          "bug_id": 19312,
+          "file_name": "alpine.patch"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-13 16:43:28"
+}
