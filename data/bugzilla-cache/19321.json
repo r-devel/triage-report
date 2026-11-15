@@ -1,0 +1,163 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "summary": "Improve scalar %% and %/% performance: add them to the do_arith() scalar fast path",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2026-11-14T23:07:07Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "status": "CONFIRMED",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-14T21:36:35Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P4",
+        "qa_contact": "",
+        "cc": [
+          "maechler"
+        ],
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 19321,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Wishlist"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19321": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-14T21:36:35Z",
+            "text": "do_arith() computes +, -, * and / on two scalars without attributes directly, but sends %% and %/% to R_binary(), the general vector code. Neither operator has a byte code instruction, so compiled code takes that path too: a scalar xi %% 2L takes 34 ns where x == 2 takes 8.\n\nTimings: arith-scalar-mod-idiv-bench.R, attached, prints ns per evaluation. On aarch64 macOS (Apple clang 21, r90888), xi %% 2L goes from 34 to 27 ns, x %% 2 from 39 to 27, and a loop that tests i %% 2L == 0L from 45 to 36 ns per iteration.\n\nProposed patch: attached as arith-scalar-mod-idiv.diff, against r90888. It adds MODOP and IDIVOP to the scalar path for integer, double and mixed operands. The formulas are shared with the vector code: R_integer_mod() and R_integer_idiv(), next to R_integer_plus(), are also called by the loops in integer_binary(), and the three double branches of the scalar path now go through one helper that uses myfmod() and myfloor() as real_binary() does. Values, types and warnings are unchanged; the regression test compares scalar results with the vector code for 841 pairs of values.\n\nmake check-all passes in CI on Linux, macOS and Windows. The patch is also submitted as https://github.com/r-devel/r-svn/pull/493, with the full measurements.",
+            "bug_id": 19321,
+            "is_markdown": false,
+            "count": 0,
+            "attachment_id": {},
+            "tags": [],
+            "time": "2026-11-14T21:36:35Z",
+            "id": 104247,
+            "is_private": false
+          },
+          {
+            "attachment_id": 4071,
+            "tags": [],
+            "id": 104248,
+            "time": "2026-11-14T21:36:48Z",
+            "is_private": false,
+            "creation_time": "2026-11-14T21:36:48Z",
+            "creator": "kevinushey",
+            "bug_id": 19321,
+            "text": "Created attachment 4071\npatch: add %% and %/% to the do_arith() scalar path, sharing the formulas with the vector code",
+            "is_markdown": false,
+            "count": 1
+          },
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-11-14T21:36:49Z",
+            "attachment_id": 4072,
+            "count": 2,
+            "bug_id": 19321,
+            "text": "Created attachment 4072\nbenchmark: ns per evaluation of scalar %% and %/%",
+            "creation_time": "2026-11-14T21:36:49Z",
+            "is_private": false,
+            "id": 104249,
+            "tags": []
+          },
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2026-11-14T23:07:07Z",
+            "id": 104254,
+            "creator": "maechler",
+            "creation_time": "2026-11-14T23:07:07Z",
+            "is_markdown": true,
+            "count": 3,
+            "text": "As prime numbers etc were my first love of math, and as the patch fairly modularizes the arithmetic source code a bit more,\nI'm sympathetic to your proposal and will look into it,\neven though this is not really about fixing a bug - thank you Kevin!",
+            "bug_id": 19321
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19321": [
+        {
+          "summary": "patch: add %% and %/% to the do_arith() scalar path, sharing the formulas with the vector code",
+          "creation_time": "2026-11-14T21:36:48Z",
+          "bug_id": 19321,
+          "file_name": "arith-scalar-mod-idiv.diff",
+          "size": 8313,
+          "last_change_time": "2026-11-14T21:36:48Z",
+          "id": 4071,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL2FyaXRobWV0aWMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hcml0aG1ldGljLmMJKHJldmlzaW9uIDkwODg4KQorKysgc3JjL21haW4vYXJpdGhtZXRpYy5jCSh3b3JraW5nIGNvcHkpCkBAIC0zNzQsNiArMzc0LDQyIEBAIHN0YXRpYyBSX0lOTElORSBkb3VibGUgUl9pbnRlZ2VyX2RpdmlkZShpbnQgeCwgaW50IHkpCiAJcmV0dXJuIChkb3VibGUpIHggLyAoZG91YmxlKSB5OwogfQogCitzdGF0aWMgUl9JTkxJTkUgaW50IFJfaW50ZWdlcl9tb2QoaW50IHgsIGludCB5KQoreworICAgIGlmICh4ID09IE5BX0lOVEVHRVIgfHwgeSA9PSBOQV9JTlRFR0VSIHx8IHkgPT0gMCkKKwlyZXR1cm4gTkFfSU5URUdFUjsKKyAgICBlbHNlIC8qIHRpbGwgMC42My4yOiB4ICUgeSAqLworCXJldHVybiAoeCA+PSAwICYmIHkgPiAwKSA/IHggJSB5IDoKKwkgICAgKGludCkgbXlmbW9kKChkb3VibGUpIHgsIChkb3VibGUpIHkpOworfQorCitzdGF0aWMgUl9JTkxJTkUgaW50IFJfaW50ZWdlcl9pZGl2KGludCB4LCBpbnQgeSkKK3sKKyAgICAvKiBUaGlzIGhhZCB4ICUvJSAwID09IDAgcHJpb3IgdG8gMi4xNC4xLCBidXQKKyAgICAgICBpdCBzZWVtcyBjb252ZW50aW9uYWxseSB0byBiZSB1bmRlZmluZWQgKi8KKyAgICBpZiAoeCA9PSBOQV9JTlRFR0VSIHx8IHkgPT0gTkFfSU5URUdFUiB8fCB5ID09IDApCisJcmV0dXJuIE5BX0lOVEVHRVI7CisgICAgZWxzZQorCXJldHVybiAoaW50KSBmbG9vcigoZG91YmxlKSB4IC8gKGRvdWJsZSkgeSk7Cit9CisKKy8qIHgxIG9wIHgyIGZvciB0aGUgb3BlcmF0b3JzIGRvX2FyaXRoKCkgYXBwbGllcyB0byBzY2FsYXJzIGl0c2VsZjsKKyAgIGZhbHNlIGZvciB0aGUgb3RoZXJzLiBteWZtb2QoKSBjYW4gd2Fybiwgc28gY2FsbGVycyBhbGxvY2F0ZSB0aGUKKyAgIHJlc3VsdCBhZnRlciB0aGlzLiAqLworc3RhdGljIFJfSU5MSU5FIGJvb2wgcmVhbF9zY2FsYXJfYXJpdGgoaW50IGNvZGUsIGRvdWJsZSB4MSwgZG91YmxlIHgyLAorCQkJCSAgICAgICBkb3VibGUgKnZhbCkKK3sKKyAgICBzd2l0Y2ggKGNvZGUpIHsKKyAgICBjYXNlIFBMVVNPUDogKnZhbCA9IHgxICsgeDI7IHJldHVybiB0cnVlOworICAgIGNhc2UgTUlOVVNPUDogKnZhbCA9IHgxIC0geDI7IHJldHVybiB0cnVlOworICAgIGNhc2UgVElNRVNPUDogKnZhbCA9IHgxICogeDI7IHJldHVybiB0cnVlOworICAgIGNhc2UgRElWT1A6ICp2YWwgPSB4MSAvIHgyOyByZXR1cm4gdHJ1ZTsKKyAgICBjYXNlIE1PRE9QOiAqdmFsID0gbXlmbW9kKHgxLCB4Mik7IHJldHVybiB0cnVlOworICAgIGNhc2UgSURJVk9QOiAqdmFsID0gbXlmbG9vcih4MSwgeDIpOyByZXR1cm4gdHJ1ZTsKKyAgICBkZWZhdWx0OiByZXR1cm4gZmFsc2U7CisgICAgfQorfQorCiBzdGF0aWMgUl9JTkxJTkUgU0VYUCBTY2FsYXJWYWx1ZTEoU0VYUCB4KQogewogICAgIGlmIChOT19SRUZFUkVOQ0VTKHgpKQpAQCAtNDE5LDIzICs0NTUsMjEgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2FyaXRoKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkgICAgZG91YmxlIHgxID0gU0NBTEFSX0RWQUwoYXJnMSk7CiAJICAgIGlmIChJU19TQ0FMQVIoYXJnMiwgUkVBTFNYUCkpIHsKIAkJZG91YmxlIHgyID0gU0NBTEFSX0RWQUwoYXJnMik7Ci0JCWFucyA9IFNjYWxhclZhbHVlMihhcmcxLCBhcmcyKTsKLQkJc3dpdGNoIChQUklNVkFMKG9wKSkgewotCQljYXNlIFBMVVNPUDogU0VUX1NDQUxBUl9EVkFMKGFucywgeDEgKyB4Mik7IHJldHVybiBhbnM7Ci0JCWNhc2UgTUlOVVNPUDogU0VUX1NDQUxBUl9EVkFMKGFucywgeDEgLSB4Mik7IHJldHVybiBhbnM7Ci0JCWNhc2UgVElNRVNPUDogU0VUX1NDQUxBUl9EVkFMKGFucywgeDEgKiB4Mik7IHJldHVybiBhbnM7Ci0JCWNhc2UgRElWT1A6IFNFVF9TQ0FMQVJfRFZBTChhbnMsIHgxIC8geDIpOyByZXR1cm4gYW5zOworCQlkb3VibGUgdmFsOworCQlpZiAocmVhbF9zY2FsYXJfYXJpdGgoUFJJTVZBTChvcCksIHgxLCB4MiwgJnZhbCkpIHsKKwkJICAgIGFucyA9IFNjYWxhclZhbHVlMihhcmcxLCBhcmcyKTsKKwkJICAgIFNFVF9TQ0FMQVJfRFZBTChhbnMsIHZhbCk7CisJCSAgICByZXR1cm4gYW5zOwogCQl9CiAJICAgIH0KIAkgICAgZWxzZSBpZiAoSVNfU0NBTEFSKGFyZzIsIElOVFNYUCkpIHsKIAkJaW50IGkyID0gU0NBTEFSX0lWQUwoYXJnMik7CiAJCWRvdWJsZSB4MiA9IGkyICE9IE5BX0lOVEVHRVIgPyAoZG91YmxlKSBpMiA6IE5BX1JFQUw7Ci0JCWFucyA9IFNjYWxhclZhbHVlMShhcmcxKTsKLQkJc3dpdGNoIChQUklNVkFMKG9wKSkgewotCQljYXNlIFBMVVNPUDogU0VUX1NDQUxBUl9EVkFMKGFucywgeDEgKyB4Mik7IHJldHVybiBhbnM7Ci0JCWNhc2UgTUlOVVNPUDogU0VUX1NDQUxBUl9EVkFMKGFucywgeDEgLSB4Mik7IHJldHVybiBhbnM7Ci0JCWNhc2UgVElNRVNPUDogU0VUX1NDQUxBUl9EVkFMKGFucywgeDEgKiB4Mik7IHJldHVybiBhbnM7Ci0JCWNhc2UgRElWT1A6IFNFVF9TQ0FMQVJfRFZBTChhbnMsIHgxIC8geDIpOyByZXR1cm4gYW5zOworCQlkb3VibGUgdmFsOworCQlpZiAocmVhbF9zY2FsYXJfYXJpdGgoUFJJTVZBTChvcCksIHgxLCB4MiwgJnZhbCkpIHsKKwkJICAgIGFucyA9IFNjYWxhclZhbHVlMShhcmcxKTsKKwkJICAgIFNFVF9TQ0FMQVJfRFZBTChhbnMsIHZhbCk7CisJCSAgICByZXR1cm4gYW5zOwogCQl9CiAJICAgIH0KIAl9CkBAIC00NDQsMTcgKzQ3OCwxNyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fYXJpdGgoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCSAgICBpZiAoSVNfU0NBTEFSKGFyZzIsIFJFQUxTWFApKSB7CiAJCWRvdWJsZSB4MSA9IGkxICE9IE5BX0lOVEVHRVIgPyAoZG91YmxlKSBpMSA6IE5BX1JFQUw7CiAJCWRvdWJsZSB4MiA9IFNDQUxBUl9EVkFMKGFyZzIpOwotCQlhbnMgPSBTY2FsYXJWYWx1ZTEoYXJnMik7Ci0JCXN3aXRjaCAoUFJJTVZBTChvcCkpIHsKLQkJY2FzZSBQTFVTT1A6IFNFVF9TQ0FMQVJfRFZBTChhbnMsIHgxICsgeDIpOyByZXR1cm4gYW5zOwotCQljYXNlIE1JTlVTT1A6IFNFVF9TQ0FMQVJfRFZBTChhbnMsIHgxIC0geDIpOyByZXR1cm4gYW5zOwotCQljYXNlIFRJTUVTT1A6IFNFVF9TQ0FMQVJfRFZBTChhbnMsIHgxICogeDIpOyByZXR1cm4gYW5zOwotCQljYXNlIERJVk9QOiBTRVRfU0NBTEFSX0RWQUwoYW5zLCB4MSAvIHgyKTsgcmV0dXJuIGFuczsKKwkJZG91YmxlIHZhbDsKKwkJaWYgKHJlYWxfc2NhbGFyX2FyaXRoKFBSSU1WQUwob3ApLCB4MSwgeDIsICZ2YWwpKSB7CisJCSAgICBhbnMgPSBTY2FsYXJWYWx1ZTEoYXJnMik7CisJCSAgICBTRVRfU0NBTEFSX0RWQUwoYW5zLCB2YWwpOworCQkgICAgcmV0dXJuIGFuczsKIAkJfQogCSAgICB9CiAJICAgIGVsc2UgaWYgKElTX1NDQUxBUihhcmcyLCBJTlRTWFApKSB7CiAJCWJvb2wgbmFmbGFnID0gZmFsc2U7CiAJCWludCBpMiA9IFNDQUxBUl9JVkFMKGFyZzIpOworCQlpbnQgaXZhbDsKIAkJc3dpdGNoIChQUklNVkFMKG9wKSkgewogCQljYXNlIFBMVVNPUDoKIAkJICAgIGFucyA9IFNjYWxhclZhbHVlMihhcmcxLCBhcmcyKTsKQEAgLTQ3Myw2ICs1MDcsMTYgQEAgYXR0cmlidXRlX2hpZGRlbiBTRVhQIGRvX2FyaXRoKFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIGVudikKIAkJICAgIHJldHVybiBhbnM7CiAJCWNhc2UgRElWT1A6CiAJCSAgICByZXR1cm4gU2NhbGFyUmVhbChSX2ludGVnZXJfZGl2aWRlKGkxLCBpMikpOworCQljYXNlIE1PRE9QOgorCQkgICAgLyogYmVmb3JlIGFsbG9jYXRpbmcsIGFzIHRoaXMgY2FuIGNhbGwgbXlmbW9kKCkgKi8KKwkJICAgIGl2YWwgPSBSX2ludGVnZXJfbW9kKGkxLCBpMik7CisJCSAgICBhbnMgPSBTY2FsYXJWYWx1ZTIoYXJnMSwgYXJnMik7CisJCSAgICBTRVRfU0NBTEFSX0lWQUwoYW5zLCBpdmFsKTsKKwkJICAgIHJldHVybiBhbnM7CisJCWNhc2UgSURJVk9QOgorCQkgICAgYW5zID0gU2NhbGFyVmFsdWUyKGFyZzEsIGFyZzIpOworCQkgICAgU0VUX1NDQUxBUl9JVkFMKGFucywgUl9pbnRlZ2VyX2lkaXYoaTEsIGkyKSk7CisJCSAgICByZXR1cm4gYW5zOwogCQl9CiAJICAgIH0KIAl9CkBAIC05MDcsMTUgKzk1MSw3IEBAIHN0YXRpYyBTRVhQIGludGVnZXJfYmluYXJ5KEFSSVRIT1BfVFlQRSBjb2RlLCBTRVhQIHMxLCBTRVhQIHMyLCBTRVhQIGxjYWxsKQogCSAgICBjb25zdCBpbnQgKnB4MSA9IElOVEVHRVJfUk8oczEpOwogCSAgICBjb25zdCBpbnQgKnB4MiA9IElOVEVHRVJfUk8oczIpOwogCSAgICBNT0RfSVRFUkFURTJfQ0hFQ0soTklOVEVSUlVQVCwgbiwgbjEsIG4yLCBpLCBpMSwgaTIsIHsKLQkJICAgIHgxID0gcHgxW2kxXTsKLQkJICAgIHgyID0gcHgyW2kyXTsKLQkJICAgIGlmICh4MSA9PSBOQV9JTlRFR0VSIHx8IHgyID09IE5BX0lOVEVHRVIgfHwgeDIgPT0gMCkKLQkJCXBhW2ldID0gTkFfSU5URUdFUjsKLQkJICAgIGVsc2UgewotCQkJcGFbaV0gPSAvKiB0aWxsIDAuNjMuMjoJeDEgJSB4MiAqLwotCQkJICAgICh4MSA+PSAwICYmIHgyID4gMCkgPyB4MSAlIHgyIDoKLQkJCSAgICAoaW50KW15Zm1vZCgoZG91YmxlKXgxLChkb3VibGUpeDIpOwotCQkgICAgfQorCQkgICAgcGFbaV0gPSBSX2ludGVnZXJfbW9kKHB4MVtpMV0sIHB4MltpMl0pOwogCQl9KTsKIAl9CiAJYnJlYWs7CkBAIC05MjUsMTQgKzk2MSw3IEBAIHN0YXRpYyBTRVhQIGludGVnZXJfYmluYXJ5KEFSSVRIT1BfVFlQRSBjb2RlLCBTRVhQIHMxLCBTRVhQIHMyLCBTRVhQIGxjYWxsKQogCSAgICBjb25zdCBpbnQgKnB4MSA9IElOVEVHRVJfUk8oczEpOwogCSAgICBjb25zdCBpbnQgKnB4MiA9IElOVEVHRVJfUk8oczIpOwogCSAgICBNT0RfSVRFUkFURTJfQ0hFQ0soTklOVEVSUlVQVCwgbiwgbjEsIG4yLCBpLCBpMSwgaTIsIHsKLQkJICAgIHgxID0gcHgxW2kxXTsKLQkJICAgIHgyID0gcHgyW2kyXTsKLQkJICAgIC8qIFRoaXMgaGFkIHggJS8lIDAgPT0gMCBwcmlvciB0byAyLjE0LjEsIGJ1dAotCQkgICAgICAgaXQgc2VlbXMgY29udmVudGlvbmFsbHkgdG8gYmUgdW5kZWZpbmVkICovCi0JCSAgICBpZiAoeDEgPT0gTkFfSU5URUdFUiB8fCB4MiA9PSBOQV9JTlRFR0VSIHx8IHgyID09IDApCi0JCQlwYVtpXSA9IE5BX0lOVEVHRVI7Ci0JCSAgICBlbHNlCi0JCQlwYVtpXSA9IChpbnQpIGZsb29yKChkb3VibGUpeDEgLyAoZG91YmxlKXgyKTsKKwkJICAgIHBhW2ldID0gUl9pbnRlZ2VyX2lkaXYocHgxW2kxXSwgcHgyW2kyXSk7CiAJCX0pOwogCX0KIAlicmVhazsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDg4OCkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NDk5LDYgKzQ0OTksNjIgQEAgdG9vbHM6OmFzc2VydEVycm9yKGdldEdlbmVyaWMoImluaXRpYWxpemUiLCB3aGVyZSA9IHgpKSAjIGNhdXNlZCBzZWdmYXVsdCBvciBidXMKICMjIGluIFIgPD0gNC42LjIKIAogCisjIyAlJSBhbmQgJS8lIG9uIHNjYWxhcnM6IHNhbWUgdmFsdWVzLCB0eXBlcyBhbmQgd2FybmluZ3MgYXMgb24gdmVjdG9ycworbG9jYWwoeworICAgIG9sZGppdCA8LSBjb21waWxlcjo6ZW5hYmxlSklUKDApCisgICAgb24uZXhpdChjb21waWxlcjo6ZW5hYmxlSklUKG9sZGppdCkpCisgICAgaW1heCA8LSAuTWFjaGluZSRpbnRlZ2VyLm1heAorICAgIHZhbHMgPC0gYyhhcy5saXN0KGMoTkEsIC1pbWF4LCAtN0wsIC0yTCwgLTFMLCAwTCwgMUwsIDJMLCA3TCwgaW1heCkpLAorICAgICAgICAgICAgICBhcy5saXN0KGMoTkEsIE5hTiwgLUluZiwgLTFlMzAwLCAtMWUxOCwgLTcuNSwgLTIsIC0wLjMsIC0xZS0zMDAsCisgICAgICAgICAgICAgICAgICAgICAgICAtMCwgMCwgNWUtMzI0LCAwLjMsIDEsIDIsIDcuNSwgMWUxOCwgMWUzMDAsIEluZikpKQorICAgIHJ1biA8LSBmdW5jdGlvbihmLCB4LCB5KSB7CisgICAgICAgIG1zZ3MgPC0gY2hhcmFjdGVyKCkKKyAgICAgICAgdmFsIDwtIHdpdGhDYWxsaW5nSGFuZGxlcnMoZih4LCB5KSwgd2FybmluZyA9IGZ1bmN0aW9uKHcpIHsKKyAgICAgICAgICAgIG1zZ3MgPDwtIGMobXNncywgY29uZGl0aW9uTWVzc2FnZSh3KSwgZGVwYXJzZShjb25kaXRpb25DYWxsKHcpKSkKKyAgICAgICAgICAgIGludm9rZVJlc3RhcnQoIm11ZmZsZVdhcm5pbmciKQorICAgICAgICB9KQorICAgICAgICBsaXN0KHZhbFsxTF0sIG1zZ3MpCisgICAgfQorICAgIGZvciAob3AgaW4gYygiJSUiLCAiJS8lIikpIHsKKyAgICAgICAgZnVuIDwtIGZ1bmN0aW9uKHgsIHkpIE5VTEwKKyAgICAgICAgYm9keShmdW4pIDwtIGNhbGwob3AsIHF1b3RlKHgpLCBxdW90ZSh5KSkKKyAgICAgICAgZm9yIChmIGluIGxpc3QoZnVuLCBjb21waWxlcjo6Y21wZnVuKGZ1bikpKQorICAgICAgICAgICAgZm9yICh4IGluIHZhbHMpIGZvciAoeSBpbiB2YWxzKSB7CisgICAgICAgICAgICAgICAgcyA8LSBydW4oZiwgeCwgeSkKKyAgICAgICAgICAgICAgICB2IDwtIHJ1bihmLCBjKHgsIDFMKSwgYyh5LCAxTCkpICMgMXN0IGVsZW1lbnQsIGFzIHZlY3RvcnMKKyAgICAgICAgICAgICAgICBpZiAoaXMubmEoeCkgJiYgaXMubmEoeSkgJiYgaXMubmFuKHgpICE9IGlzLm5hbih5KSkKKyAgICAgICAgICAgICAgICAgICAgIyMgTkEgd2l0aCBOYU4gbWF5IGdpdmUgZWl0aGVyLCBzZWUgP05BCisgICAgICAgICAgICAgICAgICAgIHN0b3BpZm5vdChpcy5uYShzW1sxTF1dKSwgaXMubmEodltbMUxdXSkpCisgICAgICAgICAgICAgICAgZWxzZQorICAgICAgICAgICAgICAgICAgICBzdG9waWZub3QoaWRlbnRpY2FsKHMsIHYsIG51bS5lcSA9IEZBTFNFKSkKKyAgICAgICAgICAgICAgICBpZiAoaXMuaW50ZWdlcih4KSAmJiBpcy5pbnRlZ2VyKHkpKSB7ICMgYXMgZm9yIGRvdWJsZXMKKyAgICAgICAgICAgICAgICAgICAgZCA8LSBmKGFzLmRvdWJsZSh4KSwgYXMuZG91YmxlKHkpKQorICAgICAgICAgICAgICAgICAgICBpcy5uYShkKSA8LSAhaXMuZmluaXRlKGQpICMgemVybyBkaXZpc29yCisgICAgICAgICAgICAgICAgICAgIHN0b3BpZm5vdChpZGVudGljYWwoc1tbMUxdXSwgYXMuaW50ZWdlcihkKSkpCisgICAgICAgICAgICAgICAgfQorICAgICAgICAgICAgfQorICAgIH0KKyAgICAjIyBhdHRyaWJ1dGVzIGFyZSBrZXB0LCBhbmQgbWV0aG9kcyBkaXNwYXRjaGVkIHRvCisgICAgT3BzLmZvbyA8LSBmdW5jdGlvbihlMSwgZTIpIHBhc3RlKC5HZW5lcmljLCAibWV0aG9kIikKKyAgICBmb28gPC0gc3RydWN0dXJlKDdMLCBjbGFzcyA9ICJmb28iKQorICAgIHN0b3BpZm5vdChpZGVudGljYWwoZm9vICUlIDJMLCAiJSUgbWV0aG9kIiksCisgICAgICAgICAgICAgIGlkZW50aWNhbCgyICUvJSBmb28sICIlLyUgbWV0aG9kIiksCisgICAgICAgICAgICAgIGlkZW50aWNhbChjKGEgPSA3TCkgJSUgMkwsIGMoYSA9IDFMKSksCisgICAgICAgICAgICAgIGlkZW50aWNhbCg3ICUvJSBjKGIgPSAyKSwgYyhiID0gMykpLAorICAgICAgICAgICAgICBpZGVudGljYWwobWF0cml4KDdMKSAlLyUgMiwgbWF0cml4KDMpKSwKKyAgICAgICAgICAgICAgaWRlbnRpY2FsKHN0cnVjdHVyZSg3LCBjbGFzcyA9ICJiYXIiKSAlJSAyTCwKKyAgICAgICAgICAgICAgICAgICAgICAgIHN0cnVjdHVyZSgxLCBjbGFzcyA9ICJiYXIiKSkpCit9KQorc2V0Q2xhc3MoIm51bTQiLCBjb250YWlucyA9ICJudW1lcmljIikKK3NldE1ldGhvZCgiQXJpdGgiLCBjKCJudW00IiwgIm51bWVyaWMiKSwKKyAgICAgICAgICBmdW5jdGlvbihlMSwgZTIpIHBhc3RlKC5HZW5lcmljLCAibWV0aG9kIikpCitzdG9waWZub3QoaWRlbnRpY2FsKG5ldygibnVtNCIsIDcpICUlIDIsICIlJSBtZXRob2QiKSwKKyAgICAgICAgICBpZGVudGljYWwobmV3KCJudW00IiwgNykgJS8lIDJMLCAiJS8lIG1ldGhvZCIpLAorICAgICAgICAgIGlkZW50aWNhbCg3ICUlIG5ldygibnVtNCIsIDIpLCBuZXcoIm51bTQiLCAxKSksCisgICAgICAgICAgcmVtb3ZlTWV0aG9kKCJBcml0aCIsIGMoIm51bTQiLCAibnVtZXJpYyIpKSwgcmVtb3ZlQ2xhc3MoIm51bTQiKSkKKyMjIHNjYWxhcnMgdG9vayB0aGUgZ2VuZXJhbCBjb2RlIGluIFIgPD0gNC42LjIKKworCiAKIAogIyMga2VlcCBhdCBlbmQK",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        },
+        {
+          "creation_time": "2026-11-14T21:36:49Z",
+          "summary": "benchmark: ns per evaluation of scalar %% and %/%",
+          "file_name": "arith-scalar-mod-idiv-bench.R",
+          "bug_id": 19321,
+          "last_change_time": "2026-11-14T21:36:49Z",
+          "size": 1262,
+          "is_private": false,
+          "id": 4072,
+          "creator": "kevinushey",
+          "data": "IyMgJSUgYW5kICUvJSBvbiBzY2FsYXJzOiBucyBwZXIgZXZhbHVhdGlvbiAobG9vcCBvdmVyaGVhZCBpbmNsdWRlZCksCiMjIGJlc3Qgb2YgNSBydW5zLgojIyBSdW4gd2l0aCBgUiAtLXZhbmlsbGEgLWYgYXJpdGgtc2NhbGFyLW1vZC1pZGl2LWJlbmNoLlJgIG9uIHR3byBidWlsZHMgb2YKIyMgUiB0aGF0IGRpZmZlciBvbmx5IGluIHRoZSBwYXRjaCAoc2FtZSBjb21waWxlciwgc2FtZSBmbGFncykuIEJhc2UgUiBvbmx5LgoKeCA8LSA3LjU7IHhpIDwtIDVMCm4gPC0gMWU3Cgp0aW1lX25zIDwtIGZ1bmN0aW9uKGV4cHIpIHsKICAgIGxvb3AgPC0gcGFyc2UodGV4dCA9IHNwcmludGYoImZvciAoaSBpbiAxOm4pICVzIiwgZXhwcikpW1sxTF1dCiAgICBzZWNzIDwtIHJlcGxpY2F0ZSg1LCB7IGdjKEZBTFNFKTsgc3lzdGVtLnRpbWUoZXZhbChsb29wLCBnbG9iYWxlbnYoKSkpW1siZWxhcHNlZCJdXSB9KQogICAgMWU5ICogbWluKHNlY3MpIC8gbgp9CgpleHBycyA8LSBjKCJpbnRlZ2VyLCBpbnRlZ2VyIiAgICAgICAgPSAieGkgJSUgMkwiLAogICAgICAgICAgICJpbnRlZ2VyLCBpbnRlZ2VyIiAgICAgICAgPSAieGkgJS8lIDJMIiwKICAgICAgICAgICAiZG91YmxlLCBkb3VibGUiICAgICAgICAgID0gInggJSUgMiIsCiAgICAgICAgICAgImRvdWJsZSwgZG91YmxlIiAgICAgICAgICA9ICJ4ICUvJSAyIiwKICAgICAgICAgICAiaW50ZWdlciwgZG91YmxlIiAgICAgICAgID0gInhpICUlIDIiLAogICAgICAgICAgICJmb3Igc2NhbGUiICAgICAgICAgICAgICAgPSAieCA9PSAyIikKbnMgPC0gdmFwcGx5KGV4cHJzLCB0aW1lX25zLCAwKQoKIyMgdGhlIHNhbWUgaW4gYSBmdW5jdGlvbjogY291bnQgdGhlIGV2ZW4gbnVtYmVycyB1cCB0byBuCmNvdW50X2V2ZW4gPC0gZnVuY3Rpb24obikgewogICAgayA8LSAwTAogICAgZm9yIChpIGluIDE6bikKICAgICAgICBpZiAoaSAlJSAyTCA9PSAwTCkKICAgICAgICAgICAgayA8LSBrICsgMUwKICAgIGsKfQpzZWNzIDwtIHJlcGxpY2F0ZSg1LCB7IGdjKEZBTFNFKTsgc3lzdGVtLnRpbWUoY291bnRfZXZlbihuKSlbWyJlbGFwc2VkIl1dIH0pCgpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKY2F0KHNwcmludGYoIiUtMTJzICUtMjBzICU3LjFmIG5zXG4iLCBleHBycywgbmFtZXMoZXhwcnMpLCBucyksIHNlcCA9ICIiKQpjYXQoc3ByaW50ZigiJS0zM3MgJTcuMWYgbnMgcGVyIGl0ZXJhdGlvblxuIiwgImNvdW50X2V2ZW4oMWU3KSIsIDFlOSAqIG1pbihzZWNzKSAvIG4pKQo=",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": false
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-14 23:07:07"
+}

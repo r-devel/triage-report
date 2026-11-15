@@ -115,7 +115,6 @@ These Triage Team patches can wait their turn.
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19314](https://bugs.r-project.org/show_bug.cgi?id=19314) — speed up integer and mixed integer/double arithmetic loops (2026-11-13)
-* [Bug 19318](https://bugs.r-project.org/show_bug.cgi?id=19318) — .C() bounds-check errors print an uninitialised routine name when .NAME is a NativeSymbolInfo (2026-11-14)
 
 #### Mac GUI / Mac specific
 
@@ -129,13 +128,15 @@ These Triage Team patches can wait their turn.
 * [Bug 19042](https://bugs.r-project.org/show_bug.cgi?id=19042) — Provide getDLLVersion on all platforms? (2026-04-02)
 * [Bug 19141](https://bugs.r-project.org/show_bug.cgi?id=19141) — `is.na()` and the `as.*()` coercions read their argument one element at a time (2026-09-03)
 * [Bug 19159](https://bugs.r-project.org/show_bug.cgi?id=19159) — hashed environments: grow the hash table at 0.75 bindings per chain, to prime sizes that suit the PJW hash (2026-09-04)
-* [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-11)
 * [Bug 19303](https://bugs.r-project.org/show_bug.cgi?id=19303) — Improve bcEval_loop() performance by intentionally spilling rarely-used variables (2026-11-12)
 * [Bug 19304](https://bugs.r-project.org/show_bug.cgi?id=19304) — Improve closure call performance by searching unhashed frames inline in GET_BINDING_CELL() (2026-11-12)
 * [Bug 19309](https://bugs.r-project.org/show_bug.cgi?id=19309) — Improve closure call performance by matching untagged arguments by position in one pass (2026-11-12)
 * [Bug 19315](https://bugs.r-project.org/show_bug.cgi?id=19315) — Reduce UseMethod() C stack use by moving error-message buffers out of the dispatch frames (2026-11-14)
 * [Bug 19316](https://bugs.r-project.org/show_bug.cgi?id=19316) — Improve closure call and string hashing performance: cheaper begincontext() and inline vmaxget()/vmaxset() within R (2026-11-14)
 * [Bug 19317](https://bugs.r-project.org/show_bug.cgi?id=19317) — Reduce C stack use of eval() and bcEval_loop() by moving the builtin-call context out of their frames (2026-11-14)
+* [Bug 19320](https://bugs.r-project.org/show_bug.cgi?id=19320) — Improve performance of internal generics on classed objects: look up the S3 method before setting up the dispatch (2026-11-14)
+* [Bug 19322](https://bugs.r-project.org/show_bug.cgi?id=19322) — Improve `$` and `[[` performance on lists: match names without translating each one (2026-11-14)
+* [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-14)
 
 ### P5
 
