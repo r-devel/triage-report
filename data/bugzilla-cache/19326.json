@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-11-15T22:39:50Z",
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "besselJ/Y/I/K allocate up to 8 GB of unused work space for orders above the supported maximum",
+        "status": "UNCONFIRMED",
+        "resolution": "",
+        "creator_detail": {
+          "name": "jeroenooms",
+          "id": 610,
+          "real_name": "Jeroen Ooms"
+        },
+        "platform": "Other",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": false,
+        "is_creator_accessible": true,
+        "creator": "jeroenooms",
+        "alias": [],
+        "deadline": {},
+        "id": 19326,
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-11-15T22:39:50Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": "",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Low-level",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19326": {
+        "comments": [
+          {
+            "creator": "jeroenooms",
+            "creation_time": "2026-11-15T22:39:50Z",
+            "count": 0,
+            "is_markdown": true,
+            "text": "Created attachment 4078\nFix bessel allocation\n\nWith a 4GB address space limit:\n\n  $ ulimit -v 4000000\n  $ Rscript -e 'besselJ(1, 2^64)'\n  Error: cannot allocate vector of size 7.5 Gb\n\ninstead of NaN with a \"too large for bessel_j() algorithm\" warning.\nOn OpenBSD this makes tests/reg-tests-1c.R fail (PR#19175 test),\nbecause OpenBSD refuses the allocation. On Linux it succeeds only\nbecause the memory is never touched.\n\nmath2B() and math3B() in src/main/arithmetic.c size the work array by\nthe largest |nu|, capped at the maximum supported order (1e9 for\nbesselJ/I/K, 1e7 for besselY), i.e. up to 1e9 doubles. But for orders\nabove that maximum, bessel_[jyik]_ex() return NaN without using the\nwork array (also via their nu < 0 branches), so that allocation is\nnever needed.\n\nThe attached patch leaves such orders out of the work-array size.\nResults are unchanged: identical output on Linux for the PR#19175\nexamples and a set of in-range orders, and besselJ(1, 2^64) now runs\nunder the 4GB limit. With the patch, R-devel passes make check-all on\nOpenBSD 8.0.",
+            "bug_id": 19326,
+            "attachment_id": 4078,
+            "tags": [],
+            "is_private": false,
+            "time": "2026-11-15T22:39:50Z",
+            "id": 104265
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19326": [
+        {
+          "is_patch": true,
+          "data": "LS0tIGEvc3JjL21haW4vYXJpdGhtZXRpYy5jCisrKyBiL3NyYy9tYWluL2FyaXRobWV0aWMuYwpAQCAtMTYyOCwxMSArMTYyOCwxMSBAQAogICAgIGRvdWJsZSBhbWF4ID0gMC47CiAgICAgZm9yIChpID0gMDsgaSA8IG5iOyBpKyspIHsKIAlkb3VibGUgYXYgPSBiW2ldIDwgMC4gPyAtYltpXSA6IGJbaV07Ci0JaWYgKGFtYXggPCBhdikKKwkvKiBsYXJnZXIgfG51fCBnaXZlIE5hTiB3aXRoIGEgd2FybmluZyBpbiAuLi9ubWF0aC9iZXNzZWxfW2p5XS5jCisJICAgd2l0aG91dCB1c2luZyAnd29yayc6IGRvbid0IGFsbG9jYXRlICh1cCB0byA4IEdCKSBmb3IgdGhlbSAqLworCWlmIChhbWF4IDwgYXYgJiYgYXYgPD0gbWF4X2FscGhhKQogCSAgICBhbWF4ID0gYXY7CiAgICAgfQotICAgIGlmIChhbWF4ID4gbWF4X2FscGhhKQotCWFtYXggPSBtYXhfYWxwaGE7IC8vIGFuZCB3YXJuaW5nIHdpbGwgaGFwcGVuIGluIC4uL25tYXRoL2Jlc3NlbF9banldLmMKICAgICBjb25zdCB2b2lkICp2bWF4ID0gdm1heGdldCgpOwogICAgIHNpemVfdCBudyA9IDEgKyAoc2l6ZV90KWZsb29yKGFtYXgpOwogICAgIGRvdWJsZSAqd29yayA9IChkb3VibGUgKikgUl9hbGxvYyhudywgc2l6ZW9mKGRvdWJsZSkpOwpAQCAtMjA2NywxMCArMjA2NywxMCBAQAogICAgIGFtYXggPSAwLjA7CiAgICAgZm9yIChpID0gMDsgaSA8IG5iOyBpKyspIHsKIAlkb3VibGUgYXYgPSBiW2ldIDwgMCA/IC1iW2ldIDogYltpXTsKLQlpZiAoYXYgPiBhbWF4KSBhbWF4ID0gYXY7CisJLyogbGFyZ2VyIHxudXwgZ2l2ZSBOYU4gd2l0aCBhIHdhcm5pbmcgaW4gLi4vbm1hdGgvYmVzc2VsX1tpa10uYworCSAgIHdpdGhvdXQgdXNpbmcgJ3dvcmsnOiBkb24ndCBhbGxvY2F0ZSAodXAgdG8gOCBHQikgZm9yIHRoZW0gKi8KKwlpZiAoYXYgPiBhbWF4ICYmIGF2IDw9IE1fYmVzc2VsX2lrX21heF9hbHBoYSkgYW1heCA9IGF2OwogICAgIH0KLSAgICBpZiAoYW1heCA+IE1fYmVzc2VsX2lrX21heF9hbHBoYSkKLQlhbWF4ID0gTV9iZXNzZWxfaWtfbWF4X2FscGhhOyAvLyBhbmQgd2FybmluZyB3aWxsIGhhcHBlbiBpbiAuLi9ubWF0aC9iZXNzZWxfW2lrXS5jCiAgICAgY29uc3Qgdm9pZCAqdm1heCA9IHZtYXhnZXQoKTsKICAgICBudyA9IDEgKyAoc2l6ZV90KWZsb29yKGFtYXgpOwogICAgIHdvcmsgPSAoZG91YmxlICopIFJfYWxsb2MobncsIHNpemVvZihkb3VibGUpKTsK",
+          "creator": "jeroenooms",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "size": 1209,
+          "last_change_time": "2026-11-15T22:39:50Z",
+          "id": 4078,
+          "is_private": false,
+          "summary": "Fix bessel allocation",
+          "creation_time": "2026-11-15T22:39:50Z",
+          "bug_id": 19326,
+          "file_name": "bessel.patch"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-15 22:39:50"
+}

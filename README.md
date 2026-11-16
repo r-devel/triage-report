@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-14._
+_Automatically generated from the R Bugzilla dump updated 2026-11-15._
 
 ## Triaged bugs
 
@@ -158,6 +158,9 @@ These patches have not yet been prioritised.
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
 * [Bug 19313](https://bugs.r-project.org/show_bug.cgi?id=19313) — C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults (2026-11-13)
+* [Bug 19326](https://bugs.r-project.org/show_bug.cgi?id=19326) — besselJ/Y/I/K allocate up to 8 GB of unused work space for orders above the supported maximum (2026-11-15)
+* [Bug 19327](https://bugs.r-project.org/show_bug.cgi?id=19327) — tan(1+1000i) is NaN+1i when the system ctan() overflows (OpenBSD) (2026-11-15)
+* [Bug 19328](https://bugs.r-project.org/show_bug.cgi?id=19328) — as.POSIXct() gives NA for years where tm_year + 1900 overflows int (OpenBSD mktime) (2026-11-15)
 
 #### Misc
 

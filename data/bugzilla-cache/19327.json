@@ -1,0 +1,100 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_creator_accessible": true,
+        "creator": "jeroenooms",
+        "alias": [],
+        "op_sys": "Other",
+        "is_confirmed": false,
+        "platform": "Other",
+        "flags": [],
+        "creator_detail": {
+          "real_name": "Jeroen Ooms",
+          "id": 610,
+          "name": "jeroenooms"
+        },
+        "resolution": "",
+        "status": "UNCONFIRMED",
+        "summary": "tan(1+1000i) is NaN+1i when the system ctan() overflows (OpenBSD)",
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "cc_detail": [],
+        "last_change_time": "2026-11-15T22:43:00Z",
+        "see_also": [],
+        "target_milestone": "---",
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "whiteboard": "",
+        "creation_time": "2026-11-15T22:43:00Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "cc": [],
+        "qa_contact": "",
+        "id": 19327,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {}
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19327": {
+        "comments": [
+          {
+            "bug_id": 19327,
+            "text": "Created attachment 4079\nFix ctan overflow\n\nOn OpenBSD, tests/complex.R fails in the PR#7781 test:\n\n  > tan(1+1000i)\n  [1] NaN+1i          # expected 0+1i\n  Warning message: NaNs produced in function \"tan\"\n\nOpenBSD's ctan() (lib/libm/src/s_ctan.c) computes\n\n  d = cos(2x) + cosh(2y);\n  w = sin(2x)/d + (sinh(2y)/d) * I;\n\nFor large |y|, sinh and cosh overflow, so the imaginary part is\nInf/Inf = NaN, and the multiplication by I makes the real part NaN as\nwell. z_tan() in src/main/complex.c already works around broken ctan()\nfor |y| > 25 by setting the imaginary part to +/-1, but keeps the NaN\nreal part.\n\nThe attached patch also recomputes the real part with A&S 4.3.57 (the\nformula used by R's own ctan() substitute) when it is NaN. That formula\ngives 0 when cosh() overflows. Platforms whose ctan() returns a finite\nreal part are unaffected. This does not reproduce with glibc; the\nOpenBSD code above gives NaN+NaNi when compiled anywhere.\n\nWith the patch, R-devel passes make check-all on OpenBSD 8.0.",
+            "is_markdown": true,
+            "count": 0,
+            "creation_time": "2026-11-15T22:43:00Z",
+            "creator": "jeroenooms",
+            "id": 104266,
+            "time": "2026-11-15T22:43:00Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 4079
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19327": [
+        {
+          "is_private": false,
+          "id": 4079,
+          "last_change_time": "2026-11-15T22:43:00Z",
+          "size": 729,
+          "file_name": "ctan.patch",
+          "bug_id": 19327,
+          "creation_time": "2026-11-15T22:43:00Z",
+          "summary": "Fix ctan overflow",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "jeroenooms",
+          "data": "LS0tIGEvc3JjL21haW4vY29tcGxleC5jCisrKyBiL3NyYy9tYWluL2NvbXBsZXguYwpAQCAtNTE4LDExICs1MTgsMTggQEAKICAgICBkb3VibGUgY29tcGxleCByID0gY3Rhbih6KTsKICAgICBpZihSX0ZJTklURSh5KSAmJiBmYWJzKHkpID4gMjUuMCkgewogCS8qIGF0IHRoaXMgcG9pbnQgdGhlIHJlYWwgcGFydCBpcyBuZWFybHkgemVybywgYW5kIHRoZQotCSAgIGltYWdpbmFyeSBwYXJ0IGlzIG9uZTogYnV0IHNvbWUgT1NlcyBnZXQgdGhlIGltYWcgYXMgTmFOICovCisJICAgaW1hZ2luYXJ5IHBhcnQgaXMgb25lOiBidXQgc29tZSBPU2VzIGdldCB0aGUgaW1hZyBhcyBOYU4sCisJICAgYW5kIE9wZW5CU0QgYWxzbyB0aGUgcmVhbCBwYXJ0IChpdCBtdWx0aXBsaWVzIEluZi9JbmYgYnkgSSkgKi8KKwlkb3VibGUgcnIgPSBjcmVhbChyKTsKKwlpZihJU05BTihycikpIHsKKwkgICAgZG91YmxlIHgyID0gMi4wICogY3JlYWwoeik7CisJICAgIHJyID0gc2luKHgyKSAvIChjb3MoeDIpICsgY29zaCgyLjAgKiB5KSk7IC8qIEEmUyA0LjMuNTcgKi8KKwl9CiAjaWYgX19HTlVDX18KKwlfX3JlYWxfXyByID0gcnI7CiAJX19pbWFnX18gciA9IHkgPCAwID8gLTEuMCA6IDEuMDsKICNlbHNlCi0JciA9IGNyZWFsKHIpICsgKHkgPCAwID8gLTEuMCA6IDEuMCkgKiBJOworCXIgPSByciArICh5IDwgMCA/IC0xLjAgOiAxLjApICogSTsKICNlbmRpZgogICAgIH0KICAgICByZXR1cm4gcjsK"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-15 22:43:00"
+}
