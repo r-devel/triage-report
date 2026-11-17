@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "blocks": [],
+        "url": "",
+        "summary": "Restore pow() accuracy for x^3 and x^4 with non-integer |x| <= 11",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-11-17T05:54:57Z",
+        "cc_detail": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "flags": [],
+        "platform": "All",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "priority": "P3",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-17T05:54:44Z",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19330,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "assigned_to": "R-core",
+        "component": "Accuracy",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "classification": "Unclassified"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19330": {
+        "comments": [
+          {
+            "creation_time": "2026-11-17T05:54:44Z",
+            "creator": "kevinushey",
+            "bug_id": 19330,
+            "text": "## Summary\n\nThis patch restores `pow()` accuracy, within about half an ulp, for `x^3` and `x^4` with non-integer |x| <= 11, which since R 4.6.0 are computed as `x*x*x` and `x*x*x*x` (up to 1.3 and 2 ulp off). Small integer powers stay exact on every platform.\n\n## Details\n\nr89376 added a shortcut to `R_pow()` in `src/main/arithmetic.c` for `y == 3, 4` and |x| <= 11. It makes small integer powers exact without the system `pow()`; for other x the products round two or three times, so of 200k random non-integer x in (-11, 11), 25% of `x^3` and 35% of `x^4` are not correctly rounded, against 0.1% with `pow()` (macOS arm64). As `R_pow()` is API, C code calling it benefits too.\n\nReproducible example: attached as `pow-small-integer-repro.R`; it prints `within_1_ulp` TRUE for all eight arguments in R 4.5.3 and with the patch, FALSE in R 4.6.x.\n\nProposed patch: attached as `pow-small-integer.diff`, against trunk r90915. It keeps the shortcut for integer x (`x == (int) x`) and adds a reg-test; `make check` passes.\n\nFound while working on [PR#19286](https://bugs.r-project.org/show_bug.cgi?id=19286); the patch is independent of the one there.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/501, where CI results can be seen.",
+            "count": 0,
+            "is_markdown": true,
+            "attachment_id": {},
+            "tags": [],
+            "id": 104278,
+            "time": "2026-11-17T05:54:44Z",
+            "is_private": false
+          },
+          {
+            "is_markdown": false,
+            "count": 1,
+            "bug_id": 19330,
+            "text": "Created attachment 4083\npatch: keep the R_pow() x^3, x^4 shortcut to integer x (against r90915)",
+            "creation_time": "2026-11-17T05:54:51Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 104279,
+            "time": "2026-11-17T05:54:51Z",
+            "attachment_id": 4083,
+            "tags": []
+          },
+          {
+            "attachment_id": 4084,
+            "tags": [],
+            "is_private": false,
+            "time": "2026-11-17T05:54:57Z",
+            "id": 104280,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-17T05:54:57Z",
+            "count": 2,
+            "is_markdown": false,
+            "text": "Created attachment 4084\nreproducer: x^3, x^4 more than 1 ulp off for non-integer x",
+            "bug_id": 19330
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19330": [
+        {
+          "creation_time": "2026-11-17T05:54:51Z",
+          "summary": "patch: keep the R_pow() x^3, x^4 shortcut to integer x (against r90915)",
+          "file_name": "pow-small-integer.diff",
+          "bug_id": 19330,
+          "last_change_time": "2026-11-17T05:54:51Z",
+          "size": 1292,
+          "is_private": false,
+          "id": 4083,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2FyaXRobWV0aWMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hcml0aG1ldGljLmMJKHJldmlzaW9uIDkwOTE1KQorKysgc3JjL21haW4vYXJpdGhtZXRpYy5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTUsNyArMjE1LDkgQEAgZG91YmxlIFJfcG93KGRvdWJsZSB4LCBkb3VibGUgeSkgLyogPSB4IF4geSAqLwogCWVsc2UgaWYoeSA8IDApIHJldHVybihSX1Bvc0luZik7CiAJZWxzZSByZXR1cm4oeSk7IC8qIE5BIG9yIE5hTiwgd2UgYXNzZXJ0ICovCiAgICAgfQotICAgIGlmICh4ID49IC0xMS4gJiYgeCA8PSAxMS4pIHsKKyAgICAvKiBleGFjdCBmb3Igc21hbGwgaW50ZWdlcnMsIHdoYXRldmVyIHRoZSBzeXN0ZW0gcG93KCk7IGZvciBvdGhlciB4LAorICAgICAgIHRoZSByZXBlYXRlZCBwcm9kdWN0cyBhcmUgbGVzcyBhY2N1cmF0ZSB0aGFuIHBvdygpICovCisgICAgaWYgKHggPj0gLTExLiAmJiB4IDw9IDExLiAmJiB4ID09IChpbnQpIHgpIHsKIAlpZih5ID09IDQuKQogCSAgICByZXR1cm4geCAqIHggKiB4ICogeDsKIAlpZih5ID09IDMuKQpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwOTE1KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ1MjAsNiArNDUyMCwxNCBAQCBzdG9waWZub3QoaWRlbnRpY2FsKHksIHgpLCBpZGVudGljYWwoeTAsIHkpLCBpZGVudGljYWwoeTEsIHVuY2xhc3MoeSkpKQogIyMgaW4gUiA8PSA0LjYuMgogCiAKKyMjIHheMyBhbmQgeF40IGZvciBub24taW50ZWdlciB8eHwgPD0gMTE6IHdpdGhpbiAxIHVscCwgYXMgZnJvbSBwb3coKQorc3RvcGlmbm90KDUuNjleMyAlaW4lIGMoMHgxLjcwNzBhNTA1MDdhNmRwKzcsIDB4MS43MDcwYTUwNTA3YTZlcCs3KSwKKyAgICAgICAgICAxLjNeNCAlaW4lIGMoMHgxLjZkOTRhZjRmMGQ4NDVwKzEsIDB4MS42ZDk0YWY0ZjBkODQ2cCsxKSkKK3ggPC0gYXMuZG91YmxlKC0xMToxMSkKK3N0b3BpZm5vdCh4XjMgPT0geCp4KngsIHheNCA9PSB4KngqeCp4KSAjIGV4YWN0IGZvciBzbWFsbCBpbnRlZ2VycworIyMgd2VyZSB4KngqeCBhbmQgeCp4KngqeCwgbW9yZSB0aGFuIDEgdWxwIG9mZiwgaW4gUiA0LjYueAorCisKIAogCiAjIyBrZWVwIGF0IGVuZAo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": true
+        },
+        {
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgeF4zIGFuZCB4XjQgZm9yIG5vbi1pbnRlZ2VyIHx4fCA8PSAxMSAoYmFzZSBSIG9ubHkpLgojIyBsbyBhbmQgaGkgYXJlIHRoZSB0d28gZG91YmxlcyBhcm91bmQgdGhlIGV4YWN0IHBvd2VyOyBhIHBvdygpIGFjY3VyYXRlCiMjIHRvIHdpdGhpbiAxIHVscCByZXR1cm5zIG9uZSBvZiB0aGVtLiAgU2luY2UgUiA0LjYuMCwgUl9wb3coKSByZXR1cm5zCiMjIHgqeCp4IGFuZCB4KngqeCp4IGhlcmUsIHdoaWNoIGFyZSBtb3JlIHRoYW4gMSB1bHAgb2ZmIGZvciB0aGVzZSB4LgpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKZCA8LSBkYXRhLmZyYW1lKAogICAgeCA9IGMoNS42OSwgNS43MSwgNi4yMSwgMTAuMDcsIDAuNjUsIDEuMywgMS4zMywgMS40MSksCiAgICBuID0gYygzLCAzLCAzLCAzLCA0LCA0LCA0LCA0KSwKICAgIGxvID0gYygweDEuNzA3MGE1MDUwN2E2ZHArNywgMHgxLjc0NTZiZDA5ZTEyYTRwKzcsIDB4MS5kZWY3NTNjNTc5ZjIzcCs3LAogICAgICAgICAgIDB4MS5mZTkyZGMyMmFiMjVicCs5LCAweDEuNmQ5NGFmNGYwZDg0NXAtMywgMHgxLjZkOTRhZjRmMGQ4NDVwKzEsCiAgICAgICAgICAgMHgxLjkwODM0ZWU5ZjJmODdwKzEsIDB4MS5mOWVjZTIyYjgzYmM0cCsxKSwKICAgIGhpID0gYygweDEuNzA3MGE1MDUwN2E2ZXArNywgMHgxLjc0NTZiZDA5ZTEyYTVwKzcsIDB4MS5kZWY3NTNjNTc5ZjI0cCs3LAogICAgICAgICAgIDB4MS5mZTkyZGMyMmFiMjVjcCs5LCAweDEuNmQ5NGFmNGYwZDg0NnAtMywgMHgxLjZkOTRhZjRmMGQ4NDZwKzEsCiAgICAgICAgICAgMHgxLjkwODM0ZWU5ZjJmODhwKzEsIDB4MS5mOWVjZTIyYjgzYmM1cCsxKQopCmQkcmVzdWx0IDwtIGQkeF5kJG4KZCR3aXRoaW5fMV91bHAgPC0gZCRyZXN1bHQgPT0gZCRsbyB8IGQkcmVzdWx0ID09IGQkaGkKZCRpc19wcm9kdWN0IDwtIGQkcmVzdWx0ID09IGlmZWxzZShkJG4gPT0gMywgZCR4ICogZCR4ICogZCR4LCBkJHggKiBkJHggKiBkJHggKiBkJHgpCnByaW50KGRhdGEuZnJhbWUoeCA9IGQkeCwgbiA9IGQkbiwgcmVzdWx0ID0gc3ByaW50ZigiJWEiLCBkJHJlc3VsdCksCiAgICAgICAgICAgICAgICAgbG8gPSBzcHJpbnRmKCIlYSIsIGQkbG8pLCBoaSA9IHNwcmludGYoIiVhIiwgZCRoaSksCiAgICAgICAgICAgICAgICAgd2l0aGluXzFfdWxwID0gZCR3aXRoaW5fMV91bHAsIGlzX3Byb2R1Y3QgPSBkJGlzX3Byb2R1Y3QpKQojIyBleHBlY3RlZDogd2l0aGluXzFfdWxwIFRSVUUgZm9yIGFsbCAoUiA0LjUuMywgYW5kIHdpdGggdGhlIHBhdGNoKTsKIyMgUiA0LjYueCBnaXZlcyBGQUxTRSBmb3IgYWxsLCB3aXRoIGlzX3Byb2R1Y3QgVFJVRQo=",
+          "is_patch": false,
+          "file_name": "pow-small-integer-repro.R",
+          "bug_id": 19330,
+          "creation_time": "2026-11-17T05:54:57Z",
+          "summary": "reproducer: x^3, x^4 more than 1 ulp off for non-integer x",
+          "is_private": false,
+          "id": 4084,
+          "last_change_time": "2026-11-17T05:54:57Z",
+          "size": 1328
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-17 05:54:57"
+}

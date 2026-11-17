@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-15._
+_Automatically generated from the R Bugzilla dump updated 2026-11-17._
 
 ## Triaged bugs
 
@@ -71,6 +71,7 @@ These Triage Team patches should be looked at next.
 #### Accuracy
 
 * [Bug 19277](https://bugs.r-project.org/show_bug.cgi?id=19277) — sample() without replacement draws zero-weight and least likely items with wrong probabilities (2026-11-02)
+* [Bug 19330](https://bugs.r-project.org/show_bug.cgi?id=19330) — Restore pow() accuracy for x^3 and x^4 with non-integer |x| <= 11 (2026-11-17)
 
 #### I/O
 
@@ -137,6 +138,7 @@ These Triage Team patches can wait their turn.
 * [Bug 19320](https://bugs.r-project.org/show_bug.cgi?id=19320) — Improve performance of internal generics on classed objects: look up the S3 method before setting up the dispatch (2026-11-14)
 * [Bug 19322](https://bugs.r-project.org/show_bug.cgi?id=19322) — Improve `$` and `[[` performance on lists: match names without translating each one (2026-11-14)
 * [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-14)
+* [Bug 19329](https://bugs.r-project.org/show_bug.cgi?id=19329) — unique(), duplicated(): avoid re-translating long latin1 strings on every hash probe (2026-11-17)
 
 ### P5
 
@@ -158,7 +160,6 @@ These patches have not yet been prioritised.
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
 * [Bug 19313](https://bugs.r-project.org/show_bug.cgi?id=19313) — C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults (2026-11-13)
-* [Bug 19326](https://bugs.r-project.org/show_bug.cgi?id=19326) — besselJ/Y/I/K allocate up to 8 GB of unused work space for orders above the supported maximum (2026-11-15)
 * [Bug 19327](https://bugs.r-project.org/show_bug.cgi?id=19327) — tan(1+1000i) is NaN+1i when the system ctan() overflows (OpenBSD) (2026-11-15)
 * [Bug 19328](https://bugs.r-project.org/show_bug.cgi?id=19328) — as.POSIXct() gives NA for years where tm_year + 1900 overflows int (OpenBSD mktime) (2026-11-15)
 
@@ -169,7 +170,6 @@ These patches have not yet been prioritised.
 
 #### S4methods
 
-* [Bug 19079](https://bugs.r-project.org/show_bug.cgi?id=19079) — S4 packages with group methods error with "subscript out of bounds" under unloadNamespace with Imports: methods (2026-05-29, in CC: lawrence)
 * [Bug 19083](https://bugs.r-project.org/show_bug.cgi?id=19083) — setGeneric("f", \(x) { standardGeneric("x") }) makes generic with class 'nonstandardGenericFunction' (2026-06-22, in CC: maechler)
 * [Bug 19237](https://bugs.r-project.org/show_bug.cgi?id=19237) — .updateMethodsInTable for group generics inefficiently over-checks signatures (up and down groups) (2026-10-21)
 * [Bug 19239](https://bugs.r-project.org/show_bug.cgi?id=19239) — Add fast paths for quadratic loop in .resetInheritedMethods (2026-10-21)
