@@ -1,142 +1,176 @@
 {
   "bug": {
+    "faults": [],
     "bugs": [
       {
+        "assigned_to": "R-core",
         "classification": "Unclassified",
         "keywords": [],
-        "is_open": true,
         "depends_on": [],
+        "is_open": true,
         "component": "Wishlist",
-        "assigned_to": "R-core",
-        "cc": [],
-        "qa_contact": "",
-        "deadline": {},
-        "id": 19329,
-        "severity": "enhancement",
-        "dupe_of": {},
         "creation_time": "2026-11-17T02:06:08Z",
         "version": "R-devel (trunk)",
         "whiteboard": "",
         "product": "R",
         "priority": "P4",
+        "qa_contact": "",
+        "cc": [
+          "maechler"
+        ],
+        "id": 19329,
+        "deadline": {},
+        "severity": "enhancement",
+        "dupe_of": {},
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
         "resolution": "",
         "creator_detail": {
           "real_name": "Kevin Ushey",
-          "id": 1044,
-          "name": "kevinushey"
+          "name": "kevinushey",
+          "id": 1044
         },
-        "status": "NEW",
-        "creator": "kevinushey",
-        "is_creator_accessible": true,
-        "alias": [],
-        "platform": "All",
-        "flags": [],
-        "is_confirmed": true,
-        "op_sys": "All",
-        "last_change_time": "2026-11-17T02:06:27Z",
-        "cc_detail": [],
-        "see_also": [],
-        "target_milestone": "---",
-        "groups": [],
+        "status": "CONFIRMED",
         "assigned_to_detail": {
           "real_name": "R-core",
           "name": "R-core",
           "id": 16
         },
+        "groups": [],
         "is_cc_accessible": true,
         "summary": "unique(), duplicated(): avoid re-translating long latin1 strings on every hash probe",
         "url": "",
-        "blocks": []
+        "blocks": [],
+        "cc_detail": [
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2026-11-17T12:19:01Z",
+        "target_milestone": "---",
+        "see_also": []
       }
-    ],
-    "faults": []
+    ]
   },
   "comments": {
-    "comments": {},
     "bugs": {
       "19329": {
         "comments": [
           {
+            "is_markdown": true,
+            "count": 0,
+            "text": "## Summary\n\nNice to have: `unique()`, `duplicated()` and `anyDuplicated()` can take seconds on a few thousand strings when one of them is a long latin1 string. The attached patch makes this fast without changing any results.\n\n## Details\n\nWith a marked encoding present, `sequal()` in `src/main/unique.c` falls back to `Seql()`, which translates both strings to UTF-8 on every hash probe, so a long latin1 string is translated again for each lookup that probes past it. `shash()` also skips each string's first byte, apparently an oversight, so `\"\"`, all one-character strings, and all strings differing only in their first byte hash alike. Found by OSS-Fuzz as a timeout.\n\nReproducible example: attached as `unique-latin1-translate-repro.R`; its two cases take 8.8 s and 1.7 s on r90913 (macOS), well under a second with the patch.\n\nProposed patch: attached as `unique-latin1-translate.diff`; since translating latin1 never shortens it, `sequal()` rejects a latin1 string against a shorter string that needs no translation, and `shash()` hashes from the first byte. Results are unchanged on 2000 random mixed-encoding vectors; a regression test is added to `tests/reg-fuzz.R`.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/499, where CI results can be seen.",
+            "bug_id": 19329,
             "creator": "kevinushey",
+            "creation_time": "2026-11-17T02:06:08Z",
+            "is_private": false,
+            "time": "2026-11-17T02:06:08Z",
+            "id": 104274,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "count": 1,
+            "is_markdown": false,
+            "bug_id": 19329,
+            "text": "Created attachment 4081\npatch: skip translating a longer latin1 string in sequal(), hash strings from the first byte (against r90913)",
+            "creation_time": "2026-11-17T02:06:24Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 104275,
+            "time": "2026-11-17T02:06:24Z",
+            "tags": [],
+            "attachment_id": 4081
+          },
+          {
+            "attachment_id": 4082,
+            "time": "2026-11-17T02:06:27Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 104276,
+            "is_private": false,
+            "creation_time": "2026-11-17T02:06:27Z",
+            "bug_id": 19329,
+            "text": "Created attachment 4082\nreproducer: unique() with a long latin1 string among short strings",
+            "count": 2
+          },
+          {
+            "creator": "maechler",
             "is_markdown": true,
             "attachment_id": {},
-            "time": "2026-11-17T02:06:08Z",
-            "creation_time": "2026-11-17T02:06:08Z",
+            "time": "2026-11-17T11:52:40Z",
+            "creation_time": "2026-11-17T11:52:40Z",
+            "text": "Hmm... sounds all \"convincing\",\nbut when I use your regression test example -- *and* replace your 5000 by\n99000 in `strrep()` to create the long latin1 string, and call `system.time()` around it,\nI get  0.023 sec for R 4.6.2\nand    0.017 sec for R-devel (with your patch applied).\n\nSomething seems strange ...",
             "bug_id": 19329,
-            "text": "## Summary\n\nNice to have: `unique()`, `duplicated()` and `anyDuplicated()` can take seconds on a few thousand strings when one of them is a long latin1 string. The attached patch makes this fast without changing any results.\n\n## Details\n\nWith a marked encoding present, `sequal()` in `src/main/unique.c` falls back to `Seql()`, which translates both strings to UTF-8 on every hash probe, so a long latin1 string is translated again for each lookup that probes past it. `shash()` also skips each string's first byte, apparently an oversight, so `\"\"`, all one-character strings, and all strings differing only in their first byte hash alike. Found by OSS-Fuzz as a timeout.\n\nReproducible example: attached as `unique-latin1-translate-repro.R`; its two cases take 8.8 s and 1.7 s on r90913 (macOS), well under a second with the patch.\n\nProposed patch: attached as `unique-latin1-translate.diff`; since translating latin1 never shortens it, `sequal()` rejects a latin1 string against a shorter string that needs no translation, and `shash()` hashes from the first byte. Results are unchanged on 2000 random mixed-encoding vectors; a regression test is added to `tests/reg-fuzz.R`.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/499, where CI results can be seen.",
-            "count": 0,
+            "count": 3,
             "tags": [],
-            "id": 104274,
+            "id": 104291,
             "is_private": false
           },
           {
-            "creation_time": "2026-11-17T02:06:24Z",
-            "creator": "kevinushey",
-            "is_markdown": false,
-            "count": 1,
+            "creator": "maechler",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-11-17T12:19:01Z",
+            "creation_time": "2026-11-17T12:19:01Z",
+            "text": "(In reply to Martin Maechler from comment #3)\n...........\n> I get  0.023 sec for R 4.6.2\n> and    0.017 sec for R-devel (with your patch applied).\n\n\nWell, aah, \nAah... but yes, the reproducer script attachment 4082 (orders of magnitude larger; not just 7k in size)  does well show the long timings before applying the patch. \nHence your `reg-fuzz.R` code is really only showing that old and new `unique()`, `duplicated()`, etc  do continue to work as they did previously.\n\n... I'll commit a version of your patch, I'm having ready,  later today.",
             "bug_id": 19329,
-            "text": "Created attachment 4081\npatch: skip translating a longer latin1 string in sequal(), hash strings from the first byte (against r90913)",
-            "attachment_id": 4081,
+            "count": 4,
             "tags": [],
-            "is_private": false,
-            "id": 104275,
-            "time": "2026-11-17T02:06:24Z"
-          },
-          {
-            "id": 104276,
-            "is_private": false,
-            "tags": [],
-            "text": "Created attachment 4082\nreproducer: unique() with a long latin1 string among short strings",
-            "bug_id": 19329,
-            "count": 2,
-            "creation_time": "2026-11-17T02:06:27Z",
-            "time": "2026-11-17T02:06:27Z",
-            "attachment_id": 4082,
-            "is_markdown": false,
-            "creator": "kevinushey"
+            "id": 104292,
+            "is_private": false
           }
         ]
       }
-    }
+    },
+    "comments": {}
   },
   "attachments": {
+    "attachments": {},
     "bugs": {
       "19329": [
         {
-          "bug_id": 19329,
-          "file_name": "unique-latin1-translate.diff",
-          "summary": "patch: skip translating a longer latin1 string in sequal(), hash strings from the first byte (against r90913)",
-          "creation_time": "2026-11-17T02:06:24Z",
-          "id": 4081,
-          "is_private": false,
-          "size": 2981,
-          "last_change_time": "2026-11-17T02:06:24Z",
-          "is_obsolete": false,
-          "flags": [],
-          "content_type": "text/plain",
-          "data": "SW5kZXg6IHNyYy9tYWluL3VuaXF1ZS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3VuaXF1ZS5jCShyZXZpc2lvbiA5MDkxMykKKysrIHNyYy9tYWluL3VuaXF1ZS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTksNyArMjE5LDcgQEAgc3RhdGljIFJfSU5MSU5FIGhsZW4gc2hhc2goU0VYUCB4LCBSX3hsZW5fdCBpbmR4LCBIYXNoRGF0YSAqZCkKIAljb25zdCB2b2lkICp2bWF4ID0gdm1heGdldCgpOwogCXAgPSBub1RyYW5zID8gQ0hBUih4aSkgOiB0cmFuc2xhdGVDaGFyVVRGOCh4aSk7CiAJayA9IDA7Ci0Jd2hpbGUgKCpwKyspCisJZm9yICg7ICpwOyBwKyspCiAJICAgIC8qIG11bHRpcGxpZXIgd2FzIDggYnV0IDExIGlzbid0IGEgcG93ZXIgb2YgMiAqLwogCSAgICBrID0gMTEgKiBrICsgKHVuc2lnbmVkIGludCkgKnA7CiAJdm1heHNldCh2bWF4KTsgLyogZGlzY2FyZCBhbnkgbWVtb3J5IHVzZWQgYnkgdHJhbnNsYXRlQ2hhciAqLwpAQCAtMjMwLDcgKzIzMCw3IEBAIHN0YXRpYyBSX0lOTElORSBobGVuIHNoYXNoKFNFWFAgeCwgUl94bGVuX3QgaW5keCwgSGFzaERhdGEgKmQpCiAgICAgLyogTm90IGhhdmluZyBkLT51c2VDYWNoZSByZWFsbHkgc2hvdWxkIG5vdCBoYXBwZW4gYW55bW9yZS4gKi8KICAgICBwID0gdHJhbnNsYXRlQ2hhclVURjgoU1RSSU5HX0VMVCh4LCBpbmR4KSk7CiAgICAgayA9IDA7Ci0gICAgd2hpbGUgKCpwKyspCisgICAgZm9yICg7ICpwOyBwKyspCiAJayA9IDExICogayArICh1bnNpZ25lZCBpbnQpICpwOyAvKiB3YXMgOCBidXQgMTEgaXNuJ3QgYSBwb3dlciBvZiAyICovCiAgICAgdm1heHNldCh2bWF4KTsgLyogZGlzY2FyZCBhbnkgbWVtb3J5IHVzZWQgYnkgdHJhbnNsYXRlQ2hhciAqLwogICAgIHJldHVybiBzY2F0dGVyKGssIGQpOwpAQCAtMzAwLDYgKzMwMCwxNSBAQCBzdGF0aWMgUl9JTkxJTkUgaW50IHNlcXVhbChTRVhQIHgsIFJfeGxlbl90IGksIFNFWFAgeSwgUl94bGVuX3QgaikKICAgICAvKiBhbm90aGVyIHByZS10ZXN0IHRvIGF2b2lkIHRoZSBjYWxsIHRvIFNlcWwgKi8KICAgICBpZiAoSVNfQ0FDSEVEKHhpKSAmJiBJU19DQUNIRUQoeWopICYmIEVOQ19LTk9XTih4aSkgPT0gRU5DX0tOT1dOKHlqKSkKIAlyZXR1cm4gMDsKKyAgICAvKiBUcmFuc2xhdGluZyBsYXRpbjEgdG8gVVRGLTggbmV2ZXIgc2hvcnRlbnMgYSBzdHJpbmcsIHNvIGEgc2hvcnRlcgorICAgICAgIHN0cmluZyB0aGF0IG5lZWRzIG5vIHRyYW5zbGF0aW9uIChBU0NJSSwgVVRGLTgsIG9yIG5hdGl2ZSBpbiBhCisgICAgICAgVVRGLTggbG9jYWxlKSBjYW5ub3QgZXF1YWwgaXQ6IHRoaXMgc3BhcmVzIHRyYW5zbGF0aW5nIGEgbG9uZworICAgICAgIGxhdGluMSBzdHJpbmcgb24gZXZlcnkgcHJvYmUgcGFzdCBpdC4gKi8KKyAgICBpZiAoSVNfTEFUSU4xKHhpKSAhPSBJU19MQVRJTjEoeWopKSB7CisJU0VYUCBsID0gSVNfTEFUSU4xKHhpKSA/IHhpIDogeWosIG8gPSBJU19MQVRJTjEoeGkpID8geWogOiB4aTsKKwlpZiAoTEVOR1RIKG8pIDwgTEVOR1RIKGwpICYmICh1dGY4bG9jYWxlIHx8IElTX0FTQ0lJKG8pIHx8IElTX1VURjgobykpKQorCSAgICByZXR1cm4gMDsKKyAgICB9CiAgICAgcmV0dXJuIFNlcWwoeGksIHlqKTsKIH0KIApJbmRleDogdGVzdHMvcmVnLWZ1enouUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctZnV6ei5SCShyZXZpc2lvbiA5MDkxMykKKysrIHRlc3RzL3JlZy1mdXp6LlIJKHdvcmtpbmcgY29weSkKQEAgLTIwMiw2ICsyMDIsMjkgQEAgbG9jYWwoewogIyMgcmVhZCBmcmVlZCBtZW1vcnkgKHZpc2libGUgdW5kZXIgQVNhbiBvciB2YWxncmluZCkgaW4gUiA8PSA0LjYuMgogCiAKKyMjIGR1cGxpY2F0ZWQoKSwgdW5pcXVlKCkgYW5kIGFueUR1cGxpY2F0ZWQoKSB3aXRoIG1hcmtlZCBlbmNvZGluZ3MKKyMjIHRyYW5zbGF0ZWQgYSBsb25nIGxhdGluMSBzdHJpbmcgYWdhaW4gZm9yIGV2ZXJ5IHByb2JlIHBhc3QgaXQKK2xvY2FsKHsKKyAgICBsMSA8LSAiZmFceEU3aWxlIjsgRW5jb2RpbmcobDEpIDwtICJsYXRpbjEiCisgICAgdTEgPC0gZW5jMnV0ZjgobDEpCisgICAgbG9uZyA8LSBzdHJyZXAoIlx4RTkiLCA1MDAwKTsgRW5jb2RpbmcobG9uZykgPC0gImxhdGluMSIKKyAgICB4IDwtIGMobG9uZywgcmVwKGMoIiIsICJhIiwgImIiLCBsMSksIDUwMCksIHUxLCBlbmMydXRmOChsb25nKSkKKyAgICBzdG9waWZub3QoZXhwcnMgPSB7CisgICAgICAgIGlkZW50aWNhbCh1bmlxdWUoeCksIGMobG9uZywgIiIsICJhIiwgImIiLCBsMSkpCisgICAgICAgIGlkZW50aWNhbCh3aGljaCghZHVwbGljYXRlZCh4KSksIDE6NSkKKyAgICAgICAgaWRlbnRpY2FsKHdoaWNoKCFkdXBsaWNhdGVkKHgsIGZyb21MYXN0ID0gVFJVRSkpLAorICAgICAgICAgICAgICAgICAgYygxOTk4TCwgMTk5OUwsIDIwMDBMLCAyMDAyTCwgMjAwM0wpKQorICAgICAgICBpZGVudGljYWwoYW55RHVwbGljYXRlZCh4KSwgNkwpCisgICAgICAgIGlkZW50aWNhbChhbnlEdXBsaWNhdGVkKHgsIGZyb21MYXN0ID0gVFJVRSksIDIwMDFMKQorICAgICAgICBpZGVudGljYWwoZHVwbGljYXRlZChjKGwxLCB1MSwgImEiLCAiYSIpLCBpbmNvbXBhcmFibGVzID0gbDEpLAorICAgICAgICAgICAgICAgICAgYyhGQUxTRSwgRkFMU0UsIEZBTFNFLCBUUlVFKSkKKyAgICAgICAgaWRlbnRpY2FsKGFueUR1cGxpY2F0ZWQoYyhsMSwgImEiLCB1MSwgImEiKSwgaW5jb21wYXJhYmxlcyA9IGwxKSwgNEwpCisgICAgfSkKK30pCisjIyB0b29rIHNlY29uZHMgb24gYSBmdXp6ZWQgNyBLQiBpbnB1dCAoYSBsb25nIGxhdGluMSBzdHJpbmcgYW1vbmcgbWFueQorIyMgc2hvcnQgb25lcykgaW4gUiA8PSA0LjYuMgorCisKIAogCiAjIyBrZWVwIGF0IGVuZAo=",
+          "is_patch": true,
           "creator": "kevinushey",
-          "is_patch": true
+          "data": "SW5kZXg6IHNyYy9tYWluL3VuaXF1ZS5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3VuaXF1ZS5jCShyZXZpc2lvbiA5MDkxMykKKysrIHNyYy9tYWluL3VuaXF1ZS5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTksNyArMjE5LDcgQEAgc3RhdGljIFJfSU5MSU5FIGhsZW4gc2hhc2goU0VYUCB4LCBSX3hsZW5fdCBpbmR4LCBIYXNoRGF0YSAqZCkKIAljb25zdCB2b2lkICp2bWF4ID0gdm1heGdldCgpOwogCXAgPSBub1RyYW5zID8gQ0hBUih4aSkgOiB0cmFuc2xhdGVDaGFyVVRGOCh4aSk7CiAJayA9IDA7Ci0Jd2hpbGUgKCpwKyspCisJZm9yICg7ICpwOyBwKyspCiAJICAgIC8qIG11bHRpcGxpZXIgd2FzIDggYnV0IDExIGlzbid0IGEgcG93ZXIgb2YgMiAqLwogCSAgICBrID0gMTEgKiBrICsgKHVuc2lnbmVkIGludCkgKnA7CiAJdm1heHNldCh2bWF4KTsgLyogZGlzY2FyZCBhbnkgbWVtb3J5IHVzZWQgYnkgdHJhbnNsYXRlQ2hhciAqLwpAQCAtMjMwLDcgKzIzMCw3IEBAIHN0YXRpYyBSX0lOTElORSBobGVuIHNoYXNoKFNFWFAgeCwgUl94bGVuX3QgaW5keCwgSGFzaERhdGEgKmQpCiAgICAgLyogTm90IGhhdmluZyBkLT51c2VDYWNoZSByZWFsbHkgc2hvdWxkIG5vdCBoYXBwZW4gYW55bW9yZS4gKi8KICAgICBwID0gdHJhbnNsYXRlQ2hhclVURjgoU1RSSU5HX0VMVCh4LCBpbmR4KSk7CiAgICAgayA9IDA7Ci0gICAgd2hpbGUgKCpwKyspCisgICAgZm9yICg7ICpwOyBwKyspCiAJayA9IDExICogayArICh1bnNpZ25lZCBpbnQpICpwOyAvKiB3YXMgOCBidXQgMTEgaXNuJ3QgYSBwb3dlciBvZiAyICovCiAgICAgdm1heHNldCh2bWF4KTsgLyogZGlzY2FyZCBhbnkgbWVtb3J5IHVzZWQgYnkgdHJhbnNsYXRlQ2hhciAqLwogICAgIHJldHVybiBzY2F0dGVyKGssIGQpOwpAQCAtMzAwLDYgKzMwMCwxNSBAQCBzdGF0aWMgUl9JTkxJTkUgaW50IHNlcXVhbChTRVhQIHgsIFJfeGxlbl90IGksIFNFWFAgeSwgUl94bGVuX3QgaikKICAgICAvKiBhbm90aGVyIHByZS10ZXN0IHRvIGF2b2lkIHRoZSBjYWxsIHRvIFNlcWwgKi8KICAgICBpZiAoSVNfQ0FDSEVEKHhpKSAmJiBJU19DQUNIRUQoeWopICYmIEVOQ19LTk9XTih4aSkgPT0gRU5DX0tOT1dOKHlqKSkKIAlyZXR1cm4gMDsKKyAgICAvKiBUcmFuc2xhdGluZyBsYXRpbjEgdG8gVVRGLTggbmV2ZXIgc2hvcnRlbnMgYSBzdHJpbmcsIHNvIGEgc2hvcnRlcgorICAgICAgIHN0cmluZyB0aGF0IG5lZWRzIG5vIHRyYW5zbGF0aW9uIChBU0NJSSwgVVRGLTgsIG9yIG5hdGl2ZSBpbiBhCisgICAgICAgVVRGLTggbG9jYWxlKSBjYW5ub3QgZXF1YWwgaXQ6IHRoaXMgc3BhcmVzIHRyYW5zbGF0aW5nIGEgbG9uZworICAgICAgIGxhdGluMSBzdHJpbmcgb24gZXZlcnkgcHJvYmUgcGFzdCBpdC4gKi8KKyAgICBpZiAoSVNfTEFUSU4xKHhpKSAhPSBJU19MQVRJTjEoeWopKSB7CisJU0VYUCBsID0gSVNfTEFUSU4xKHhpKSA/IHhpIDogeWosIG8gPSBJU19MQVRJTjEoeGkpID8geWogOiB4aTsKKwlpZiAoTEVOR1RIKG8pIDwgTEVOR1RIKGwpICYmICh1dGY4bG9jYWxlIHx8IElTX0FTQ0lJKG8pIHx8IElTX1VURjgobykpKQorCSAgICByZXR1cm4gMDsKKyAgICB9CiAgICAgcmV0dXJuIFNlcWwoeGksIHlqKTsKIH0KIApJbmRleDogdGVzdHMvcmVnLWZ1enouUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctZnV6ei5SCShyZXZpc2lvbiA5MDkxMykKKysrIHRlc3RzL3JlZy1mdXp6LlIJKHdvcmtpbmcgY29weSkKQEAgLTIwMiw2ICsyMDIsMjkgQEAgbG9jYWwoewogIyMgcmVhZCBmcmVlZCBtZW1vcnkgKHZpc2libGUgdW5kZXIgQVNhbiBvciB2YWxncmluZCkgaW4gUiA8PSA0LjYuMgogCiAKKyMjIGR1cGxpY2F0ZWQoKSwgdW5pcXVlKCkgYW5kIGFueUR1cGxpY2F0ZWQoKSB3aXRoIG1hcmtlZCBlbmNvZGluZ3MKKyMjIHRyYW5zbGF0ZWQgYSBsb25nIGxhdGluMSBzdHJpbmcgYWdhaW4gZm9yIGV2ZXJ5IHByb2JlIHBhc3QgaXQKK2xvY2FsKHsKKyAgICBsMSA8LSAiZmFceEU3aWxlIjsgRW5jb2RpbmcobDEpIDwtICJsYXRpbjEiCisgICAgdTEgPC0gZW5jMnV0ZjgobDEpCisgICAgbG9uZyA8LSBzdHJyZXAoIlx4RTkiLCA1MDAwKTsgRW5jb2RpbmcobG9uZykgPC0gImxhdGluMSIKKyAgICB4IDwtIGMobG9uZywgcmVwKGMoIiIsICJhIiwgImIiLCBsMSksIDUwMCksIHUxLCBlbmMydXRmOChsb25nKSkKKyAgICBzdG9waWZub3QoZXhwcnMgPSB7CisgICAgICAgIGlkZW50aWNhbCh1bmlxdWUoeCksIGMobG9uZywgIiIsICJhIiwgImIiLCBsMSkpCisgICAgICAgIGlkZW50aWNhbCh3aGljaCghZHVwbGljYXRlZCh4KSksIDE6NSkKKyAgICAgICAgaWRlbnRpY2FsKHdoaWNoKCFkdXBsaWNhdGVkKHgsIGZyb21MYXN0ID0gVFJVRSkpLAorICAgICAgICAgICAgICAgICAgYygxOTk4TCwgMTk5OUwsIDIwMDBMLCAyMDAyTCwgMjAwM0wpKQorICAgICAgICBpZGVudGljYWwoYW55RHVwbGljYXRlZCh4KSwgNkwpCisgICAgICAgIGlkZW50aWNhbChhbnlEdXBsaWNhdGVkKHgsIGZyb21MYXN0ID0gVFJVRSksIDIwMDFMKQorICAgICAgICBpZGVudGljYWwoZHVwbGljYXRlZChjKGwxLCB1MSwgImEiLCAiYSIpLCBpbmNvbXBhcmFibGVzID0gbDEpLAorICAgICAgICAgICAgICAgICAgYyhGQUxTRSwgRkFMU0UsIEZBTFNFLCBUUlVFKSkKKyAgICAgICAgaWRlbnRpY2FsKGFueUR1cGxpY2F0ZWQoYyhsMSwgImEiLCB1MSwgImEiKSwgaW5jb21wYXJhYmxlcyA9IGwxKSwgNEwpCisgICAgfSkKK30pCisjIyB0b29rIHNlY29uZHMgb24gYSBmdXp6ZWQgNyBLQiBpbnB1dCAoYSBsb25nIGxhdGluMSBzdHJpbmcgYW1vbmcgbWFueQorIyMgc2hvcnQgb25lcykgaW4gUiA8PSA0LjYuMgorCisKIAogCiAjIyBrZWVwIGF0IGVuZAo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-11-17T02:06:24Z",
+          "size": 2981,
+          "is_private": false,
+          "id": 4081,
+          "creation_time": "2026-11-17T02:06:24Z",
+          "summary": "patch: skip translating a longer latin1 string in sequal(), hash strings from the first byte (against r90913)",
+          "file_name": "unique-latin1-translate.diff",
+          "bug_id": 19329
         },
         {
-          "is_patch": false,
           "creator": "kevinushey",
           "data": "IyMgdW5pcXVlKCkgKGFuZCBkdXBsaWNhdGVkKCksIGFueUR1cGxpY2F0ZWQoKSkgb24gY2hhcmFjdGVyIHZlY3RvcnMgd2l0aAojIyBhIGxhdGluMSBzdHJpbmcgdHJhbnNsYXRlIHN0cmluZ3MgdG8gVVRGLTggYWdhaW4gb24gZXZlcnkgaGFzaCBwcm9iZS4KCiMjIDEuIEEgbG9uZyBsYXRpbjEgc3RyaW5nIGFtb25nIG1hbnkgc2hvcnQgQVNDSUkgc3RyaW5ncy4gIFRoZSBzdHJpbmcKIyMgaGFzaCBza2lwcyBlYWNoIHN0cmluZydzIGZpcnN0IGJ5dGUsIHNvICIiIGFuZCBldmVyeSBvbmUtY2hhcmFjdGVyCiMjIHN0cmluZyBoYXNoIGFsaWtlOyB0aGUgcnVuIGxlbmd0aCBhbmQgdGhlICIjdiIgc3VmZml4IHB1dCBgbG9uZ2AgaW4KIyMgdGhlaXIgcHJvYmUgcnVuIGZvciBhIDIwMDEtZWxlbWVudCB2ZWN0b3IgKHdpdGggc2lnbmVkIG9yIHVuc2lnbmVkCiMjIGNoYXIpLCBhbmQgZXZlcnkgbG9va3VwIG9mIGEgc2hvcnQgc3RyaW5nIHRyYW5zbGF0ZXMgYGxvbmdgIGFnYWluLgpsb25nIDwtIHBhc3RlMCgiXHhlOSIsIHN0cnJlcCgiYSIsIDIwMDE2OCksICIjdiIpCkVuY29kaW5nKGxvbmcpIDwtICJsYXRpbjEiCnNob3J0IDwtIGMoIiIsIHZhcHBseSgzMjoxMjYsIGZ1bmN0aW9uKGkpIHJhd1RvQ2hhcihhcy5yYXcoaSkpLCAiIikpCnggPC0gYyhsb25nLCByZXAoc2hvcnQsIGxlbmd0aC5vdXQgPSAyMDAwKSkKdDEgPC0gc3lzdGVtLnRpbWUodSA8LSB1bmlxdWUoeCkpW1siZWxhcHNlZCJdXQpzdG9waWZub3QobGVuZ3RoKHUpID09IDk3TCkKCiMjIDIuIFN0cmluZ3MgdGhhdCBkaWZmZXIgb25seSBpbiB0aGVpciBmaXJzdCBjaGFyYWN0ZXIgYWxsIGhhc2ggYWxpa2UsCiMjIGFuZCBldmVyeSBwcm9iZSBiZXR3ZWVuIGEgbGF0aW4xIGFuZCBhIFVURi04IHN0cmluZyB0cmFuc2xhdGVzIGJvdGguCnRhaWwgPC0gcmVwKGFzLnJhdygweGU5KSwgMjAwMCkKbGF0IDwtIHZhcHBseShjKGxldHRlcnMsIExFVFRFUlMpLCBmdW5jdGlvbihjaCkKICAgIHJhd1RvQ2hhcihjKGNoYXJUb1JhdyhjaCksIHRhaWwpKSwgIiIsIFVTRS5OQU1FUyA9IEZBTFNFKQpFbmNvZGluZyhsYXQpIDwtICJsYXRpbjEiCnkgPC0gcmVwKGMobGF0WzE6MjZdLCBlbmMydXRmOChsYXRbMjc6NTJdKSksIDEwMCkKdDIgPC0gc3lzdGVtLnRpbWUodiA8LSB1bmlxdWUoeSkpW1siZWxhcHNlZCJdXQpzdG9waWZub3QobGVuZ3RoKHYpID09IDUyTCkKCmNhdChzcHJpbnRmKCJ1bmlxdWUoeCk6ICUuMmYgcywgdW5pcXVlKHkpOiAlLjJmIHNcbiIsIHQxLCB0MikpCg==",
-          "content_type": "text/plain",
           "flags": [],
+          "content_type": "text/plain",
           "is_obsolete": false,
-          "last_change_time": "2026-11-17T02:06:27Z",
-          "size": 1267,
-          "is_private": false,
-          "id": 4082,
+          "is_patch": false,
           "creation_time": "2026-11-17T02:06:27Z",
           "summary": "reproducer: unique() with a long latin1 string among short strings",
           "file_name": "unique-latin1-translate-repro.R",
-          "bug_id": 19329
+          "bug_id": 19329,
+          "last_change_time": "2026-11-17T02:06:27Z",
+          "size": 1267,
+          "is_private": false,
+          "id": 4082
         }
       ]
-    },
-    "attachments": {}
+    }
   },
-  "source_changed": "2026-11-17 02:06:27"
+  "source_changed": "2026-11-17 12:19:01"
 }

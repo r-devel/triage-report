@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "id": 19337,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P3",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-18T04:04:05Z",
+        "version": "R-devel (trunk)",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-11-18T04:04:17Z",
+        "cc_detail": [],
+        "blocks": [],
+        "url": "",
+        "summary": "toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs)",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "status": "NEW",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": [],
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19337": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "is_private": false,
+            "time": "2026-11-18T04:04:05Z",
+            "id": 104328,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-18T04:04:05Z",
+            "count": 0,
+            "is_markdown": true,
+            "text": "## Summary\n\n`toupper()` and `tolower()` accept UTF-8-marked strings holding overlong forms, which `validUTF8()` rejects: an overlong surrogate comes back as a 3-byte surrogate that R itself then refuses, an overlong NUL truncates the string, and on Linux each surrogate warns twice. Fixes a reproducible bug: wrong results, and an OSS-Fuzz timeout from the warnings.\n\n## Details\n\n`utf8toucs()` in `src/main/util.c` rejects surrogates only in its 3-byte branch, and no branch rejects overlong (non-shortest) forms, so `F0 8D BF B0` decodes to U+DFF0 and `C0 80` to NUL. On Linux, `wcstoutf8()` then warns \"unpaired surrogate Unicode point\" on both of its passes; the OSS-Fuzz input, 56 KB with 5941 such forms, raised 11882 warnings. Tested on R-devel r90925.\n\nReproducible example: attached as `utf8toucs-overlong-repro.R`; prints what `toupper()` returns for each form (re-encoded or truncated before the patch, an error after) and the warning count (10000 on Linux before, 0 after).\n\nProposed patch: attached as `utf8toucs-overlong.diff`; rejects overlong forms in every branch of `utf8toucs()`, so they give the usual \"invalid input\" error, and adds a test to `tests/reg-fuzz.R`.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/509, where CI results can be seen.",
+            "bug_id": 19337
+          },
+          {
+            "count": 1,
+            "bug_id": 19337,
+            "text": "Created attachment 4102\nPatch against r90925: reject overlong forms in utf8toucs()",
+            "creation_time": "2026-11-18T04:04:17Z",
+            "is_private": false,
+            "id": 104329,
+            "tags": [],
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-11-18T04:04:17Z",
+            "attachment_id": 4102
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 4103,
+            "time": "2026-11-18T04:04:17Z",
+            "creation_time": "2026-11-18T04:04:17Z",
+            "bug_id": 19337,
+            "text": "Created attachment 4103\nReproducible example",
+            "count": 2,
+            "tags": [],
+            "id": 104330,
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19337": [
+        {
+          "size": 3708,
+          "last_change_time": "2026-11-18T04:04:17Z",
+          "id": 4102,
+          "is_private": false,
+          "summary": "Patch against r90925: reject overlong forms in utf8toucs()",
+          "creation_time": "2026-11-18T04:04:17Z",
+          "bug_id": 19337,
+          "file_name": "utf8toucs-overlong.diff",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwOTI1KQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNDA1LDYgKzE0MDUsNyBAQCB1dGY4dG91Y3Mod2NoYXJfdCAqd2MsIGNvbnN0IGNoYXIgKnMpCiAJaWYoc3RybGVuKHMpIDwgMikgcmV0dXJuIChzaXplX3QpLTI7CiAJaWYgKChzWzFdICYgMHhDMCkgPT0gMHg4MCkgewogCSAgICAqdyA9ICh3Y2hhcl90KSAoKChieXRlICYgMHgxRikgPDwgNikgfCAoc1sxXSAmIDB4M0YpKTsKKwkgICAgaWYoKncgPCAweDgwKSByZXR1cm4gKHNpemVfdCktMTsgLyogb3ZlcmxvbmcgKi8KIAkgICAgcmV0dXJuIDI7CiAJfSBlbHNlIHJldHVybiAoc2l6ZV90KS0xOwogICAgIH0gZWxzZSBpZiAoYnl0ZSA8IDB4RjApIHsKQEAgLTE0MTQsNiArMTQxNSw3IEBAIHV0Zjh0b3Vjcyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcykKIAkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1sxXSAmIDB4M0YpIDw8IDYpCiAJCQkgICAgfCAoc1syXSAmIDB4M0YpKTsKIAkgICAgYnl0ZSA9ICh1bnNpZ25lZCBpbnQpICp3OworCSAgICBpZihieXRlIDwgMHg4MDApIHJldHVybiAoc2l6ZV90KS0xOyAvKiBvdmVybG9uZyAqLwogCSAgICAvKiBTdXJyb2dhdGVzIHJhbmdlICovCiAJICAgIGlmKGJ5dGUgPj0gMHhEODAwICYmIGJ5dGUgPD0gMHhERkZGKSByZXR1cm4gKHNpemVfdCktMTsKIAkgICAgaWYoYnl0ZSA9PSAweEZGRkUgfHwgYnl0ZSA9PSAweEZGRkYpIHJldHVybiAoc2l6ZV90KS0xOwpAQCAtMTQyNyw2ICsxNDI5LDEwIEBAIHV0Zjh0b3Vjcyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcykKIAkJCXwgKHVuc2lnbmVkIGludCkgKChzWzFdICYgMHgzRikgPDwgMTIpCiAJCQl8ICh1bnNpZ25lZCBpbnQpICgoc1syXSAmIDB4M0YpIDw8IDYpCiAJCQl8IChzWzNdICYgMHgzRikpOworCSAgICAvKiBPdmVybG9uZyAobm9uLXNob3J0ZXN0KSBmb3JtcyBhcmUgaW52YWxpZCBpbiBldmVyeSBicmFuY2g7CisJICAgICAgIGhlcmUgdGhleSBjb3VsZCBhbHNvIGVuY29kZSBOVUwgb3IgdGhlIHN1cnJvZ2F0ZXMgdGhlCisJICAgICAgIDMtYnl0ZSBicmFuY2ggcmVqZWN0cy4gKi8KKwkgICAgaWYoY3ZhbHVlIDwgMHgxMDAwMCkgcmV0dXJuIChzaXplX3QpLTE7CiAJICAgIGlmKHNpemVvZih3Y2hhcl90KSA8IDQpIC8qIEFzc3VtZSBVVEYtMTYgYW5kIHJldHVybiBoaWdoIHN1cnJvZ2F0ZS4gIFVzZXJzIG5lZWQgdG8gY2FsbCB1dGY4dG91dGYxNmxvdyBuZXh0LiAqLwogCQkqdyA9ICh3Y2hhcl90KSAoKGN2YWx1ZSAtIDB4MTAwMDApID4+IDEwKSB8IDB4RDgwMDsKIAkgICAgZWxzZQpAQCAtMTQ0MiwxMSArMTQ0OCwxMyBAQCB1dGY4dG91Y3Mod2NoYXJfdCAqd2MsIGNvbnN0IGNoYXIgKnMpCiAJaWYoc3RybGVuKHMpIDwgNSkgcmV0dXJuIChzaXplX3QpLTI7CiAJaWYgKCgoc1sxXSAmIDB4QzApID09IDB4ODApICYmICgoc1syXSAmIDB4QzApID09IDB4ODApCiAJICAgICYmICgoc1szXSAmIDB4QzApID09IDB4ODApICYmICgoc1s0XSAmIDB4QzApID09IDB4ODApKSB7Ci0JICAgICp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDAzKSA8PCAyNCkKKwkgICAgdW5zaWduZWQgaW50IGN2YWx1ZSA9ICgoKGJ5dGUgJiAweDAzKSA8PCAyNCkKIAkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1sxXSAmIDB4M0YpIDw8IDE4KQogCQkJICAgIHwgKHVuc2lnbmVkIGludCkgKChzWzJdICYgMHgzRikgPDwgMTIpCiAJCQkgICAgfCAodW5zaWduZWQgaW50KSAoKHNbM10gJiAweDNGKSA8PCA2KQogCQkJICAgIHwgKHNbNF0gJiAweDNGKSk7CisJICAgIGlmKGN2YWx1ZSA8IDB4MjAwMDAwKSByZXR1cm4gKHNpemVfdCktMTsgLyogb3ZlcmxvbmcgKi8KKwkgICAgKncgPSAod2NoYXJfdCkgY3ZhbHVlOwogCSAgICByZXR1cm4gNTsKIAl9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CiAgICAgfSBlbHNlIGlmIChieXRlIDwgMHhGRSkgewpAQCAtMTQ1NCwxMiArMTQ2MiwxNCBAQCB1dGY4dG91Y3Mod2NoYXJfdCAqd2MsIGNvbnN0IGNoYXIgKnMpCiAJaWYgKCgoc1sxXSAmIDB4QzApID09IDB4ODApICYmICgoc1syXSAmIDB4QzApID09IDB4ODApCiAJICAgICYmICgoc1szXSAmIDB4QzApID09IDB4ODApICYmICgoc1s0XSAmIDB4QzApID09IDB4ODApCiAJICAgICYmICgoc1s1XSAmIDB4QzApID09IDB4ODApKSB7Ci0JICAgICp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDAxKSA8PCAzMCkKKwkgICAgdW5zaWduZWQgaW50IGN2YWx1ZSA9ICgoKGJ5dGUgJiAweDAxKSA8PCAzMCkKIAkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1sxXSAmIDB4M0YpIDw8IDI0KQogCQkJICAgIHwgKHVuc2lnbmVkIGludCkgKChzWzJdICYgMHgzRikgPDwgMTgpCiAJCQkgICAgfCAodW5zaWduZWQgaW50KSAoKHNbM10gJiAweDNGKSA8PCAxMikKIAkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1s0XSAmIDB4M0YpIDw8IDYpCiAJCQkgICAgfCAoc1s1XSAmIDB4M0YpKTsKKwkgICAgaWYoY3ZhbHVlIDwgMHg0MDAwMDAwKSByZXR1cm4gKHNpemVfdCktMTsgLyogb3ZlcmxvbmcgKi8KKwkgICAgKncgPSAod2NoYXJfdCkgY3ZhbHVlOwogCSAgICByZXR1cm4gNjsKIAl9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CiAgICAgfSBlbHNlIHJldHVybiAoc2l6ZV90KS0xOwpJbmRleDogdGVzdHMvcmVnLWZ1enouUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctZnV6ei5SCShyZXZpc2lvbiA5MDkyNSkKKysrIHRlc3RzL3JlZy1mdXp6LlIJKHdvcmtpbmcgY29weSkKQEAgLTIyNSw2ICsyMjUsMjAgQEAgaWYgKGwxMG5faW5mbygpW1siVVRGLTgiXV0pIHsKICMjIHdyb3RlIHBhc3QgaXRzIGJ1ZmZlciB3aGVyZSBNQl9DVVJfTUFYIGlzIDQgKG1hY09TKSwgc2VnLmZhdWx0aW5nLCBpbiBSIDw9IDQuNi4yCiAKIAorIyMgdG91cHBlcigpIG9mIFVURi04IHdpdGggb3ZlcmxvbmcgZm9ybXMsIG9mIE5VTCBhbmQgb2YgYSBzdXJyb2dhdGUKK2xvY2FsKHsKKyAgICBvdmVybG9uZyA8LSBsaXN0KGMoMHhjMCwgMHg4MCksIGMoMHhlMCwgMHg4MCwgMHg4MCksCisgICAgICAgICAgICAgICAgICAgICBjKDB4ZjAsIDB4OGQsIDB4YmYsIDB4YjApLCBjKDB4ZjgsIDB4ODAsIDB4OGQsIDB4YmYsIDB4YjApKQorICAgIGZvciAoYiBpbiBvdmVybG9uZykgeworICAgICAgICB4IDwtIHJhd1RvQ2hhcihhcy5yYXcoYygweDYxLCBiLCAweDYyKSkpCisgICAgICAgIEVuY29kaW5nKHgpIDwtICJVVEYtOCIKKyAgICAgICAgYXNzZXJ0RXJyVih0b3VwcGVyKHgpKQorICAgIH0KK30pCisjIyB0cnVuY2F0ZWQgdGhlIHN0cmluZyBhdCBOVUwsIG9yIHJldHVybmVkIGFuIGludmFsaWQgc3Vycm9nYXRlICh3YXJuaW5nCisjIyB0d2ljZSBwZXIgc3Vycm9nYXRlIG9uIExpbnV4KSwgaW4gUiA8PSA0LjYuMgorCisKICMjIGdjKCkgYWNjb3VudGluZyBhZnRlciByZWxlYXNpbmcgYSBsb25nIHN0cmluZyB0aGF0IGNhcnJpZXMgYSBoYXNoIHZhbHVlIC0tIFBSIzE5MTk1CiBsb2NhbCh7CiAgICAgdXNlZCA8LSBmdW5jdGlvbigpIGdjKClbIlZjZWxscyIsICJ1c2VkIl0K",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": []
+        },
+        {
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgdG91cHBlcigpIG9mIFVURi04LW1hcmtlZCBzdHJpbmdzIGhvbGRpbmcgb3ZlcmxvbmcgZm9ybXMuCiMjIHZhbGlkVVRGOCgpIGlzIEZBTFNFIGZvciBhbGwgb2YgdGhlbTsgb25seSB0aGUgMy1ieXRlIHN1cnJvZ2F0ZSBpcyBhbiBlcnJvci4Kc2hvdyA8LSBmdW5jdGlvbihieXRlcywgd2hhdCkgewogICAgeCA8LSByYXdUb0NoYXIoYXMucmF3KGMoMHg2MSwgYnl0ZXMsIDB4NjIpKSkKICAgIEVuY29kaW5nKHgpIDwtICJVVEYtOCIKICAgIHIgPC0gdHJ5Q2F0Y2gocGFzdGUoYXMuY2hhcmFjdGVyKGNoYXJUb1Jhdyh0b3VwcGVyKHgpKSksIGNvbGxhcHNlID0gIiAiKSwKICAgICAgICAgICAgICAgICAgZXJyb3IgPSBmdW5jdGlvbihlKSAiZXJyb3IiKQogICAgY2F0KHNwcmludGYoIiUtMTVzICUtMjZzIHZhbGlkVVRGOCA9ICUtNXMgdG91cHBlcigpIC0+ICVzXG4iLAogICAgICAgICAgICAgICAgcGFzdGUoc3ByaW50ZigiJTAyeCIsIGJ5dGVzKSwgY29sbGFwc2UgPSAiICIpLCB3aGF0LAogICAgICAgICAgICAgICAgdmFsaWRVVEY4KHgpLCByKSkKfQpzaG93KGMoMHhlZCwgMHhiZiwgMHhiMCksICAgICAgICAgICAgICJVK0RGRjAiKQpzaG93KGMoMHhmMCwgMHg4ZCwgMHhiZiwgMHhiMCksICAgICAgICJVK0RGRjAsIG92ZXJsb25nIDQtYnl0ZSIpCnNob3coYygweGY4LCAweDgwLCAweDhkLCAweGJmLCAweGIwKSwgIlUrREZGMCwgb3ZlcmxvbmcgNS1ieXRlIikKc2hvdyhjKDB4YzAsIDB4ODApLCAgICAgICAgICAgICAgICAgICAiTlVMLCBvdmVybG9uZyAyLWJ5dGUiKQojIyBCZWZvcmUgdGhlIHBhdGNoLCB0aGUgb3ZlcmxvbmcgZm9ybXMgY29tZSBiYWNrIHJlLWVuY29kZWQgKCI0MSBlZCBiZiBiMCA0MiIpCiMjIG9yIHRydW5jYXRlZCBhdCB0aGUgTlVMICgiNDEiKTsgYWZ0ZXIgaXQsIGVhY2ggaXMgYW4gZXJyb3IgbGlrZSB0aGUgZmlyc3QuCgojIyBPbiBMaW51eCBlYWNoIHVucGFpcmVkIHN1cnJvZ2F0ZSBhbHNvIHdhcm5zIHR3aWNlICh0aGUgT1NTLUZ1enogaW5wdXQgaGFkIDU5NDEpCnggPC0gc3RycmVwKCJceGYwXHg4ZFx4YmZceGIwIiwgNTAwMCkKRW5jb2RpbmcoeCkgPC0gIlVURi04IgpuIDwtIDBMCmludmlzaWJsZSh3aXRoQ2FsbGluZ0hhbmRsZXJzKHRyeUNhdGNoKHRvdXBwZXIoeCksIGVycm9yID0gZnVuY3Rpb24oZSkgTlVMTCksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHdhcm5pbmcgPSBmdW5jdGlvbih3KSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBuIDw8LSBuICsgMUwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGludm9rZVJlc3RhcnQoIm11ZmZsZVdhcm5pbmciKQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICB9KSkKY2F0KCJ3YXJuaW5nczoiLCBuLCAiKDEwMDAwIG9uIExpbnV4IGJlZm9yZSB0aGUgcGF0Y2gsIDAgYWZ0ZXIpXG4iKQo=",
+          "is_patch": false,
+          "file_name": "utf8toucs-overlong-repro.R",
+          "bug_id": 19337,
+          "creation_time": "2026-11-18T04:04:17Z",
+          "summary": "Reproducible example",
+          "is_private": false,
+          "id": 4103,
+          "last_change_time": "2026-11-18T04:04:17Z",
+          "size": 1442
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-18 04:04:17"
+}

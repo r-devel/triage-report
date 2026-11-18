@@ -1,0 +1,171 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Wishlist",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "enhancement",
+        "dupe_of": {},
+        "id": 19338,
+        "deadline": {},
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-18T04:06:23Z",
+        "priority": "P4",
+        "product": "R",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "last_change_time": "2026-11-18T04:32:37Z",
+        "cc_detail": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "summary": "toupper(), format(), strsplit(perl = TRUE) and others take quadratic time on long strings (per-character strlen)",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19338": {
+        "comments": [
+          {
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-11-18T04:06:23Z",
+            "creation_time": "2026-11-18T04:06:23Z",
+            "bug_id": 19338,
+            "text": "## Summary\n\nFunctions that decode a UTF-8 string one character at a time, such as `toupper()`, `encodeString()`, `format()` and `nchar(type = \"width\")`, take time quadratic in its number of non-ASCII characters: 2.6 s for `format()` of a 200,000-character string. Enhancement: a performance fix, results do not change.\n\n## Details\n\nBefore each multibyte form, `utf8toucs()` in `src/main/util.c` checks the remaining length with `strlen(s) < n`, which scans to the end of the string, and its callers call it once per character. Tested on R-devel r90925.\n\nReproducible example: attached as `utf8toucs-strlen-repro.R`; times the three functions as the string doubles: 4x as long per doubling before the patch, a few ms after.\n\nProposed patch: attached as `utf8toucs-strlen.diff`; a helper that looks only at the bytes the form needs, which gives the same answer as `strlen(s) < n`, plus a timing in `tests/reg-tests-1e.R`.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/510, where CI results can be seen.",
+            "count": 0,
+            "tags": [],
+            "id": 104331,
+            "is_private": false
+          },
+          {
+            "time": "2026-11-18T04:06:34Z",
+            "id": 104332,
+            "is_private": false,
+            "attachment_id": 4104,
+            "tags": [],
+            "text": "Created attachment 4104\nPatch against r90925: check sequence length without strlen()",
+            "bug_id": 19338,
+            "is_markdown": false,
+            "count": 1,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-18T04:06:34Z"
+          },
+          {
+            "is_private": false,
+            "id": 104333,
+            "tags": [],
+            "count": 2,
+            "bug_id": 19338,
+            "text": "Created attachment 4105\nReproducible example",
+            "creation_time": "2026-11-18T04:06:35Z",
+            "time": "2026-11-18T04:06:35Z",
+            "attachment_id": 4105,
+            "is_markdown": false,
+            "creator": "kevinushey"
+          },
+          {
+            "time": "2026-11-18T04:32:27Z",
+            "attachment_id": 4108,
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "id": 104337,
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19338,
+            "text": "Created attachment 4108\nPatch against r90925 (v2): drop the length checks in utf8toucs(); strsplit(perl = TRUE) passes the remaining length\n\nRevised patch attached, replacing attachment 4104. Rather than swap the `strlen(s) < n` checks in `utf8toucs()` for a helper, it removes them: they were never needed to stay in bounds, since NUL is never a continuation byte and each branch tests its continuation bytes in order with `&&`. They only made a truncated sequence return `(size_t)-2` instead of `-1`. The one caller that tells the two apart, `mbcsToSbcs()` in `devPS.c`, mishandles `-2` (under ASan, `pdf()` text ending in `\"\\xf0\"` gives negative-size-param) and now takes its invalid-input path.\n\nThe patch also fixes the same pattern in `strsplit(perl = TRUE)`, which ran `strlen()` on the rest of the string for every piece: 1.3 s for 200,000 pieces, 0.013 s after.\n\nPatch also at https://github.com/r-devel/r-svn/pull/510",
+            "count": 3,
+            "creation_time": "2026-11-18T04:32:27Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19338": [
+        {
+          "is_private": false,
+          "id": 4104,
+          "last_change_time": "2026-11-18T04:32:37Z",
+          "size": 3533,
+          "file_name": "utf8toucs-strlen.diff",
+          "bug_id": 19338,
+          "creation_time": "2026-11-18T04:06:34Z",
+          "summary": "Patch against r90925: check sequence length without strlen()",
+          "is_patch": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwOTI1KQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xMzgzLDYgKzEzODMsMTYgQEAgdXRmOHRvdWNzMzIod2NoYXJfdCBoaWdoLCBjb25zdCBjaGFyICpzKQogICAgIHJldHVybiB1dGYxNnRvdWNzKGhpZ2gsIHV0Zjh0b3V0ZjE2bG93KHMpKTsKIH0KIAorLyogc3RybGVuKHMpIDwgbiwgd2l0aG91dCBzY2FubmluZyBwYXN0IHNbbiAtIDFdOiB1dGY4dG91Y3MoKSBpcyBjYWxsZWQKKyAgIG9uY2UgcGVyIGNoYXJhY3Rlciwgc28gc3RybGVuKCkgdGhlcmUgbWFkZSBzdHJpbmcgbG9vcHMgcXVhZHJhdGljLiAqLworc3RhdGljIGJvb2wgaXNTaG9ydGVyVGhhbihjb25zdCBjaGFyICpzLCBzaXplX3QgbikKK3sKKyAgICBmb3IgKHNpemVfdCBpID0gMDsgaSA8IG47IGkrKykKKwlpZiAoIXNbaV0pCisJICAgIHJldHVybiBUUlVFOworICAgIHJldHVybiBGQUxTRTsKK30KKwogLyogVGhlc2UgcmV0dXJuIHRoZSByZXN1bHQgaW4gd2NoYXJfdC4gIElmIHdjaGFyX3QgaXMgMTYgYml0IChlLmcuIFVURi0xNkxFIG9uIFdpbmRvd3MpCiAgICBvbmx5IHRoZSBoaWdoIHN1cnJvZ2F0ZSBpcyByZXR1cm5lZDsgY2FsbCB1dGY4dG91dGYxNmxvdyBuZXh0LiAqLwogc2l6ZV90CkBAIC0xNDAyLDEzICsxNDEyLDEzIEBAIHV0Zjh0b3Vjcyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcykKICAgICB9IGVsc2UgaWYgKGJ5dGUgPCAweEMwKSB7CiAJcmV0dXJuIChzaXplX3QpLTE7CiAgICAgfSBlbHNlIGlmIChieXRlIDwgMHhFMCkgewotCWlmKHN0cmxlbihzKSA8IDIpIHJldHVybiAoc2l6ZV90KS0yOworCWlmKGlzU2hvcnRlclRoYW4ocywgMikpIHJldHVybiAoc2l6ZV90KS0yOwogCWlmICgoc1sxXSAmIDB4QzApID09IDB4ODApIHsKIAkgICAgKncgPSAod2NoYXJfdCkgKCgoYnl0ZSAmIDB4MUYpIDw8IDYpIHwgKHNbMV0gJiAweDNGKSk7CiAJICAgIHJldHVybiAyOwogCX0gZWxzZSByZXR1cm4gKHNpemVfdCktMTsKICAgICB9IGVsc2UgaWYgKGJ5dGUgPCAweEYwKSB7Ci0JaWYoc3RybGVuKHMpIDwgMykgcmV0dXJuIChzaXplX3QpLTI7CisJaWYoaXNTaG9ydGVyVGhhbihzLCAzKSkgcmV0dXJuIChzaXplX3QpLTI7CiAJaWYgKCgoc1sxXSAmIDB4QzApID09IDB4ODApICYmICgoc1syXSAmIDB4QzApID09IDB4ODApKSB7CiAJICAgICp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDBGKSA8PCAxMikKIAkJCSAgICB8ICh1bnNpZ25lZCBpbnQpICgoc1sxXSAmIDB4M0YpIDw8IDYpCkBAIC0xNDIxLDcgKzE0MzEsNyBAQCB1dGY4dG91Y3Mod2NoYXJfdCAqd2MsIGNvbnN0IGNoYXIgKnMpCiAJfSBlbHNlIHJldHVybiAoc2l6ZV90KS0xOwogCiAgICAgfSBlbHNlIGlmIChieXRlIDwgMHhmOCkgewotCWlmKHN0cmxlbihzKSA8IDQpIHJldHVybiAoc2l6ZV90KS0yOworCWlmKGlzU2hvcnRlclRoYW4ocywgNCkpIHJldHVybiAoc2l6ZV90KS0yOwogCWlmICgoKHNbMV0gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbMl0gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbM10gJiAweEMwKSA9PSAweDgwKSkgewogCSAgICB1bnNpZ25lZCBpbnQgY3ZhbHVlID0gKCgoYnl0ZSAmIDB4MEYpIDw8IDE4KQogCQkJfCAodW5zaWduZWQgaW50KSAoKHNbMV0gJiAweDNGKSA8PCAxMikKQEAgLTE0MzksNyArMTQ0OSw3IEBAIHV0Zjh0b3Vjcyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcykKICAgICAgICBmb3IgY29tcGF0aWJpbGl0eSwgYnV0IGNoZWNrZWQgbGlrZSB0aGUgc2hvcnRlciBmb3JtcyBzbyB0aGUKICAgICAgICByZXN1bHQgZml0cyBpbiAzMSBiaXRzLiAgMHhGRSBhbmQgMHhGRiBhcmUgbmV2ZXIgbGVhZCBieXRlcy4gKi8KICAgICBpZiAoYnl0ZSA8IDB4RkMpIHsKLQlpZihzdHJsZW4ocykgPCA1KSByZXR1cm4gKHNpemVfdCktMjsKKwlpZihpc1Nob3J0ZXJUaGFuKHMsIDUpKSByZXR1cm4gKHNpemVfdCktMjsKIAlpZiAoKChzWzFdICYgMHhDMCkgPT0gMHg4MCkgJiYgKChzWzJdICYgMHhDMCkgPT0gMHg4MCkKIAkgICAgJiYgKChzWzNdICYgMHhDMCkgPT0gMHg4MCkgJiYgKChzWzRdICYgMHhDMCkgPT0gMHg4MCkpIHsKIAkgICAgKncgPSAod2NoYXJfdCkgKCgoYnl0ZSAmIDB4MDMpIDw8IDI0KQpAQCAtMTQ1MCw3ICsxNDYwLDcgQEAgdXRmOHRvdWNzKHdjaGFyX3QgKndjLCBjb25zdCBjaGFyICpzKQogCSAgICByZXR1cm4gNTsKIAl9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CiAgICAgfSBlbHNlIGlmIChieXRlIDwgMHhGRSkgewotCWlmKHN0cmxlbihzKSA8IDYpIHJldHVybiAoc2l6ZV90KS0yOworCWlmKGlzU2hvcnRlclRoYW4ocywgNikpIHJldHVybiAoc2l6ZV90KS0yOwogCWlmICgoKHNbMV0gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbMl0gJiAweEMwKSA9PSAweDgwKQogCSAgICAmJiAoKHNbM10gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbNF0gJiAweEMwKSA9PSAweDgwKQogCSAgICAmJiAoKHNbNV0gJiAweEMwKSA9PSAweDgwKSkgewpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwOTI1KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ0OTEsNiArNDQ5MSwxOCBAQCBzdG9waWZub3QobGVuZ3RoKGNsKSA9PSAxTCwKIHRvb2xzOjphc3NlcnRXYXJuaW5nKGNvbnRvdXJMaW5lcyhtYXRyaXgoLTEsIDMsIDMpKSwgdmVyYm9zZSA9IFRSVUUpCiAKIAorIyMgdG91cHBlcigpIGFuZCBlbmNvZGVTdHJpbmcoKSBvZiBhIGxvbmcgVVRGLTggc3RyaW5nCit4IDwtIGludFRvVXRmOChyZXAoMHhlOSwgMmU1KSkgIyBtYXJrZWQgVVRGLTggaW4gYW55IGxvY2FsZQorc3lzdGVtLnRpbWUodG91cHBlcih4KSkgICAgICAjIDEgcyBvciBzbyBpbiBSIDQuNi4yCitzeXN0ZW0udGltZShlbmNvZGVTdHJpbmcoeCkpICMgZGl0dG8KKyMjICAwLjAwMyBvciBzbyBhZnRlciBmaXhpbmc7IHdlcmUgcXVhZHJhdGljIGluIHRoZSBudW1iZXIgb2YgY2hhcmFjdGVycworZm9yIChiIGluIGxpc3QoMHhjMywgYygweGUyLCAweDgyKSwgYygweGYwLCAweDlmLCAweDk4KSkpIHsgIyB0cnVuY2F0ZWQ6IHN0aWxsIGludmFsaWQKKyAgICBzIDwtIHJhd1RvQ2hhcihhcy5yYXcoYygweDYxLCBiKSkpCisgICAgRW5jb2RpbmcocykgPC0gIlVURi04IgorICAgIGFzc2VydEVyclYodG91cHBlcihzKSkKK30KKworCiAjIyBhcy5lbnZpcm9ubWVudCh4KSwgcG9zLnRvLmVudih4KSBmb3IgbnVtZXJpYyAneCcgKFBSIzE5MzA2KQogeCA8LSBjKC0xTCwgLTFMKSAjIGxlbmd0aCh4KSA+PSAyCiB0b29sczo6YXNzZXJ0RXJyb3IoYXMuZW52aXJvbm1lbnQoeCkpICMgcmV0dXJuZWQgbGlzdAo="
+        },
+        {
+          "is_private": false,
+          "id": 4105,
+          "last_change_time": "2026-11-18T04:06:35Z",
+          "size": 629,
+          "file_name": "utf8toucs-strlen-repro.R",
+          "bug_id": 19338,
+          "creation_time": "2026-11-18T04:06:35Z",
+          "summary": "Reproducible example",
+          "is_patch": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgRnVuY3Rpb25zIHRoYXQgZGVjb2RlIFVURi04IG9uZSBjaGFyYWN0ZXIgYXQgYSB0aW1lIHRha2UgdGltZSBxdWFkcmF0aWMgaW4KIyMgdGhlIG51bWJlciBvZiBub24tQVNDSUkgY2hhcmFjdGVyczogdXRmOHRvdWNzKCkgY2FsbHMgc3RybGVuKCkgb24gdGhlIHJlc3QKIyMgb2YgdGhlIHN0cmluZyBmb3IgZWFjaCBvbmUuCmZvciAobiBpbiBjKDVlNCwgMWU1LCAyZTUpKSB7CiAgICB4IDwtIGludFRvVXRmOChyZXAoMHhlOSwgbikpCiAgICBjYXQoc3ByaW50ZigibiA9ICU2ZCAgdG91cHBlciAlNi4zZiBzICBlbmNvZGVTdHJpbmcgJTYuM2YgcyAgZm9ybWF0ICU2LjNmIHNcbiIsIG4sCiAgICAgICAgICAgICAgICBzeXN0ZW0udGltZSh0b3VwcGVyKHgpKVtbImVsYXBzZWQiXV0sCiAgICAgICAgICAgICAgICBzeXN0ZW0udGltZShlbmNvZGVTdHJpbmcoeCkpW1siZWxhcHNlZCJdXSwKICAgICAgICAgICAgICAgIHN5c3RlbS50aW1lKGZvcm1hdCh4KSlbWyJlbGFwc2VkIl1dKSkKfQojIyBCZWZvcmUgdGhlIHBhdGNoIGVhY2ggZG91Ymxpbmcgb2YgbiB0YWtlcyA0eCBhcyBsb25nICgyZTU6IDEuMywgMS4zLCAyLjYgcwojIyBvbiBtYWNPUyBhcm02NCk7IGFmdGVyIGl0LCBhIGZldyBtcyBlYWNoLgo="
+        },
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL2dyZXAuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9ncmVwLmMJKHJldmlzaW9uIDkwOTI1KQorKysgc3JjL21haW4vZ3JlcC5jCSh3b3JraW5nIGNvcHkpCkBAIC04NjUsMTggKzg2NSwyMyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc3Ryc3BsaXQoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCQkgICAgfQogCQl9CiAJCS8qIGZpbmQgb3V0IGhvdyBtYW55IHNwbGl0cyB0aGVyZSB3aWxsIGJlICovCisJCS8qIEJvdGggcGFzc2VzIGdpdmUgdGhlIG1hdGNoZXIgdGhlIHJlbWFpbmluZyBsZW5ndGg6CisJCSAgIHN0cmxlbihidWZwKSwgb3IgUENSRTJfWkVST19URVJNSU5BVEVELCB3aGljaCBoYXMKKwkJICAgcGNyZTJfbWF0Y2goKSBjYWxsIHN0cmxlbigpLCBjb3N0cyB0aW1lIHF1YWRyYXRpYyBpbiB0aGUKKwkJICAgbnVtYmVyIG9mIHRva2Vucy4gKi8KKwkJc2l6ZV90IGJ1ZmxlbiA9IHN0cmxlbihidWYpOwogCQludG9rID0gMDsKIAkJYnVmcCA9IGJ1ZjsKIAkJaWYgKCpidWZwKSB7CiAJCSAgICBpbnQgcmM7CiAjaWZkZWYgSEFWRV9QQ1JFMgogCQkgICAgd2hpbGUoKHJjID0gcGNyZTJfbWF0Y2gocmUsIChQQ1JFMl9TUFRSKSBidWZwLAotCQkgICAgICAgICAgICAgICAgICAgICAgICAgICAgUENSRTJfWkVST19URVJNSU5BVEVELAorCQkgICAgICAgICAgICAgICAgICAgICAgICAgICAgYnVmbGVuIC0gKHNpemVfdCkoYnVmcCAtIGJ1ZiksCiAJCQkJCSAgICAwLCBlZmxhZywgbWRhdGEsIG1jb250ZXh0KSkgPj0gMCkgewogCQkJb3ZlY3RvciA9IHBjcmUyX2dldF9vdmVjdG9yX3BvaW50ZXIobWRhdGEpOwogI2Vsc2UKIAkJICAgIHdoaWxlKChyYyA9IHBjcmVfZXhlYyhyZV9wY3JlLCByZV9wZSwgYnVmcCwKLQkJCQkJICAoaW50KSBzdHJsZW4oYnVmcCksCisJCQkJCSAgKGludCkgKGJ1ZmxlbiAtIChzaXplX3QpKGJ1ZnAgLSBidWYpKSwKIAkJCQkJICAwLCAwLCBvdmVjdG9yLCBvdmVjc2l6ZSkpID49IDApIHsKICNlbmRpZgogCQkJLyogRW1wdHkgbWF0Y2hlcyBnZXQgdGhlIG5leHQgY2hhciwgc28gbW92ZSBieSBvbmUuICovCkBAIC04OTcsMTUgKzkwMiwxNSBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgZG9fc3Ryc3BsaXQoU0VYUCBjYWxsLCBTRVhQIG9wLCBTRVhQIGFyZ3MsIFNFWFAgZW52KQogCQkJICAgICAgIHQgPSBhbGxvY1ZlY3RvcihTVFJTWFAsIG50b2sgKyAoKmJ1ZnAgPyAxIDogMCkpKTsKIAkJLyogYW5kIGZpbGwgd2l0aCB0aGUgc3BsaXRzICovCiAJCWJ1ZnAgPSBidWY7Ci0JCXB0ID0gUl9SZWFsbG9jKHB0LCBzdHJsZW4oYnVmKSsxLCBjaGFyKTsKKwkJcHQgPSBSX1JlYWxsb2MocHQsIGJ1ZmxlbisxLCBjaGFyKTsKIAkJZm9yIChqID0gMDsgaiA8IG50b2s7IGorKykgewogI2lmZGVmIEhBVkVfUENSRTIKIAkJICAgIGludCByYyA9IHBjcmUyX21hdGNoKHJlLCAoUENSRTJfU1BUUikgYnVmcCwKLQkJCQkgICAgICAgUENSRTJfWkVST19URVJNSU5BVEVELAorCQkJCSAgICAgICBidWZsZW4gLSAoc2l6ZV90KShidWZwIC0gYnVmKSwKIAkJICAgICAgICAgICAgICAgICAgICAgICAwLCBlZmxhZywgbWRhdGEsIG1jb250ZXh0KTsKICNlbHNlCiAJCSAgICBpbnQgcmMgPSBwY3JlX2V4ZWMocmVfcGNyZSwgcmVfcGUsIGJ1ZnAsCi0JCQkJICAgICAgIChpbnQpIHN0cmxlbihidWZwKSwgMCwgMCwKKwkJCQkgICAgICAgKGludCkgKGJ1ZmxlbiAtIChzaXplX3QpKGJ1ZnAgLSBidWYpKSwgMCwgMCwKIAkJCQkgICAgICAgb3ZlY3Rvciwgb3ZlY3NpemUpOwogI2VuZGlmCiAJCSAgICBSX3BjcmVfZXhlY19lcnJvcihyYywgaSk7CkluZGV4OiBzcmMvbWFpbi91dGlsLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vdXRpbC5jCShyZXZpc2lvbiA5MDkyNSkKKysrIHNyYy9tYWluL3V0aWwuYwkod29ya2luZyBjb3B5KQpAQCAtMTM4NCw3ICsxMzg0LDEzIEBAIHV0Zjh0b3VjczMyKHdjaGFyX3QgaGlnaCwgY29uc3QgY2hhciAqcykKIH0KIAogLyogVGhlc2UgcmV0dXJuIHRoZSByZXN1bHQgaW4gd2NoYXJfdC4gIElmIHdjaGFyX3QgaXMgMTYgYml0IChlLmcuIFVURi0xNkxFIG9uIFdpbmRvd3MpCi0gICBvbmx5IHRoZSBoaWdoIHN1cnJvZ2F0ZSBpcyByZXR1cm5lZDsgY2FsbCB1dGY4dG91dGYxNmxvdyBuZXh0LiAqLworICAgb25seSB0aGUgaGlnaCBzdXJyb2dhdGUgaXMgcmV0dXJuZWQ7IGNhbGwgdXRmOHRvdXRmMTZsb3cgbmV4dC4KKworICAgVGhlcmUgaXMgbm8gbGVuZ3RoIGNoZWNrOiBOVUwgaXMgbmV2ZXIgYSBjb250aW51YXRpb24gYnl0ZSwgYW5kIGVhY2gKKyAgICYmIGNoYWluIGJlbG93IHN0b3BzIGF0IHRoZSBmaXJzdCBieXRlIHRoYXQgaXMgbm90IG9uZSwgc28gYSBzZXF1ZW5jZQorICAgY3V0IHNob3J0IGJ5IHRoZSB0ZXJtaW5hdG9yIGdpdmVzIChzaXplX3QpLTEgd2l0aG91dCByZWFkaW5nIHBhc3QgaXQuCisgICBDYWxsZXJzIGRlY29kZSBhIHN0cmluZyBvbmUgY2hhcmFjdGVyIGF0IGEgdGltZSwgc28gY2hlY2tpbmcgd2l0aAorICAgc3RybGVuKHMpIGhlcmUgd291bGQgbWFrZSB0aGVtIHF1YWRyYXRpYy4gKi8KIHNpemVfdAogdXRmOHRvdWNzKHdjaGFyX3QgKndjLCBjb25zdCBjaGFyICpzKQogewpAQCAtMTQwMiwxMyArMTQwOCwxMSBAQCB1dGY4dG91Y3Mod2NoYXJfdCAqd2MsIGNvbnN0IGNoYXIgKnMpCiAgICAgfSBlbHNlIGlmIChieXRlIDwgMHhDMCkgewogCXJldHVybiAoc2l6ZV90KS0xOwogICAgIH0gZWxzZSBpZiAoYnl0ZSA8IDB4RTApIHsKLQlpZihzdHJsZW4ocykgPCAyKSByZXR1cm4gKHNpemVfdCktMjsKIAlpZiAoKHNbMV0gJiAweEMwKSA9PSAweDgwKSB7CiAJICAgICp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDFGKSA8PCA2KSB8IChzWzFdICYgMHgzRikpOwogCSAgICByZXR1cm4gMjsKIAl9IGVsc2UgcmV0dXJuIChzaXplX3QpLTE7CiAgICAgfSBlbHNlIGlmIChieXRlIDwgMHhGMCkgewotCWlmKHN0cmxlbihzKSA8IDMpIHJldHVybiAoc2l6ZV90KS0yOwogCWlmICgoKHNbMV0gJiAweEMwKSA9PSAweDgwKSAmJiAoKHNbMl0gJiAweEMwKSA9PSAweDgwKSkgewogCSAgICAqdyA9ICh3Y2hhcl90KSAoKChieXRlICYgMHgwRikgPDwgMTIpCiAJCQkgICAgfCAodW5zaWduZWQgaW50KSAoKHNbMV0gJiAweDNGKSA8PCA2KQpAQCAtMTQyMSw3ICsxNDI1LDYgQEAgdXRmOHRvdWNzKHdjaGFyX3QgKndjLCBjb25zdCBjaGFyICpzKQogCX0gZWxzZSByZXR1cm4gKHNpemVfdCktMTsKIAogICAgIH0gZWxzZSBpZiAoYnl0ZSA8IDB4ZjgpIHsKLQlpZihzdHJsZW4ocykgPCA0KSByZXR1cm4gKHNpemVfdCktMjsKIAlpZiAoKChzWzFdICYgMHhDMCkgPT0gMHg4MCkgJiYgKChzWzJdICYgMHhDMCkgPT0gMHg4MCkgJiYgKChzWzNdICYgMHhDMCkgPT0gMHg4MCkpIHsKIAkgICAgdW5zaWduZWQgaW50IGN2YWx1ZSA9ICgoKGJ5dGUgJiAweDBGKSA8PCAxOCkKIAkJCXwgKHVuc2lnbmVkIGludCkgKChzWzFdICYgMHgzRikgPDwgMTIpCkBAIC0xNDM5LDcgKzE0NDIsNiBAQCB1dGY4dG91Y3Mod2NoYXJfdCAqd2MsIGNvbnN0IGNoYXIgKnMpCiAgICAgICAgZm9yIGNvbXBhdGliaWxpdHksIGJ1dCBjaGVja2VkIGxpa2UgdGhlIHNob3J0ZXIgZm9ybXMgc28gdGhlCiAgICAgICAgcmVzdWx0IGZpdHMgaW4gMzEgYml0cy4gIDB4RkUgYW5kIDB4RkYgYXJlIG5ldmVyIGxlYWQgYnl0ZXMuICovCiAgICAgaWYgKGJ5dGUgPCAweEZDKSB7Ci0JaWYoc3RybGVuKHMpIDwgNSkgcmV0dXJuIChzaXplX3QpLTI7CiAJaWYgKCgoc1sxXSAmIDB4QzApID09IDB4ODApICYmICgoc1syXSAmIDB4QzApID09IDB4ODApCiAJICAgICYmICgoc1szXSAmIDB4QzApID09IDB4ODApICYmICgoc1s0XSAmIDB4QzApID09IDB4ODApKSB7CiAJICAgICp3ID0gKHdjaGFyX3QpICgoKGJ5dGUgJiAweDAzKSA8PCAyNCkKQEAgLTE0NTAsNyArMTQ1Miw2IEBAIHV0Zjh0b3Vjcyh3Y2hhcl90ICp3YywgY29uc3QgY2hhciAqcykKIAkgICAgcmV0dXJuIDU7CiAJfSBlbHNlIHJldHVybiAoc2l6ZV90KS0xOwogICAgIH0gZWxzZSBpZiAoYnl0ZSA8IDB4RkUpIHsKLQlpZihzdHJsZW4ocykgPCA2KSByZXR1cm4gKHNpemVfdCktMjsKIAlpZiAoKChzWzFdICYgMHhDMCkgPT0gMHg4MCkgJiYgKChzWzJdICYgMHhDMCkgPT0gMHg4MCkKIAkgICAgJiYgKChzWzNdICYgMHhDMCkgPT0gMHg4MCkgJiYgKChzWzRdICYgMHhDMCkgPT0gMHg4MCkKIAkgICAgJiYgKChzWzVdICYgMHhDMCkgPT0gMHg4MCkpIHsKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDkyNSkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NDkxLDYgKzQ0OTEsMjEgQEAgc3RvcGlmbm90KGxlbmd0aChjbCkgPT0gMUwsCiB0b29sczo6YXNzZXJ0V2FybmluZyhjb250b3VyTGluZXMobWF0cml4KC0xLCAzLCAzKSksIHZlcmJvc2UgPSBUUlVFKQogCiAKKyMjIHRvdXBwZXIoKSwgZW5jb2RlU3RyaW5nKCkgYW5kIHN0cnNwbGl0KHBlcmwgPSBUUlVFKSBvbiBsb25nIHN0cmluZ3MgLS0gUFIjMTkzMzgKK3ggPC0gaW50VG9VdGY4KHJlcCgweGU5LCAyZTUpKSAjIG1hcmtlZCBVVEYtOCBpbiBhbnkgbG9jYWxlCitzeXN0ZW0udGltZSh0b3VwcGVyKHgpKSAgICAgICMgMSBzIG9yIHNvIGluIFIgNC42LjIKK3N5c3RlbS50aW1lKGVuY29kZVN0cmluZyh4KSkgIyBkaXR0bworeSA8LSBzdHJyZXAoImEsIiwgMmU1KQorc3lzdGVtLnRpbWUoc3kgPC0gc3Ryc3BsaXQoeSwgIiwiLCBwZXJsID0gVFJVRSkpICMgZGl0dG8KKyMjICAwLjAwMyBvciBzbyBhZnRlciBmaXhpbmc7IHdlcmUgcXVhZHJhdGljIGluIHRoZSBudW1iZXIgb2YgY2hhcmFjdGVycyBvciBwaWVjZXMKK3N0b3BpZm5vdChpZGVudGljYWwoc3ksIHN0cnNwbGl0KHksICIsIiwgZml4ZWQgPSBUUlVFKSkpCitmb3IgKGIgaW4gbGlzdCgweGMzLCBjKDB4ZTIsIDB4ODIpLCBjKDB4ZjAsIDB4OWYsIDB4OTgpKSkgeyAjIHRydW5jYXRlZDogc3RpbGwgaW52YWxpZAorICAgIHMgPC0gcmF3VG9DaGFyKGFzLnJhdyhjKDB4NjEsIGIpKSkKKyAgICBFbmNvZGluZyhzKSA8LSAiVVRGLTgiCisgICAgYXNzZXJ0RXJyVih0b3VwcGVyKHMpKQorfQorCisKICMjIGFzLmVudmlyb25tZW50KHgpLCBwb3MudG8uZW52KHgpIGZvciBudW1lcmljICd4JyAoUFIjMTkzMDYpCiB4IDwtIGMoLTFMLCAtMUwpICMgbGVuZ3RoKHgpID49IDIKIHRvb2xzOjphc3NlcnRFcnJvcihhcy5lbnZpcm9ubWVudCh4KSkgIyByZXR1cm5lZCBsaXN0Cg==",
+          "creator": "kevinushey",
+          "id": 4108,
+          "is_private": false,
+          "size": 5482,
+          "last_change_time": "2026-11-18T04:32:27Z",
+          "bug_id": 19338,
+          "file_name": "utf8toucs-strlen-v2.diff",
+          "summary": "Patch against r90925 (v2): drop the length checks in utf8toucs(); strsplit(perl = TRUE) passes the remaining length",
+          "creation_time": "2026-11-18T04:32:27Z"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-18 04:32:37"
+}

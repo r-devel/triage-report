@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "Graphics",
+        "assigned_to": "R-core",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19340,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P2",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-18T04:50:35Z",
+        "whiteboard": "",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-18T04:50:47Z",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "text() on pdf()/postscript() reads past strings with a truncated UTF-8 character, segfaulting on Windows (mbcsToSbcs)"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19340": {
+        "comments": [
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 104338,
+            "time": "2026-11-18T04:50:35Z",
+            "creation_time": "2026-11-18T04:50:35Z",
+            "creator": "kevinushey",
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19340,
+            "text": "## Summary\n\nIn a UTF-8 locale, `text()` on a `pdf()` or `postscript()` device reads past the end of a string that ends part way through a UTF-8 character, and on Windows also of one holding a byte from 0xF8 that `iconv()` cannot convert. Fixes a reproducible segfault: an out-of-bounds read reachable from plain R code (an error on Linux and macOS, a crash on Windows).\n\n## Details\n\nWhen `iconv()` fails on a character, `mbcsToSbcs()` in `src/library/grDevices/src/devPS.c` decodes it with `utf8toucs()` and steps over `utf8clen()` bytes. It treats only `-1` as an error, but `utf8toucs()` also returns `-2`, for a truncated sequence and, on Windows, for any lead byte from 0xF8; the step then passes the terminator and the next `iconv()` reads far beyond the string (ASan: negative-size-param). Since r85256 (R 4.4.0); seen in R-devel r90926 and R 4.6.1, patch tested on Linux, macOS and Windows.\n\nReproducible example: attached as `devps-truncated-utf8-repro.R`; runs four strings in fresh R processes: three fail before the patch (on Windows all four, three as segfaults), none after.\n\nProposed patch: attached as `devps-truncated-utf8.diff`; tests for `res > 0`, so these get one dot per byte, and adds a test to `grDevices/tests/encodings.R`.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/512, where CI results can be seen."
+          },
+          {
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 4109,
+            "time": "2026-11-18T04:50:46Z",
+            "creation_time": "2026-11-18T04:50:46Z",
+            "count": 1,
+            "text": "Created attachment 4109\nPatch against r90926: treat every negative utf8toucs() result as a conversion error",
+            "bug_id": 19340,
+            "tags": [],
+            "is_private": false,
+            "id": 104339
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-18T04:50:47Z",
+            "text": "Created attachment 4110\nReproducible example",
+            "bug_id": 19340,
+            "is_markdown": false,
+            "count": 2,
+            "tags": [],
+            "attachment_id": 4110,
+            "time": "2026-11-18T04:50:47Z",
+            "id": 104340,
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19340": [
+        {
+          "bug_id": 19340,
+          "file_name": "devps-truncated-utf8.diff",
+          "summary": "Patch against r90926: treat every negative utf8toucs() result as a conversion error",
+          "creation_time": "2026-11-18T04:50:46Z",
+          "id": 4109,
+          "is_private": false,
+          "size": 2535,
+          "last_change_time": "2026-11-18T04:50:46Z",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L2dyRGV2aWNlcy9zcmMvZGV2UFMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9nckRldmljZXMvc3JjL2RldlBTLmMJKHJldmlzaW9uIDkwOTI2KQorKysgc3JjL2xpYnJhcnkvZ3JEZXZpY2VzL3NyYy9kZXZQUy5jCSh3b3JraW5nIGNvcHkpCkBAIC00NTQ2LDggKzQ1NDYsOCBAQCBzdGF0aWMgdm9pZCBtYmNzVG9TYmNzKGNvbnN0IGNoYXIgKmluLCBjaGFyICpvdXQsIGNvbnN0IGNoYXIgKmVuY29kaW5nLAogCSAgICBpbnQgY2xlbiA9IHV0ZjhjbGVuKCppX2J1Zik7CiAJICAgIHdjaGFyX3Qgd2M7CiAJICAgIGludCByZXMgPQotCQkoaW50KSB1dGY4dG91Y3MoJndjLCBpX2J1Zik7IC8vIGdpdmVzIC0xIGZvciBhIGNvbnZlcnNpb24gZXJyb3IKLQkgICAgaWYgKHJlcyAhPSAtMSkgeworCQkoaW50KSB1dGY4dG91Y3MoJndjLCBpX2J1Zik7IC8vIG5lZ2F0aXZlIGZvciBhIGNvbnZlcnNpb24gZXJyb3IKKwkgICAgaWYgKHJlcyA+IDApIHsKIAkJUl93Y2hhcl90IHVjcyA9IHdjOwogCQlSX0NoZWNrU3RhY2syKGNsZW4gKyAxKTsKIAkJY2hhciBiYWRjaGFyW2NsZW4gKyAxXTsKSW5kZXg6IHNyYy9saWJyYXJ5L2dyRGV2aWNlcy90ZXN0cy9lbmNvZGluZ3MuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9nckRldmljZXMvdGVzdHMvZW5jb2RpbmdzLlIJKHJldmlzaW9uIDkwOTI2KQorKysgc3JjL2xpYnJhcnkvZ3JEZXZpY2VzL3Rlc3RzL2VuY29kaW5ncy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMzIsNiArMTMyLDE5IEBAIGRldi5vZmYoKQogICAgIGRldi5vZmYoKQogI30KIAorIyMgQSBzdHJpbmcgZW5kaW5nIHBhcnQgd2F5IHRocm91Z2ggYSBVVEYtOCBjaGFyYWN0ZXIsIG9yIChvbiBXaW5kb3dzKQorIyMgd2l0aCBhIGxlYWQgYnl0ZSBmcm9tIDB4RjgsIGdldHMgb25lIGRvdCBwZXIgYnl0ZQorcGRmKHRmIDwtIHRlbXBmaWxlKGZpbGVleHQgPSAiLnBkZiIpKQorcGxvdC5uZXcoKQorZm9yICh4IGluIGMoImFiXHhmMCIsICJhYlx4ZTJceDgyIiwgImFiXHhmOCIsICJhYlx4ZmYiKSkgeworICAgIHRleHQoMC41LCAwLjUsIHgpCisgICAgZG90cyA8LSBzdHJyZXAoIi4iLCBuY2hhcih4LCAiYnl0ZXMiKSAtIDJMKQorICAgIHN0b3BpZm5vdChzdHJ3aWR0aCh4KSA9PSBzdHJ3aWR0aChwYXN0ZTAoImFiIiwgZG90cykpKQorfQoraW52aXNpYmxlKGRldi5vZmYoKSkKK3VubGluayh0ZikKKyMjIHJlYWQgcGFzdCB0aGUgc3RyaW5nLCBnaXZpbmcgYW4gZXJyb3Igb3IgYSBzZWdmYXVsdCwgaW4gUiA0LjQuMCB0byA0LjYuMgorCiAjIyBOb3cgd2l0aCAtLWFzLWNyYW4gc2V0dGluZ3MgaW4gcmVjZW50IFIsIG9ubHkuCiBpZiAoZ2V0UnZlcnNpb24oKSA8ICI0LjQuMCIpIHEoIm5vIikKIFN5cy5zZXRlbnYoIl9SX0NIRUNLX01CQ1NfQ09OVkVSU0lPTl9GQUlMVVJFXyIgPSAiVFJVRSIpCkluZGV4OiBzcmMvbGlicmFyeS9nckRldmljZXMvdGVzdHMvZW5jb2RpbmdzLlJvdXQuc2F2ZQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS9nckRldmljZXMvdGVzdHMvZW5jb2RpbmdzLlJvdXQuc2F2ZQkocmV2aXNpb24gOTA5MjYpCisrKyBzcmMvbGlicmFyeS9nckRldmljZXMvdGVzdHMvZW5jb2RpbmdzLlJvdXQuc2F2ZQkod29ya2luZyBjb3B5KQpAQCAtMjE1LDYgKzIxNSwxOSBAQCBudWxsIGRldmljZQogICAgICAgICAgIDEgCiA+ICN9CiA+IAorPiAjIyBBIHN0cmluZyBlbmRpbmcgcGFydCB3YXkgdGhyb3VnaCBhIFVURi04IGNoYXJhY3Rlciwgb3IgKG9uIFdpbmRvd3MpCis+ICMjIHdpdGggYSBsZWFkIGJ5dGUgZnJvbSAweEY4LCBnZXRzIG9uZSBkb3QgcGVyIGJ5dGUKKz4gcGRmKHRmIDwtIHRlbXBmaWxlKGZpbGVleHQgPSAiLnBkZiIpKQorPiBwbG90Lm5ldygpCis+IGZvciAoeCBpbiBjKCJhYlx4ZjAiLCAiYWJceGUyXHg4MiIsICJhYlx4ZjgiLCAiYWJceGZmIikpIHsKKysgICAgIHRleHQoMC41LCAwLjUsIHgpCisrICAgICBkb3RzIDwtIHN0cnJlcCgiLiIsIG5jaGFyKHgsICJieXRlcyIpIC0gMkwpCisrICAgICBzdG9waWZub3Qoc3Ryd2lkdGgoeCkgPT0gc3Ryd2lkdGgocGFzdGUwKCJhYiIsIGRvdHMpKSkKKysgfQorPiBpbnZpc2libGUoZGV2Lm9mZigpKQorPiB1bmxpbmsodGYpCis+ICMjIHJlYWQgcGFzdCB0aGUgc3RyaW5nLCBnaXZpbmcgYW4gZXJyb3Igb3IgYSBzZWdmYXVsdCwgaW4gUiA0LjQuMCB0byA0LjYuMgorPiAKID4gIyMgTm93IHdpdGggLS1hcy1jcmFuIHNldHRpbmdzIGluIHJlY2VudCBSLCBvbmx5LgogPiBpZiAoZ2V0UnZlcnNpb24oKSA8ICI0LjQuMCIpIHEoIm5vIikKID4gU3lzLnNldGVudigiX1JfQ0hFQ0tfTUJDU19DT05WRVJTSU9OX0ZBSUxVUkVfIiA9ICJUUlVFIikK",
+          "creator": "kevinushey",
+          "is_patch": true
+        },
+        {
+          "data": "IyMgdGV4dCgpIG9uIHBkZigpIGZvciBzdHJpbmdzIGVuZGluZyBwYXJ0IHdheSB0aHJvdWdoIGEgVVRGLTggY2hhcmFjdGVyLAojIyBhbmQgKG9uIFdpbmRvd3MpIHdpdGggYSBieXRlIGZyb20gMHhGOC4gIEVhY2ggY2FzZSBydW5zIGluIGEgZnJlc2ggUiwKIyMgYXMgdW5wYXRjaGVkIGJ1aWxkcyBtYXkgY3Jhc2guICBOZWVkcyBhIFVURi04IGxvY2FsZS4Kc3RvcGlmbm90KGwxMG5faW5mbygpW1siVVRGLTgiXV0pCmNhc2VzIDwtIGMoJyJhYlxceGYwIicsICciYWJcXHhlMlxceDgyIicsICciYWJcXHhmOCInLCAnImFiXFx4ZmYiJykKZm9yICh4IGluIGNhc2VzKSB7CiAgICBmIDwtIHRlbXBmaWxlKGZpbGVleHQgPSAiLlIiKQogICAgd3JpdGVMaW5lcyhzcHJpbnRmKCdwZGYodGVtcGZpbGUoKSk7IHBsb3QubmV3KCk7IHN1cHByZXNzV2FybmluZ3ModGV4dCgwLjUsIDAuNSwgJXMpKScsIHgpLCBmKQogICAgc3QgPC0gc3lzdGVtMihmaWxlLnBhdGgoUi5ob21lKCJiaW4iKSwgIlJzY3JpcHQiKSwgYygiLS12YW5pbGxhIiwgc2hRdW90ZShmKSksCiAgICAgICAgICAgICAgICAgIHN0ZG91dCA9IEZBTFNFLCBzdGRlcnIgPSBGQUxTRSkKICAgIGNhdChzcHJpbnRmKCIlLTE0cyAlc1xuIiwgeCwgaWYgKHN0ID09IDApICJvayIgZWxzZSBwYXN0ZSgiZmFpbGVkLCBleGl0IHN0YXR1cyIsIHN0KSkpCn0KIyMgQmVmb3JlIHRoZSBwYXRjaCB0aGUgZmlyc3QgdGhyZWUgZmFpbCB3aXRoICJjb252ZXJzaW9uIGZhaWx1cmUgZnJvbSBVVEYtOAojIyB0byBsYXRpbjEgb24gJ2ludmFsaWQgaW5wdXQnIiAodW5kZXIgQVNhbjogbmVnYXRpdmUtc2l6ZS1wYXJhbSksIGFuZCBvbgojIyBXaW5kb3dzICJhYlx4ZjAiLCAiYWJceGY4IiBhbmQgImFiXHhmZiIgc2VnZmF1bHQ7IGFmdGVyIGl0LCBhbGwgYXJlIG9rLgo=",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": false,
+          "summary": "Reproducible example",
+          "creation_time": "2026-11-18T04:50:47Z",
+          "bug_id": 19340,
+          "file_name": "devps-truncated-utf8-repro.R",
+          "size": 911,
+          "last_change_time": "2026-11-18T04:50:47Z",
+          "id": 4110,
+          "is_private": false
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-18 04:50:47"
+}

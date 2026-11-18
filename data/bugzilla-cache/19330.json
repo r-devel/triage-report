@@ -2,104 +2,178 @@
   "bug": {
     "bugs": [
       {
-        "blocks": [],
-        "url": "",
-        "summary": "Restore pow() accuracy for x^3 and x^4 with non-integer |x| <= 11",
-        "is_cc_accessible": true,
-        "groups": [],
-        "assigned_to_detail": {
-          "real_name": "R-core",
-          "id": 16,
-          "name": "R-core"
-        },
-        "see_also": [],
-        "target_milestone": "---",
-        "last_change_time": "2026-11-17T05:54:57Z",
-        "cc_detail": [],
-        "is_confirmed": true,
-        "op_sys": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
         "flags": [],
         "platform": "All",
-        "creator": "kevinushey",
-        "is_creator_accessible": true,
-        "alias": [],
-        "status": "NEW",
-        "creator_detail": {
-          "real_name": "Kevin Ushey",
-          "name": "kevinushey",
-          "id": 1044
-        },
+        "is_confirmed": true,
+        "op_sys": "All",
         "resolution": "",
-        "priority": "P3",
-        "product": "R",
-        "whiteboard": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "status": "CONFIRMED",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "Restore pow() accuracy for x^3 and x^4 with non-integer |x| <= 11",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2026-11-17T17:21:11Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Accuracy",
         "version": "R-devel (trunk)",
         "creation_time": "2026-11-17T05:54:44Z",
-        "severity": "normal",
-        "dupe_of": {},
-        "id": 19330,
-        "deadline": {},
-        "cc": [],
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P3",
+        "cc": [
+          "maechler"
+        ],
         "qa_contact": "",
-        "assigned_to": "R-core",
-        "component": "Accuracy",
-        "keywords": [],
-        "is_open": true,
-        "depends_on": [],
-        "classification": "Unclassified"
+        "dupe_of": {},
+        "severity": "normal",
+        "deadline": {},
+        "id": 19330
       }
     ],
     "faults": []
   },
   "comments": {
+    "comments": {},
     "bugs": {
       "19330": {
         "comments": [
           {
-            "creation_time": "2026-11-17T05:54:44Z",
-            "creator": "kevinushey",
-            "bug_id": 19330,
-            "text": "## Summary\n\nThis patch restores `pow()` accuracy, within about half an ulp, for `x^3` and `x^4` with non-integer |x| <= 11, which since R 4.6.0 are computed as `x*x*x` and `x*x*x*x` (up to 1.3 and 2 ulp off). Small integer powers stay exact on every platform.\n\n## Details\n\nr89376 added a shortcut to `R_pow()` in `src/main/arithmetic.c` for `y == 3, 4` and |x| <= 11. It makes small integer powers exact without the system `pow()`; for other x the products round two or three times, so of 200k random non-integer x in (-11, 11), 25% of `x^3` and 35% of `x^4` are not correctly rounded, against 0.1% with `pow()` (macOS arm64). As `R_pow()` is API, C code calling it benefits too.\n\nReproducible example: attached as `pow-small-integer-repro.R`; it prints `within_1_ulp` TRUE for all eight arguments in R 4.5.3 and with the patch, FALSE in R 4.6.x.\n\nProposed patch: attached as `pow-small-integer.diff`, against trunk r90915. It keeps the shortcut for integer x (`x == (int) x`) and adds a reg-test; `make check` passes.\n\nFound while working on [PR#19286](https://bugs.r-project.org/show_bug.cgi?id=19286); the patch is independent of the one there.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/501, where CI results can be seen.",
-            "count": 0,
-            "is_markdown": true,
             "attachment_id": {},
-            "tags": [],
-            "id": 104278,
             "time": "2026-11-17T05:54:44Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 104278,
+            "creation_time": "2026-11-17T05:54:44Z",
+            "count": 0,
+            "text": "## Summary\n\nThis patch restores `pow()` accuracy, within about half an ulp, for `x^3` and `x^4` with non-integer |x| <= 11, which since R 4.6.0 are computed as `x*x*x` and `x*x*x*x` (up to 1.3 and 2 ulp off). Small integer powers stay exact on every platform.\n\n## Details\n\nr89376 added a shortcut to `R_pow()` in `src/main/arithmetic.c` for `y == 3, 4` and |x| <= 11. It makes small integer powers exact without the system `pow()`; for other x the products round two or three times, so of 200k random non-integer x in (-11, 11), 25% of `x^3` and 35% of `x^4` are not correctly rounded, against 0.1% with `pow()` (macOS arm64). As `R_pow()` is API, C code calling it benefits too.\n\nReproducible example: attached as `pow-small-integer-repro.R`; it prints `within_1_ulp` TRUE for all eight arguments in R 4.5.3 and with the patch, FALSE in R 4.6.x.\n\nProposed patch: attached as `pow-small-integer.diff`, against trunk r90915. It keeps the shortcut for integer x (`x == (int) x`) and adds a reg-test; `make check` passes.\n\nFound while working on [PR#19286](https://bugs.r-project.org/show_bug.cgi?id=19286); the patch is independent of the one there.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/501, where CI results can be seen.",
+            "bug_id": 19330
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-17T05:54:51Z",
+            "text": "Created attachment 4083\npatch: keep the R_pow() x^3, x^4 shortcut to integer x (against r90915)",
+            "bug_id": 19330,
+            "count": 1,
+            "is_markdown": false,
+            "attachment_id": 4083,
+            "tags": [],
+            "time": "2026-11-17T05:54:51Z",
+            "id": 104279,
             "is_private": false
           },
           {
-            "is_markdown": false,
-            "count": 1,
-            "bug_id": 19330,
-            "text": "Created attachment 4083\npatch: keep the R_pow() x^3, x^4 shortcut to integer x (against r90915)",
-            "creation_time": "2026-11-17T05:54:51Z",
-            "creator": "kevinushey",
+            "id": 104280,
+            "time": "2026-11-17T05:54:57Z",
             "is_private": false,
-            "id": 104279,
-            "time": "2026-11-17T05:54:51Z",
-            "attachment_id": 4083,
+            "tags": [],
+            "attachment_id": 4084,
+            "bug_id": 19330,
+            "text": "Created attachment 4084\nreproducer: x^3, x^4 more than 1 ulp off for non-integer x",
+            "is_markdown": false,
+            "count": 2,
+            "creation_time": "2026-11-17T05:54:57Z",
+            "creator": "kevinushey"
+          },
+          {
+            "time": "2026-11-17T07:18:37Z",
+            "id": 104286,
+            "is_private": false,
+            "attachment_id": 4088,
+            "tags": [],
+            "text": "Created attachment 4088\nalternative patch: drop the R_pow() x^3, x^4 shortcut (against r90915)\n\nHere is an alternative to attachment 4083 that drops the `x^3`/`x^4` branch, restoring R 4.5 behaviour. Small integer powers are exact without it on every library I tested: macOS libm, glibc 2.43, UCRT `pow()`, and mingw-w64 `pow()`/`powl()` (Windows R 3.6.3 to 4.5.1). mfuzz also leaves integer exponents unperturbed.\n\nMartin, Tomas: do you recall what the branch was for? If it was exact small integer powers or speed, attachment 4083 keeps both (integer `x^3` stays ~10x faster on Windows), and its bound could be raised from 11 to 9741, the largest |x| with `x*x*x*x` exact.\n\nSeparately: UCRT's `pow()` was as accurate as `powl()` and ~8x faster, so `USE_POWL_IN_R_POW` may be worth revisiting once Rtools uses mingw-w64 v12+.\n\nThe alternative is also at https://github.com/r-devel/r-svn/pull/502.",
+            "bug_id": 19330,
+            "count": 3,
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-17T07:18:37Z"
+          },
+          {
+            "tags": [],
+            "id": 104288,
+            "is_private": false,
+            "creation_time": "2026-11-17T07:27:04Z",
+            "text": "Sorry, with apologies to the the late Tomas... the r89376 commit message credits much of that work to him, and I wrote without thinking. Martin, if you remember what the x^3/x^4 branch was for, that would be helpful.",
+            "bug_id": 19330,
+            "count": 4,
+            "attachment_id": {},
+            "time": "2026-11-17T07:27:04Z",
+            "creator": "kevinushey",
+            "is_markdown": true
+          },
+          {
+            "text": "Sorry, but this report is \"invalid\" -- in a subtle sense, though, but still :\n\nThe R Blog about 'mfuzz', https://blog.r-project.org/posts/mfuzz/  \nby Tomas Kalibera explains that it can be quite treacherous to conclude\nfrom (in our case, typically  glibc / libmath ) behaviour of the C math libary combined with the underlying hardware (and partly very low level OS settings, e.g., kernel ...) on what will happen on all other platforms that R runs.\n\nI have myself fallen in this trap (to put it a bit extremely, specifically I was wrongly assuming that glibc/libmath behavior on x86_64 was +- \"universal\") multiple times.\nAs Tomas is no longer with us, we can no longer ask him why he had this code in the arithmetic.c version he sent me to review (several times / evolving in Jan 2026).  The point has been that in some cases other libmath implementations, notably the new mingw on Windows which had started to use MS Windows UCRT libc instead of their own (and better!) to facilitate their own maintenance; and that was were Tomas found quite a few R package tests failing (which had worked everywhere else, sometimes for many years).\n\nNote that Bug 19286  is exactly about this change as well, and does cite the NEWS entry which put these changes as experimental *but* in addition emphasized the reasoning and goals behind them: to get more accurate results than the \"bad\" libmath implementations out there (also see Bug 19286 comment 1) I explain more about the intent and goals there,  and also that we (Tomas and I) expected more tests would happen within the R community, notably experts reading about it (the R blog above, the NEWS entry (say in https://stat.ethz.ch/pipermail/r-announce/2026/000722.html , search for \"Experimentally\" which then also mentions the above R Blog entry by Tomas) and further postings to R-devel which had not happened when Tomas' untimely death invalidated all these plans.\n\nStill, what I hoped (\"fully accurate / platform independent\") is now clearly incorrect I should have been more prudent and cautious in that NEWS entry.\n\nAlso for the  x^4 = x*x*x*x  implementation which uses 3 multiplications instead of only two  { x2 = x*x; x^4 = x2*x2 }   I should have fixed myself during the review I did back then.\n\n-------------------------------------\n\nAll the tests you show for macOS arm64  are just what their current libmath + runtime provides, but cannot know how less accurate libmath implementations on all the other R platforms will do... and as mentioned above, those do occasionally (quite a bit) worse than glibc etc.\n\nOTOH, this report and Bug 19286 for `exp()` instead of `pow()` / `x^y` do show that the current approach may be too simplistic .. possibly by orders of magnitude, possibly.\n\nThe CORE-MATH project https://core-math.gitlabpages.inria.fr/ seems to try to help solving this problem (of too much variation in libmath implementations) and\nlooking at their source code, e.g., for double precision`exp(.)`, https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/exp/exp.c  would indicate to me that to solve the problem for R may not be solved even for this small subset situation (values close to 0 / special cases) easily, and has not been achieved with our svn r89376.\n\nUsing your patch is not thorough enough I'm pretty sure, now.\nAnother 'solution' may be to revert much and hope that  libmath \"standards\" and implementation would improve in the future to guarantee at least *some* of the principal identities (such as log(1.) == 0.,  exp(0.) == 1.;  1^k == 1, x^2 == x*x ...etc)",
+            "bug_id": 19330,
+            "count": 5,
+            "is_markdown": true,
+            "creator": "maechler",
+            "creation_time": "2026-11-17T10:14:58Z",
+            "time": "2026-11-17T10:14:58Z",
+            "id": 104289,
+            "is_private": false,
+            "attachment_id": {},
             "tags": []
           },
           {
-            "attachment_id": 4084,
-            "tags": [],
+            "is_markdown": true,
+            "creator": "maechler",
+            "time": "2026-11-17T10:19:17Z",
+            "attachment_id": {},
+            "count": 6,
+            "text": "(Note: I wrote comment 5  when I had not yet seen comment 3 and 4)",
+            "bug_id": 19330,
+            "creation_time": "2026-11-17T10:19:17Z",
             "is_private": false,
-            "time": "2026-11-17T05:54:57Z",
-            "id": 104280,
+            "id": 104290,
+            "tags": []
+          },
+          {
+            "is_markdown": true,
             "creator": "kevinushey",
-            "creation_time": "2026-11-17T05:54:57Z",
-            "count": 2,
-            "is_markdown": false,
-            "text": "Created attachment 4084\nreproducer: x^3, x^4 more than 1 ulp off for non-integer x",
-            "bug_id": 19330
+            "time": "2026-11-17T17:21:11Z",
+            "attachment_id": {},
+            "text": "Thanks Martin, the extra context is very helpful. At the very least, I'm happy to verify any code changes in that family on Windows, on both x86_64 and arm64... or alternatively on other platforms via Docker.\n\nI did find this paper discussing the accuracy of different math libraries on different platforms:\n\nhttps://members.loria.fr/PZimmermann/papers/accuracy.pdf\n\nand Microsoft has said in some of their release notes, e.g. from https://learn.microsoft.com/en-us/cpp/c-runtime-library/floating-point-support?view=msvc-170, that\n\n> Newer versions of the UCRT might improve the precision and accuracy of the floating-point math library functions. Since the UCRT is part of the Windows operating system, you might get different results for these functions on different operating system versions or between debug and release builds. Although it is not recommended, you can statically link to the UCRT to guarantee consistent results if you need these functions will produce identical results everywhere.\n\n(not to imply we would want to follow their advice here, but for my own understanding that the exact reported results for certain mathematical operations can indeed change across versions of an OS...)\n\nFortunately, at least, it does appear that the accuracy of these mathematical operations has indeed improved in recent versions of UCRT, as discussed in the paper above.",
+            "bug_id": 19330,
+            "count": 7,
+            "creation_time": "2026-11-17T17:21:11Z",
+            "id": 104299,
+            "is_private": false,
+            "tags": []
           }
         ]
       }
-    },
-    "comments": {}
+    }
   },
   "attachments": {
+    "attachments": {},
     "bugs": {
       "19330": [
         {
@@ -113,30 +187,45 @@
           "id": 4083,
           "creator": "kevinushey",
           "data": "SW5kZXg6IHNyYy9tYWluL2FyaXRobWV0aWMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hcml0aG1ldGljLmMJKHJldmlzaW9uIDkwOTE1KQorKysgc3JjL21haW4vYXJpdGhtZXRpYy5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTUsNyArMjE1LDkgQEAgZG91YmxlIFJfcG93KGRvdWJsZSB4LCBkb3VibGUgeSkgLyogPSB4IF4geSAqLwogCWVsc2UgaWYoeSA8IDApIHJldHVybihSX1Bvc0luZik7CiAJZWxzZSByZXR1cm4oeSk7IC8qIE5BIG9yIE5hTiwgd2UgYXNzZXJ0ICovCiAgICAgfQotICAgIGlmICh4ID49IC0xMS4gJiYgeCA8PSAxMS4pIHsKKyAgICAvKiBleGFjdCBmb3Igc21hbGwgaW50ZWdlcnMsIHdoYXRldmVyIHRoZSBzeXN0ZW0gcG93KCk7IGZvciBvdGhlciB4LAorICAgICAgIHRoZSByZXBlYXRlZCBwcm9kdWN0cyBhcmUgbGVzcyBhY2N1cmF0ZSB0aGFuIHBvdygpICovCisgICAgaWYgKHggPj0gLTExLiAmJiB4IDw9IDExLiAmJiB4ID09IChpbnQpIHgpIHsKIAlpZih5ID09IDQuKQogCSAgICByZXR1cm4geCAqIHggKiB4ICogeDsKIAlpZih5ID09IDMuKQpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwOTE1KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ1MjAsNiArNDUyMCwxNCBAQCBzdG9waWZub3QoaWRlbnRpY2FsKHksIHgpLCBpZGVudGljYWwoeTAsIHkpLCBpZGVudGljYWwoeTEsIHVuY2xhc3MoeSkpKQogIyMgaW4gUiA8PSA0LjYuMgogCiAKKyMjIHheMyBhbmQgeF40IGZvciBub24taW50ZWdlciB8eHwgPD0gMTE6IHdpdGhpbiAxIHVscCwgYXMgZnJvbSBwb3coKQorc3RvcGlmbm90KDUuNjleMyAlaW4lIGMoMHgxLjcwNzBhNTA1MDdhNmRwKzcsIDB4MS43MDcwYTUwNTA3YTZlcCs3KSwKKyAgICAgICAgICAxLjNeNCAlaW4lIGMoMHgxLjZkOTRhZjRmMGQ4NDVwKzEsIDB4MS42ZDk0YWY0ZjBkODQ2cCsxKSkKK3ggPC0gYXMuZG91YmxlKC0xMToxMSkKK3N0b3BpZm5vdCh4XjMgPT0geCp4KngsIHheNCA9PSB4KngqeCp4KSAjIGV4YWN0IGZvciBzbWFsbCBpbnRlZ2VycworIyMgd2VyZSB4KngqeCBhbmQgeCp4KngqeCwgbW9yZSB0aGFuIDEgdWxwIG9mZiwgaW4gUiA0LjYueAorCisKIAogCiAjIyBrZWVwIGF0IGVuZAo=",
-          "content_type": "text/plain",
           "flags": [],
+          "content_type": "text/plain",
           "is_obsolete": false,
           "is_patch": true
         },
         {
+          "last_change_time": "2026-11-17T05:54:57Z",
+          "size": 1328,
+          "is_private": false,
+          "id": 4084,
+          "creation_time": "2026-11-17T05:54:57Z",
+          "summary": "reproducer: x^3, x^4 more than 1 ulp off for non-integer x",
+          "file_name": "pow-small-integer-repro.R",
+          "bug_id": 19330,
+          "is_patch": false,
+          "creator": "kevinushey",
+          "data": "IyMgeF4zIGFuZCB4XjQgZm9yIG5vbi1pbnRlZ2VyIHx4fCA8PSAxMSAoYmFzZSBSIG9ubHkpLgojIyBsbyBhbmQgaGkgYXJlIHRoZSB0d28gZG91YmxlcyBhcm91bmQgdGhlIGV4YWN0IHBvd2VyOyBhIHBvdygpIGFjY3VyYXRlCiMjIHRvIHdpdGhpbiAxIHVscCByZXR1cm5zIG9uZSBvZiB0aGVtLiAgU2luY2UgUiA0LjYuMCwgUl9wb3coKSByZXR1cm5zCiMjIHgqeCp4IGFuZCB4KngqeCp4IGhlcmUsIHdoaWNoIGFyZSBtb3JlIHRoYW4gMSB1bHAgb2ZmIGZvciB0aGVzZSB4LgpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKZCA8LSBkYXRhLmZyYW1lKAogICAgeCA9IGMoNS42OSwgNS43MSwgNi4yMSwgMTAuMDcsIDAuNjUsIDEuMywgMS4zMywgMS40MSksCiAgICBuID0gYygzLCAzLCAzLCAzLCA0LCA0LCA0LCA0KSwKICAgIGxvID0gYygweDEuNzA3MGE1MDUwN2E2ZHArNywgMHgxLjc0NTZiZDA5ZTEyYTRwKzcsIDB4MS5kZWY3NTNjNTc5ZjIzcCs3LAogICAgICAgICAgIDB4MS5mZTkyZGMyMmFiMjVicCs5LCAweDEuNmQ5NGFmNGYwZDg0NXAtMywgMHgxLjZkOTRhZjRmMGQ4NDVwKzEsCiAgICAgICAgICAgMHgxLjkwODM0ZWU5ZjJmODdwKzEsIDB4MS5mOWVjZTIyYjgzYmM0cCsxKSwKICAgIGhpID0gYygweDEuNzA3MGE1MDUwN2E2ZXArNywgMHgxLjc0NTZiZDA5ZTEyYTVwKzcsIDB4MS5kZWY3NTNjNTc5ZjI0cCs3LAogICAgICAgICAgIDB4MS5mZTkyZGMyMmFiMjVjcCs5LCAweDEuNmQ5NGFmNGYwZDg0NnAtMywgMHgxLjZkOTRhZjRmMGQ4NDZwKzEsCiAgICAgICAgICAgMHgxLjkwODM0ZWU5ZjJmODhwKzEsIDB4MS5mOWVjZTIyYjgzYmM1cCsxKQopCmQkcmVzdWx0IDwtIGQkeF5kJG4KZCR3aXRoaW5fMV91bHAgPC0gZCRyZXN1bHQgPT0gZCRsbyB8IGQkcmVzdWx0ID09IGQkaGkKZCRpc19wcm9kdWN0IDwtIGQkcmVzdWx0ID09IGlmZWxzZShkJG4gPT0gMywgZCR4ICogZCR4ICogZCR4LCBkJHggKiBkJHggKiBkJHggKiBkJHgpCnByaW50KGRhdGEuZnJhbWUoeCA9IGQkeCwgbiA9IGQkbiwgcmVzdWx0ID0gc3ByaW50ZigiJWEiLCBkJHJlc3VsdCksCiAgICAgICAgICAgICAgICAgbG8gPSBzcHJpbnRmKCIlYSIsIGQkbG8pLCBoaSA9IHNwcmludGYoIiVhIiwgZCRoaSksCiAgICAgICAgICAgICAgICAgd2l0aGluXzFfdWxwID0gZCR3aXRoaW5fMV91bHAsIGlzX3Byb2R1Y3QgPSBkJGlzX3Byb2R1Y3QpKQojIyBleHBlY3RlZDogd2l0aGluXzFfdWxwIFRSVUUgZm9yIGFsbCAoUiA0LjUuMywgYW5kIHdpdGggdGhlIHBhdGNoKTsKIyMgUiA0LjYueCBnaXZlcyBGQUxTRSBmb3IgYWxsLCB3aXRoIGlzX3Byb2R1Y3QgVFJVRQo=",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false
+        },
+        {
+          "is_private": false,
+          "id": 4088,
+          "last_change_time": "2026-11-17T07:18:37Z",
+          "size": 1193,
+          "file_name": "pow-remove-small-integer.diff",
+          "bug_id": 19330,
+          "creation_time": "2026-11-17T07:18:37Z",
+          "summary": "alternative patch: drop the R_pow() x^3, x^4 shortcut (against r90915)",
+          "is_patch": true,
           "flags": [],
           "content_type": "text/plain",
           "is_obsolete": false,
           "creator": "kevinushey",
-          "data": "IyMgeF4zIGFuZCB4XjQgZm9yIG5vbi1pbnRlZ2VyIHx4fCA8PSAxMSAoYmFzZSBSIG9ubHkpLgojIyBsbyBhbmQgaGkgYXJlIHRoZSB0d28gZG91YmxlcyBhcm91bmQgdGhlIGV4YWN0IHBvd2VyOyBhIHBvdygpIGFjY3VyYXRlCiMjIHRvIHdpdGhpbiAxIHVscCByZXR1cm5zIG9uZSBvZiB0aGVtLiAgU2luY2UgUiA0LjYuMCwgUl9wb3coKSByZXR1cm5zCiMjIHgqeCp4IGFuZCB4KngqeCp4IGhlcmUsIHdoaWNoIGFyZSBtb3JlIHRoYW4gMSB1bHAgb2ZmIGZvciB0aGVzZSB4LgpjYXQoUi52ZXJzaW9uLnN0cmluZywgIlxuIikKZCA8LSBkYXRhLmZyYW1lKAogICAgeCA9IGMoNS42OSwgNS43MSwgNi4yMSwgMTAuMDcsIDAuNjUsIDEuMywgMS4zMywgMS40MSksCiAgICBuID0gYygzLCAzLCAzLCAzLCA0LCA0LCA0LCA0KSwKICAgIGxvID0gYygweDEuNzA3MGE1MDUwN2E2ZHArNywgMHgxLjc0NTZiZDA5ZTEyYTRwKzcsIDB4MS5kZWY3NTNjNTc5ZjIzcCs3LAogICAgICAgICAgIDB4MS5mZTkyZGMyMmFiMjVicCs5LCAweDEuNmQ5NGFmNGYwZDg0NXAtMywgMHgxLjZkOTRhZjRmMGQ4NDVwKzEsCiAgICAgICAgICAgMHgxLjkwODM0ZWU5ZjJmODdwKzEsIDB4MS5mOWVjZTIyYjgzYmM0cCsxKSwKICAgIGhpID0gYygweDEuNzA3MGE1MDUwN2E2ZXArNywgMHgxLjc0NTZiZDA5ZTEyYTVwKzcsIDB4MS5kZWY3NTNjNTc5ZjI0cCs3LAogICAgICAgICAgIDB4MS5mZTkyZGMyMmFiMjVjcCs5LCAweDEuNmQ5NGFmNGYwZDg0NnAtMywgMHgxLjZkOTRhZjRmMGQ4NDZwKzEsCiAgICAgICAgICAgMHgxLjkwODM0ZWU5ZjJmODhwKzEsIDB4MS5mOWVjZTIyYjgzYmM1cCsxKQopCmQkcmVzdWx0IDwtIGQkeF5kJG4KZCR3aXRoaW5fMV91bHAgPC0gZCRyZXN1bHQgPT0gZCRsbyB8IGQkcmVzdWx0ID09IGQkaGkKZCRpc19wcm9kdWN0IDwtIGQkcmVzdWx0ID09IGlmZWxzZShkJG4gPT0gMywgZCR4ICogZCR4ICogZCR4LCBkJHggKiBkJHggKiBkJHggKiBkJHgpCnByaW50KGRhdGEuZnJhbWUoeCA9IGQkeCwgbiA9IGQkbiwgcmVzdWx0ID0gc3ByaW50ZigiJWEiLCBkJHJlc3VsdCksCiAgICAgICAgICAgICAgICAgbG8gPSBzcHJpbnRmKCIlYSIsIGQkbG8pLCBoaSA9IHNwcmludGYoIiVhIiwgZCRoaSksCiAgICAgICAgICAgICAgICAgd2l0aGluXzFfdWxwID0gZCR3aXRoaW5fMV91bHAsIGlzX3Byb2R1Y3QgPSBkJGlzX3Byb2R1Y3QpKQojIyBleHBlY3RlZDogd2l0aGluXzFfdWxwIFRSVUUgZm9yIGFsbCAoUiA0LjUuMywgYW5kIHdpdGggdGhlIHBhdGNoKTsKIyMgUiA0LjYueCBnaXZlcyBGQUxTRSBmb3IgYWxsLCB3aXRoIGlzX3Byb2R1Y3QgVFJVRQo=",
-          "is_patch": false,
-          "file_name": "pow-small-integer-repro.R",
-          "bug_id": 19330,
-          "creation_time": "2026-11-17T05:54:57Z",
-          "summary": "reproducer: x^3, x^4 more than 1 ulp off for non-integer x",
-          "is_private": false,
-          "id": 4084,
-          "last_change_time": "2026-11-17T05:54:57Z",
-          "size": 1328
+          "data": "SW5kZXg6IHNyYy9tYWluL2FyaXRobWV0aWMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hcml0aG1ldGljLmMJKHJldmlzaW9uIDkwOTE1KQorKysgc3JjL21haW4vYXJpdGhtZXRpYy5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMTUsMTIgKzIxNSw2IEBAIGRvdWJsZSBSX3Bvdyhkb3VibGUgeCwgZG91YmxlIHkpIC8qID0geCBeIHkgKi8KIAllbHNlIGlmKHkgPCAwKSByZXR1cm4oUl9Qb3NJbmYpOwogCWVsc2UgcmV0dXJuKHkpOyAvKiBOQSBvciBOYU4sIHdlIGFzc2VydCAqLwogICAgIH0KLSAgICBpZiAoeCA+PSAtMTEuICYmIHggPD0gMTEuKSB7Ci0JaWYoeSA9PSA0LikKLQkgICAgcmV0dXJuIHggKiB4ICogeCAqIHg7Ci0JaWYoeSA9PSAzLikKLQkgICAgcmV0dXJuIHggKiB4ICogeDsKLSAgICB9CiAgICAgaWYgKFJfRklOSVRFKHgpICYmIFJfRklOSVRFKHkpKSB7CiAJLyogVGhlcmUgd2FzIGEgc3BlY2lhbCBjYXNlIGZvciB5ID09IDAuNSBoZXJlLCBidXQKIAkgICBnY2MgNC4zLjAgLWcgLU8yIG1pcy1jb21waWxlZCBpdC4gIFNob3dlZCB1cCB3aXRoCkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA5MTUpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDUyMCw2ICs0NTIwLDEyIEBAIHN0b3BpZm5vdChpZGVudGljYWwoeSwgeCksIGlkZW50aWNhbCh5MCwgeSksIGlkZW50aWNhbCh5MSwgdW5jbGFzcyh5KSkpCiAjIyBpbiBSIDw9IDQuNi4yCiAKIAorIyMgeF4zIGFuZCB4XjQgZm9yIG5vbi1pbnRlZ2VyIHx4fCA8PSAxMTogd2l0aGluIDEgdWxwLCBhcyBmcm9tIHBvdygpCitzdG9waWZub3QoNS42OV4zICVpbiUgYygweDEuNzA3MGE1MDUwN2E2ZHArNywgMHgxLjcwNzBhNTA1MDdhNmVwKzcpLAorICAgICAgICAgIDEuM140ICVpbiUgYygweDEuNmQ5NGFmNGYwZDg0NXArMSwgMHgxLjZkOTRhZjRmMGQ4NDZwKzEpKQorIyMgd2VyZSB4KngqeCBhbmQgeCp4KngqeCwgbW9yZSB0aGFuIDEgdWxwIG9mZiwgaW4gUiA0LjYueAorCisKIAogCiAjIyBrZWVwIGF0IGVuZAo="
         }
       ]
-    },
-    "attachments": {}
+    }
   },
-  "source_changed": "2026-11-17 05:54:57"
+  "source_changed": "2026-11-17 17:21:11"
 }

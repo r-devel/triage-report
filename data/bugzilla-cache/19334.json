@@ -1,0 +1,200 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "cc_detail": [],
+        "last_change_time": "2026-11-17T19:20:12Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "Speed up named-argument matching by comparing symbols instead of strings",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "qa_contact": "",
+        "cc": [],
+        "dupe_of": {},
+        "severity": "enhancement",
+        "deadline": {},
+        "id": 19334,
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-17T18:38:15Z",
+        "priority": "P4",
+        "product": "R",
+        "component": "Wishlist",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19334": {
+        "comments": [
+          {
+            "is_private": false,
+            "id": 104305,
+            "time": "2026-11-17T18:38:15Z",
+            "tags": [],
+            "attachment_id": {},
+            "is_markdown": true,
+            "count": 0,
+            "bug_id": 19334,
+            "text": "## Summary\n\nCalls with named arguments execute up to 9% fewer instructions when `matchArgs_NR()` compares argument names as symbols rather than as strings. Nice to have: a performance improvement with no change in behaviour.\n\n## Details\n\nThe exact-match pass of `matchArgs_NR()` (`src/main/match.c`) compares every formal with every tagged argument by `strcmp()` on their print names, about 35 instructions per pair. The patch tests `TAG(b) == ftag` instead. This is equivalent because `install()` keeps one symbol per name and the pass compares bytes without translation; names that differ only in encoding are still matched by `pmatch()` in the second pass. Calls without named arguments are unchanged, and this is independent of the positional fast path in PR#19309.\n\nTimings: attached as `matchargs-exact-bench.R`, which prints ns per call for eleven calls. On macOS arm64 (r90921, Apple clang 21), `f2(x = x, y = y)` goes from 170 to 156 ns and `rep(x, times = 2L)` from 101 to 98 ns; across 28 whole programs, instructions drop by 0.1% on average and 1.9% at most.\n\nProposed patch: attached as `matchargs-exact-symbol.diff`, against r90921. `make check` passes on macOS.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/503, with CI results and the full measurements.",
+            "creation_time": "2026-11-17T18:38:15Z",
+            "creator": "kevinushey"
+          },
+          {
+            "bug_id": 19334,
+            "text": "Created attachment 4091\npatch: matchArgs_NR(): compare argument tags as symbols in the exact-match pass",
+            "count": 1,
+            "is_markdown": false,
+            "creation_time": "2026-11-17T18:38:29Z",
+            "creator": "kevinushey",
+            "id": 104306,
+            "time": "2026-11-17T18:38:29Z",
+            "is_private": false,
+            "tags": [],
+            "attachment_id": 4091
+          },
+          {
+            "count": 2,
+            "is_markdown": false,
+            "bug_id": 19334,
+            "text": "Created attachment 4092\nbenchmark: ns per call for eleven calls with named arguments",
+            "creation_time": "2026-11-17T18:38:31Z",
+            "creator": "kevinushey",
+            "is_private": false,
+            "id": 104307,
+            "time": "2026-11-17T18:38:31Z",
+            "tags": [],
+            "attachment_id": 4092
+          },
+          {
+            "count": 3,
+            "bug_id": 19334,
+            "text": "Created attachment 4093\npatch v2: compare argument tags as symbols in exact matches (also c(), na.rm, UseMethod, NextMethod)\n\nI've extended the patch to the other places that match a tag exactly against a known name: `c()` and `unlist()` looking for `recursive` and `use.names`, the `na.rm` lookup in `sum()`, `max()`, `any()` and friends, the dispatch argument in `UseMethod()`, and `NextMethod()` re-matching its arguments. These used `pmatch()`, which translates names whose encoding marks differ, but a symbol name only keeps a mark in the locale's own encoding, so comparing the symbols gives the same answer.\n\nWith it, `c(a = x, b = y)` executes 6.7% fewer instructions, `c(x, y, recursive = TRUE)` 3.7% and a call through `NextMethod()` 2.3%. The new patch (against r90922) replaces attachment 4091, and the extended benchmark replaces 4092. `make check` passes on macOS; patch also at https://github.com/r-devel/r-svn/pull/503.",
+            "creation_time": "2026-11-17T19:20:06Z",
+            "is_private": false,
+            "id": 104308,
+            "tags": [],
+            "is_markdown": true,
+            "creator": "kevinushey",
+            "time": "2026-11-17T19:20:06Z",
+            "attachment_id": 4093
+          },
+          {
+            "bug_id": 19334,
+            "text": "Created attachment 4094\nbenchmark v2: ns per call for 17 calls with named arguments",
+            "count": 4,
+            "creation_time": "2026-11-17T19:20:08Z",
+            "id": 104309,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-11-17T19:20:08Z",
+            "attachment_id": 4094
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19334": [
+        {
+          "is_patch": true,
+          "is_obsolete": true,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9tYWluL21hdGNoLmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vbWF0Y2guYwkocmV2aXNpb24gOTA5MjEpCisrKyBzcmMvbWFpbi9tYXRjaC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMjAsMjYgKzIyMCwyMyBAQCBhdHRyaWJ1dGVfaGlkZGVuIFNFWFAgbWF0Y2hBcmdzX05SKFNFWFAgZm9ybWFscywgU0VYUCBzdXBwbGllZCwgU0VYUCBjYWxsKQogICAgIGFyZ19pID0gMDsKICAgICB3aGlsZSAoZiAhPSBSX05pbFZhbHVlKSB7CiAgICAgICBTRVhQIGZ0YWcgPSBUQUcoZik7Ci0gICAgICBjb25zdCBjaGFyICpmdGFnX25hbWUgPSBDSEFSKFBSSU5UTkFNRShmdGFnKSk7CiAgICAgICBpZiAoZnRhZyAhPSBSX0RvdHNTeW1ib2wgJiYgZnRhZyAhPSBSX05pbFZhbHVlKSB7CiAJICAgIGZvciAoYiA9IHN1cHBsaWVkLCBpID0gMTsgYiAhPSBSX05pbFZhbHVlOyBiID0gQ0RSKGIpLCBpKyspIHsKLQkgICAgICBTRVhQIGJ0YWcgPSBUQUcoYik7Ci0JICAgICAgaWYgKGJ0YWcgIT0gUl9OaWxWYWx1ZSkgewotCQkgIGNvbnN0IGNoYXIgKmJ0YWdfbmFtZSA9IENIQVIoUFJJTlROQU1FKGJ0YWcpKTsKLQkJICBpZiAoc3RyZXFsKCBmdGFnX25hbWUsIGJ0YWdfbmFtZSApKSB7Ci0JCSAgICAgIGlmIChmYXJndXNlZFthcmdfaV0gPT0gMikKLQkJCSAgZXJyb3JjYWxsKGNhbGwsCi0JICAgICAgICAgICAgICAgICAgICAgIF8oImZvcm1hbCBhcmd1bWVudCBcIiVzXCIgbWF0Y2hlZCBieSBtdWx0aXBsZSBhY3R1YWwgYXJndW1lbnRzIiksCi0JICAgICAgICAgICAgICAgICAgICAgIENIQVIoUFJJTlROQU1FKFRBRyhmKSkpKTsKLQkJICAgICAgaWYgKEFSR1VTRUQoYikgPT0gMikKLQkJCSAgZXJyb3JjYWxsKGNhbGwsCi0JICAgICAgICAgICAgICAgICAgICAgIF8oImFyZ3VtZW50ICVkIG1hdGNoZXMgbXVsdGlwbGUgZm9ybWFsIGFyZ3VtZW50cyIpLAotICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaSk7Ci0JCSAgICAgIFNFVENBUihhLCBDQVIoYikpOwotCQkgICAgICBpZihDQVIoYikgIT0gUl9NaXNzaW5nQXJnKSBTRVRfTUlTU0lORyhhLCAwKTsKLQkJICAgICAgU0VUX0FSR1VTRUQoYiwgMik7Ci0JCSAgICAgIGZhcmd1c2VkW2FyZ19pXSA9IDI7Ci0JCSAgfQorCSAgICAgIC8qIGluc3RhbGwoKSBrZWVwcyBvbmUgc3ltYm9sIHBlciBuYW1lLCBzbyBuYW1lcyB0aGF0IGFyZQorCQkgZXF1YWwgYnl0ZSBmb3IgYnl0ZSBhcmUgdGhlIHNhbWUgc3ltYm9sICovCisJICAgICAgaWYgKFRBRyhiKSA9PSBmdGFnKSB7CisJCSAgaWYgKGZhcmd1c2VkW2FyZ19pXSA9PSAyKQorCQkgICAgICBlcnJvcmNhbGwoY2FsbCwKKwkgICAgICAgICAgICAgICAgICBfKCJmb3JtYWwgYXJndW1lbnQgXCIlc1wiIG1hdGNoZWQgYnkgbXVsdGlwbGUgYWN0dWFsIGFyZ3VtZW50cyIpLAorCSAgICAgICAgICAgICAgICAgIENIQVIoUFJJTlROQU1FKFRBRyhmKSkpKTsKKwkJICBpZiAoQVJHVVNFRChiKSA9PSAyKQorCQkgICAgICBlcnJvcmNhbGwoY2FsbCwKKwkgICAgICAgICAgICAgICAgICBfKCJhcmd1bWVudCAlZCBtYXRjaGVzIG11bHRpcGxlIGZvcm1hbCBhcmd1bWVudHMiKSwKKyAgICAgICAgICAgICAgICAgICAgICAgICAgaSk7CisJCSAgU0VUQ0FSKGEsIENBUihiKSk7CisJCSAgaWYoQ0FSKGIpICE9IFJfTWlzc2luZ0FyZykgU0VUX01JU1NJTkcoYSwgMCk7CisJCSAgU0VUX0FSR1VTRUQoYiwgMik7CisJCSAgZmFyZ3VzZWRbYXJnX2ldID0gMjsKIAkgICAgICB9CiAJICAgIH0KIAl9Cg==",
+          "creator": "kevinushey",
+          "id": 4091,
+          "is_private": false,
+          "size": 1813,
+          "last_change_time": "2026-11-17T19:20:10Z",
+          "bug_id": 19334,
+          "file_name": "matchargs-exact-symbol.diff",
+          "summary": "patch: matchArgs_NR(): compare argument tags as symbols in the exact-match pass",
+          "creation_time": "2026-11-17T18:38:29Z"
+        },
+        {
+          "file_name": "matchargs-exact-bench.R",
+          "bug_id": 19334,
+          "creation_time": "2026-11-17T18:38:31Z",
+          "summary": "benchmark: ns per call for eleven calls with named arguments",
+          "is_private": false,
+          "id": 4092,
+          "last_change_time": "2026-11-17T19:20:11Z",
+          "size": 1728,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": true,
+          "creator": "kevinushey",
+          "data": "IyBucyBwZXIgY2FsbCBmb3IgY2FsbHMgd2l0aCBuYW1lZCBhcmd1bWVudHMsIGxvb3Agb3ZlcmhlYWQgaW5jbHVkZWQuCiMgRWFjaCBjYXNlIHJ1bnMgYSBjb21waWxlZCBgZm9yIChpIGluIDE6bikgPGNhbGw+YCBsb29wOyB0aGUgYmVzdCBvZgojICdyZXBzJyB0aW1pbmdzIGlzIHJlcG9ydGVkLgojICAgUnNjcmlwdCBtYXRjaGFyZ3MtZXhhY3QtYmVuY2guUiBbcmVwc10KYXJncyA8LSBjb21tYW5kQXJncyh0cmFpbGluZ09ubHkgPSBUUlVFKQpyZXBzIDwtIGlmIChsZW5ndGgoYXJncykpIGFzLmludGVnZXIoYXJnc1tbMUxdXSkgZWxzZSA1TAoKeCA8LSAxCnkgPC0gMgpmMiA8LSBmdW5jdGlvbih4LCB5KSB4CmcxMCA8LSBmdW5jdGlvbih4LCBhID0gMSwgYiA9IDIsIGMgPSAzLCBkID0gNCwgZSA9IDUsIGYgPSA2LCBnID0gNywgaCA9IDgsCiAgICAgICAgICAgICAgICBuYS5ybSA9IEZBTFNFKSB4CmZkb3RzIDwtIGZ1bmN0aW9uKHgsIC4uLiwgbiA9IDEpIHgKZ2VuIDwtIGZ1bmN0aW9uKHgsIC4uLikgVXNlTWV0aG9kKCJnZW4iKQpnZW4uZGVmYXVsdCA8LSBmdW5jdGlvbih4LCBmbGFnID0gRkFMU0UsIC4uLikgeAoKY2FzZXMgPC0gbGlzdCgKICAgICJmMih4LCB5KSIgICAgICAgICAgICAgICAgICAgICAgID0gcXVvdGUoZjIoeCwgeSkpLAogICAgImYyKHgsIHkgPSB5KSIgICAgICAgICAgICAgICAgICAgPSBxdW90ZShmMih4LCB5ID0geSkpLAogICAgImYyKHggPSB4LCB5ID0geSkiICAgICAgICAgICAgICAgPSBxdW90ZShmMih4ID0geCwgeSA9IHkpKSwKICAgICJnMTAoeCwgbmEucm0gPSBUUlVFKSIgICAgICAgICAgID0gcXVvdGUoZzEwKHgsIG5hLnJtID0gVFJVRSkpLAogICAgImcxMCh4LCBjID0gMSwgZiA9IDIsIG5hLnJtID0gVFJVRSkiID0gcXVvdGUoZzEwKHgsIGMgPSAxLCBmID0gMiwgbmEucm0gPSBUUlVFKSksCiAgICAiZmRvdHMoeCwgMiwgMywgbiA9IDIpIiAgICAgICAgICA9IHF1b3RlKGZkb3RzKHgsIDIsIDMsIG4gPSAyKSksCiAgICAiZ2VuKHgsIGZsYWcgPSBUUlVFKSIgICAgICAgICAgICA9IHF1b3RlKGdlbih4LCBmbGFnID0gVFJVRSkpLAogICAgInJlcCh4LCB0aW1lcyA9IDJMKSIgICAgICAgICAgICAgPSBxdW90ZShyZXAoeCwgdGltZXMgPSAyTCkpLAogICAgInJvdW5kKHgsIGRpZ2l0cyA9IDJMKSIgICAgICAgICAgPSBxdW90ZShyb3VuZCh4LCBkaWdpdHMgPSAyTCkpLAogICAgIm1hdHJpeCgwLCBucm93ID0gMkwsIG5jb2wgPSAyTCkiID0gcXVvdGUobWF0cml4KDAsIG5yb3cgPSAyTCwgbmNvbCA9IDJMKSksCiAgICAiZm9ybWF0KFRSVUUpIiAgICAgICAgICAgICAgICAgICA9IHF1b3RlKGZvcm1hdChUUlVFKSkKKQoKbiA8LSAyZTUKZm9yIChubSBpbiBuYW1lcyhjYXNlcykpIHsKICAgIGxvb3AgPC0gZXZhbChicXVvdGUoZnVuY3Rpb24obikgeyBmb3IgKGkgaW4gMTpuKSAuKGNhc2VzW1tubV1dKTsgTlVMTCB9KSkKICAgIGxvb3AgPC0gY29tcGlsZXI6OmNtcGZ1bihsb29wKQogICAgbG9vcCgxMDApCiAgICBiZXN0IDwtIEluZgogICAgZm9yIChyIGluIHNlcV9sZW4ocmVwcykpIHsKICAgICAgICB0MCA8LSBTeXMudGltZSgpCiAgICAgICAgbG9vcChuKQogICAgICAgIGJlc3QgPC0gbWluKGJlc3QsIGFzLm51bWVyaWMoU3lzLnRpbWUoKSAtIHQwLCB1bml0cyA9ICJzZWNzIikpCiAgICB9CiAgICBjYXQoc3ByaW50ZigiJS0zNnMgJTguMWZcbiIsIG5tLCAxZTkgKiBiZXN0IC8gbikpCn0K",
+          "is_patch": false
+        },
+        {
+          "is_patch": true,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2JpbmQuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9iaW5kLmMJKHJldmlzaW9uIDkwOTIyKQorKysgc3JjL21haW4vYmluZC5jCSh3b3JraW5nIGNvcHkpCkBAIC03MzMsNyArNzMzLDggQEAgc3RhdGljIFNFWFAgY19FeHRyYWN0X29wdChTRVhQIGFucywgYm9vbCAqcmVjdXJzZSwgYm9vbCAqdXNlbmFtZXMsCiAgICAgZm9yIChhID0gYW5zOyBhICE9IFJfTmlsVmFsdWU7IGEgPSBuZXh0KSB7CiAJbiA9IFRBRyhhKTsKIAluZXh0ID0gQ0RSKGEpOwotCWlmIChuICE9IFJfTmlsVmFsdWUgJiYgcG1hdGNoKFJfUmVjdXJzaXZlU3ltYm9sLCBuLCAxKSkgeworCS8qIGV4YWN0IG1hdGNoZXMsIHNvIHRoZSBzeW1ib2xzIGNhbiBiZSBjb21wYXJlZCAqLworCWlmIChuID09IFJfUmVjdXJzaXZlU3ltYm9sKSB7CiAJICAgIGlmIChuX3JlY3Vyc2UrKyA9PSAxKQogCQllcnJvcmNhbGwoY2FsbCwgXygicmVwZWF0ZWQgZm9ybWFsIGFyZ3VtZW50ICdyZWN1cnNpdmUnIikpOwogCSAgICBpZiAoKHYgPSBhc0xvZ2ljYWwoQ0FSKGEpKSkgIT0gTkFfSU5URUdFUikgewpAQCAtNzQ0LDcgKzc0NSw3IEBAIHN0YXRpYyBTRVhQIGNfRXh0cmFjdF9vcHQoU0VYUCBhbnMsIGJvb2wgKnJlY3Vyc2UsIGJvb2wgKnVzZW5hbWVzLAogCSAgICBlbHNlCiAJCVNFVENEUihsYXN0LCBuZXh0KTsKIAl9Ci0JZWxzZSBpZiAobiAhPSBSX05pbFZhbHVlICYmIHBtYXRjaChSX1VzZU5hbWVzU3ltYm9sLCBuLCAxKSkgeworCWVsc2UgaWYgKG4gPT0gUl9Vc2VOYW1lc1N5bWJvbCkgewogCSAgICBpZiAobl91c2VuYW1lcysrID09IDEpCiAJCWVycm9yY2FsbChjYWxsLCBfKCJyZXBlYXRlZCBmb3JtYWwgYXJndW1lbnQgJ3VzZS5uYW1lcyciKSk7CiAJICAgIGlmICgodiA9IGFzTG9naWNhbChDQVIoYSkpKSAhPSBOQV9JTlRFR0VSKSB7CkluZGV4OiBzcmMvbWFpbi9tYXRjaC5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL21hdGNoLmMJKHJldmlzaW9uIDkwOTIyKQorKysgc3JjL21haW4vbWF0Y2guYwkod29ya2luZyBjb3B5KQpAQCAtMTA5LDE2ICsxMDksMjQgQEAgUmJvb2xlYW4gcG1hdGNoKFNFWFAgZm9ybWFsLCBTRVhQIHRhZywgUmJvb2xlYW4gZXhhY3QpCiB9CiAKIAorLyogQW4gZXhhY3QgbWF0Y2ggaXMgYSBtYXRjaCBvZiB0aGUgc3ltYm9sICdzeW0nLCBzaW5jZSBpbnN0YWxsKCkga2VlcHMKKyAgIG9uZSBzeW1ib2wgcGVyIG5hbWU7IGEgcGFydGlhbCBtYXRjaCAoc3ltID09IE5VTEwpIGNvbXBhcmVzIG5hbWVzLiAqLworc3RhdGljIFJfSU5MSU5FIGJvb2wgaXNQYXJNYXRjaChTRVhQIHgsIGNvbnN0IGNoYXIgKnRhZywgU0VYUCBzeW0pCit7CisgICAgaWYgKHN5bSAhPSBOVUxMKQorCXJldHVybiBUQUcoeCkgPT0gc3ltOworICAgIHJldHVybiBUQUcoeCkgIT0gUl9OaWxWYWx1ZSAmJiBwc21hdGNoKHRhZywgQ0hBUihQUklOVE5BTUUoVEFHKHgpKSksIEZBTFNFKTsKK30KKwogLyogRGVzdHJ1Y3RpdmVseSBFeHRyYWN0IEEgTmFtZWQgTGlzdCBFbGVtZW50LiAqLwogLyogUmV0dXJucyB0aGUgZmlyc3QgcGFydGlhbGx5IG1hdGNoaW5nIHRhZyBmb3VuZC4gKi8KIC8qIFBhdHRlcm4gaXMgYSBDIHN0cmluZy4gKi8KIAotc3RhdGljIFNFWFAgbWF0Y2hQYXJfaW50KGNvbnN0IGNoYXIgKnRhZywgU0VYUCAqbGlzdCwgUmJvb2xlYW4gZXhhY3QpCitzdGF0aWMgU0VYUCBtYXRjaFBhcl9pbnQoY29uc3QgY2hhciAqdGFnLCBTRVhQIHN5bSwgU0VYUCAqbGlzdCkKIHsKICAgICBpZiAoKmxpc3QgPT0gUl9OaWxWYWx1ZSkKIAlyZXR1cm4gUl9NaXNzaW5nQXJnOwotICAgIGVsc2UgaWYgKFRBRygqbGlzdCkgIT0gUl9OaWxWYWx1ZSAmJgotCSAgICAgcHNtYXRjaCh0YWcsIENIQVIoUFJJTlROQU1FKFRBRygqbGlzdCkpKSwgZXhhY3QpKSB7CisgICAgZWxzZSBpZiAoaXNQYXJNYXRjaCgqbGlzdCwgdGFnLCBzeW0pKSB7CiAJU0VYUCBzID0gKmxpc3Q7CiAJKmxpc3QgPSBDRFIoKmxpc3QpOwogCXJldHVybiBDQVIocyk7CkBAIC0xMjcsOCArMTM1LDcgQEAgc3RhdGljIFNFWFAgbWF0Y2hQYXJfaW50KGNvbnN0IGNoYXIgKnRhZywgU0VYUCAqbGlzdCwgUmJvb2xlYW4gZXhhY3QpCiAJU0VYUCBsYXN0ID0gKmxpc3Q7CiAJU0VYUCBuZXh0ID0gQ0RSKCpsaXN0KTsKIAl3aGlsZSAobmV4dCAhPSBSX05pbFZhbHVlKSB7Ci0JICAgIGlmIChUQUcobmV4dCkgIT0gUl9OaWxWYWx1ZSAmJgotCQlwc21hdGNoKHRhZywgQ0hBUihQUklOVE5BTUUoVEFHKG5leHQpKSksIGV4YWN0KSkgeworCSAgICBpZiAoaXNQYXJNYXRjaChuZXh0LCB0YWcsIHN5bSkpIHsKIAkJU0VUQ0RSKGxhc3QsIENEUihuZXh0KSk7CiAJCXJldHVybiBDQVIobmV4dCk7CiAJICAgIH0KQEAgLTE0NCw3ICsxNTEsNyBAQCBzdGF0aWMgU0VYUCBtYXRjaFBhcl9pbnQoY29uc3QgY2hhciAqdGFnLCBTRVhQICpsaXN0LCBSYm9vbGVhbiBleGFjdCkKIC8qIHVudXNlZCBvdXRzaWRlIHRoaXMgZmlsZSAqLwogYXR0cmlidXRlX2hpZGRlbiBTRVhQIG1hdGNoUGFyKGNvbnN0IGNoYXIgKnRhZywgU0VYUCAqIGxpc3QpCiB7Ci0gICAgcmV0dXJuIG1hdGNoUGFyX2ludCh0YWcsIGxpc3QsIEZBTFNFKTsKKyAgICByZXR1cm4gbWF0Y2hQYXJfaW50KHRhZywgTlVMTCwgbGlzdCk7CiB9CiAKIApAQCAtMTY1LDcgKzE3Miw3IEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBtYXRjaEFyZyhTRVhQIHRhZywgU0VYUCAqIGxpc3QpCiAKIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBtYXRjaEFyZ0V4YWN0KFNFWFAgdGFnLCBTRVhQICogbGlzdCkKIHsKLSAgICAgIHJldHVybiBtYXRjaFBhcl9pbnQoQ0hBUihQUklOVE5BTUUodGFnKSksIGxpc3QsIFRSVUUpOworICAgICAgcmV0dXJuIG1hdGNoUGFyX2ludChOVUxMLCB0YWcsIGxpc3QpOwogfQogCiAKQEAgLTIyMCwyNiArMjI3LDIzIEBAIGF0dHJpYnV0ZV9oaWRkZW4gU0VYUCBtYXRjaEFyZ3NfTlIoU0VYUCBmb3JtYWxzLCBTRVhQIHN1cHBsaWVkLCBTRVhQIGNhbGwpCiAgICAgYXJnX2kgPSAwOwogICAgIHdoaWxlIChmICE9IFJfTmlsVmFsdWUpIHsKICAgICAgIFNFWFAgZnRhZyA9IFRBRyhmKTsKLSAgICAgIGNvbnN0IGNoYXIgKmZ0YWdfbmFtZSA9IENIQVIoUFJJTlROQU1FKGZ0YWcpKTsKICAgICAgIGlmIChmdGFnICE9IFJfRG90c1N5bWJvbCAmJiBmdGFnICE9IFJfTmlsVmFsdWUpIHsKIAkgICAgZm9yIChiID0gc3VwcGxpZWQsIGkgPSAxOyBiICE9IFJfTmlsVmFsdWU7IGIgPSBDRFIoYiksIGkrKykgewotCSAgICAgIFNFWFAgYnRhZyA9IFRBRyhiKTsKLQkgICAgICBpZiAoYnRhZyAhPSBSX05pbFZhbHVlKSB7Ci0JCSAgY29uc3QgY2hhciAqYnRhZ19uYW1lID0gQ0hBUihQUklOVE5BTUUoYnRhZykpOwotCQkgIGlmIChzdHJlcWwoIGZ0YWdfbmFtZSwgYnRhZ19uYW1lICkpIHsKLQkJICAgICAgaWYgKGZhcmd1c2VkW2FyZ19pXSA9PSAyKQotCQkJICBlcnJvcmNhbGwoY2FsbCwKLQkgICAgICAgICAgICAgICAgICAgICAgXygiZm9ybWFsIGFyZ3VtZW50IFwiJXNcIiBtYXRjaGVkIGJ5IG11bHRpcGxlIGFjdHVhbCBhcmd1bWVudHMiKSwKLQkgICAgICAgICAgICAgICAgICAgICAgQ0hBUihQUklOVE5BTUUoVEFHKGYpKSkpOwotCQkgICAgICBpZiAoQVJHVVNFRChiKSA9PSAyKQotCQkJICBlcnJvcmNhbGwoY2FsbCwKLQkgICAgICAgICAgICAgICAgICAgICAgXygiYXJndW1lbnQgJWQgbWF0Y2hlcyBtdWx0aXBsZSBmb3JtYWwgYXJndW1lbnRzIiksCi0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpKTsKLQkJICAgICAgU0VUQ0FSKGEsIENBUihiKSk7Ci0JCSAgICAgIGlmKENBUihiKSAhPSBSX01pc3NpbmdBcmcpIFNFVF9NSVNTSU5HKGEsIDApOwotCQkgICAgICBTRVRfQVJHVVNFRChiLCAyKTsKLQkJICAgICAgZmFyZ3VzZWRbYXJnX2ldID0gMjsKLQkJICB9CisJICAgICAgLyogaW5zdGFsbCgpIGtlZXBzIG9uZSBzeW1ib2wgcGVyIG5hbWUsIHNvIG5hbWVzIHRoYXQgYXJlCisJCSBlcXVhbCBieXRlIGZvciBieXRlIGFyZSB0aGUgc2FtZSBzeW1ib2wgKi8KKwkgICAgICBpZiAoVEFHKGIpID09IGZ0YWcpIHsKKwkJICBpZiAoZmFyZ3VzZWRbYXJnX2ldID09IDIpCisJCSAgICAgIGVycm9yY2FsbChjYWxsLAorCSAgICAgICAgICAgICAgICAgIF8oImZvcm1hbCBhcmd1bWVudCBcIiVzXCIgbWF0Y2hlZCBieSBtdWx0aXBsZSBhY3R1YWwgYXJndW1lbnRzIiksCisJICAgICAgICAgICAgICAgICAgQ0hBUihQUklOVE5BTUUoVEFHKGYpKSkpOworCQkgIGlmIChBUkdVU0VEKGIpID09IDIpCisJCSAgICAgIGVycm9yY2FsbChjYWxsLAorCSAgICAgICAgICAgICAgICAgIF8oImFyZ3VtZW50ICVkIG1hdGNoZXMgbXVsdGlwbGUgZm9ybWFsIGFyZ3VtZW50cyIpLAorICAgICAgICAgICAgICAgICAgICAgICAgICBpKTsKKwkJICBTRVRDQVIoYSwgQ0FSKGIpKTsKKwkJICBpZihDQVIoYikgIT0gUl9NaXNzaW5nQXJnKSBTRVRfTUlTU0lORyhhLCAwKTsKKwkJICBTRVRfQVJHVVNFRChiLCAyKTsKKwkJICBmYXJndXNlZFthcmdfaV0gPSAyOwogCSAgICAgIH0KIAkgICAgfQogCX0KQEAgLTQ2Niw3ICs0NzAsOCBAQCBwYXRjaEFyZ3NCeUFjdHVhbHMoU0VYUCBmb3JtYWxzLCBTRVhQIHN1cHBsaWVkLCBTRVhQIGNsb2VudikKICAgICB3aGlsZSAoZiAhPSBSX05pbFZhbHVlKSB7CiAJaWYgKFRBRyhmKSAhPSBSX0RvdHNTeW1ib2wpIHsKIAkgICAgZm9yIChiID0gcHJzdXBwbGllZDsgYiAhPSBSX05pbFZhbHVlOyBiID0gQ0RSKGIpKSB7Ci0JCWlmIChUQUcoYikgIT0gUl9OaWxWYWx1ZSAmJiBwbWF0Y2goVEFHKGYpLCBUQUcoYiksIDEpKSB7CisJCS8qIHNhbWUgc3ltYm9sID0gc2FtZSBuYW1lLCBhcyBpbiBtYXRjaEFyZ3NfTlIgKi8KKwkJaWYgKFRBRyhiKSA9PSBUQUcoZikpIHsKIAkJICAgIHBhdGNoQXJndW1lbnQoYiwgVEFHKGYpLCAmZmFyZ1tmYXJnX2ldLCBjbG9lbnYpOwogCQkgICAgU0VUX0FSR1VTRUQoYiwgMik7CiAJCSAgICBicmVhazsgLyogUHJldmlvdXMgaW52b2NhdGlvbiBvZiBtYXRjaEFyZ3NfTlIgKi8KSW5kZXg6IHNyYy9tYWluL29iamVjdHMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9vYmplY3RzLmMJKHJldmlzaW9uIDkwOTIyKQorKysgc3JjL21haW4vb2JqZWN0cy5jCSh3b3JraW5nIGNvcHkpCkBAIC00Miw5ICs0Miw5IEBAIHN0YXRpYyBTRVhQIEdldE9iamVjdChSQ05UWFQgKmNwdHIpCiAgICAgdGFnID0gVEFHKGZvcm1hbHMpOwogICAgIGlmICh0YWcgIT0gUl9OaWxWYWx1ZSAmJiB0YWcgIT0gUl9Eb3RzU3ltYm9sKSB7CiAJcyA9IE5VTEw7Ci0JLyoqIGV4YWN0IG1hdGNoZXMgKiovCisJLyoqIGV4YWN0IG1hdGNoZXM6IHNhbWUgc3ltYm9sID0gc2FtZSBuYW1lICoqLwogCWZvciAoYiA9IGNwdHItPnByb21hcmdzIDsgYiAhPSBSX05pbFZhbHVlIDsgYiA9IENEUihiKSkKLQkgICAgaWYgKFRBRyhiKSAhPSBSX05pbFZhbHVlICYmIHBtYXRjaCh0YWcsIFRBRyhiKSwgMSkpIHsKKwkgICAgaWYgKFRBRyhiKSA9PSB0YWcpIHsKIAkJaWYgKHMgIT0gTlVMTCkKIAkJICAgIGVycm9yKF8oImZvcm1hbCBhcmd1bWVudCBcIiVzXCIgbWF0Y2hlZCBieSBtdWx0aXBsZSBhY3R1YWwgYXJndW1lbnRzIiksCiAJCSAgICAgICAgICBDSEFSKFBSSU5UTkFNRSh0YWcpKSk7Cg==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "last_change_time": "2026-11-17T19:20:06Z",
+          "size": 5803,
+          "is_private": false,
+          "id": 4093,
+          "creation_time": "2026-11-17T19:20:06Z",
+          "summary": "patch v2: compare argument tags as symbols in exact matches (also c(), na.rm, UseMethod, NextMethod)",
+          "file_name": "matchargs-exact-symbol-v2.diff",
+          "bug_id": 19334
+        },
+        {
+          "is_patch": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyBucyBwZXIgY2FsbCBmb3IgY2FsbHMgd2l0aCBuYW1lZCBhcmd1bWVudHMsIGxvb3Agb3ZlcmhlYWQgaW5jbHVkZWQuCiMgRWFjaCBjYXNlIHJ1bnMgYSBjb21waWxlZCBgZm9yIChpIGluIDE6bikgPGNhbGw+YCBsb29wOyB0aGUgYmVzdCBvZgojICdyZXBzJyB0aW1pbmdzIGlzIHJlcG9ydGVkLgojICAgUnNjcmlwdCBtYXRjaGFyZ3MtZXhhY3QtYmVuY2guUiBbcmVwc10KYXJncyA8LSBjb21tYW5kQXJncyh0cmFpbGluZ09ubHkgPSBUUlVFKQpyZXBzIDwtIGlmIChsZW5ndGgoYXJncykpIGFzLmludGVnZXIoYXJnc1tbMUxdXSkgZWxzZSA1TAoKeCA8LSAxCnkgPC0gMgpmMiA8LSBmdW5jdGlvbih4LCB5KSB4CmcxMCA8LSBmdW5jdGlvbih4LCBhID0gMSwgYiA9IDIsIGMgPSAzLCBkID0gNCwgZSA9IDUsIGYgPSA2LCBnID0gNywgaCA9IDgsCiAgICAgICAgICAgICAgICBuYS5ybSA9IEZBTFNFKSB4CmZkb3RzIDwtIGZ1bmN0aW9uKHgsIC4uLiwgbiA9IDEpIHgKZ2VuIDwtIGZ1bmN0aW9uKHgsIC4uLikgVXNlTWV0aG9kKCJnZW4iKQpnZW4uZGVmYXVsdCA8LSBmdW5jdGlvbih4LCBmbGFnID0gRkFMU0UsIC4uLikgeApuZyA8LSBmdW5jdGlvbih4LCBuID0gMSwgLi4uKSBVc2VNZXRob2QoIm5nIikKbmcuZGVmYXVsdCA8LSBmdW5jdGlvbih4LCBuID0gMSwgLi4uKSBuCm5nLmZvbyA8LSBmdW5jdGlvbih4LCBuID0gMSwgLi4uKSBOZXh0TWV0aG9kKCkKZm9vIDwtIHN0cnVjdHVyZSgxLCBjbGFzcyA9ICJmb28iKQoKY2FzZXMgPC0gbGlzdCgKICAgICJmMih4LCB5KSIgICAgICAgICAgICAgICAgICAgICAgID0gcXVvdGUoZjIoeCwgeSkpLAogICAgImYyKHgsIHkgPSB5KSIgICAgICAgICAgICAgICAgICAgPSBxdW90ZShmMih4LCB5ID0geSkpLAogICAgImYyKHggPSB4LCB5ID0geSkiICAgICAgICAgICAgICAgPSBxdW90ZShmMih4ID0geCwgeSA9IHkpKSwKICAgICJnMTAoeCwgbmEucm0gPSBUUlVFKSIgICAgICAgICAgID0gcXVvdGUoZzEwKHgsIG5hLnJtID0gVFJVRSkpLAogICAgImcxMCh4LCBjID0gMSwgZiA9IDIsIG5hLnJtID0gVFJVRSkiID0gcXVvdGUoZzEwKHgsIGMgPSAxLCBmID0gMiwgbmEucm0gPSBUUlVFKSksCiAgICAiZmRvdHMoeCwgMiwgMywgbiA9IDIpIiAgICAgICAgICA9IHF1b3RlKGZkb3RzKHgsIDIsIDMsIG4gPSAyKSksCiAgICAiZ2VuKHgsIGZsYWcgPSBUUlVFKSIgICAgICAgICAgICA9IHF1b3RlKGdlbih4LCBmbGFnID0gVFJVRSkpLAogICAgInJlcCh4LCB0aW1lcyA9IDJMKSIgICAgICAgICAgICAgPSBxdW90ZShyZXAoeCwgdGltZXMgPSAyTCkpLAogICAgInJvdW5kKHgsIGRpZ2l0cyA9IDJMKSIgICAgICAgICAgPSBxdW90ZShyb3VuZCh4LCBkaWdpdHMgPSAyTCkpLAogICAgIm1hdHJpeCgwLCBucm93ID0gMkwsIG5jb2wgPSAyTCkiID0gcXVvdGUobWF0cml4KDAsIG5yb3cgPSAyTCwgbmNvbCA9IDJMKSksCiAgICAiZm9ybWF0KFRSVUUpIiAgICAgICAgICAgICAgICAgICA9IHF1b3RlKGZvcm1hdChUUlVFKSksCiAgICAiYyhhID0geCwgYiA9IHkpIiAgICAgICAgICAgICAgICA9IHF1b3RlKGMoYSA9IHgsIGIgPSB5KSksCiAgICAiYyh4LCB5LCByZWN1cnNpdmUgPSBUUlVFKSIgICAgICA9IHF1b3RlKGMoeCwgeSwgcmVjdXJzaXZlID0gVFJVRSkpLAogICAgInN1bSh4LCB5LCBuYS5ybSA9IFRSVUUpIiAgICAgICAgPSBxdW90ZShzdW0oeCwgeSwgbmEucm0gPSBUUlVFKSksCiAgICAiYW55KFRSVUUsIG5hLnJtID0gVFJVRSkiICAgICAgICA9IHF1b3RlKGFueShUUlVFLCBuYS5ybSA9IFRSVUUpKSwKICAgICJnZW4oeCA9IHgpIiAgICAgICAgICAgICAgICAgICAgID0gcXVvdGUoZ2VuKHggPSB4KSksCiAgICAibmcoZm9vLCBuID0gMiksIE5leHRNZXRob2QiICAgICA9IHF1b3RlKG5nKGZvbywgbiA9IDIpKQopCgpuIDwtIDJlNQpmb3IgKG5tIGluIG5hbWVzKGNhc2VzKSkgewogICAgbG9vcCA8LSBldmFsKGJxdW90ZShmdW5jdGlvbihuKSB7IGZvciAoaSBpbiAxOm4pIC4oY2FzZXNbW25tXV0pOyBOVUxMIH0pKQogICAgbG9vcCA8LSBjb21waWxlcjo6Y21wZnVuKGxvb3ApCiAgICBsb29wKDEwMCkKICAgIGJlc3QgPC0gSW5mCiAgICBmb3IgKHIgaW4gc2VxX2xlbihyZXBzKSkgewogICAgICAgIHQwIDwtIFN5cy50aW1lKCkKICAgICAgICBsb29wKG4pCiAgICAgICAgYmVzdCA8LSBtaW4oYmVzdCwgYXMubnVtZXJpYyhTeXMudGltZSgpIC0gdDAsIHVuaXRzID0gInNlY3MiKSkKICAgIH0KICAgIGNhdChzcHJpbnRmKCIlLTM2cyAlOC4xZlxuIiwgbm0sIDFlOSAqIGJlc3QgLyBuKSkKfQo=",
+          "is_private": false,
+          "id": 4094,
+          "last_change_time": "2026-11-17T19:20:08Z",
+          "size": 2294,
+          "file_name": "matchargs-exact-bench.R",
+          "bug_id": 19334,
+          "creation_time": "2026-11-17T19:20:08Z",
+          "summary": "benchmark v2: ns per call for 17 calls with named arguments"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-17 19:20:12"
+}

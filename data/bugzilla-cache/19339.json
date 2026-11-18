@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "last_change_time": "2026-11-18T04:11:55Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4)",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "name": "kevinushey",
+          "id": 1044,
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "flags": [],
+        "platform": "All",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19339,
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-18T04:11:46Z",
+        "priority": "P3",
+        "product": "R",
+        "component": "Low-level",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core"
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19339": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 104334,
+            "time": "2026-11-18T04:11:46Z",
+            "is_private": false,
+            "creation_time": "2026-11-18T04:11:46Z",
+            "creator": "kevinushey",
+            "bug_id": 19339,
+            "text": "## Summary\n\nOn Windows, `toupper()` and `tolower()` turn every character above U+FFFF after a string's first into a different one: `toupper(\"a\\U0001F600\")` returns U+1F7D8 instead of the emoji. Fixes a reproducible bug: wrong results, Windows only.\n\n## Details\n\nWhere `wchar_t` is 16 bits, `utf8towcs4()` in `src/main/util.c` completes each high surrogate with `utf8toucs32(*p, s)`, so the low half is computed from the start of the string `s` instead of the current character `t`. This dates from r79717; with a 32-bit `wchar_t` the branch is never taken. Seen in R 4.6.1 and R-devel on Windows 11; patch tested on a Windows build of r90925.\n\nReproducible example: attached as `utf8towcs4-low-surrogate-repro.R`; prints the code points after `toupper()`, `65 128984 128984` instead of `65 128512 128591`.\n\nProposed patch: attached as `utf8towcs4-low-surrogate.diff`; passes `t`, and adds a test to `tests/reg-tests-1e.R`.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/511, where CI results can be seen.",
+            "is_markdown": true,
+            "count": 0
+          },
+          {
+            "is_markdown": false,
+            "creator": "kevinushey",
+            "time": "2026-11-18T04:11:54Z",
+            "attachment_id": 4106,
+            "count": 1,
+            "text": "Created attachment 4106\nPatch against r90925: pass the current character to utf8toucs32()",
+            "bug_id": 19339,
+            "creation_time": "2026-11-18T04:11:54Z",
+            "is_private": false,
+            "id": 104335,
+            "tags": []
+          },
+          {
+            "creation_time": "2026-11-18T04:11:55Z",
+            "creator": "kevinushey",
+            "bug_id": 19339,
+            "text": "Created attachment 4107\nReproducible example",
+            "count": 2,
+            "is_markdown": false,
+            "tags": [],
+            "attachment_id": 4107,
+            "id": 104336,
+            "time": "2026-11-18T04:11:55Z",
+            "is_private": false
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19339": [
+        {
+          "size": 1357,
+          "last_change_time": "2026-11-18T04:11:54Z",
+          "id": 4106,
+          "is_private": false,
+          "summary": "Patch against r90925: pass the current character to utf8toucs32()",
+          "creation_time": "2026-11-18T04:11:54Z",
+          "bug_id": 19339,
+          "file_name": "utf8towcs4-low-surrogate.diff",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwOTI1KQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNTE2LDcgKzE1MTYsNyBAQCBzaXplX3QgdXRmOHRvd2NzNChSX3djaGFyX3QgKndjLCBjb25zdCBjaGFyICpzLCBzaXplX3QgbikKIAkgICAgKnAgPSAoUl93Y2hhcl90KSBsb2NhbDsKIAkgICAgaWYgKG0gPCAwKSBlcnJvcihfKCJpbnZhbGlkIGlucHV0ICclcycgaW4gJ3V0Zjh0b3djczMyJyIpLCBzKTsKIAkgICAgaWYgKG0gPT0gMCkgYnJlYWs7Ci0JICAgIGlmIChJU19ISUdIX1NVUlJPR0FURSgqcCkpICpwID0gdXRmOHRvdWNzMzIoKnAsIHMpOworCSAgICBpZiAoSVNfSElHSF9TVVJST0dBVEUoKnApKSAqcCA9IHV0Zjh0b3VjczMyKCpwLCB0KTsKIAkgICAgcmVzICsrOwogCSAgICBpZiAocmVzID49IG4pIGJyZWFrOwogCX0KSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDkyNSkKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NDk5LDYgKzQ0OTksMTMgQEAgdG9vbHM6OmFzc2VydEVycm9yKGdldEdlbmVyaWMoImluaXRpYWxpemUiLCB3aGVyZSA9IHgpKSAjIGNhdXNlZCBzZWdmYXVsdCBvciBidXMKICMjIGluIFIgPD0gNC42LjIKIAogCisjIyB0b3VwcGVyKCkgYW5kIHRvbG93ZXIoKSBvZiBub24tQk1QIGNoYXJhY3RlcnMgYWZ0ZXIgdGhlIGZpcnN0IG9uZQoreCA8LSBpbnRUb1V0ZjgoYyg5NywgMHgxRjYwMCwgMHgxRjY0RikpICMgbWFya2VkIFVURi04IGluIGFueSBsb2NhbGUKK3N0b3BpZm5vdChpZGVudGljYWwodXRmOFRvSW50KHRvdXBwZXIoeCkpLCBjKDY1TCwgMHgxRjYwMEwsIDB4MUY2NEZMKSksCisgICAgICAgICAgaWRlbnRpY2FsKHV0ZjhUb0ludCh0b2xvd2VyKHgpKSwgYyg5N0wsIDB4MUY2MDBMLCAweDFGNjRGTCkpKQorIyMgY2hhbmdlZCB0aGVtIGludG8gb3RoZXIgY2hhcmFjdGVycyBvbiBXaW5kb3dzIGluIFIgPD0gNC42LjIKKworCiAjIyBzb2NrZXRTZWxlY3QoKSBvbiBhIHNvY2tldCBjb25uZWN0aW9uIHRoYXQgaXMgbm90IG9wZW4gLS0gUFIjMTkyOTgKIHMgPC0gc29ja2V0Q29ubmVjdGlvbihwb3J0ID0gODA4M0wsIG9wZW4gPSAiIikKIG1zZyA8LSB0cnlDbXNnKHNvY2tldFNlbGVjdChsaXN0KHMpLCB0aW1lb3V0ID0gMCkpCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        },
+        {
+          "creator": "kevinushey",
+          "data": "IyMgdG91cHBlcigpIG9mIGNoYXJhY3RlcnMgYWJvdmUgVStGRkZGIGFmdGVyIGEgc3RyaW5nJ3MgZmlyc3QgY2hhcmFjdGVyCnggPC0gaW50VG9VdGY4KGMoOTcsIDB4MUY2MDAsIDB4MUY2NEYpKQpwcmludCh1dGY4VG9JbnQodG91cHBlcih4KSkpICAjIGV4cGVjdGVkIDY1IDEyODUxMiAxMjg1OTEKeSA8LSBpbnRUb1V0ZjgoYygweDEwNDI4LCAweDEwNDI5KSkKcHJpbnQodXRmOFRvSW50KHRvdXBwZXIoeSkpKSAgIyBleHBlY3RlZCA2NjU2MCA2NjU2MQojIyBPbiBXaW5kb3dzIGJlZm9yZSB0aGUgcGF0Y2g6IDY1IDEyODk4NCAxMjg5ODQgYW5kIDY2NTYwIDY2NTYwCnN0b3BpZm5vdChpZGVudGljYWwodXRmOFRvSW50KHRvdXBwZXIoeCkpLCBjKDY1TCwgMHgxRjYwMEwsIDB4MUY2NEZMKSkpCg==",
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "is_patch": false,
+          "creation_time": "2026-11-18T04:11:55Z",
+          "summary": "Reproducible example",
+          "file_name": "utf8towcs4-low-surrogate-repro.R",
+          "bug_id": 19339,
+          "last_change_time": "2026-11-18T04:11:55Z",
+          "size": 397,
+          "is_private": false,
+          "id": 4107
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-18 04:11:55"
+}

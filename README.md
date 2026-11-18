@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-17._
+_Automatically generated from the R Bugzilla dump updated 2026-11-18._
 
 ## Triaged bugs
 
@@ -50,10 +50,18 @@ _None._
 
 These are the most important or urgent regular patches from the Triage Team and should be prioritised before others below.
 
+#### Graphics
+
+* [Bug 19340](https://bugs.r-project.org/show_bug.cgi?id=19340) — text() on pdf()/postscript() reads past strings with a truncated UTF-8 character, segfaulting on Windows (mbcsToSbcs) (2026-11-18)
+
 #### I/O
 
 * [Bug 19287](https://bugs.r-project.org/show_bug.cgi?id=19287) — readRDS() can seg.fault on a malformed serialized ALTREP object (2026-11-06)
 * [Bug 19288](https://bugs.r-project.org/show_bug.cgi?id=19288) — unserialize() reads past a string's end when a stream declares the wchar_t encoding (2026-11-06)
+
+#### Low-level
+
+* [Bug 19313](https://bugs.r-project.org/show_bug.cgi?id=19313) — C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults (2026-11-13)
 
 #### S4methods
 
@@ -71,11 +79,14 @@ These Triage Team patches should be looked at next.
 #### Accuracy
 
 * [Bug 19277](https://bugs.r-project.org/show_bug.cgi?id=19277) — sample() without replacement draws zero-weight and least likely items with wrong probabilities (2026-11-02)
-* [Bug 19330](https://bugs.r-project.org/show_bug.cgi?id=19330) — Restore pow() accuracy for x^3 and x^4 with non-integer |x| <= 11 (2026-11-17)
 
-#### I/O
+#### Graphics
 
-* [Bug 19289](https://bugs.r-project.org/show_bug.cgi?id=19289) — readChar() on a raw vector can write past its buffer in UTF-8 locales on macOS (2026-11-06)
+* [Bug 19335](https://bugs.r-project.org/show_bug.cgi?id=19335) — Graphics device stays locked after an error in a clipping path, mask or pattern function (2026-11-17)
+
+#### Language
+
+* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-17)
 
 #### Low-level
 
@@ -85,6 +96,8 @@ These Triage Team patches should be looked at next.
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
 * [Bug 19308](https://bugs.r-project.org/show_bug.cgi?id=19308) — JIT leaves a function uncompiled for good when another function with the same body is in the code cache (2026-11-12)
 * [Bug 19311](https://bugs.r-project.org/show_bug.cgi?id=19311) — Byte-compiled reads of active bindings call the binding function twice (2026-11-13)
+* [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
+* [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
 
 #### S4methods
 
@@ -132,13 +145,13 @@ These Triage Team patches can wait their turn.
 * [Bug 19303](https://bugs.r-project.org/show_bug.cgi?id=19303) — Improve bcEval_loop() performance by intentionally spilling rarely-used variables (2026-11-12)
 * [Bug 19304](https://bugs.r-project.org/show_bug.cgi?id=19304) — Improve closure call performance by searching unhashed frames inline in GET_BINDING_CELL() (2026-11-12)
 * [Bug 19309](https://bugs.r-project.org/show_bug.cgi?id=19309) — Improve closure call performance by matching untagged arguments by position in one pass (2026-11-12)
-* [Bug 19315](https://bugs.r-project.org/show_bug.cgi?id=19315) — Reduce UseMethod() C stack use by moving error-message buffers out of the dispatch frames (2026-11-14)
 * [Bug 19316](https://bugs.r-project.org/show_bug.cgi?id=19316) — Improve closure call and string hashing performance: cheaper begincontext() and inline vmaxget()/vmaxset() within R (2026-11-14)
-* [Bug 19317](https://bugs.r-project.org/show_bug.cgi?id=19317) — Reduce C stack use of eval() and bcEval_loop() by moving the builtin-call context out of their frames (2026-11-14)
 * [Bug 19320](https://bugs.r-project.org/show_bug.cgi?id=19320) — Improve performance of internal generics on classed objects: look up the S3 method before setting up the dispatch (2026-11-14)
 * [Bug 19322](https://bugs.r-project.org/show_bug.cgi?id=19322) — Improve `$` and `[[` performance on lists: match names without translating each one (2026-11-14)
 * [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-14)
-* [Bug 19329](https://bugs.r-project.org/show_bug.cgi?id=19329) — unique(), duplicated(): avoid re-translating long latin1 strings on every hash probe (2026-11-17)
+* [Bug 19334](https://bugs.r-project.org/show_bug.cgi?id=19334) — Speed up named-argument matching by comparing symbols instead of strings (2026-11-17)
+* [Bug 19317](https://bugs.r-project.org/show_bug.cgi?id=19317) — Allocate evaluation contexts on a stack of their own instead of the C stack (2026-11-18, in CC: tierney)
+* [Bug 19338](https://bugs.r-project.org/show_bug.cgi?id=19338) — toupper(), format(), strsplit(perl = TRUE) and others take quadratic time on long strings (per-character strlen) (2026-11-18)
 
 ### P5
 
@@ -159,7 +172,6 @@ These patches have not yet been prioritised.
 * [Bug 19096](https://bugs.r-project.org/show_bug.cgi?id=19096) — Update handling of overflow in integer operations (2026-06-30)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
-* [Bug 19313](https://bugs.r-project.org/show_bug.cgi?id=19313) — C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults (2026-11-13)
 * [Bug 19327](https://bugs.r-project.org/show_bug.cgi?id=19327) — tan(1+1000i) is NaN+1i when the system ctan() overflows (OpenBSD) (2026-11-15)
 * [Bug 19328](https://bugs.r-project.org/show_bug.cgi?id=19328) — as.POSIXct() gives NA for years where tm_year + 1900 overflows int (OpenBSD mktime) (2026-11-15)
 
