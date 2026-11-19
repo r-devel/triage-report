@@ -21,6 +21,8 @@ _Core developers in CC should not be assumed responsible for action._
 * [Bug 19098](https://bugs.r-project.org/show_bug.cgi?id=19098) — Ctrl-D does not exit R console on Windows (2026-09-22, in CC: tierney)
 * [Bug 19265](https://bugs.r-project.org/show_bug.cgi?id=19265) — Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper (2026-10-31)
 * [Bug 19225](https://bugs.r-project.org/show_bug.cgi?id=19225) — as.list(<environment>) returns misaligned names/values (or an internal SET_VECTOR_ELT error) when an active binding modifies the environment (2026-11-13)
+* [Bug 19324](https://bugs.r-project.org/show_bug.cgi?id=19324) — pdf() device writes past pd->pos in PDF_endfile() when a file holds many definitions (e.g. clipping paths) (2026-11-18)
+* [Bug 19325](https://bugs.r-project.org/show_bug.cgi?id=19325) — utils::winMenuAddItem crashes with a heap corruption error (2026-11-18)
 
 ### Recommended closures
 
@@ -53,11 +55,6 @@ These are the most important or urgent regular patches from the Triage Team and 
 #### Graphics
 
 * [Bug 19340](https://bugs.r-project.org/show_bug.cgi?id=19340) — text() on pdf()/postscript() reads past strings with a truncated UTF-8 character, segfaulting on Windows (mbcsToSbcs) (2026-11-18)
-
-#### I/O
-
-* [Bug 19287](https://bugs.r-project.org/show_bug.cgi?id=19287) — readRDS() can seg.fault on a malformed serialized ALTREP object (2026-11-06)
-* [Bug 19288](https://bugs.r-project.org/show_bug.cgi?id=19288) — unserialize() reads past a string's end when a stream declares the wchar_t encoding (2026-11-06)
 
 #### Low-level
 
@@ -150,8 +147,6 @@ These Triage Team patches can wait their turn.
 * [Bug 19322](https://bugs.r-project.org/show_bug.cgi?id=19322) — Improve `$` and `[[` performance on lists: match names without translating each one (2026-11-14)
 * [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-14)
 * [Bug 19334](https://bugs.r-project.org/show_bug.cgi?id=19334) — Speed up named-argument matching by comparing symbols instead of strings (2026-11-17)
-* [Bug 19317](https://bugs.r-project.org/show_bug.cgi?id=19317) — Allocate evaluation contexts on a stack of their own instead of the C stack (2026-11-18, in CC: tierney)
-* [Bug 19338](https://bugs.r-project.org/show_bug.cgi?id=19338) — toupper(), format(), strsplit(perl = TRUE) and others take quadratic time on long strings (per-character strlen) (2026-11-18)
 
 ### P5
 

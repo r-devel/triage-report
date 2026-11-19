@@ -1,0 +1,169 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "TRIAGED",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "André Gillibert",
+          "id": 3330,
+          "name": "Andre.Gillibert"
+        },
+        "platform": "x86_64/x64/amd64 (64-bit)",
+        "flags": [],
+        "is_confirmed": true,
+        "op_sys": "Windows 64-bit",
+        "creator": "Andre.Gillibert",
+        "is_creator_accessible": true,
+        "alias": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [
+          {
+            "name": "Andre.Gillibert",
+            "id": 3330,
+            "real_name": "André Gillibert"
+          },
+          {
+            "id": 3307,
+            "name": "ikrylov",
+            "real_name": "Ivan Krylov"
+          }
+        ],
+        "last_change_time": "2026-11-18T15:18:55Z",
+        "url": "",
+        "blocks": [],
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "summary": "utils::winMenuAddItem crashes with a heap corruption error",
+        "classification": "Unclassified",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "component": "Windows GUI / Window specific",
+        "assigned_to": "R-core",
+        "deadline": {},
+        "id": 19325,
+        "severity": "critical",
+        "dupe_of": {},
+        "cc": [
+          "Andre.Gillibert",
+          "ikrylov"
+        ],
+        "qa_contact": "",
+        "product": "R",
+        "priority": "P5",
+        "creation_time": "2026-11-15T21:30:20Z",
+        "version": "R 4.6.x",
+        "whiteboard": ""
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19325": {
+        "comments": [
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 104261,
+            "creation_time": "2026-11-15T21:30:20Z",
+            "count": 0,
+            "bug_id": 19325,
+            "text": "Created attachment 4076\nPatch that fixes the bug\n\n#Steps to reproduce\nMake a fresh install of R-4.6.2 (binary version) on Windows 10 x64 bits\nThe bug is also found in R-devel (2026-11-15 r90890)\nRun c:\\program files\\R-4.6.2\\bin\\x64\\Rgui.exe\ncopy/paste the following commands in the console\nwinMenuAdd(\"Testit\")\nwinMenuAddItem(\"Testit\", \"one\", \"short\")\nwinMenuAddItem(\"Testit\", \"one\", \"this is a longer string\")\nwinMenuAddItem(\"Testit\", \"one\", \"check allocator\")\n\n#Diagnostic\nI opened the WinDbg crash dump in %localappdata%\\CrashDumps and opened it with WinDbgTool and found that the culprit is a call to realloc() in winaddmenuitem.\nSTACK_TEXT:  \n00007ff8`f5139808 00007ff8`f507a505 ntdll!RtlpLogHeapFailure+0x45\n00007ff8`f5139810 00007ff8`f5088f43 ntdll!RtlpReAllocateHeapInternal+0x95203\n00007ff8`f5139818 00007ff8`f4ff3d1a ntdll!RtlReAllocateHeap+0x5a\n00007ff8`f5139820 00007ff8`81ff82e1 aclayers!NS_FaultTolerantHeap::APIHook_RtlReAllocateHeap+0x7e1\n00007ff8`f5139828 00007ff8`f13a4e09 ucrtbase!_realloc_base+0x39\n00007ff8`f5139830 00007ff8`7f80ae5a r!winaddmenuitem+0x18a\n00007ff8`f5139838 00007ff8`7f7b03b2 utils!winMenuAdd+0x132\n00007ff8`f5139840 00007ff8`7fa2048f r!rwarn_+0x2299f\n00007ff8`f5139848 00007ff8`7f8e4ab8 r!R_ParseEvalString+0x8248\n00007ff8`f5139850 00007ff8`7f8ef6eb r!R_ParseEvalString+0x12e7b\n00007ff8`f5139858 00007ff8`7f8ef9db r!R_ParseEvalString+0x1316b\n00007ff8`f5139860 00007ff8`7f8f49c2 r!Rf_eval+0x4922\n00007ff8`f5139868 00007ff8`7f8f5d7f r!Rf_eval+0x5cdf\n00007ff8`f5139870 00007ff8`7f8efbed r!R_ParseEvalString+0x1337d\n00007ff8`f5139878 00007ff8`7f91c0d0 r!Rf_ReplIteration+0x140\n00007ff8`f5139880 00007ff8`7f91c550 r!Rf_ReplIteration+0x5c0\n00007ff8`f5139888 00007ff8`7f91c5f2 r!run_Rmainloop+0x52\n00007ff8`f5139890 00007ff8`7f91c63e r!Rf_mainloop+0xe\n00007ff8`f5139898 00007ff6`4e4b1546 rgui+0x1546\n00007ff8`f51398a0 00007ff6`4e4b1476 rgui+0x1476\n00007ff8`f51398a8 00007ff6`4e4b12ee rgui+0x12ee\n00007ff8`f51398b0 00007ff6`4e4b13e6 rgui+0x13e6\n00007ff8`f51398b8 00007ff8`f4f04034 kernel32!BaseThreadInitThunk+0x14\n00007ff8`f51398c0 00007ff8`f5053691 ntdll!RtlUserThreadStart+0x21\n\nI opened the source code file src/gnuwin32/rui.c and, after a few tests, I understood that the bug comes from the fact that, when realloc() moves the memory, the original pointer (umitems[i]->action) is not updated, and so becomes a dangling pointer.\n\n#Bugfix\nWith the help of Rtools 4.5, I wrote a trivial patch and tested it on Windows.\nWithout the patch, the bug is reproducible on a fresh R-4.6.2 built on my machine with Rtools 4.5, but due to the fact that it relies on the specific allocator and the detection of a dangling pointer by the malloc heap allocator, it may not be reproducible on other machines with a different allocator or maybe even debug setting.\nWith my patch, the bug disappears on my machine.\n\n\n#Exact setting\nplatform       x86_64-w64-mingw32               \narch           x86_64                           \nos             mingw32                          \ncrt            ucrt                             \nsystem         x86_64, mingw32                  \nstatus                                          \nmajor          4                                \nminor          6.2                              \nyear           2026                             \nmonth          10                               \nday            29                               \nsvn rev        90784                            \nlanguage       R                                \nversion.string R version 4.6.2 (2026-10-29 ucrt)\nnickname       Diversified Portfolio  \n\nVersions of important system components:\nucrtbase.dll 10.0.17134.677\nWindows 10 Version 10.0.17134\n\nCPU: AMD Ryzen 7 1700\nMotherboard: AX370-Gaming K5",
+            "attachment_id": 4076,
+            "time": "2026-11-15T21:30:20Z",
+            "creator": "Andre.Gillibert",
+            "is_markdown": true
+          },
+          {
+            "time": "2026-11-15T21:47:36Z",
+            "id": 104262,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "#Reproducing on Wine\nI also tried to reproduce the Bug on Ubuntu 26.04 with wine and got the following error (standard installation of R-4.6.2):\n> winMenuAdd(\"Testit\")\n> winMenuAddItem(\"Testit\", \"one\", \"short\")\n> winMenuAddItem(\"Testit\", \"one\", \"this is a longer string\")\n> winMenuAddItem(\"Testit\", \"one\", \"check allocator\")\nError in .External2(C_winMenuAdd, menuname, itemname, action) : \n  unable to add menu item (failed to allocate char storage)\n\nThis can be explained by the fact that the Wine heap allocator returns NULL when reallocating a dangling pointer and src/gnuwin32/rui.c emits an error in that case. The patch also fixes the bug on Wine.\n\n#Linux system information\n$ uname -a\nLinux ryzen 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 23 13:25:25 UTC 2026 x86_64 GNU/Linux\n$ wine --version\nwine-10.0 (Ubuntu 10.0~repack-12ubuntu1)\n\n#R version\n               _                                \nplatform       x86_64-w64-mingw32               \narch           x86_64                           \nos             mingw32                          \ncrt            ucrt                             \nsystem         x86_64, mingw32                  \nstatus                                          \nmajor          4                                \nminor          6.2                              \nyear           2026                             \nmonth          10                               \nday            29                               \nsvn rev        90784                            \nlanguage       R                                \nversion.string R version 4.6.2 (2026-10-29 ucrt)\nnickname       Diversified Portfolio",
+            "bug_id": 19325,
+            "count": 1,
+            "is_markdown": true,
+            "creator": "Andre.Gillibert",
+            "creation_time": "2026-11-15T21:47:36Z"
+          },
+          {
+            "creation_time": "2026-11-15T21:49:44Z",
+            "creator": "Andre.Gillibert",
+            "bug_id": 19325,
+            "text": "Created attachment 4077\nCrash dump decoded by WinDbgTool",
+            "is_markdown": true,
+            "count": 2,
+            "tags": [],
+            "attachment_id": 4077,
+            "id": 104263,
+            "time": "2026-11-15T21:49:44Z",
+            "is_private": false
+          },
+          {
+            "creation_time": "2026-11-18T15:18:55Z",
+            "creator": "ikrylov",
+            "bug_id": 19325,
+            "text": "Thank you for the report!\n\nOn Windows Server 2022, I got the same error you got on Wine. Indeed, `realloc()` must be returning a null pointer in this case because it has already deallocated the `\"short\"` string:\n\n```\n1500                p = realloc(p, strlen(action) + 1);\n(gdb) p p\n$11 = 0x16aff7c0 \"short\"\n(gdb) n\n1501                if(!p) {\n(gdb) p p\n$12 = 0x0\n(gdb) p (void*)realloc((void*)0x16aff7c0, (size_t)strlen(\"check allocator\")+1)\n$16 = (void *) 0x0\n```\nThe code needs to remember the pointer newly returned by `realloc()`. I confirm that your patch fixes the problem.",
+            "is_markdown": true,
+            "count": 3,
+            "attachment_id": {},
+            "tags": [],
+            "id": 104346,
+            "time": "2026-11-18T15:18:55Z",
+            "is_private": false
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19325": [
+        {
+          "is_patch": true,
+          "data": "LS0tIFItNC42LjIudW5jaGFuZ2VkL3NyYy9nbnV3aW4zMi9ydWkuYwkyMDI1LTAzLTEzIDIzOjAyOjAzLjAwMDAwMDAwMCArMDAwMAorKysgUi00LjYuMi5kZWJ1Z2dlZC9zcmMvZ251d2luMzIvcnVpLmMJMjAyNi0xMS0xNSAyMToxMDo1OS4yMTE2NTgxMDAgKzAwMDAKQEAgLTE1MDMsNiArMTUwMyw3IEBACiAJCXJldHVybiA0OwogCSAgICB9CiAJICAgIHN0cmNweShwLCBhY3Rpb24pOworCSAgICB1bWl0ZW1zW2ldLT5hY3Rpb24gPSBwOwogCX0KICAgICB9IGVsc2UgewogCWFkZHRvKHVzZXJtZW51c1tpbV0pOwo=",
+          "creator": "Andre.Gillibert",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "size": 293,
+          "last_change_time": "2026-11-15T21:30:20Z",
+          "id": 4076,
+          "is_private": false,
+          "summary": "Patch that fixes the bug",
+          "creation_time": "2026-11-15T21:30:20Z",
+          "bug_id": 19325,
+          "file_name": "rui-realloc-bugfix.patch"
+        },
+        {
+          "creator": "Andre.Gillibert",
+          "data": "DQpNaWNyb3NvZnQgKFIpIFdpbmRvd3MgRGVidWdnZXIgVmVyc2lvbiA2LjIuOTIwMC4yMDUxMiBBTUQ2NA0KQ29weXJpZ2h0IChjKSBNaWNyb3NvZnQgQ29ycG9yYXRpb24uIEFsbCByaWdodHMgcmVzZXJ2ZWQuDQoNCg0KTG9hZGluZyBEdW1wIEZpbGUgW0U6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXExvY2FsXENyYXNoRHVtcHNcUmd1aS5leGUuNzExMi5kbXBdDQpXQVJOSU5HOiBNaW5pZHVtcCBjb250YWlucyB1bmtub3duIHN0cmVhbSB0eXBlIDB4MTUNCldBUk5JTkc6IE1pbmlkdW1wIGNvbnRhaW5zIHVua25vd24gc3RyZWFtIHR5cGUgMHgxNg0KVXNlciBNaW5pIER1bXAgRmlsZTogT25seSByZWdpc3RlcnMsIHN0YWNrIGFuZCBwb3J0aW9ucyBvZiBtZW1vcnkgYXJlIGF2YWlsYWJsZQ0KDQpTeW1ib2wgc2VhcmNoIHBhdGggaXM6ICoqKiBJbnZhbGlkICoqKg0KKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg0KKiBTeW1ib2wgbG9hZGluZyBtYXkgYmUgdW5yZWxpYWJsZSB3aXRob3V0IGEgc3ltYm9sIHNlYXJjaCBwYXRoLiAgICAgICAgICAgKg0KKiBVc2UgLnN5bWZpeCB0byBoYXZlIHRoZSBkZWJ1Z2dlciBjaG9vc2UgYSBzeW1ib2wgcGF0aC4gICAgICAgICAgICAgICAgICAgKg0KKiBBZnRlciBzZXR0aW5nIHlvdXIgc3ltYm9sIHBhdGgsIHVzZSAucmVsb2FkIHRvIHJlZnJlc2ggc3ltYm9sIGxvY2F0aW9ucy4gKg0KKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg0KRXhlY3V0YWJsZSBzZWFyY2ggcGF0aCBpczogDQpXaW5kb3dzIDggVmVyc2lvbiAxNzEzNCBNUCAoMTYgcHJvY3MpIEZyZWUgeDY0DQpQcm9kdWN0OiBXaW5OdCwgc3VpdGU6IFNpbmdsZVVzZXJUUw0KQnVpbHQgYnk6IDE3MTM0LjEuYW1kNjRmcmUucnM0X3JlbGVhc2UuMTgwNDEwLTE4MDQNCk1hY2hpbmUgTmFtZToNCkRlYnVnIHNlc3Npb24gdGltZTogU3VuIE5vdiAxNSAyMTo1NDozNS4wMDAgMjAyNiAoVVRDICsgMTowMCkNClN5c3RlbSBVcHRpbWU6IG5vdCBhdmFpbGFibGUNClByb2Nlc3MgVXB0aW1lOiAwIGRheXMgMDowMDowNS4wMDANCi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uDQpUaGlzIGR1bXAgZmlsZSBoYXMgYW4gZXhjZXB0aW9uIG9mIGludGVyZXN0IHN0b3JlZCBpbiBpdC4NClRoZSBzdG9yZWQgZXhjZXB0aW9uIGluZm9ybWF0aW9uIGNhbiBiZSBhY2Nlc3NlZCB2aWEgLmVjeHIuDQooMWJjOC4xZWI4KTogVW5rbm93biBleGNlcHRpb24gLSBjb2RlIGMwMDAwMzc0IChmaXJzdC9zZWNvbmQgY2hhbmNlIG5vdCBhdmFpbGFibGUpDQoNCj4+PiFzeW0gbm9pc3kNCm5vaXN5IG1vZGUgLSBzeW1ib2wgcHJvbXB0cyBvbg0KDQo+Pj4uc3ltcGF0aCBzcnYqVW5rbm93biBmb3JtYXQgY2hhcmFjdGVyVW5rbm93biBmb3JtYXQgY29udHJvbCBjaGFyYWN0ZXINCkRCR0hFTFA6IFN5bWJvbCBTZWFyY2ggUGF0aDogc3J2KkU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXFJvYW1pbmdcd2luZGJndG9vbFxzeW1ib2xzKmh0dHA6Ly9tc2RsLm1pY3Jvc29mdC5jb20vZG93bmxvYWQvc3ltYm9scw0KREJHSEVMUDogU3ltYm9sIFNlYXJjaCBQYXRoOiBzcnYqRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcUm9hbWluZ1x3aW5kYmd0b29sXHN5bWJvbHMqaHR0cDovL21zZGwubWljcm9zb2Z0LmNvbS9kb3dubG9hZC9zeW1ib2xzDQpTeW1ib2wgc2VhcmNoIHBhdGggaXM6IHNydiolQVBQREFUQSVcV2luRGJnVG9vbFxTeW1ib2xzKmh0dHA6Ly9tc2RsLm1pY3Jvc29mdC5jb20vZG93bmxvYWQvc3ltYm9scw0KRXhwYW5kZWQgU3ltYm9sIHNlYXJjaCBwYXRoIGlzOiBzcnYqJWFwcGRhdGElXHdpbmRiZ3Rvb2xcc3ltYm9scypodHRwOi8vbXNkbC5taWNyb3NvZnQuY29tL2Rvd25sb2FkL3N5bWJvbHMNCg0KPj4+LmxvYWQgRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XERvd25sb2Fkc1xXaW5kYmd0b29sc1xSZWxlYXNlXGV4dC5kbGwNCg0KPj4+LmxvYWQgRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XERvd25sb2Fkc1xXaW5kYmd0b29sc1xSZWxlYXNlXGV4dHMuZGxsDQoNCj4+PiFhbmFseXplIC12DQpEQkdFTkc6ICAlYXBwZGF0YSVcd2luZGJndG9vbFxzeW1ib2xzXG50ZGxsLmRsbFxBRUQxQjlFQjFlMTAwMFxudGRsbC5kbGwgLSBNYXBwZWQgaW1hZ2UgbWVtb3J5DQpEQkdIRUxQOiBudGRsbCAtIHByaXZhdGUgc3ltYm9scyAgDQogICAgICAgIEU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXFJvYW1pbmdcd2luZGJndG9vbFxzeW1ib2xzXG50ZGxsLnBkYlxERjY1NzU0RTczRUREQTQ4MDVBRDVDNENCNTQ5QkQwMjFcbnRkbGwucGRiDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqDQoqICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqDQoqICAgICAgICAgICAgICAgICAgICAgICAgRXhjZXB0aW9uIEFuYWx5c2lzICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqDQoqICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqDQoNCkRCR0VORzogICVhcHBkYXRhJVx3aW5kYmd0b29sXHN5bWJvbHNcdWNydGJhc2UuZGxsXDlGMzQ2RDNGZjgwMDBcdWNydGJhc2UuZGxsIC0gTWFwcGVkIGltYWdlIG1lbW9yeQ0KREJHSEVMUDogdWNydGJhc2UgLSBwcml2YXRlIHN5bWJvbHMgIA0KICAgICAgICBFOlxVc2Vyc1xhbmRyZS5naWxsaWJlcnRcQXBwRGF0YVxSb2FtaW5nXHdpbmRiZ3Rvb2xcc3ltYm9sc1x1Y3J0YmFzZS5wZGJcM0E4MkZGNjJFODlGOTM5RkRFRkQ2NzE1MTE1RTk4ODYxXHVjcnRiYXNlLnBkYg0KU1lNU1JWOiAgaHR0cDovL21zZGwubWljcm9zb2Z0LmNvbS9kb3dubG9hZC9zeW1ib2xzL1IuZGxsLzZBRTMxM0YyMjdmZTAwMC9SLmRsbCBub3QgZm91bmQNCkRCR0hFTFA6IEU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXExvY2FsXENyYXNoRHVtcHNcUi5kbGwgLSBmaWxlIG5vdCBmb3VuZA0KREJHSEVMUDogRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcTG9jYWxcQ3Jhc2hEdW1wc1xSLmRsbCAtIGZpbGUgbm90IGZvdW5kDQpEQkdFTkc6ICBjOlxQcm9ncmFtIEZpbGVzXFItNC42LjJcYmluXHg2NFxSLmRsbCAtIE1hcHBlZCBpbWFnZSBtZW1vcnkNCkRCR0hFTFA6IFIuZGxsIGlzIHN0cmlwcGVkLiAgU2VhcmNoaW5nIGZvciBkYmcgZmlsZQ0KU1lNU1JWOiAgRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcUm9hbWluZ1x3aW5kYmd0b29sXHN5bWJvbHNcUi5kYmdcNkFFMzEzRjIyN2ZlMDAwXFIuZGJnIG5vdCBmb3VuZA0KU1lNU1JWOiAgaHR0cDovL21zZGwubWljcm9zb2Z0LmNvbS9kb3dubG9hZC9zeW1ib2xzL1IuZGJnLzZBRTMxM0YyMjdmZTAwMC9SLmRiZyBub3QgZm91bmQNCkRCR0hFTFA6IC5cUi5kYmcgLSBmaWxlIG5vdCBmb3VuZA0KREJHSEVMUDogLlxkbGxcUi5kYmcgLSBwYXRoIG5vdCBmb3VuZA0KREJHSEVMUDogLlxzeW1ib2xzXGRsbFxSLmRiZyAtIHBhdGggbm90IGZvdW5kDQpEQkdIRUxQOiBSLmRsbCBtaXNzaW5nIGRlYnVnIGluZm8uICBTZWFyY2hpbmcgZm9yIHBkYiBhbnl3YXkNCkRCR0hFTFA6IENhbid0IHVzZSBzeW1ib2wgc2VydmVyIGZvciBSLnBkYiAtIG5vIGhlYWRlciBpbmZvcm1hdGlvbiBhdmFpbGFibGUNCkRCR0hFTFA6IFIucGRiIC0gZmlsZSBub3QgZm91bmQNCioqKiBFUlJPUjogU3ltYm9sIGZpbGUgY291bGQgbm90IGJlIGZvdW5kLiAgRGVmYXVsdGVkIHRvIGV4cG9ydCBzeW1ib2xzIGZvciBSLmRsbCAtIA0KREJHSEVMUDogUiAtIGV4cG9ydCBzeW1ib2xzDQpTWU1TUlY6ICBodHRwOi8vbXNkbC5taWNyb3NvZnQuY29tL2Rvd25sb2FkL3N5bWJvbHMvdXRpbHMuZGxsLzZBRTMxNTM1MmIwMDAvdXRpbHMuZGxsIG5vdCBmb3VuZA0KREJHSEVMUDogRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcTG9jYWxcQ3Jhc2hEdW1wc1x1dGlscy5kbGwgLSBmaWxlIG5vdCBmb3VuZA0KREJHSEVMUDogRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcTG9jYWxcQ3Jhc2hEdW1wc1x1dGlscy5kbGwgLSBmaWxlIG5vdCBmb3VuZA0KREJHRU5HOiAgQzpcUHJvZ3JhbSBGaWxlc1xSLTQuNi4yXGxpYnJhcnlcdXRpbHNcbGlic1x4NjRcdXRpbHMuZGxsIC0gTWFwcGVkIGltYWdlIG1lbW9yeQ0KREJHSEVMUDogdXRpbHMuZGxsIGlzIHN0cmlwcGVkLiAgU2VhcmNoaW5nIGZvciBkYmcgZmlsZQ0KU1lNU1JWOiAgRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcUm9hbWluZ1x3aW5kYmd0b29sXHN5bWJvbHNcdXRpbHMuZGJnXDZBRTMxNTM1MmIwMDBcdXRpbHMuZGJnIG5vdCBmb3VuZA0KU1lNU1JWOiAgaHR0cDovL21zZGwubWljcm9zb2Z0LmNvbS9kb3dubG9hZC9zeW1ib2xzL3V0aWxzLmRiZy82QUUzMTUzNTJiMDAwL3V0aWxzLmRiZyBub3QgZm91bmQNCkRCR0hFTFA6IC5cdXRpbHMuZGJnIC0gZmlsZSBub3QgZm91bmQNCkRCR0hFTFA6IC5cZGxsXHV0aWxzLmRiZyAtIHBhdGggbm90IGZvdW5kDQpEQkdIRUxQOiAuXHN5bWJvbHNcZGxsXHV0aWxzLmRiZyAtIHBhdGggbm90IGZvdW5kDQpEQkdIRUxQOiB1dGlscy5kbGwgbWlzc2luZyBkZWJ1ZyBpbmZvLiAgU2VhcmNoaW5nIGZvciBwZGIgYW55d2F5DQpEQkdIRUxQOiBDYW4ndCB1c2Ugc3ltYm9sIHNlcnZlciBmb3IgdXRpbHMucGRiIC0gbm8gaGVhZGVyIGluZm9ybWF0aW9uIGF2YWlsYWJsZQ0KREJHSEVMUDogdXRpbHMucGRiIC0gZmlsZSBub3QgZm91bmQNCioqKiBFUlJPUjogU3ltYm9sIGZpbGUgY291bGQgbm90IGJlIGZvdW5kLiAgRGVmYXVsdGVkIHRvIGV4cG9ydCBzeW1ib2xzIGZvciB1dGlscy5kbGwgLSANCkRCR0hFTFA6IHV0aWxzIC0gZXhwb3J0IHN5bWJvbHMNClNZTVNSVjogIGh0dHA6Ly9tc2RsLm1pY3Jvc29mdC5jb20vZG93bmxvYWQvc3ltYm9scy9SZ3VpLmV4ZS82QUUzMTQwOTFkMDAwL1JndWkuZXhlIG5vdCBmb3VuZA0KREJHSEVMUDogRTpcVXNlcnNcYW5kcmUuZ2lsbGliZXJ0XEFwcERhdGFcTG9jYWxcQ3Jhc2hEdW1wc1xSZ3VpLmV4ZSAtIGZpbGUgbm90IGZvdW5kDQpEQkdIRUxQOiBFOlxVc2Vyc1xhbmRyZS5naWxsaWJlcnRcQXBwRGF0YVxMb2NhbFxDcmFzaER1bXBzXFJndWkuZXhlIC0gZmlsZSBub3QgZm91bmQNCkRCR0VORzogIGM6XFByb2dyYW0gRmlsZXNcUi00LjYuMlxiaW5ceDY0XFJndWkuZXhlIC0gTWFwcGVkIGltYWdlIG1lbW9yeQ0KREJHSEVMUDogUmd1aS5leGUgaXMgc3RyaXBwZWQuICBTZWFyY2hpbmcgZm9yIGRiZyBmaWxlDQpTWU1TUlY6ICBFOlxVc2Vyc1xhbmRyZS5naWxsaWJlcnRcQXBwRGF0YVxSb2FtaW5nXHdpbmRiZ3Rvb2xcc3ltYm9sc1xSZ3VpLmRiZ1w2QUUzMTQwOTFkMDAwXFJndWkuZGJnIG5vdCBmb3VuZA0KU1lNU1JWOiAgaHR0cDovL21zZGwubWljcm9zb2Z0LmNvbS9kb3dubG9hZC9zeW1ib2xzL1JndWkuZGJnLzZBRTMxNDA5MWQwMDAvUmd1aS5kYmcgbm90IGZvdW5kDQpEQkdIRUxQOiAuXFJndWkuZGJnIC0gZmlsZSBub3QgZm91bmQNCkRCR0hFTFA6IC5cZXhlXFJndWkuZGJnIC0gcGF0aCBub3QgZm91bmQNCkRCR0hFTFA6IC5cc3ltYm9sc1xleGVcUmd1aS5kYmcgLSBwYXRoIG5vdCBmb3VuZA0KREJHSEVMUDogUmd1aS5leGUgbWlzc2luZyBkZWJ1ZyBpbmZvLiAgU2VhcmNoaW5nIGZvciBwZGIgYW55d2F5DQpEQkdIRUxQOiBDYW4ndCB1c2Ugc3ltYm9sIHNlcnZlciBmb3IgUmd1aS5wZGIgLSBubyBoZWFkZXIgaW5mb3JtYXRpb24gYXZhaWxhYmxlDQpEQkdIRUxQOiBSZ3VpLnBkYiAtIGZpbGUgbm90IGZvdW5kDQoqKiogRVJST1I6IE1vZHVsZSBsb2FkIGNvbXBsZXRlZCBidXQgc3ltYm9scyBjb3VsZCBub3QgYmUgbG9hZGVkIGZvciBSZ3VpLmV4ZQ0KREJHSEVMUDogUmd1aSAtIG5vIHN5bWJvbHMgbG9hZGVkDQpEQkdIRUxQOiBrZXJuZWwzMiAtIHByaXZhdGUgc3ltYm9scyAgDQogICAgICAgIEU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXFJvYW1pbmdcd2luZGJndG9vbFxzeW1ib2xzXGtlcm5lbDMyLnBkYlw1NDhDQUE4OUYxRkNGMDE5M0QxMkQyREMwMkY4OTIwRTFca2VybmVsMzIucGRiDQpEQkdFTkc6ICAlYXBwZGF0YSVcd2luZGJndG9vbFxzeW1ib2xzXHVzZXIzMi5kbGxcMDQ2RTkyRkUxOTAwMDBcdXNlcjMyLmRsbCAtIE1hcHBlZCBpbWFnZSBtZW1vcnkNCkRCR0hFTFA6IHVzZXIzMiAtIHByaXZhdGUgc3ltYm9scyAgDQogICAgICAgIEU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXFJvYW1pbmdcd2luZGJndG9vbFxzeW1ib2xzXHVzZXIzMi5wZGJcNzdBN0ZFRTY0MjZGMDVDNzA3MEU5RTlCMzQ5RTAxODUxXHVzZXIzMi5wZGINCkRCR0VORzogICVhcHBkYXRhJVx3aW5kYmd0b29sXHN5bWJvbHNcb2xlMzIuZGxsXEE3NzdBRUQyMTUxMDAwXG9sZTMyLmRsbCAtIE1hcHBlZCBpbWFnZSBtZW1vcnkNCkRCR0hFTFA6IG9sZTMyIC0gcHJpdmF0ZSBzeW1ib2xzICYgbGluZXMgDQogICAgICAgIEU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxBcHBEYXRhXFJvYW1pbmdcd2luZGJndG9vbFxzeW1ib2xzXG9sZTMyLnBkYlw5M0RBNzZGN0VGNzY0MkY0QkJFQzQ1RUJFMjAzMTI2MTFcb2xlMzIucGRiDQoqKiogVGhlIE9TIG5hbWUgbGlzdCBuZWVkcyB0byBiZSB1cGRhdGVkISBVbmtub3duIFdpbmRvd3MgdmVyc2lvbjogMTAuMCAqKioNCg0KRkFVTFRJTkdfSVA6IA0KbnRkbGwhUnRsUmVwb3J0Q3JpdGljYWxGYWlsdXJlKzk3DQowMDAwN2ZmOGBmNTBkNDdkYiBlYjAwICAgICAgICAgICAgam1wICAgICBudGRsbCFSdGxSZXBvcnRDcml0aWNhbEZhaWx1cmUrMHg5OSAoMDAwMDdmZjhgZjUwZDQ3ZGQpDQoNCkVYQ0VQVElPTl9SRUNPUkQ6ICBmZmZmZmZmZmZmZmZmZmZmIC0tICguZXhyIDB4ZmZmZmZmZmZmZmZmZmZmZikNCkV4Y2VwdGlvbkFkZHJlc3M6IDAwMDA3ZmY4ZjUwZDQ3ZGIgKG50ZGxsIVJ0bFJlcG9ydENyaXRpY2FsRmFpbHVyZSsweDAwMDAwMDAwMDAwMDAwOTcpDQogICBFeGNlcHRpb25Db2RlOiBjMDAwMDM3NA0KICBFeGNlcHRpb25GbGFnczogMDAwMDAwMDENCk51bWJlclBhcmFtZXRlcnM6IDENCiAgIFBhcmFtZXRlclswXTogMDAwMDdmZjhmNTEzOTdiMA0KDQpQUk9DRVNTX05BTUU6ICBSZ3VpLmV4ZQ0KDQpFUlJPUl9DT0RFOiAoTlRTVEFUVVMpIDB4YzAwMDAzNzQgLSBVbiBzZWdtZW50IGRlIG0gbW9pcmUgYSAgdCAgZW5kb21tYWcgLg0KDQpFWENFUFRJT05fQ09ERTogKE5UU1RBVFVTKSAweGMwMDAwMzc0IC0gVW4gc2VnbWVudCBkZSBtIG1vaXJlIGEgIHQgIGVuZG9tbWFnIC4NCg0KRVhDRVBUSU9OX1BBUkFNRVRFUjE6ICAwMDAwN2ZmOGY1MTM5N2IwDQoNCk5UR0xPQkFMRkxBRzogIDANCg0KQVBQTElDQVRJT05fVkVSSUZJRVJfRkxBR1M6ICAwDQoNCkFQUDogIHJndWkuZXhlDQoNCkxBU1RfQ09OVFJPTF9UUkFOU0ZFUjogIGZyb20gMDAwMDdmZjhmNTBkYzJhNiB0byAwMDAwN2ZmOGY1MGQ0N2RiDQoNCkZBVUxUSU5HX1RIUkVBRDogIGZmZmZmZmZmZmZmZmZmZmYNCg0KQlVHQ0hFQ0tfU1RSOiAgQVBQTElDQVRJT05fRkFVTFRfQUNUSU9OQUJMRV9IRUFQX0NPUlJVUFRJT05faGVhcF9mYWlsdXJlX2Jsb2NrX25vdF9idXN5X0FGVEVSX0NBTEwNCg0KUFJJTUFSWV9QUk9CTEVNX0NMQVNTOiAgQUNUSU9OQUJMRV9IRUFQX0NPUlJVUFRJT05faGVhcF9mYWlsdXJlX2Jsb2NrX25vdF9idXN5X0FGVEVSX0NBTEwNCg0KREVGQVVMVF9CVUNLRVRfSUQ6ICBBQ1RJT05BQkxFX0hFQVBfQ09SUlVQVElPTl9oZWFwX2ZhaWx1cmVfYmxvY2tfbm90X2J1c3lfQUZURVJfQ0FMTA0KDQpTVEFDS19URVhUOiAgDQowMDAwN2ZmOGBmNTEzOTgwOCAwMDAwN2ZmOGBmNTA3YTUwNSBudGRsbCFSdGxwTG9nSGVhcEZhaWx1cmUrMHg0NQ0KMDAwMDdmZjhgZjUxMzk4MTAgMDAwMDdmZjhgZjUwODhmNDMgbnRkbGwhUnRscFJlQWxsb2NhdGVIZWFwSW50ZXJuYWwrMHg5NTIwMw0KMDAwMDdmZjhgZjUxMzk4MTggMDAwMDdmZjhgZjRmZjNkMWEgbnRkbGwhUnRsUmVBbGxvY2F0ZUhlYXArMHg1YQ0KMDAwMDdmZjhgZjUxMzk4MjAgMDAwMDdmZjhgZjEzYTRlMDkgdWNydGJhc2UhX3JlYWxsb2NfYmFzZSsweDM5DQowMDAwN2ZmOGBmNTEzOTgyOCAwMDAwN2ZmOGBhMGJhYWU1YSByIXdpbmFkZG1lbnVpdGVtKzB4MThhDQowMDAwN2ZmOGBmNTEzOTgzMCAwMDAwN2ZmOGBlNjQyMDNiMiB1dGlscyF3aW5NZW51QWRkKzB4MTMyDQowMDAwN2ZmOGBmNTEzOTgzOCAwMDAwN2ZmOGBhMGRjMDkwZiByIXJ3YXJuXysweDIyYTVmDQowMDAwN2ZmOGBmNTEzOTg0MCAwMDAwN2ZmOGBhMGM4NGUzOCByIVJfUGFyc2VFdmFsU3RyaW5nKzB4ODI0OA0KMDAwMDdmZjhgZjUxMzk4NDggMDAwMDdmZjhgYTBjOGZhOGIgciFSX1BhcnNlRXZhbFN0cmluZysweDEyZTliDQowMDAwN2ZmOGBmNTEzOTg1MCAwMDAwN2ZmOGBhMGM4ZmQ3YiByIVJfUGFyc2VFdmFsU3RyaW5nKzB4MTMxOGINCjAwMDA3ZmY4YGY1MTM5ODU4IDAwMDA3ZmY4YGEwYzk0ZDYyIHIhUmZfZXZhbCsweDQ5MjINCjAwMDA3ZmY4YGY1MTM5ODYwIDAwMDA3ZmY4YGEwYzk2MTFmIHIhUmZfZXZhbCsweDVjZGYNCjAwMDA3ZmY4YGY1MTM5ODY4IDAwMDA3ZmY4YGEwYzhmZjhkIHIhUl9QYXJzZUV2YWxTdHJpbmcrMHgxMzM5ZA0KMDAwMDdmZjhgZjUxMzk4NzAgMDAwMDdmZjhgYTBjYmM0OTAgciFSZl9SZXBsSXRlcmF0aW9uKzB4MTQwDQowMDAwN2ZmOGBmNTEzOTg3OCAwMDAwN2ZmOGBhMGNiYzkwMSByIVJmX1JlcGxJdGVyYXRpb24rMHg1YjENCjAwMDA3ZmY4YGY1MTM5ODgwIDAwMDA3ZmY4YGEwY2JjOTgyIHIhcnVuX1JtYWlubG9vcCsweDUyDQowMDAwN2ZmOGBmNTEzOTg4OCAwMDAwN2ZmOGBhMGNiYzljZSByIVJmX21haW5sb29wKzB4ZQ0KMDAwMDdmZjhgZjUxMzk4OTAgMDAwMDdmZjdgODY0NzE1ZGUgcmd1aSsweDE1ZGUNCjAwMDA3ZmY4YGY1MTM5ODk4IDAwMDA3ZmY3YDg2NDcxNDc2IHJndWkrMHgxNDc2DQowMDAwN2ZmOGBmNTEzOThhMCAwMDAwN2ZmN2A4NjQ3MTJlZSByZ3VpKzB4MTJlZQ0KMDAwMDdmZjhgZjUxMzk4YTggMDAwMDdmZjdgODY0NzEzZTYgcmd1aSsweDEzZTYNCjAwMDA3ZmY4YGY1MTM5OGIwIDAwMDA3ZmY4YGY0ZjA0MDM0IGtlcm5lbDMyIUJhc2VUaHJlYWRJbml0VGh1bmsrMHgxNA0KMDAwMDdmZjhgZjUxMzk4YjggMDAwMDdmZjhgZjUwNTM2OTEgbnRkbGwhUnRsVXNlclRocmVhZFN0YXJ0KzB4MjENCg0KDQpTVEFDS19DT01NQU5EOiAgZHBzIDdmZjhmNTEzOTgwOCA7IGtiDQoNCkZPTExPV1VQX0lQOiANClIhd2luYWRkbWVudWl0ZW0rMThhDQowMDAwN2ZmOGBhMGJhYWU1YSA0ODg5YzEgICAgICAgICAgbW92ICAgICByY3gscmF4DQoNClNZTUJPTF9TVEFDS19JTkRFWDogIDQNCg0KU1lNQk9MX05BTUU6ICByIXdpbmFkZG1lbnVpdGVtKzE4YQ0KDQpGT0xMT1dVUF9OQU1FOiAgTWFjaGluZU93bmVyDQoNCk1PRFVMRV9OQU1FOiBSDQoNCklNQUdFX05BTUU6ICBSLmRsbA0KDQpERUJVR19GTFJfSU1BR0VfVElNRVNUQU1QOiAgNmFlMzEzZjINCg0KRkFJTFVSRV9CVUNLRVRfSUQ6ICBBQ1RJT05BQkxFX0hFQVBfQ09SUlVQVElPTl9oZWFwX2ZhaWx1cmVfYmxvY2tfbm90X2J1c3lfQUZURVJfQ0FMTF9jMDAwMDM3NF9SLmRsbCF3aW5hZGRtZW51aXRlbQ0KDQpCVUNLRVRfSUQ6ICBBUFBMSUNBVElPTl9GQVVMVF9BQ1RJT05BQkxFX0hFQVBfQ09SUlVQVElPTl9oZWFwX2ZhaWx1cmVfYmxvY2tfbm90X2J1c3lfQUZURVJfQ0FMTF9yIXdpbmFkZG1lbnVpdGVtKzE4YQ0KDQpXQVRTT05fU1RBR0VPTkVfVVJMOiAgaHR0cDovL3dhdHNvbi5taWNyb3NvZnQuY29tL1N0YWdlT25lL1JndWlfZXhlLzRfNjJfMjUyNDhfMC82YWUzMTQwOS9udGRsbF9kbGwvMTBfMF8xNzEzNF8xMzA0L2FlZDFiOWViL2MwMDAwMzc0LzAwMGY0N2RiLmh0bT9SZXRyaWFnZT0xDQoNCkZvbGxvd3VwOiBNYWNoaW5lT3duZXINCi0tLS0tLS0tLQ0KDQoNCj4+Pi5sb2FkYnkgc29zIGNscg0KVW5hYmxlIHRvIGZpbmQgbW9kdWxlICdjbHInDQoNCj4+Pi5sb2FkIEU6XFVzZXJzXGFuZHJlLmdpbGxpYmVydFxEb3dubG9hZHNcV2luZGJndG9vbHNcUmVsZWFzZVxzb3NleC5kbGwNClRoaXMgZHVtcCBoYXMgbm8gU09TRVggaGVhcCBpbmRleC4NClRoZSBoZWFwIGluZGV4IG1ha2VzIHNlYXJjaGluZyBmb3IgcmVmZXJlbmNlcyBhbmQgcm9vdHMgbXVjaCBmYXN0ZXIuDQpUbyBjcmVhdGUgYSBoZWFwIGluZGV4LCBydW4gIWJoaQ==",
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "is_patch": false,
+          "creation_time": "2026-11-15T21:49:44Z",
+          "summary": "Crash dump decoded by WinDbgTool",
+          "file_name": "heap corruption.windbg.log",
+          "bug_id": 19325,
+          "last_change_time": "2026-11-15T21:49:44Z",
+          "size": 10498,
+          "is_private": false,
+          "id": 4077
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-18 15:18:55"
+}
