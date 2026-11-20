@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-18._
+_Automatically generated from the R Bugzilla dump updated 2026-11-20._
 
 ## Triaged bugs
 
@@ -21,7 +21,6 @@ _Core developers in CC should not be assumed responsible for action._
 * [Bug 19098](https://bugs.r-project.org/show_bug.cgi?id=19098) — Ctrl-D does not exit R console on Windows (2026-09-22, in CC: tierney)
 * [Bug 19265](https://bugs.r-project.org/show_bug.cgi?id=19265) — Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper (2026-10-31)
 * [Bug 19225](https://bugs.r-project.org/show_bug.cgi?id=19225) — as.list(<environment>) returns misaligned names/values (or an internal SET_VECTOR_ELT error) when an active binding modifies the environment (2026-11-13)
-* [Bug 19324](https://bugs.r-project.org/show_bug.cgi?id=19324) — pdf() device writes past pd->pos in PDF_endfile() when a file holds many definitions (e.g. clipping paths) (2026-11-18)
 * [Bug 19325](https://bugs.r-project.org/show_bug.cgi?id=19325) — utils::winMenuAddItem crashes with a heap corruption error (2026-11-18)
 
 ### Recommended closures
@@ -81,10 +80,6 @@ These Triage Team patches should be looked at next.
 
 * [Bug 19335](https://bugs.r-project.org/show_bug.cgi?id=19335) — Graphics device stays locked after an error in a clipping path, mask or pattern function (2026-11-17)
 
-#### Language
-
-* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-17)
-
 #### Low-level
 
 * [Bug 19051](https://bugs.r-project.org/show_bug.cgi?id=19051) — casts from double to R_xlen_t can trigger undefined behaviour (2026-04-14)
@@ -95,6 +90,8 @@ These Triage Team patches should be looked at next.
 * [Bug 19311](https://bugs.r-project.org/show_bug.cgi?id=19311) — Byte-compiled reads of active bindings call the binding function twice (2026-11-13)
 * [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
+* [Bug 19346](https://bugs.r-project.org/show_bug.cgi?id=19346) — parse_Rd(): return on an unterminated [option] or \Sexpr{} instead of looping forever (2026-11-20)
+* [Bug 19348](https://bugs.r-project.org/show_bug.cgi?id=19348) — parse_Rd(): stop with an error on a user macro that ends by calling itself, instead of looping forever (2026-11-20)
 
 #### S4methods
 
@@ -126,6 +123,7 @@ These Triage Team patches can wait their turn.
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19314](https://bugs.r-project.org/show_bug.cgi?id=19314) — speed up integer and mixed integer/double arithmetic loops (2026-11-13)
+* [Bug 19342](https://bugs.r-project.org/show_bug.cgi?id=19342) — Parse hexadecimal constants with binary exponents below -1023, such as 0x1p-1074 (2026-11-19)
 
 #### Mac GUI / Mac specific
 

@@ -1,0 +1,293 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "cc": [
+          "maechler"
+        ],
+        "qa_contact": "",
+        "id": 19124,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "minor",
+        "whiteboard": "",
+        "creation_time": "2026-08-04T16:49:03Z",
+        "version": "R-devel (trunk)",
+        "priority": "P5",
+        "product": "R",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "assigned_to": "R-core",
+        "cc_detail": [
+          {
+            "name": "maechler",
+            "id": 18,
+            "real_name": "Martin Maechler"
+          }
+        ],
+        "last_change_time": "2026-11-19T16:20:02Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "strptime() fails to parse %w of '0' in LC_CTYPE=C",
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": "",
+        "creator_detail": {
+          "real_name": "Michael Chirico",
+          "name": "michaelchirico4",
+          "id": 3256
+        },
+        "resolution": "",
+        "status": "REOPENED",
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "michaelchirico4",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "platform": "All",
+        "flags": []
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19124": {
+        "comments": [
+          {
+            "creator": "michaelchirico4",
+            "creation_time": "2026-08-04T16:49:03Z",
+            "count": 0,
+            "is_markdown": true,
+            "text": "Created attachment 3774\nHandle %w of '0' consistently in LC_CTYPE=C\n\nr63319 introduced a boundary check for `w_strptime_internal` that was not mirrored in `strptime_internal`, so we get this difference in behavior:\n\n```\nLC_CTYPE=C          Rscript -e 'strptime(\"2026 0 0\", \"%Y %U %w\")'\n# [1] NA\nLC_CTYPE=en_US.utf8 Rscript -e 'strptime(\"2026 0 0\", \"%Y %U %w\")'\n# [1] \"2026-01-04 UTC\"\n```",
+            "bug_id": 19124,
+            "tags": [],
+            "attachment_id": 3774,
+            "is_private": false,
+            "time": "2026-08-04T16:49:03Z",
+            "id": 103370
+          },
+          {
+            "time": "2026-08-28T05:25:33Z",
+            "id": 103492,
+            "is_private": false,
+            "tags": [],
+            "attachment_id": {},
+            "text": "I think this can be closed (r90447)?",
+            "bug_id": 19124,
+            "count": 1,
+            "is_markdown": true,
+            "creator": "michaelchirico4",
+            "creation_time": "2026-08-28T05:25:33Z"
+          },
+          {
+            "count": 2,
+            "is_markdown": true,
+            "text": "(In reply to Michael Chirico from comment #0)\n> Created attachment 3774\n> Handle %w of '0' consistently in LC_CTYPE=C\n> \n> r63319 introduced a boundary check for `w_strptime_internal` that was not\n> mirrored in `strptime_internal`, so we get this difference in behavior:\n> \n> ```\n> LC_CTYPE=C          Rscript -e 'strptime(\"2026 0 0\", \"%Y %U %w\")'\n> # [1] NA\n> LC_CTYPE=en_US.utf8 Rscript -e 'strptime(\"2026 0 0\", \"%Y %U %w\")'\n> # [1] \"2026-01-04 UTC\"\n> ```\n\nWith `%U`, week 1 starts at the first Sunday. So, Sunday of week 0 doesn't exist. In fact,\n\n    strftime(\"2026-01-04\", \"%Y %U %w\")\n\ngives `\"2026 01 0\"`.\n\nOn the other hand,\n\n    strftime(\"2026-01-04\", \"%W\")\n\ngives `\"00\"`.\n\nThe added code in `w_strptime_internal`, which is supposed to fix Bug 15195, is wrong.\n\nIn the formula, `save_wday - w_offset` part is supposed to mean how many days _ahead of_ `w_offset`.\n\n\t  if(tm->tm_yday < 0) tm->tm_yday += 7;\n\nshould be\n\n\t  if(save_wday - w_offset < 0) tm->tm_yday += 7;\n\n.\n\nAlternatively, discard it entirely, but replace\n\n    save_wday - w_offset\n\nin the formula with\n\n    (save_wday - w_offset + 7) % 7\n\n.\n\n    strptime(paste(\"2026\", c(\"00\", \"01\"), \"0\"), \"%Y %W %w\")\n\nshould be one week apart, `2026-01-04` and `2026-01-11`.",
+            "bug_id": 19124,
+            "creator": "suharto_anggono",
+            "creation_time": "2026-08-28T16:32:00Z",
+            "is_private": false,
+            "time": "2026-08-28T16:32:00Z",
+            "id": 103494,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "creator": "suharto_anggono",
+            "creation_time": "2026-09-18T05:36:04Z",
+            "is_markdown": true,
+            "count": 3,
+            "text": "Once again, the the change to `w_strptime_internal` in r63319 is wrong and shouldn't be followed by `strptime_internal`. For `%U` and Sunday, `strptime_internal` is already correct. For\n\n    strptime(\"2026 0 0\", \"%Y %U %w\")\n\n, `NA` result is correct and it is `2026-01-04` that is wrong.\n\nWhat gives wrong result is `%W` and Sunday (Bug 15195). Similar to what is said by  https://stackoverflow.com/questions/14646406/r-conversion-of-week-number-uk-to-posixct-issue#comment20464275_14646756 , r63319 is a partial fix of the problem. It fixes week number 0, but later weeks are still wrong.",
+            "bug_id": 19124,
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-09-18T05:36:04Z",
+            "id": 103658
+          },
+          {
+            "creator": "maechler",
+            "creation_time": "2026-09-18T15:53:21Z",
+            "text": "(In reply to Suharto Anggono from comment #3)\n> Once again, the the change to `w_strptime_internal` in r63319 is wrong and\n> shouldn't be followed by `strptime_internal`. \n.........\n\nYes, I read your comment #2  and actually did think you were right and Michael Ch and I were wrong ...  but I was busy  (upcoming R Sprint in Birmingham ..),\nand then forget / postponed this.\n...  and I was hoping you would provide a patch correcting both wrong codes, the\nold one (in r63319) for `w_strptime_internal` and the \nnew one (in r90447) for `strptime_internal`.  If this was already in your own version of `Rstrptime.h`\nYou could create the patch attachment with something like\n\n    svn diff src/main/Rstrptime.h > Rstrptime_h.patch\n\nBut indeed, your description of the needed changes has really been easily sufficient, too, and I am committing them, i.e., a \"simplification\" - using auxiliary `int del = save_wday - w_offset;`  of the first of the two alternatives you proposed.\nI've changed extended the regression tests in `tests/datetime3.R` as well, now requiring `NA` for invalid cases, and also looking at both %U and %W week numbering schemes.\n\nIt needs a bit more tests, also just in case for the \"internal\" tzone setting.",
+            "bug_id": 19124,
+            "is_markdown": true,
+            "count": 4,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-09-18T15:53:21Z",
+            "id": 103662,
+            "is_private": false
+          },
+          {
+            "creator": "michaelchirico4",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-09-18T17:51:44Z",
+            "creation_time": "2026-09-18T17:51:44Z",
+            "count": 5,
+            "bug_id": 19124,
+            "text": "Thanks Suharto for the more careful review!\n\nI was only noticing the imbalance between `w_strptime_internal` and `strptime_internal`, without checking that the former might itself be incorrect! I put too much faith in the commit history.",
+            "tags": [],
+            "is_private": false,
+            "id": 103663
+          },
+          {
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "time": "2026-09-18T19:15:43Z",
+            "id": 103665,
+            "creator": "suharto_anggono",
+            "creation_time": "2026-09-18T19:15:43Z",
+            "count": 6,
+            "is_markdown": false,
+            "text": "Year 2026\n\nSunday as the first day of week (%U):\nWeekday:  0  1  2  3  4  5  6\nWeek 00:             01 02 03\nWeek 01: 04 05 06 07 08 09 10\nWeek 02: 11 12 13 14 15 16 17\n(2026-01)\n\nMonday as the first day of week (%W):\nWeekday:  1  2  3  4  5  6  0\nWeek 00:          01 02 03 04\nWeek 01: 05 06 07 08 09 10 11\nWeek 02: 12 13 14 15 16 17 18\n(2026-01)",
+            "bug_id": 19124
+          },
+          {
+            "creation_time": "2026-10-29T18:20:08Z",
+            "creator": "kevinushey",
+            "bug_id": 19124,
+            "text": "Created attachment 3971\nguard strptime against negative week-zero day of year\n\nFollowing up on the week-zero cases discussed here, OSS-Fuzz found an AddressSanitizer global-buffer-overflow read in R-devel. With `strptime(\"2026 0 0\", \"%Y %U %w\", tz = \"UTC\")`, the week and weekday calculation produces a negative `tm_yday`. In both `w_strptime_internal` and `strptime_internal`, the month search then leaves `t_mon` at zero, and the subsequent `__mon_yday[...][t_mon - 1]` reads two bytes before the table. The OSS-Fuzz report is https://oss-fuzz.com/testcase-detail/4807144269217792.\n\nThe attached patch adds a guard after the week and weekday calculation in both parser paths, returning an invalid parse before the month lookup when `tm_yday` is negative. It also tests invalid `%U` and `%W` week-zero inputs in C and UTF-8 locales. The direct cases now return `NA`, and `tests/datetime3.R` passes under an AddressSanitizer build. The patch is based on trunk revision 90792 and dry-runs cleanly there.\n\nPatch also at https://github.com/r-devel/r-svn/pull/421",
+            "count": 7,
+            "is_markdown": false,
+            "attachment_id": 3971,
+            "tags": [],
+            "id": 104006,
+            "time": "2026-10-29T18:20:08Z",
+            "is_private": false
+          },
+          {
+            "is_markdown": true,
+            "count": 8,
+            "text": "Thanks a lot, Kevin!\n\nIndeed, your comment 7 seems perfect; I could easily reproduce (on a ASAN-sanitized version of R-devel) and the simple patch did fix the problem.\n\nCommited to R-devel as svn r90799 \n(and to be back ported to the R-4-6 branch: this report was just a few days to late to make it to R 4.6.2 )",
+            "bug_id": 19124,
+            "creator": "maechler",
+            "creation_time": "2026-10-30T12:02:48Z",
+            "is_private": false,
+            "time": "2026-10-30T12:02:48Z",
+            "id": 104020,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "count": 9,
+            "is_markdown": true,
+            "bug_id": 19124,
+            "text": "(In reply to Kevin Ushey from comment #7)\n> Created attachment 3971 [details]\n> guard strptime against negative week-zero day of year\n> \n> Following up on the week-zero cases discussed here, OSS-Fuzz found an\n> AddressSanitizer global-buffer-overflow read in R-devel. With\n> `strptime(\"2026 0 0\", \"%Y %U %w\", tz = \"UTC\")`, the week and weekday\n> calculation produces a negative `tm_yday`. In both `w_strptime_internal` and\n> `strptime_internal`, the month search then leaves `t_mon` at zero, and the\n> subsequent `__mon_yday[...][t_mon - 1]` reads two bytes before the table.\n> The OSS-Fuzz report is https://oss-fuzz.com/testcase-detail/4807144269217792.\n> \n> The attached patch adds a guard after the week and weekday calculation in\n> both parser paths, returning an invalid parse before the month lookup when\n> `tm_yday` is negative. It also tests invalid `%U` and `%W` week-zero inputs\n> in C and UTF-8 locales. The direct cases now return `NA`, and\n> `tests/datetime3.R` passes under an AddressSanitizer build. The patch is\n> based on trunk revision 90792 and dry-runs cleanly there.\n> \n> Patch also at https://github.com/r-devel/r-svn/pull/421\n\nInstead of it, parallel to\n\n\t  if(tm->tm_yday > (__isleap(yr) ? 365 : 364)) {\n\t\twarning(\"(0-based) yday %d in year %d is invalid\\n\",\n\t\t\ttm->tm_yday, yr);\n\t\tt_mon = 12;\n\t  }\n\n, one could add\n\n\t  else if(tm->tm_yday < 0)) {\n\t\t<warning>;\n\t\tt_mon = 1;\n\t  }\n\n.",
+            "creation_time": "2026-11-04T06:40:30Z",
+            "creator": "suharto_anggono",
+            "is_private": false,
+            "id": 104084,
+            "time": "2026-11-04T06:40:30Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "bug_id": 19124,
+            "text": "(In reply to Kevin Ushey from comment #7)\n> Created attachment 3971 [details]\n> guard strptime against negative week-zero day of year\n> \n> The attached patch adds a guard after the week and weekday calculation in\n> both parser paths, returning an invalid parse before the month lookup when\n> `tm_yday` is negative. It also tests invalid `%U` and `%W` week-zero inputs\n> in C and UTF-8 locales. The direct cases now return `NA`, and\n> `tests/datetime3.R` passes under an AddressSanitizer build. The patch is\n> based on trunk revision 90792 and dry-runs cleanly there.\n\nBehavior change with the patch:\nstrptime(\"2026 0 0 1 4\", \"%Y %U %w %m %d\", tz = \"UTC\")\ngives NA. Previously not.",
+            "count": 10,
+            "is_markdown": false,
+            "creation_time": "2026-11-12T08:00:47Z",
+            "creator": "suharto_anggono",
+            "id": 104178,
+            "time": "2026-11-12T08:00:47Z",
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "count": 11,
+            "is_markdown": true,
+            "bug_id": 19124,
+            "text": "(In reply to Suharto Anggono from comment #10)\n> (In reply to Kevin Ushey from comment #7)\n> > Created attachment 3971 [details]\n> > guard strptime against negative week-zero day of year\n..........................\n..........................\n\n> Behavior change with the patch:\n> strptime(\"2026 0 0 1 4\", \"%Y %U %w %m %d\", tz = \"UTC\")\n> gives NA. Previously not.\n\nYes, but that's on purpose, right?  \nYou yourself mentioned that (%U %w) can never be '(00 0)', see, e.g., from this code:\n\n```\nwdfmt <-  \"%Y-%m-%d : %U %V %W | %u %w\"\nfor(yr in format(2007:2027))\n     print(quote=FALSE, rbind(paste(\" \", wdfmt),\n             cbind(format(as.Date(paste0(yr,\"-1-1\"))+ -2:6, format = wdfmt))))\n```\nsee your comment #2, comment #3, comment #6, no?",
+            "creation_time": "2026-11-13T21:55:38Z",
+            "creator": "maechler",
+            "is_private": false,
+            "id": 104224,
+            "time": "2026-11-13T21:55:38Z",
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "id": 104287,
+            "is_private": false,
+            "creation_time": "2026-11-17T07:21:46Z",
+            "bug_id": 19124,
+            "text": "(In reply to Martin Maechler from comment #11)\n> (In reply to Suharto Anggono from comment #10)\n> > (In reply to Kevin Ushey from comment #7)\n> > > Created attachment 3971 [details]\n> > > guard strptime against negative week-zero day of year\n> ..........................\n> ..........................\n> \n> > Behavior change with the patch:\n> > strptime(\"2026 0 0 1 4\", \"%Y %U %w %m %d\", tz = \"UTC\")\n> > gives NA. Previously not.\n> \n> Yes, but that's on purpose, right?  \n> You yourself mentioned that (%U %w) can never be '(00 0)', see, e.g., from\n> this code:\n> \n> ```\n> wdfmt <-  \"%Y-%m-%d : %U %V %W | %u %w\"\n> for(yr in format(2007:2027))\n>      print(quote=FALSE, rbind(paste(\" \", wdfmt),\n>              cbind(format(as.Date(paste0(yr,\"-1-1\"))+ -2:6, format =\n> wdfmt))))\n> ```\n> see your comment #2, comment #3, comment #6, no?\n\nYes, but, previously, month and day of month \"takes precedence\" if given. Compare to, for example,\n\n    strptime(\"2026 53 0\", \"%Y %U %w\", tz = \"UTC\")\n    strptime(\"2026 53 0 12 31\", \"%Y %U %w %m %d\", tz = \"UTC\")\n\n.",
+            "count": 12,
+            "attachment_id": {},
+            "time": "2026-11-17T07:21:46Z",
+            "creator": "suharto_anggono",
+            "is_markdown": true
+          },
+          {
+            "creator": "maechler",
+            "is_markdown": true,
+            "attachment_id": {},
+            "time": "2026-11-19T14:58:59Z",
+            "creation_time": "2026-11-19T14:58:59Z",
+            "count": 13,
+            "text": "(In reply to Suharto Anggono from comment #12)\nThank you, Suharto.  I now understand what you mean, and you seem to know what to do,\nto get the more back compatible behaviour which still fixes the bug(s) reported here.\nAs I needed some time, too, to understand:\nHere's a repro code which has worked in \"all\" versions of R upto R 4.6.2,\nbut fails in R 4.6.2 patched and non-old R-devel:\n\n```\n(lt1 <- strptime(\"2026    0  1 4\", \"%Y %U %w %m %d\", tz=\"UTC\"))# \"2026-01-04 UTC\", but NA in R 4.6.2 ptchd, R-devel)\n(lt2 <- strptime(\"2026 53 0  1 4\", \"%Y %U %w %m %d\", tz=\"UTC\"))# works everywhere\nstopifnot(inherits(lt1, \"POSIXlt\"), identical(lt1, lt2),\n          identical(as.Date(lt1), as.Date(\"2026-01-04\")))\n## ok: R 3.0.1, 3.3.3, 4.0.1, 4.4.1, 4.5.1, 4.6.0, 4.6.2\n```\n\nIf it's not easy enough to attach a patch to bugzilla (see my advice in comment #4),\nI'd be grateful if you attach the changed source file(s) `Rstrptime.h` (and maybe `datetime.c`)\nin a private e-mail to me, so I can try it and add the fix to the R source.",
+            "bug_id": 19124,
+            "tags": [],
+            "is_private": false,
+            "id": 104355
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19124": [
+        {
+          "is_private": false,
+          "id": 3774,
+          "last_change_time": "2026-08-04T16:49:03Z",
+          "size": 979,
+          "file_name": "strptime-w-0.patch",
+          "bug_id": 19124,
+          "creation_time": "2026-08-04T16:49:03Z",
+          "summary": "Handle %w of '0' consistently in LC_CTYPE=C",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "michaelchirico4",
+          "data": "SW5kZXg6IHNyYy9tYWluL1JzdHJwdGltZS5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL1JzdHJwdGltZS5oCShyZXZpc2lvbiA5MDM1MCkKKysrIHNyYy9tYWluL1JzdHJwdGltZS5oCSh3b3JraW5nIGNvcHkpCkBAIC0xMTYyLDEwICsxMTYyLDEyIEBACiAgICAgICBpZiAoaGF2ZV9tb24pCiAJICB0bS0+dG1fbW9uID0gc2F2ZV9tb247CiAKLSAgICAgIGlmICghaGF2ZV95ZGF5KQorICAgICAgaWYgKCFoYXZlX3lkYXkpIHsKIAkgIHRtLT50bV95ZGF5ID0gKCg3IC0gKHRtLT50bV93ZGF5IC0gd19vZmZzZXQpKSAlIDcKIAkJCSArICh3ZWVrX25vIC0gMSkgKjcKIAkJCSArIHNhdmVfd2RheSAtIHdfb2Zmc2V0KTsKKwkgIGlmKHRtLT50bV95ZGF5IDwgMCkgdG0tPnRtX3lkYXkgKz0gNzsKKyAgICAgIH0KIAogICAgICAgaWYgKCFoYXZlX21kYXkgfHwgIWhhdmVfbW9uKQogICAgICAgewpJbmRleDogdGVzdHMvZGF0ZXRpbWUzLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvZGF0ZXRpbWUzLlIJKHJldmlzaW9uIDkwMzUwKQorKysgdGVzdHMvZGF0ZXRpbWUzLlIJKHdvcmtpbmcgY29weSkKQEAgLTk5Nyw4ICs5OTcsOSBAQAogc3RvcGlmbm90KGRfc2VjID09IDM2NSoyNCozNjAwKQogIyMgdGhlIG5lZ2F0aXZlIHZhbHVlIHN0ZW1taW5nIGZyb20gQyBsZXZlbCBpbnRlZ2VyIGFkZGl0aW9uIG92ZXJmbG93CiAKK2ludmlzaWJsZShTeXMuc2V0bG9jYWxlKCJMQ19DVFlQRSIsICJDIikpCitzdG9waWZub3QoIWlzLm5hKHN0cnB0aW1lKCIyMDI2IDAgMCIsICIlWSAlVSAldyIpKSkKIAotCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwKICAgICAgIHRvdGFsID0gcHJvYy50aW1lKCkpCg=="
+        },
+        {
+          "summary": "guard strptime against negative week-zero day of year",
+          "creation_time": "2026-10-29T18:20:08Z",
+          "bug_id": 19124,
+          "file_name": "strptime-week-zero.diff",
+          "size": 1633,
+          "last_change_time": "2026-10-29T18:20:08Z",
+          "id": 3971,
+          "is_private": false,
+          "data": "SW5kZXg6IHNyYy9tYWluL1JzdHJwdGltZS5oCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL1JzdHJwdGltZS5oCShyZXZpc2lvbiA5MDc5MikKKysrIHNyYy9tYWluL1JzdHJwdGltZS5oCSh3b3JraW5nIGNvcHkpCkBAIC02OTAsNiArNjkwLDcgQEAgd19zdHJwdGltZV9pbnRlcm5hbCAod2NoYXJfdCAqcnAsIGNvbnN0IHdjaGFyX3QgKmZtdCwgc3RtICp0bSwKIAkgIHRtLT50bV95ZGF5ID0gKCg3IC0gKHRtLT50bV93ZGF5IC0gd19vZmZzZXQpKSAlIDcKIAkJCSArICh3ZWVrX25vIC0gKGludCkoZGVsID49IDApKSAqIDcKIAkJCSArIGRlbCk7CisJICBpZiAodG0tPnRtX3lkYXkgPCAwKSByZXR1cm4gTlVMTDsKICAgICAgIH0KIAogICAgICAgaWYgKCFoYXZlX21kYXkgfHwgIWhhdmVfbW9uKQpAQCAtMTE3OSw2ICsxMTgwLDcgQEAgc3RycHRpbWVfaW50ZXJuYWwgKGNvbnN0IGNoYXIgKnJwLCBjb25zdCBjaGFyICpmbXQsIHN0bSAqdG0sCiAJICB0bS0+dG1feWRheSA9ICgoNyAtICh0bS0+dG1fd2RheSAtIHdfb2Zmc2V0KSkgJSA3CiAJCQkgKyAod2Vla19ubyAtIChpbnQpKGRlbCA+PSAwKSkgKiA3CiAJCQkgKyBkZWwpOworCSAgaWYgKHRtLT50bV95ZGF5IDwgMCkgcmV0dXJuIE5VTEw7CiAgICAgICB9CiAKICAgICAgIGlmICghaGF2ZV9tZGF5IHx8ICFoYXZlX21vbikKSW5kZXg6IHRlc3RzL2RhdGV0aW1lMy5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL2RhdGV0aW1lMy5SCShyZXZpc2lvbiA5MDc5MikKKysrIHRlc3RzL2RhdGV0aW1lMy5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMDQ5LDYgKzEwNDksMTcgQEAgc3RvcGlmbm90KGNobHRVWywxXSA9PSAiMjAyNiIsIGNobHRVWywyXSA9PSAiMDEiLAogICAgICAgICAgIGlkZW50aWNhbChjaGx0VVstKDE6MyksXSwgY2hsdFstKDE6MiksXSkpCiAjIyBpbmRlZWQsIHRoZSBmaXJzdCBmaXhlcyB3ZXJlIG5vdCBvayBpbiBSIDw9IDQuNi4xCiAKKyMjIFdlZWsgemVybyBjYW4gc3BlY2lmeSBhIHdlZWtkYXkgYmVmb3JlIEphbnVhcnkgMTsgcmVqZWN0IGl0IGJlZm9yZQorIyMgY29udmVydGluZyB0aGUgcmVzdWx0aW5nIG5lZ2F0aXZlIHlkYXkgdG8gYSBtb250aCBhbmQgZGF5Lgorb2xkTENjdHlwZSA8LSBTeXMuZ2V0bG9jYWxlKCJMQ19DVFlQRSIpCitmb3IgKGxjIGluIGMoIkMiLCAiQy5VVEYtOCIpKSB7CisgICAgaWYgKG56Y2hhcihzdXBwcmVzc1dhcm5pbmdzKFN5cy5zZXRsb2NhbGUoIkxDX0NUWVBFIiwgbGMpKSkpCisgICAgICAgIHN0b3BpZm5vdChpcy5uYShzdHJwdGltZSgiMjAyNiAwIDAiLCAiJVkgJVUgJXciLCB0eiA9ICJVVEMiKSksCisgICAgICAgICAgICAgICAgICBpcy5uYShzdHJwdGltZSgiMjAyNiAwIDEiLCAiJVkgJVcgJXciLCB0eiA9ICJVVEMiKSkpCit9CitTeXMuc2V0bG9jYWxlKCJMQ19DVFlQRSIsIG9sZExDY3R5cGUpCisjIyBBU2FuIHJlcG9ydGVkIGFuIG91dC1vZi1ib3VuZHMgcmVhZCBpbiBSLWRldmVsIHI5MDYwNSB0aHJvdWdoIHI5MDc4My4KKwogCiAKICMjIGtlZXAgYXQgZW5kCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_patch": true
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-19 16:20:02"
+}

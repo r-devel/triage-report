@@ -1,0 +1,83 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_creator_accessible": true,
+        "creator": "michaelchirico4",
+        "alias": [],
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "name": "michaelchirico4",
+          "id": 3256,
+          "real_name": "Michael Chirico"
+        },
+        "status": "NEW",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "groups": [],
+        "summary": "CRAN checks could enforce Control Flow Integrity (KCFI) issues (e.g. from stale package_native_routine_registration_skeleton templates)",
+        "url": "",
+        "blocks": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-20T01:01:10Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "assigned_to": "R-core",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Add-ons",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-20T01:01:10Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19347
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19347": {
+        "comments": [
+          {
+            "id": 104379,
+            "is_private": false,
+            "tags": [],
+            "text": "Some 40-50 CRAN packages have actual problems as identified by [`-fsanitize=kcfi`](https://clang.llvm.org/docs/ControlFlowIntegrity.html#fsanitize-kcfi). Specifically, the settings for these 40-50 are `-fsanitize=kcfi -fsanitize-cfi-icall-generalize-pointers -fuse-ld=lld -Wl,-z,kcfi-trampolines`.\n\nTake {dotCall64} for example, which has in [init.c](https://github.com/cran/dotCall64/blob/de0eca96011f215020f9624ed691b9399d7da371/src/init.c#L13): \n\n```\nextern void dC64               ( void *);\n```\n\nBut the implementation ([dotCall64.c](https://github.com/cran/dotCall64/blob/de0eca96011f215020f9624ed691b9399d7da371/src/dotCall64.c#L76)) is `SEXP dC64(SEXP)`:\n\n```\nSEXP dC64(SEXP args_in) {\n  // ...\n}\n```\n\n`ld.lld` will reject this under `-fsanitize=kcfi`.\n\nThat's a return-type mismatch; there are 3 other classes of issues that `-fsanitize=kcfi` can expose:\n\n1. `const` mismatch, e.g. {caTools}\n\n[caTools_init.c](https://github.com/cran/caTools/blob/21dec30aea222d6091b675302996bdd42b221935/src/caTools_init.c#L15) has:\n\n```\nextern void runmean(void *, void *, void *, void *);\n```\n\n[runfunc.c](https://github.com/cran/caTools/blob/21dec30aea222d6091b675302996bdd42b221935/src/runfunc.c#L270) has:\n\n```\nvoid runmean(double *In, double *Out, const int *nIn, const int *nWin)\n```\n\nKCFI preserves `const`-ness, so `ld.lld` rejects this\n\n2. `()` vs. `(void)` mismatch, e.g. {hypergeo}\n\n[init.c](https://github.com/cran/hypergeo/blob/38c15f391c2043eb3ce2c5cd7bfb21c8f16d021e/src/init.c#L17) has:\n\n```\nextern SEXP _hypergeo_RcppExport_registerCCallable();\n```\n\n[RcppExports.cpp](https://github.com/cran/hypergeo/blob/38c15f391c2043eb3ce2c5cd7bfb21c8f16d021e/src/RcppExports.cpp#L254) has:\n\n```\nRcppExport SEXP _hypergeo_RcppExport_registerCCallable()\n```\n\nBecause this is C++, that means `(void)`! Hence the `ld.lld` rejection.\n\n3. pointer-reference conflict, e.g. {cit}\n\n[cit_init.c](https://github.com/cran/cit/blob/cf288c84f9c4c018339faea6859ccb2833af291a/src/cit_init.c#L10) has:\n\n```\nextern void citconlog2(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);\n```\n\n[citconlog2.cpp](https://github.com/cran/cit/blob/cf288c84f9c4c018339faea6859ccb2833af291a/src/citconlog2.cpp#L41-L42) has:\n\n```\nvoid citconlog2( double *L, double *G, double *T, int &nrow,\n\tint &ncol, double &pval, double &pval1, double &pval2, double &pval3, double &pval4, int &maxit )\n```\n\n`ld.lld` rejects equating `void *` with `int &`. The file also uses `extern \"C\"` earlier in the file to disable C++ name mangling, which disguises the issue from the normal linker.\n\n----\n\nNB: Many of the packages with issues are part of the set of about 600 packages on CRAN that failed to obey the `FIXME` emitted by `tools::package_native_routine_registration_skeleton()`:\n\n```\n/* FIXME:\nCheck these declarations against the C/Fortran source code.\n*/\n```\n\nhttps://github.com/search?q=org%3Acran+%2FCheck+these+declarations+against+the+C%5C%2FFortran+source+code.%2F+%2Fvoid%5Cs*%5B*%5D%2F&type=code",
+            "bug_id": 19347,
+            "count": 0,
+            "creation_time": "2026-11-20T01:01:10Z",
+            "time": "2026-11-20T01:01:10Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "michaelchirico4"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19347": []
+    }
+  },
+  "source_changed": "2026-11-20 01:01:10"
+}

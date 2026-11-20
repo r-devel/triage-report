@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "resolution": "",
+        "blocks": [],
+        "url": "",
+        "summary": "Parse hexadecimal constants with binary exponents below -1023, such as 0x1p-1074",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "is_cc_accessible": true,
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-11-19T15:14:14Z",
+        "cc_detail": [],
+        "assigned_to": "R-core",
+        "component": "Low-level",
+        "classification": "Unclassified",
+        "depends_on": [],
+        "keywords": [],
+        "is_open": true,
+        "priority": "P4",
+        "product": "R",
+        "whiteboard": "",
+        "creation_time": "2026-11-19T15:13:57Z",
+        "version": "R-devel (trunk)",
+        "id": 19342,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "cc": [],
+        "qa_contact": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "bugs": {
+      "19342": {
+        "comments": [
+          {
+            "creation_time": "2026-11-19T15:13:57Z",
+            "creator": "kevinushey",
+            "count": 0,
+            "is_markdown": true,
+            "bug_id": 19342,
+            "text": "## Summary\n\nHexadecimal constants with a binary exponent below -1023, such as `0x1p-1074`, are read as 0 by the parser, `as.numeric()` and `scan()`; since macOS's `%a` writes subnormals in that form, `deparse(x, control = \"exact\")` does not round-trip subnormal `x` there. Fixes a reproducible wrong result, for rare input.\n\n## Details\n\nThe hex branch of `R_strtod5()` (`src/main/util.c`) scales the mantissa by a factor 2^-expn built by repeated squaring of a `double`; for expn <= -1024 the factor overflows to `Inf` and the result is 0. PR#17199 fixed this only for strings with hex fraction digits. Seen in R 4.6.1; R-devel (r90937) has the same code.\n\nReproducible example: attached as `hex-subnormal-parse-repro.R`; it reads `\"0x1p-1024\"`, `\"0x1p-1074\"` and `\"0x1.54p-1068\"` as 0 instead of 2^-1024, 2^-1074 and `exp(-740)`, so its `stopifnot()` fails.\n\nProposed patch: attached as `hex-subnormal-parse.diff` (against r90937); it replaces the scaling and the PR#17199 special case with one `ldexpl()` call (`ldexp()` without `HAVE_LONG_DOUBLE`), which is exact and rounds once for subnormal results, and adds a test to `reg-tests-1e.R`. `make check` passes on macOS (arm64).\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/514, where CI results can be seen.",
+            "tags": [],
+            "attachment_id": {},
+            "is_private": false,
+            "id": 104356,
+            "time": "2026-11-19T15:13:57Z"
+          },
+          {
+            "attachment_id": 4113,
+            "time": "2026-11-19T15:14:06Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "is_private": false,
+            "id": 104357,
+            "creation_time": "2026-11-19T15:14:06Z",
+            "count": 1,
+            "text": "Created attachment 4113\npatch: scale hexadecimal constants with ldexpl() (against r90937)",
+            "bug_id": 19342
+          },
+          {
+            "id": 104358,
+            "time": "2026-11-19T15:14:14Z",
+            "is_private": false,
+            "attachment_id": 4114,
+            "tags": [],
+            "bug_id": 19342,
+            "text": "Created attachment 4114\nreproducer",
+            "count": 2,
+            "is_markdown": false,
+            "creation_time": "2026-11-19T15:14:14Z",
+            "creator": "kevinushey"
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19342": [
+        {
+          "file_name": "hex-subnormal-parse.diff",
+          "bug_id": 19342,
+          "creation_time": "2026-11-19T15:14:06Z",
+          "summary": "patch: scale hexadecimal constants with ldexpl() (against r90937)",
+          "is_private": false,
+          "id": 4113,
+          "last_change_time": "2026-11-19T15:14:06Z",
+          "size": 2258,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3V0aWwuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi91dGlsLmMJKHJldmlzaW9uIDkwOTM3KQorKysgc3JjL21haW4vdXRpbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMjYxLDI3ICsyMjYxLDE1IEBAIGRvdWJsZSBSX3N0cnRvZDUoY29uc3QgY2hhciAqc3RyLCBjaGFyICoqZW5kcHRyLCBjaGFyIGRlYywKIAkgICAgZXhwbiArPSBleHBzaWduICogbjsKIAl9CiAJaWYgKGFucyAhPSAwLjApIHsgLyogUFIjMTU5NzY6ICBhbGxvdyBiaWcgZXhwb25lbnRzIG9uIDAgKi8KLQkgICAgTERPVUJMRSBmYWMgPSAxLjA7Ci0JICAgIGRvdWJsZSBwMiA9IDIuMDsKLQkgICAgaWYoZXhwaCA+IDApIHsKLQkJaWYgKGV4cG4gLSBleHBoIDwgLTEyMikgewkvKiBQUiMxNzE5OTogIGZhYyBtYXkgb3ZlcmZsb3cgYmVsb3cgaWYgZXhwbiAtIGV4cGggaXMgdG9vIHNtYWxsLgotCQkJCQkgICAgICAgMl4tMTIyIGlzIGEgYml0IGJpZ2dlciB0aGFuIDFFLTM3LCBzbyBzaG91bGQgYmUgZmluZSBvbiBhbGwgc3lzdGVtcyAqLwotCQkgICAgZm9yIChuID0gZXhwaCwgZmFjID0gMS4wOyBuOyBuID4+PSAxLCBwMiAqPSBwMikKLQkJCWlmIChuICYgMSkgZmFjICo9IHAyOwotCQkgICAgYW5zIC89IGZhYzsKLQkJICAgIHAyID0gMi4wOwotCQl9IGVsc2UKLQkJICAgIGV4cG4gLT0gZXhwaDsKLQkgICAgfQotCSAgICBpZiAoZXhwbiA8IDApIHsKLQkJZm9yIChuID0gLWV4cG4sIGZhYyA9IDEuMDsgbjsgbiA+Pj0gMSwgcDIgKj0gcDIpCi0JCSAgICBpZiAobiAmIDEpIGZhYyAqPSBwMjsKLQkJYW5zIC89IGZhYzsKLQkgICAgfSBlbHNlIHsKLQkJZm9yIChuID0gZXhwbiwgZmFjID0gMS4wOyBuOyBuID4+PSAxLCBwMiAqPSBwMikKLQkJICAgIGlmIChuICYgMSkgZmFjICo9IHAyOwotCQlhbnMgKj0gZmFjOwotCSAgICB9CisJICAgIGlmKGV4cGggPiAwKQorCQlleHBuIC09IGV4cGg7CisJICAgIC8qIGxkZXhwKCkgc2NhbGVzIGV4YWN0bHksIHJvdW5kaW5nIG9uY2UgZm9yIGEgc3Vibm9ybWFsIHJlc3VsdDoKKwkgICAgICAgYSBmYWN0b3IgMl4tZXhwbiBvdmVyZmxvd3MgZm9yIGV4cG4gPD0gLTEwMjQgKGNmIFBSIzE3MTk5KSAqLworI2lmZGVmIEhBVkVfTE9OR19ET1VCTEUKKwkgICAgYW5zID0gbGRleHBsKGFucywgZXhwbik7CisjZWxzZQorCSAgICBhbnMgPSBsZGV4cChhbnMsIGV4cG4pOworI2VuZGlmCiAJfQogCWdvdG8gZG9uZTsKICAgICB9IC8vIGVuZCB7aGV4YWRlY2ltYWwgY2FzZX0KSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDkzNykKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC0xMjkxLDYgKzEyOTEsMTcgQEAgeSA8LSBjKDcuNjQ1Mjk2ZS0yOTgsIDIuMjI1MDc0ZS0zMDgsIDEuMjM0NTZlLTI5MykKIHN0b3BpZm5vdChhbGwuZXF1YWwoeCwgeSkpCiAKIAorIyMgaGV4YWRlY2ltYWwgY29uc3RhbnRzIHdpdGggYSBiaW5hcnkgZXhwb25lbnQgYmVsb3cgLTEwMjMKK3ggPC0gYygyXi0xMDI0LCAyXi0xMDQwLCAyXi0xMDc0LCAzICogMl4tMTA3NCwgMl4tMTA3NCwgMl4tMTA3NCkKK3N0b3BpZm5vdChpZGVudGljYWwoYXMubnVtZXJpYyhjKCIweDFwLTEwMjQiLCAiMHgxcC0xMDQwIiwgIjB4MXAtMTA3NCIsCisgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiMHgxLjhwLTEwNzMiLCAiMHgwLjhwLTEwNzMiLCAiMHgxLjhwLTEwNzUiKSksCisgICAgICAgICAgICAgICAgICAgIHgpLAorICAgICAgICAgIGlkZW50aWNhbCgweDFwLTEwNzQsIDJeLTEwNzQpLAorICAgICAgICAgIGlkZW50aWNhbChhcy5udW1lcmljKCIweDFwLTEwNzUiKSwgMCksICMgYSB0aWUsIHRvIGV2ZW4KKyAgICAgICAgICBpZGVudGljYWwoYXMubnVtZXJpYyhzcHJpbnRmKCIlYSIsIHgpKSwgeCkpCisjIyBnYXZlIDAgaW4gUiA8PSA0LjYueCwgc28gYWxzbyB0aGUgcm91bmQgdHJpcCB3aGVyZSAiJWEiIGdpdmVzIDB4MXAtMTA3NAorCisKICMjIHJlcXVpcmUgYSBub24tZW1wdHkgZXhwb25lbnQgZGlnaXQgc2VxdWVuY2UgaW4gUl9zdHJ0b2QuCiAjIyBSIDQuNC4wIChhbmQgbWFueSBhY2NvdW50cykgYWNjZXB0ZWQgZW1wdHkgb25lLgogewo=",
+          "is_patch": true
+        },
+        {
+          "is_private": false,
+          "id": 4114,
+          "last_change_time": "2026-11-19T15:14:14Z",
+          "size": 583,
+          "file_name": "hex-subnormal-parse-repro.R",
+          "bug_id": 19342,
+          "creation_time": "2026-11-19T15:14:14Z",
+          "summary": "reproducer",
+          "is_patch": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgSGV4YWRlY2ltYWwgY29uc3RhbnRzIHdob3NlIGJpbmFyeSBleHBvbmVudCBpcyBiZWxvdyAtMTAyMyBhcmUgcmVhZCBhcyAwLgp4IDwtIGMoMl4tMTAyNCwgMl4tMTA3NCwgZXhwKC03NDApKQpzIDwtIGMoIjB4MXAtMTAyNCIsICIweDFwLTEwNzQiLCAiMHgxLjU0cC0xMDY4IikKcHJpbnQoYXMubnVtZXJpYyhzKSkgICMgZXhwZWN0ZWQgdGhlIHNhbWUgYXMgeDoKcHJpbnQoeCkKcHJpbnQoMHgxcC0xMDc0KSAgICAgICMgdGhlIHBhcnNlciB0b287IGV4cGVjdGVkIDQuOTQwNjU2ZS0zMjQKCiMjIG1hY09TJ3Mgc3ByaW50ZigiJWEiKSB3cml0ZXMgc3Vibm9ybWFscyBpbiB0aGlzIGZvcm0sIHNvIHRoZXJlCiMjIGRlcGFyc2UoY29udHJvbCA9ICJleGFjdCIpIGRvZXMgbm90IHJvdW5kLXRyaXAgdGhlbToKeSA8LSBldmFsKHN0cjJsYW5nKGRlcGFyc2UoeCwgY29udHJvbCA9ICJleGFjdCIpKSkKcHJpbnQoaWRlbnRpY2FsKHksIHgpKSAjIGV4cGVjdGVkIFRSVUUgKEZBTFNFIG9uIG1hY09TKQoKc3RvcGlmbm90KGlkZW50aWNhbChhcy5udW1lcmljKHMpLCB4KSwgaWRlbnRpY2FsKDB4MXAtMTA3NCwgMl4tMTA3NCkpCg=="
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-19 15:14:14"
+}
