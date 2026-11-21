@@ -15,7 +15,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19337,toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs),Low-level,kevinushey,NEW,2026-11-18 04:04:17 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19337
 19339,toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4),Low-level,kevinushey,NEW,2026-11-18 04:11:54 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19339
 19346,parse_Rd(): return on an unterminated [option] or \Sexpr{} instead of looping forever,Low-level,kevinushey,NEW,2026-11-20 01:48:23 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19346
-19348,"parse_Rd(): stop with an error on a user macro that ends by calling itself, instead of looping forever",Low-level,kevinushey,NEW,2026-11-20 02:09:33 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19348
+19356,"Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",Low-level,kevinushey,NEW,2026-11-21 06:01:43 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19356
 19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19244
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19143
 19103,choose.dir() returns NA without showing a dialog in Rterm/Rscript,Windows GUI / Window specific,kevinushey,NEW,2026-10-30 00:58:58 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19103
@@ -31,7 +31,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19157,unserialize() leaks the CHARSXP read buffer when the stream errors mid-string,Low-level,kevinushey,NEW,2026-09-03 21:10:43 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19157
 19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19209
 19314,speed up integer and mixed integer/double arithmetic loops,Low-level,kevinushey,NEW,2026-11-13 17:54:13 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19314
-19342,"Parse hexadecimal constants with binary exponents below -1023, such as 0x1p-1074",Low-level,kevinushey,NEW,2026-11-19 15:14:06 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19342
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19092
 18039,Wishlist: allow Sys.setenv() to accept named vector,Wishlist,kevinushey,UNCONFIRMED,2021-01-27 05:50:20 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18039
 19028,Should object.size() be ALTREP aware?,Wishlist,kevinushey,NEW,2026-03-24 19:00:53 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19028

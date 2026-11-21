@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-20._
+_Automatically generated from the R Bugzilla dump updated 2026-11-21._
 
 ## Triaged bugs
 
@@ -91,7 +91,7 @@ These Triage Team patches should be looked at next.
 * [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
 * [Bug 19346](https://bugs.r-project.org/show_bug.cgi?id=19346) — parse_Rd(): return on an unterminated [option] or \Sexpr{} instead of looping forever (2026-11-20)
-* [Bug 19348](https://bugs.r-project.org/show_bug.cgi?id=19348) — parse_Rd(): stop with an error on a user macro that ends by calling itself, instead of looping forever (2026-11-20)
+* [Bug 19356](https://bugs.r-project.org/show_bug.cgi?id=19356) — Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1) (2026-11-21)
 
 #### S4methods
 
@@ -123,7 +123,6 @@ These Triage Team patches can wait their turn.
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19314](https://bugs.r-project.org/show_bug.cgi?id=19314) — speed up integer and mixed integer/double arithmetic loops (2026-11-13)
-* [Bug 19342](https://bugs.r-project.org/show_bug.cgi?id=19342) — Parse hexadecimal constants with binary exponents below -1023, such as 0x1p-1074 (2026-11-19)
 
 #### Mac GUI / Mac specific
 
