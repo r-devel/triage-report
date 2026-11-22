@@ -2,11 +2,39 @@
   "bug": {
     "bugs": [
       {
-        "priority": "P3",
+        "url": "",
+        "blocks": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "summary": "Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",
+        "see_also": [],
+        "target_milestone": "---",
+        "last_change_time": "2026-11-21T06:54:57Z",
+        "cc_detail": [],
+        "flags": [],
+        "platform": "All",
+        "is_confirmed": true,
+        "op_sys": "All",
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
         "product": "R",
-        "whiteboard": "",
+        "priority": "P3",
         "version": "R-devel (trunk)",
         "creation_time": "2026-11-21T06:01:04Z",
+        "whiteboard": "",
         "severity": "normal",
         "dupe_of": {},
         "id": 19356,
@@ -14,39 +42,11 @@
         "cc": [],
         "qa_contact": "",
         "assigned_to": "R-core",
-        "component": "Low-level",
         "is_open": true,
         "keywords": [],
         "depends_on": [],
         "classification": "Unclassified",
-        "blocks": [],
-        "url": "",
-        "summary": "Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",
-        "is_cc_accessible": true,
-        "groups": [],
-        "assigned_to_detail": {
-          "name": "R-core",
-          "id": 16,
-          "real_name": "R-core"
-        },
-        "see_also": [],
-        "target_milestone": "---",
-        "last_change_time": "2026-11-21T06:01:51Z",
-        "cc_detail": [],
-        "is_confirmed": true,
-        "op_sys": "All",
-        "flags": [],
-        "platform": "All",
-        "is_creator_accessible": true,
-        "alias": [],
-        "creator": "kevinushey",
-        "status": "NEW",
-        "creator_detail": {
-          "real_name": "Kevin Ushey",
-          "id": 1044,
-          "name": "kevinushey"
-        },
-        "resolution": ""
+        "component": "Low-level"
       }
     ],
     "faults": []
@@ -57,43 +57,56 @@
       "19356": {
         "comments": [
           {
-            "is_markdown": true,
             "creator": "kevinushey",
-            "time": "2026-11-21T06:01:04Z",
+            "is_markdown": true,
             "attachment_id": {},
+            "time": "2026-11-21T06:01:04Z",
+            "creation_time": "2026-11-21T06:01:04Z",
+            "count": 0,
             "bug_id": 19356,
             "text": "## Summary\n\nAfter any read of its data, such as `sum(x)` or `identical(x, y)`, a `sort()` result loses its sortedness and no-NA metadata, so `is.unsorted(x)` and `anyNA(x)` scan the whole vector again. Fixes a reproducible slowdown relative to R 4.6.1; results do not change.\n\n## Details\n\nSince r90261, the read-only `Dataptr` and `Dataptr_or_null` wrapper methods (`src/main/altclasses.c`) go through `WRAPPER_WRAPPED_RW()`, which also resets the metadata; only a write needs that. Seen at r90952; the R 4.6.2 sources have the same code.\n\nReproducible example: attached as `wrapper-readonly-metadata-repro.R`; after `sum(x)` on 5e7 sorted doubles, 20 calls each of `is.unsorted(x)` and `anyNA(x)` take about 0.5 s and 0.25 s, against under 0.01 s in R 4.6.1 and with the patch.\n\nProposed patch: attached as `wrapper-readonly-metadata.diff`; the read-only methods now only duplicate and lock the data, and writable requests still reset the metadata. The copy on the first read of shared data (r90309) is unchanged. A regression test is included, and `make check` passes on macOS arm64.\n\nIf this is ported to R-patched, it needs r90948 (PR#19354) there as well: without it, a wrapper that is read and then serialized fails on its next access. Trunk already has r90948.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/521, where CI results can be seen.\n\n## AI Disclosure\n\nThis patch was prepared with the assistance of Claude Code. The issue was discovered while investigating PR#19287.",
-            "count": 0,
-            "creation_time": "2026-11-21T06:01:04Z",
-            "id": 104409,
+            "tags": [],
             "is_private": false,
-            "tags": []
+            "id": 104409
           },
           {
-            "is_markdown": false,
-            "creator": "kevinushey",
             "time": "2026-11-21T06:01:43Z",
             "attachment_id": 4136,
-            "count": 1,
-            "text": "Created attachment 4136\npatch: keep wrapper metadata on read-only data pointer requests (against r90952)",
-            "bug_id": 19356,
-            "creation_time": "2026-11-21T06:01:43Z",
-            "is_private": false,
+            "is_markdown": false,
+            "creator": "kevinushey",
             "id": 104410,
-            "tags": []
+            "is_private": false,
+            "tags": [],
+            "bug_id": 19356,
+            "text": "Created attachment 4136\npatch: keep wrapper metadata on read-only data pointer requests (against r90952)",
+            "count": 1,
+            "creation_time": "2026-11-21T06:01:43Z"
           },
           {
-            "tags": [],
-            "id": 104411,
-            "is_private": false,
             "creation_time": "2026-11-21T06:01:51Z",
+            "creator": "kevinushey",
             "bug_id": 19356,
             "text": "Created attachment 4137\nreproducer: metadata and timings after a read",
             "count": 2,
+            "is_markdown": false,
+            "tags": [],
             "attachment_id": 4137,
+            "id": 104411,
             "time": "2026-11-21T06:01:51Z",
+            "is_private": false
+          },
+          {
+            "creation_time": "2026-11-21T06:54:57Z",
             "creator": "kevinushey",
-            "is_markdown": false
+            "count": 3,
+            "is_markdown": true,
+            "bug_id": 19356,
+            "text": "Created attachment 4138\npatch: no copy for DATAPTR_OR_NULL() on a wrapper's shared data (on top of attachment 4136)\n\nHere is a second, small patch, on top of attachment 4136. Since r90261 the wrapper's `Dataptr_or_null` method duplicates shared data so that it can return a pointer. For example, with `x <- runif(1e6)` and `y <- structure(x, a = 1)`, `sum(y)` copies the data of `x`. R 4.6.1 did not.\n\nWith the patch the method returns NULL while the data is shared and not yet locked, and callers read through `Get_region`. No pointer is handed out, so the guarantee from r90309 is unaffected, and `DATAPTR_OR_NULL()`, which is not called with the GC disabled, no longer allocates. `sum()`, `mean()`, `max()`, `anyNA()` and `is.unsorted()` stop copying; `REAL_RO()` still does, as it has to return a pointer. Regression test included; `make check` passes on macOS arm64.\n\nBoth patches are in https://github.com/r-devel/r-svn/pull/521.",
+            "attachment_id": 4138,
+            "tags": [],
+            "is_private": false,
+            "id": 104412,
+            "time": "2026-11-21T06:54:57Z"
           }
         ]
       }
@@ -104,28 +117,22 @@
     "bugs": {
       "19356": [
         {
-          "file_name": "wrapper-readonly-metadata.diff",
-          "bug_id": 19356,
-          "creation_time": "2026-11-21T06:01:43Z",
-          "summary": "patch: keep wrapper metadata on read-only data pointer requests (against r90952)",
-          "is_private": false,
-          "id": 4136,
-          "last_change_time": "2026-11-21T06:01:43Z",
-          "size": 2925,
-          "flags": [],
-          "content_type": "text/plain",
+          "is_patch": true,
           "is_obsolete": false,
-          "creator": "kevinushey",
+          "content_type": "text/plain",
+          "flags": [],
           "data": "SW5kZXg6IHNyYy9tYWluL2FsdGNsYXNzZXMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hbHRjbGFzc2VzLmMJKHJldmlzaW9uIDkwOTUyKQorKysgc3JjL21haW4vYWx0Y2xhc3Nlcy5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNDc2LDggKzE0NzYsMTEgQEAgc3RhdGljIFJfYWx0cmVwX2NsYXNzX3Qgd3JhcF9saXN0X2NsYXNzOwogI2RlZmluZSBXUkFQUEVSX0xPQ0tfREFUQSh4KSBXUkFQUEVSX1NFVF9EQVRBX0xPQ0soeCwgMSkKICNkZWZpbmUgV1JBUFBFUl9VTkxPQ0tfREFUQSh4KSBXUkFQUEVSX1NFVF9EQVRBX0xPQ0soeCwgMCkKIAotIAotc3RhdGljIFJfSU5MSU5FIFNFWFAgV1JBUFBFUl9XUkFQUEVEX1JXKFNFWFAgeCkKKworLyogTWFrZSB0aGUgd3JhcHBlciB0aGUgb25seSByZWZlcmVuY2UgdG8gaXRzIGRhdGEgYW5kIGxvY2sgaXQsIHNvIHRoYXQKKyAgIGEgZGF0YSBwb2ludGVyLCBvbmNlIG9idGFpbmVkLCBzdGF5cyB2YWxpZC4gIFJlYWRpbmcgZG9lcyBub3QgY2hhbmdlCisgICB0aGUgZGF0YSwgc28gdGhpcyBsZWF2ZXMgdGhlIG1ldGFkYXRhIGFsb25lLiAqLworc3RhdGljIFJfSU5MSU5FIFNFWFAgV1JBUFBFUl9XUkFQUEVEX0xPQ0tFRChTRVhQIHgpCiB7CiAgICAgU0VYUCBkYXRhID0gV1JBUFBFUl9XUkFQUEVEKHgpOwogICAgIGlmIChXUkFQUEVSX0RBVEFfSVNfTE9DS0VEKHgpKSB7CkBAIC0xNTAyLDYgKzE1MDUsMTMgQEAgc3RhdGljIFJfSU5MSU5FIFNFWFAgV1JBUFBFUl9XUkFQUEVEX1JXKFNFWFAgeCkKIAllbHNlIFdSQVBQRVJfTE9DS19EQVRBKHgpOwogICAgIH0KIAorICAgIHJldHVybiBXUkFQUEVSX1dSQVBQRUQoeCk7Cit9CisKK3N0YXRpYyBSX0lOTElORSBTRVhQIFdSQVBQRVJfV1JBUFBFRF9SVyhTRVhQIHgpCit7CisgICAgV1JBUFBFUl9XUkFQUEVEX0xPQ0tFRCh4KTsKKwogICAgIC8qIFRoZSBtZXRhIGRhdGEgYWxzbyBuZWVkcyB0byBiZSBjbGVhcmVkIGFzIGl0IG1heSBubyBsb25nZXIgYmUKICAgICAgICB2YWxpZCBhZnRlciBhIHdyaXRlLiAqLwogICAgIFNFWFAgbWV0YSA9IFdSQVBQRVJfTUVUQURBVEEoeCk7CkBAIC0xNTk4LDE3ICsxNjA4LDE3IEBAIHN0YXRpYyB2b2lkICp3cmFwcGVyX0RhdGFwdHIoU0VYUCB4LCBSYm9vbGVhbiB3cml0ZWFibGUpCiAgICAgaWYgKHdyaXRlYWJsZSkKIAlyZXR1cm4gREFUQVBUUl9SVyhXUkFQUEVSX1dSQVBQRURfUlcoeCkpOwogICAgIGVsc2UKLQkvKiBUaGlzIGhhcyB0byB1c2UgV1JBUFBFUl9XUkFQUEVEX1JXIGV2ZW4gZm9yIGEgcmVhZC1vbmx5Ci0JICAgcG9pbnRlciB0byBtYWtlIHN1cmUgYSBsYXRlciByZXF1ZXN0IGZvciBhIHdyaXRhYmxlIHBvaW50ZXIKLQkgICB3aWxsIHJldHVybiB0aGUgc2FtZSBhZGRyZXNzLiAqLworCS8qIFRoaXMgaGFzIHRvIGxvY2sgdGhlIGRhdGEgZXZlbiBmb3IgYSByZWFkLW9ubHkgcG9pbnRlciB0bworCSAgIG1ha2Ugc3VyZSBhIGxhdGVyIHJlcXVlc3QgZm9yIGEgd3JpdGFibGUgcG9pbnRlciB3aWxsIHJldHVybgorCSAgIHRoZSBzYW1lIGFkZHJlc3M7IHRoYXQgcmVxdWVzdCBjbGVhcnMgdGhlIG1ldGFkYXRhLiAqLwogCS8qKioqIGNvdWxkIGF2b2lkIHRoZSBjYXN0IGJ5IGhhdmluZyBzZXBhcmF0ZSBtZXRob2RzICovCi0JcmV0dXJuICh2b2lkICopIERBVEFQVFJfUk8oV1JBUFBFUl9XUkFQUEVEX1JXKHgpKTsKKwlyZXR1cm4gKHZvaWQgKikgREFUQVBUUl9STyhXUkFQUEVSX1dSQVBQRURfTE9DS0VEKHgpKTsKIH0KIAogc3RhdGljIGNvbnN0IHZvaWQgKndyYXBwZXJfRGF0YXB0cl9vcl9udWxsKFNFWFAgeCkKIHsKLSAgICAvKiBUaGlzIGhhcyB0byB1c2UgV1JBUFBFUl9XUkFQUEVEX1JXIGFzIGFib3ZlLiAqLwotICAgIHJldHVybiBEQVRBUFRSX09SX05VTEwoV1JBUFBFUl9XUkFQUEVEX1JXKHgpKTsKKyAgICAvKiBUaGlzIGhhcyB0byBsb2NrIHRoZSBkYXRhIGFzIGFib3ZlLiAqLworICAgIHJldHVybiBEQVRBUFRSX09SX05VTEwoV1JBUFBFUl9XUkFQUEVEX0xPQ0tFRCh4KSk7CiB9CiAKIHN0YXRpYyBTRVhQIHdyYXBwZXJfRXh0cmFjdF9zdWJzZXQoU0VYUCB4LCBTRVhQIGluZHgsIFNFWFAgY2FsbCkKSW5kZXg6IHRlc3RzL3JlZy10ZXN0cy0xZS5SCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHRlc3RzL3JlZy10ZXN0cy0xZS5SCShyZXZpc2lvbiA5MDk1MikKKysrIHRlc3RzL3JlZy10ZXN0cy0xZS5SCSh3b3JraW5nIGNvcHkpCkBAIC00NTM0LDYgKzQ1MzQsMTUgQEAgc3RvcGlmbm90KGlkZW50aWNhbChzdW0oeSksIHMpLCBpZGVudGljYWwoeSAqIDIsIHggKiAyKSwKICMjIGZhaWxlZCBpbiBSIDQuNi4yCiAKIAorIyMgcmVhZGluZyBhIHdyYXBwZXIncyBkYXRhIGtlZXBzIGl0cyBzb3J0ZWRuZXNzIGFuZCBuby1OQSBtZXRhZGF0YSAtLSBQUiMxOTM1NgoreCA8LSBzb3J0KGMoMywgMSwgMikpCitzIDwtIHN1bSh4KQorc3RvcGlmbm90KC5JbnRlcm5hbChzb3J0ZWRfZnBhc3MoeCwgRkFMU0UsIEZBTFNFKSkpCit4WzFMXSA8LSA0ICMgd2hlcmVhcyBhIHdyaXRlIGRyb3BzIGl0CitzdG9waWZub3QoIS5JbnRlcm5hbChzb3J0ZWRfZnBhc3MoeCwgRkFMU0UsIEZBTFNFKSksIGlzLnVuc29ydGVkKHgpKQorIyMgc3VtKHgpIGRyb3BwZWQgdGhlIG1ldGFkYXRhIGluIFIgNC42LjIKKworCiAjIyBhcyhvYmplY3QsIG5hbWUpIGZvciBpbmZvcm1hbGx5IGRlZmluZWQgY2xhc3Mob2JqZWN0KVsxTF0sCiAjIyB3aXRoICduYW1lJyBpbiBjbGFzcyhvYmplY3QpWy0xTF0gKFBSIzE5MDIzKQogeCA8LSBzdHJ1Y3R1cmUoYXJyYXkoMEwpLCBjbGFzcyA9IGMoImFycmF5U3ViY2xhc3MiLCAiYXJyYXkiKSkK",
-          "is_patch": true
+          "creator": "kevinushey",
+          "id": 4136,
+          "is_private": false,
+          "size": 2925,
+          "last_change_time": "2026-11-21T06:01:43Z",
+          "bug_id": 19356,
+          "file_name": "wrapper-readonly-metadata.diff",
+          "summary": "patch: keep wrapper metadata on read-only data pointer requests (against r90952)",
+          "creation_time": "2026-11-21T06:01:43Z"
         },
         {
-          "is_patch": false,
-          "flags": [],
-          "content_type": "text/plain",
-          "is_obsolete": false,
-          "creator": "kevinushey",
-          "data": "IyMgUmVhZGluZyB0aGUgZGF0YSBvZiBhIHdyYXBwZXIgb2JqZWN0IHJlc2V0cyBpdHMgc29ydGVkbmVzcyBhbmQgbm8tTkEKIyMgbWV0YWRhdGEsIHNvIGlzLnVuc29ydGVkKCkgYW5kIGFueU5BKCkgc2NhbiB0aGUgd2hvbGUgdmVjdG9yIGFnYWluLgojIwojIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFIgNC42LjEgICAgUi1kZXZlbCByOTA5NTIgICAgd2l0aCB0aGUgcGF0Y2gKIyMgbWV0YWRhdGEgYWZ0ZXIgc3VtKHgpICAgICAgICBUUlVFICAgICAgIEZBTFNFICAgICAgICAgICAgIFRSVUUKIyMgMjAgeCBpcy51bnNvcnRlZCh4KSAgICAgICAgICA8IDAuMDEgcyAgIGFib3V0IDAuNSBzICAgICAgIDwgMC4wMSBzCiMjIDIwIHggYW55TkEoeCkgICAgICAgICAgICAgICAgPCAwLjAxIHMgICBhYm91dCAwLjI1IHMgICAgICA8IDAuMDEgcwoKeCA8LSBzb3J0KHJ1bmlmKDVlNykpCgojIyBzb3J0ZWRfZnBhc3MoeCwgRkFMU0UsIEZBTFNFKSBpcyBUUlVFIG9ubHkgd2hlbiAneCcgaXMga25vd24gdG8gYmUKIyMgc29ydGVkIGluY3JlYXNpbmdseSBhbmQga25vd24gdG8gaGF2ZSBubyBOQXMuCmNhdCgibWV0YWRhdGEgYWZ0ZXIgc29ydCgpOiIsIC5JbnRlcm5hbChzb3J0ZWRfZnBhc3MoeCwgRkFMU0UsIEZBTFNFKSksICJcbiIpCgppbnZpc2libGUoc3VtKHgpKSAgIyBhIHJlYWQ7IG1lYW4oeCksIG1heCh4KSwgeCArIDEsIGlkZW50aWNhbCh4LCB5KSBkbyB0aGUgc2FtZQpjYXQoIm1ldGFkYXRhIGFmdGVyIHN1bSh4KToiLCAuSW50ZXJuYWwoc29ydGVkX2ZwYXNzKHgsIEZBTFNFLCBGQUxTRSkpLCAiKGV4cGVjdGVkIFRSVUUpXG4iKQoKY2F0KCIyMCB4IGlzLnVuc29ydGVkKHgpOiIsCiAgICBzeXN0ZW0udGltZShmb3IgKGkgaW4gMToyMCkgaXMudW5zb3J0ZWQoeCkpW1siZWxhcHNlZCJdXSwgInNcbiIpCmNhdCgiMjAgeCBhbnlOQSh4KTogICAgICAiLAogICAgc3lzdGVtLnRpbWUoZm9yIChpIGluIDE6MjApIGFueU5BKHgpKVtbImVsYXBzZWQiXV0sICJzXG4iKQo=",
           "is_private": false,
           "id": 4137,
           "last_change_time": "2026-11-21T06:01:51Z",
@@ -133,10 +140,32 @@
           "file_name": "wrapper-readonly-metadata-repro.R",
           "bug_id": 19356,
           "creation_time": "2026-11-21T06:01:51Z",
-          "summary": "reproducer: metadata and timings after a read"
+          "summary": "reproducer: metadata and timings after a read",
+          "is_patch": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "IyMgUmVhZGluZyB0aGUgZGF0YSBvZiBhIHdyYXBwZXIgb2JqZWN0IHJlc2V0cyBpdHMgc29ydGVkbmVzcyBhbmQgbm8tTkEKIyMgbWV0YWRhdGEsIHNvIGlzLnVuc29ydGVkKCkgYW5kIGFueU5BKCkgc2NhbiB0aGUgd2hvbGUgdmVjdG9yIGFnYWluLgojIwojIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFIgNC42LjEgICAgUi1kZXZlbCByOTA5NTIgICAgd2l0aCB0aGUgcGF0Y2gKIyMgbWV0YWRhdGEgYWZ0ZXIgc3VtKHgpICAgICAgICBUUlVFICAgICAgIEZBTFNFICAgICAgICAgICAgIFRSVUUKIyMgMjAgeCBpcy51bnNvcnRlZCh4KSAgICAgICAgICA8IDAuMDEgcyAgIGFib3V0IDAuNSBzICAgICAgIDwgMC4wMSBzCiMjIDIwIHggYW55TkEoeCkgICAgICAgICAgICAgICAgPCAwLjAxIHMgICBhYm91dCAwLjI1IHMgICAgICA8IDAuMDEgcwoKeCA8LSBzb3J0KHJ1bmlmKDVlNykpCgojIyBzb3J0ZWRfZnBhc3MoeCwgRkFMU0UsIEZBTFNFKSBpcyBUUlVFIG9ubHkgd2hlbiAneCcgaXMga25vd24gdG8gYmUKIyMgc29ydGVkIGluY3JlYXNpbmdseSBhbmQga25vd24gdG8gaGF2ZSBubyBOQXMuCmNhdCgibWV0YWRhdGEgYWZ0ZXIgc29ydCgpOiIsIC5JbnRlcm5hbChzb3J0ZWRfZnBhc3MoeCwgRkFMU0UsIEZBTFNFKSksICJcbiIpCgppbnZpc2libGUoc3VtKHgpKSAgIyBhIHJlYWQ7IG1lYW4oeCksIG1heCh4KSwgeCArIDEsIGlkZW50aWNhbCh4LCB5KSBkbyB0aGUgc2FtZQpjYXQoIm1ldGFkYXRhIGFmdGVyIHN1bSh4KToiLCAuSW50ZXJuYWwoc29ydGVkX2ZwYXNzKHgsIEZBTFNFLCBGQUxTRSkpLCAiKGV4cGVjdGVkIFRSVUUpXG4iKQoKY2F0KCIyMCB4IGlzLnVuc29ydGVkKHgpOiIsCiAgICBzeXN0ZW0udGltZShmb3IgKGkgaW4gMToyMCkgaXMudW5zb3J0ZWQoeCkpW1siZWxhcHNlZCJdXSwgInNcbiIpCmNhdCgiMjAgeCBhbnlOQSh4KTogICAgICAiLAogICAgc3lzdGVtLnRpbWUoZm9yIChpIGluIDE6MjApIGFueU5BKHgpKVtbImVsYXBzZWQiXV0sICJzXG4iKQo="
+        },
+        {
+          "is_private": false,
+          "id": 4138,
+          "last_change_time": "2026-11-21T06:54:57Z",
+          "size": 1492,
+          "file_name": "wrapper-dataptr-or-null.diff",
+          "bug_id": 19356,
+          "creation_time": "2026-11-21T06:54:57Z",
+          "summary": "patch: no copy for DATAPTR_OR_NULL() on a wrapper's shared data (on top of attachment 4136)",
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL2FsdGNsYXNzZXMuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbWFpbi9hbHRjbGFzc2VzLmMJKHJldmlzaW9uIDkwOTUyKQorKysgc3JjL21haW4vYWx0Y2xhc3Nlcy5jCSh3b3JraW5nIGNvcHkpCkBAIC0xNjE3LDYgKzE2MTcsMTIgQEAgc3RhdGljIHZvaWQgKndyYXBwZXJfRGF0YXB0cihTRVhQIHgsIFJib29sZWFuIHdyaXRlYWJsZSkKIAogc3RhdGljIGNvbnN0IHZvaWQgKndyYXBwZXJfRGF0YXB0cl9vcl9udWxsKFNFWFAgeCkKIHsKKyAgICAvKiBBIHBvaW50ZXIgdG8gZGF0YSB0aGF0IGlzIHNoYXJlZCBhbmQgbm90IHlldCBsb2NrZWQgd291bGQgbmVlZAorICAgICAgIGEgZHVwbGljYXRlOyByZXBvcnQgdGhhdCBub25lIGlzIGF2YWlsYWJsZSwgc28gY2FsbGVycyByZWFkCisgICAgICAgdGhyb3VnaCBHZXRfcmVnaW9uIG9yIEVsdCBpbnN0ZWFkLiAqLworICAgIGlmICghIFdSQVBQRVJfREFUQV9JU19MT0NLRUQoeCkgJiYgTUFZQkVfU0hBUkVEKFdSQVBQRVJfV1JBUFBFRCh4KSkpCisJcmV0dXJuIE5VTEw7CisKICAgICAvKiBUaGlzIGhhcyB0byBsb2NrIHRoZSBkYXRhIGFzIGFib3ZlLiAqLwogICAgIHJldHVybiBEQVRBUFRSX09SX05VTEwoV1JBUFBFUl9XUkFQUEVEX0xPQ0tFRCh4KSk7CiB9CkluZGV4OiB0ZXN0cy9yZWctdGVzdHMtMWUuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctdGVzdHMtMWUuUgkocmV2aXNpb24gOTA5NTIpCisrKyB0ZXN0cy9yZWctdGVzdHMtMWUuUgkod29ya2luZyBjb3B5KQpAQCAtNDU0Myw2ICs0NTQzLDE0IEBAIHN0b3BpZm5vdCghLkludGVybmFsKHNvcnRlZF9mcGFzcyh4LCBGQUxTRSwgRkFMU0UpKSwgaXMudW5zb3J0ZWQoeCkpCiAjIyBzdW0oeCkgZHJvcHBlZCB0aGUgbWV0YWRhdGEgaW4gUiA0LjYuMgogCiAKKyMjIERBVEFQVFJfT1JfTlVMTCgpIHJlYWRlcnMgZG8gbm90IGR1cGxpY2F0ZSBhIHdyYXBwZXIncyBzaGFyZWQgZGF0YSAtLSBQUiMxOTM1NgoreCA8LSByZXAoMTo1LCAyMCkKK3kgPC0gc3RydWN0dXJlKHgsIGEgPSAxKQorc3RvcGlmbm90KGlkZW50aWNhbChzdW0oeSksIDMwMEwpLAorICAgICAgICAgIGdyZXBsKCJsY2s9MCIsIGNhcHR1cmUub3V0cHV0KC5JbnRlcm5hbChpbnNwZWN0KHkpKSlbMUxdLCBmaXhlZCA9IFRSVUUpKQorIyMgc3VtKHkpIGR1cGxpY2F0ZWQgdGhlIGRhdGEgb2YgeCBpbiBSIDQuNi4yCisKKwogIyMgYXMob2JqZWN0LCBuYW1lKSBmb3IgaW5mb3JtYWxseSBkZWZpbmVkIGNsYXNzKG9iamVjdClbMUxdLAogIyMgd2l0aCAnbmFtZScgaW4gY2xhc3Mob2JqZWN0KVstMUxdIChQUiMxOTAyMykKIHggPC0gc3RydWN0dXJlKGFycmF5KDBMKSwgY2xhc3MgPSBjKCJhcnJheVN1YmNsYXNzIiwgImFycmF5IikpCg=="
         }
       ]
     }
   },
-  "source_changed": "2026-11-21 06:01:51"
+  "source_changed": "2026-11-21 06:54:57"
 }

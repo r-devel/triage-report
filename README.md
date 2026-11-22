@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-21._
+_Automatically generated from the R Bugzilla dump updated 2026-11-22._
 
 ## Triaged bugs
 
@@ -22,6 +22,7 @@ _Core developers in CC should not be assumed responsible for action._
 * [Bug 19265](https://bugs.r-project.org/show_bug.cgi?id=19265) — Further harden `getRUser()`'s `ShellGetPersonalDirectory()` helper (2026-10-31)
 * [Bug 19225](https://bugs.r-project.org/show_bug.cgi?id=19225) — as.list(<environment>) returns misaligned names/values (or an internal SET_VECTOR_ELT error) when an active binding modifies the environment (2026-11-13)
 * [Bug 19325](https://bugs.r-project.org/show_bug.cgi?id=19325) — utils::winMenuAddItem crashes with a heap corruption error (2026-11-18)
+* [Bug 17845](https://bugs.r-project.org/show_bug.cgi?id=17845) — change p.adjust method "bonferroni" to "Dunn-Bonferrroni" (2026-11-21)
 
 ### Recommended closures
 
@@ -80,6 +81,10 @@ These Triage Team patches should be looked at next.
 
 * [Bug 19335](https://bugs.r-project.org/show_bug.cgi?id=19335) — Graphics device stays locked after an error in a clipping path, mask or pattern function (2026-11-17)
 
+#### Language
+
+* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-22, in CC: hornik)
+
 #### Low-level
 
 * [Bug 19051](https://bugs.r-project.org/show_bug.cgi?id=19051) — casts from double to R_xlen_t can trigger undefined behaviour (2026-04-14)
@@ -90,7 +95,6 @@ These Triage Team patches should be looked at next.
 * [Bug 19311](https://bugs.r-project.org/show_bug.cgi?id=19311) — Byte-compiled reads of active bindings call the binding function twice (2026-11-13)
 * [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
-* [Bug 19346](https://bugs.r-project.org/show_bug.cgi?id=19346) — parse_Rd(): return on an unterminated [option] or \Sexpr{} instead of looping forever (2026-11-20)
 * [Bug 19356](https://bugs.r-project.org/show_bug.cgi?id=19356) — Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1) (2026-11-21)
 
 #### S4methods
@@ -164,8 +168,6 @@ These patches have not yet been prioritised.
 * [Bug 19096](https://bugs.r-project.org/show_bug.cgi?id=19096) — Update handling of overflow in integer operations (2026-06-30)
 * [Bug 19125](https://bugs.r-project.org/show_bug.cgi?id=19125) — Integer arithmetic means '%z' for minute-level offsets is incorrect (2026-08-04)
 * [Bug 19145](https://bugs.r-project.org/show_bug.cgi?id=19145) — MSan issue in context.c reading uninitialized state (2026-09-01)
-* [Bug 19327](https://bugs.r-project.org/show_bug.cgi?id=19327) — tan(1+1000i) is NaN+1i when the system ctan() overflows (OpenBSD) (2026-11-15)
-* [Bug 19328](https://bugs.r-project.org/show_bug.cgi?id=19328) — as.POSIXct() gives NA for years where tm_year + 1900 overflows int (OpenBSD mktime) (2026-11-15)
 
 #### Misc
 

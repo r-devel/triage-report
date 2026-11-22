@@ -6,6 +6,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19198
 19277,sample() without replacement draws zero-weight and least likely items with wrong probabilities,Accuracy,kevinushey,NEW,2026-11-02 18:22:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19277
 19335,"Graphics device stays locked after an error in a clipping path, mask or pattern function",Graphics,kevinushey,NEW,2026-11-17 19:22:13 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19335
+19331,sync with upstream TRE + apply R patches,Language,kevinushey,NEW,2026-11-22 01:41:38 +0000,4,P3,P3,hornik,https://bugs.r-project.org/show_bug.cgi?id=19331
 19051,casts from double to R_xlen_t can trigger undefined behaviour,Low-level,kevinushey,NEW,2026-04-14 21:41:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19051
 19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19119
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19158
@@ -14,8 +15,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19311,Byte-compiled reads of active bindings call the binding function twice,Low-level,kevinushey,NEW,2026-11-13 01:48:45 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19311
 19337,toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs),Low-level,kevinushey,NEW,2026-11-18 04:04:17 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19337
 19339,toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4),Low-level,kevinushey,NEW,2026-11-18 04:11:54 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19339
-19346,parse_Rd(): return on an unterminated [option] or \Sexpr{} instead of looping forever,Low-level,kevinushey,NEW,2026-11-20 01:48:23 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19346
-19356,"Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",Low-level,kevinushey,NEW,2026-11-21 06:01:43 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19356
+19356,"Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",Low-level,kevinushey,NEW,2026-11-21 06:54:57 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19356
 19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19244
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19143
 19103,choose.dir() returns NA without showing a dialog in Rterm/Rscript,Windows GUI / Window specific,kevinushey,NEW,2026-10-30 00:58:58 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19103
@@ -53,8 +53,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19096,Update handling of overflow in integer operations,Low-level,michaelchirico4,NEW,2026-06-30 17:39:29 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19096
 19125,Integer arithmetic means '%z' for minute-level offsets is incorrect,Low-level,michaelchirico4,NEW,2026-08-04 17:34:22 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19125
 19145,MSan issue in context.c reading uninitialized state,Low-level,michaelchirico4,NEW,2026-09-01 05:37:00 +0000,2,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19145
-19327,tan(1+1000i) is NaN+1i when the system ctan() overflows (OpenBSD),Low-level,jeroenooms,UNCONFIRMED,2026-11-15 22:43:00 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19327
-19328,as.POSIXct() gives NA for years where tm_year + 1900 overflows int (OpenBSD mktime),Low-level,jeroenooms,UNCONFIRMED,2026-11-15 22:48:02 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=19328
 18938,seq.Date inconsistent on whether to= can be a string,Misc,michaelchirico4,UNCONFIRMED,2025-08-21 23:46:02 +0000,3,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18938
 18958,"'methods_message' component of 'check_packages_used' internal class should be character(), not """", when empty",Misc,michaelchirico4,UNCONFIRMED,2025-10-16 20:31:57 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18958
 19083,"setGeneric(""f"", \(x) { standardGeneric(""x"") }) makes generic with class 'nonstandardGenericFunction'",S4methods,michaelchirico4,CONFIRMED,2026-06-22 18:04:14 +0000,2,P5,P5,maechler,https://bugs.r-project.org/show_bug.cgi?id=19083
