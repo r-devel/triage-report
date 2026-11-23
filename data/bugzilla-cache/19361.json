@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Low-level",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-22T20:12:41Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P3",
+        "qa_contact": "",
+        "cc": [],
+        "severity": "normal",
+        "dupe_of": {},
+        "deadline": {},
+        "id": 19361,
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "status": "NEW",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "name": "R-core",
+          "id": 16,
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "summary": "parse_Rd(): keep syntax error messages for long tokens within their buffer",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-11-22T20:14:18Z",
+        "cc_detail": [],
+        "target_milestone": "---",
+        "see_also": []
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19361": {
+        "comments": [
+          {
+            "count": 0,
+            "is_markdown": true,
+            "text": "## Summary\n\n`tools::parse_Rd()` writes past a 256-byte stack buffer when it reports a syntax error at a token longer than about 240 bytes, which kills R on macOS (SIGTRAP) and is a stack-buffer-overflow under ASan. Fixes a reproducible crash on malformed Rd input.\n\n## Details\n\nIn `yyerror()` in `src/library/tools/src/gramRd.y`, `snprintf()` fills `ParseErrorMsg` with \"unexpected TEXT '<token>'\", and two unbounded `strcat()` calls then append \", expecting ...\". One line is enough: `\\link[{x}aaa...]{y}` with 300 `a`s, since an `[option]` holds a single item. R 4.6.1 and R-devel r90959 both crash.\n\nReproducible example: attached as `rd-yyerror-overflow-repro.R`; it parses that line in a child R process, which exits with status 133 without the patch and 0 with it.\n\nProposed patch: attached as `rd-yyerror-overflow.diff` (against r90959). It appends the clause with `snprintf()` into the space left, and copies the file name with `snprintf()` too, as `strncpy()` leaves it unterminated for paths of 255 bytes or more (found by reading the code). `gramRd.c` is regenerated with bison 3.8.2. A `tests/reg-fuzz.R` test is included; `make check` passes and ASan reports nothing.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/523, where CI results can be seen.\n\n## AI Disclosure\n\nThis patch was prepared with the assistance of Claude Code. The issue was discovered while verifying the patch for PR#19360.",
+            "bug_id": 19361,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-22T20:12:41Z",
+            "is_private": false,
+            "time": "2026-11-22T20:12:41Z",
+            "id": 104436,
+            "tags": [],
+            "attachment_id": {}
+          },
+          {
+            "tags": [],
+            "is_private": false,
+            "id": 104437,
+            "creation_time": "2026-11-22T20:12:54Z",
+            "count": 1,
+            "text": "Created attachment 4150\npatch: bound parse_Rd() syntax error messages (against r90959)",
+            "bug_id": 19361,
+            "attachment_id": 4150,
+            "time": "2026-11-22T20:12:54Z",
+            "creator": "kevinushey",
+            "is_markdown": false
+          },
+          {
+            "text": "Created attachment 4151\nreproducer: parse_Rd() crash on a syntax error at a long token",
+            "bug_id": 19361,
+            "is_markdown": false,
+            "count": 2,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-22T20:12:57Z",
+            "time": "2026-11-22T20:12:57Z",
+            "id": 104438,
+            "is_private": false,
+            "attachment_id": 4151,
+            "tags": []
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "19361": [
+        {
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL3NyYy9ncmFtUmQuYwo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9zcmMvZ3JhbVJkLmMJKHJldmlzaW9uIDkwOTU5KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvc3JjL2dyYW1SZC5jCSh3b3JraW5nIGNvcHkpCkBAIC00MDM1LDE5ICs0MDM1LDIxIEBAIHN0YXRpYyB2b2lkIHl5ZXJyb3IoY29uc3QgY2hhciAqcykKIAkJCSBzMSArIHNpemVvZiB5eXVuZXhwZWN0ZWQgLSAxLCBDSEFSKFNUUklOR19FTFQoeXlsdmFsLCAwKSkpOwogCX0KICAgICAJaWYgKGV4cGVjdGluZykgeworCSAgICBzaXplX3QgbGVuID0gc3RybGVuKFBhcnNlRXJyb3JNc2cpOwogIAkgICAgdHJhbnNsYXRlZCA9IEZBTFNFOwogICAgIAkgICAgZm9yIChpID0gMDsgeXl0bmFtZV90cmFuc2xhdGlvbnNbaV07IGkgKz0gMikgewogICAgIAkgICAgCWlmICghc3RyY21wKGV4cGVjdGluZyArIHNpemVvZiB5eWV4cGVjdGluZyAtIDEsIHl5dG5hbWVfdHJhbnNsYXRpb25zW2ldKSkgewotICAgIAkgICAgCSAgICBzdHJjYXQoUGFyc2VFcnJvck1zZywgXyh5eWV4cGVjdGluZykpOwotICAgIAkgICAgCSAgICBzdHJjYXQoUGFyc2VFcnJvck1zZywgaS8yIDwgWVlFTkdMSVNIID8gXyh5eXRuYW1lX3RyYW5zbGF0aW9uc1tpKzFdKQotICAgIAkgICAgCSAgICAgICAgICAgICAgICAgICAgOiB5eXRuYW1lX3RyYW5zbGF0aW9uc1tpKzFdKTsKKyAgICAJICAgIAkgICAgc25wcmludGYoUGFyc2VFcnJvck1zZyArIGxlbiwgUEFSU0VfRVJST1JfU0laRSAtIGxlbiwgIiVzJXMiLAorCQkJICAgICBfKHl5ZXhwZWN0aW5nKSwKKwkJCSAgICAgaS8yIDwgWVlFTkdMSVNIID8gXyh5eXRuYW1lX3RyYW5zbGF0aW9uc1tpKzFdKQorCQkJICAgICA6IHl5dG5hbWVfdHJhbnNsYXRpb25zW2krMV0pOwogICAgIAkgICAgCSAgICB0cmFuc2xhdGVkID0gVFJVRTsKIAkJICAgIGJyZWFrOwogCQl9CiAJICAgIH0KIAkgICAgaWYgKCF0cmFuc2xhdGVkKSB7Ci0JICAgIAlzdHJjYXQoUGFyc2VFcnJvck1zZywgXyh5eWV4cGVjdGluZykpOwotCSAgICAJc3RyY2F0KFBhcnNlRXJyb3JNc2csIGV4cGVjdGluZyArIHNpemVvZiB5eWV4cGVjdGluZyAtIDEpOworCSAgICAJc25wcmludGYoUGFyc2VFcnJvck1zZyArIGxlbiwgUEFSU0VfRVJST1JfU0laRSAtIGxlbiwgIiVzJXMiLAorCQkJIF8oeXlleHBlY3RpbmcpLCBleHBlY3RpbmcgKyBzaXplb2YgeXlleHBlY3RpbmcgLSAxKTsKIAkgICAgfQogCX0KICAgICB9IGVsc2UgaWYgKCFzdHJuY21wKHMsIHl5dW5rbm93biwgc2l6ZW9mIHl5dW5rbm93bi0xKSkgewpAQCAtNDA1OCw3ICs0MDYwLDcgQEAgc3RhdGljIHZvaWQgeXllcnJvcihjb25zdCBjaGFyICpzKQogICAgIH0KICAgICBmaWxlbmFtZSA9IGZpbmRWYXIoaW5zdGFsbCgiZmlsZW5hbWUiKSwgU3JjRmlsZSk7CiAgICAgaWYgKGlzU3RyaW5nKGZpbGVuYW1lKSAmJiBMRU5HVEgoZmlsZW5hbWUpKQotICAgIAlzdHJuY3B5KFBhcnNlRXJyb3JGaWxlbmFtZSwgQ0hBUihTVFJJTkdfRUxUKGZpbGVuYW1lLCAwKSksIFBBUlNFX0VSUk9SX1NJWkUgLSAxKTsKKyAgICAJc25wcmludGYoUGFyc2VFcnJvckZpbGVuYW1lLCBQQVJTRV9FUlJPUl9TSVpFLCAiJXMiLCBDSEFSKFNUUklOR19FTFQoZmlsZW5hbWUsIDApKSk7CiAgICAgZWxzZQogICAgICAgICBQYXJzZUVycm9yRmlsZW5hbWVbMF0gPSAnXDAnOwogICAgIGlmICh3Q2FsbHMpIHsKSW5kZXg6IHNyYy9saWJyYXJ5L3Rvb2xzL3NyYy9ncmFtUmQueQo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSBzcmMvbGlicmFyeS90b29scy9zcmMvZ3JhbVJkLnkJKHJldmlzaW9uIDkwOTU5KQorKysgc3JjL2xpYnJhcnkvdG9vbHMvc3JjL2dyYW1SZC55CSh3b3JraW5nIGNvcHkpCkBAIC0xNDcwLDE5ICsxNDcwLDIxIEBAIHN0YXRpYyB2b2lkIHl5ZXJyb3IoY29uc3QgY2hhciAqcykKIAkJCSBzMSArIHNpemVvZiB5eXVuZXhwZWN0ZWQgLSAxLCBDSEFSKFNUUklOR19FTFQoeXlsdmFsLCAwKSkpOwogCX0KICAgICAJaWYgKGV4cGVjdGluZykgeworCSAgICBzaXplX3QgbGVuID0gc3RybGVuKFBhcnNlRXJyb3JNc2cpOwogIAkgICAgdHJhbnNsYXRlZCA9IEZBTFNFOwogICAgIAkgICAgZm9yIChpID0gMDsgeXl0bmFtZV90cmFuc2xhdGlvbnNbaV07IGkgKz0gMikgewogICAgIAkgICAgCWlmICghc3RyY21wKGV4cGVjdGluZyArIHNpemVvZiB5eWV4cGVjdGluZyAtIDEsIHl5dG5hbWVfdHJhbnNsYXRpb25zW2ldKSkgewotICAgIAkgICAgCSAgICBzdHJjYXQoUGFyc2VFcnJvck1zZywgXyh5eWV4cGVjdGluZykpOwotICAgIAkgICAgCSAgICBzdHJjYXQoUGFyc2VFcnJvck1zZywgaS8yIDwgWVlFTkdMSVNIID8gXyh5eXRuYW1lX3RyYW5zbGF0aW9uc1tpKzFdKQotICAgIAkgICAgCSAgICAgICAgICAgICAgICAgICAgOiB5eXRuYW1lX3RyYW5zbGF0aW9uc1tpKzFdKTsKKyAgICAJICAgIAkgICAgc25wcmludGYoUGFyc2VFcnJvck1zZyArIGxlbiwgUEFSU0VfRVJST1JfU0laRSAtIGxlbiwgIiVzJXMiLAorCQkJICAgICBfKHl5ZXhwZWN0aW5nKSwKKwkJCSAgICAgaS8yIDwgWVlFTkdMSVNIID8gXyh5eXRuYW1lX3RyYW5zbGF0aW9uc1tpKzFdKQorCQkJICAgICA6IHl5dG5hbWVfdHJhbnNsYXRpb25zW2krMV0pOwogICAgIAkgICAgCSAgICB0cmFuc2xhdGVkID0gVFJVRTsKIAkJICAgIGJyZWFrOwogCQl9CiAJICAgIH0KIAkgICAgaWYgKCF0cmFuc2xhdGVkKSB7Ci0JICAgIAlzdHJjYXQoUGFyc2VFcnJvck1zZywgXyh5eWV4cGVjdGluZykpOwotCSAgICAJc3RyY2F0KFBhcnNlRXJyb3JNc2csIGV4cGVjdGluZyArIHNpemVvZiB5eWV4cGVjdGluZyAtIDEpOworCSAgICAJc25wcmludGYoUGFyc2VFcnJvck1zZyArIGxlbiwgUEFSU0VfRVJST1JfU0laRSAtIGxlbiwgIiVzJXMiLAorCQkJIF8oeXlleHBlY3RpbmcpLCBleHBlY3RpbmcgKyBzaXplb2YgeXlleHBlY3RpbmcgLSAxKTsKIAkgICAgfQogCX0KICAgICB9IGVsc2UgaWYgKCFzdHJuY21wKHMsIHl5dW5rbm93biwgc2l6ZW9mIHl5dW5rbm93bi0xKSkgewpAQCAtMTQ5Myw3ICsxNDk1LDcgQEAgc3RhdGljIHZvaWQgeXllcnJvcihjb25zdCBjaGFyICpzKQogICAgIH0KICAgICBmaWxlbmFtZSA9IGZpbmRWYXIoaW5zdGFsbCgiZmlsZW5hbWUiKSwgU3JjRmlsZSk7CiAgICAgaWYgKGlzU3RyaW5nKGZpbGVuYW1lKSAmJiBMRU5HVEgoZmlsZW5hbWUpKQotICAgIAlzdHJuY3B5KFBhcnNlRXJyb3JGaWxlbmFtZSwgQ0hBUihTVFJJTkdfRUxUKGZpbGVuYW1lLCAwKSksIFBBUlNFX0VSUk9SX1NJWkUgLSAxKTsKKyAgICAJc25wcmludGYoUGFyc2VFcnJvckZpbGVuYW1lLCBQQVJTRV9FUlJPUl9TSVpFLCAiJXMiLCBDSEFSKFNUUklOR19FTFQoZmlsZW5hbWUsIDApKSk7CiAgICAgZWxzZQogICAgICAgICBQYXJzZUVycm9yRmlsZW5hbWVbMF0gPSAnXDAnOwogICAgIGlmICh3Q2FsbHMpIHsKSW5kZXg6IHRlc3RzL3JlZy1mdXp6LlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLWZ1enouUgkocmV2aXNpb24gOTA5NTkpCisrKyB0ZXN0cy9yZWctZnV6ei5SCSh3b3JraW5nIGNvcHkpCkBAIC00MjAsNiArNDIwLDE1IEBAIHN0b3BpZm5vdChpZGVudGljYWwodW5zZXJpYWxpemUoc2VyaWFsaXplKHgsIE5VTEwpKSwgeCkpCiAjIyByZXR1cm5lZCBhIGRvdHRlZCBwYWlyIHdob3NlIG5hbWVzKCkgY3Jhc2hlZCBSIGluIFIgPD0gNC42LjIKIAogCisjIyBwYXJzZV9SZCgpIHJlcG9ydGluZyBhIHN5bnRheCBlcnJvciBhdCBhIGxvbmcgdG9rZW4KK2xvY2FsKHsKKyAgICB0eHQgPC0gYygiXFxuYW1le3h9IiwKKyAgICAgICAgICAgICBwYXN0ZTAoIlxcZGVzY3JpcHRpb257XFxsaW5rW3t4fSIsIHN0cnJlcCgiYSIsIDMwMEwpLCAiXXt5fX0iKSkKKyAgICBhc3NlcnRXYXJuVih0b29sczo6cGFyc2VfUmQodGV4dENvbm5lY3Rpb24odHh0KSkpCit9KQorIyMgb3ZlcmZsb3dlZCBhIHN0YWNrIGJ1ZmZlciwgdHlwaWNhbGx5IGNyYXNoaW5nIFIsIGluIFIgPD0gNC42LjIKKworCiAKICMjIGtlZXAgYXQgZW5kCiByYmluZChsYXN0ID0gIHByb2MudGltZSgpIC0gLnB0LAo=",
+          "is_patch": true,
+          "file_name": "rd-yyerror-overflow.diff",
+          "bug_id": 19361,
+          "creation_time": "2026-11-22T20:12:54Z",
+          "summary": "patch: bound parse_Rd() syntax error messages (against r90959)",
+          "is_private": false,
+          "id": 4150,
+          "last_change_time": "2026-11-22T20:12:54Z",
+          "size": 4229
+        },
+        {
+          "id": 4151,
+          "is_private": false,
+          "size": 848,
+          "last_change_time": "2026-11-22T20:12:57Z",
+          "bug_id": 19361,
+          "file_name": "rd-yyerror-overflow-repro.R",
+          "summary": "reproducer: parse_Rd() crash on a syntax error at a long token",
+          "creation_time": "2026-11-22T20:12:57Z",
+          "is_patch": false,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "IyMgcGFyc2VfUmQoKSByZXBvcnRzIGEgc3ludGF4IGVycm9yIGF0IGEgMzAwLWJ5dGUgdG9rZW46IHRoZSBbb3B0aW9uXSBvZgojIyBcbGluayBob2xkcyBhIHNpbmdsZSBpdGVtLCBzbyB0aGUgdGV4dCBhZnRlciB7eH0gaXMgdW5leHBlY3RlZC4gIFRoZQojIyBwYXJzZSBydW5zIGluIGEgY2hpbGQgUiBwcm9jZXNzLCBzaW5jZSB3aXRob3V0IHRoZSBmaXggaXQgY2FuIGtpbGwgUi4KY29kZSA8LSAnCnR4dCA8LSBjKCJcXFxcbmFtZXt4fSIsCiAgICAgICAgIHBhc3RlMCgiXFxcXGRlc2NyaXB0aW9ue1xcXFxsaW5rW3t4fSIsIHN0cnJlcCgiYSIsIDMwMEwpLCAiXXt5fX0iKSkKdyA8LSB0cnlDYXRjaCh0b29sczo6cGFyc2VfUmQodGV4dENvbm5lY3Rpb24odHh0KSksIHdhcm5pbmcgPSBjb25kaXRpb25NZXNzYWdlKQpjYXQoInBhcnNlZCwgd2FybmluZyBvZiIsIG5jaGFyKHcsICJieXRlcyIpLCAiYnl0ZXNcbiIpCicKZiA8LSB0ZW1wZmlsZShmaWxlZXh0ID0gIi5SIikKd3JpdGVMaW5lcyhjb2RlLCBmKQpvdXQgPC0gc3VwcHJlc3NXYXJuaW5ncyhzeXN0ZW0yKGZpbGUucGF0aChSLmhvbWUoImJpbiIpLCAiUnNjcmlwdCIpLCBmLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHN0ZG91dCA9IFRSVUUsIHN0ZGVyciA9IFRSVUUpKQpzdGF0dXMgPC0gYXR0cihvdXQsICJzdGF0dXMiKQppZiAoaXMubnVsbChzdGF0dXMpKQogICAgc3RhdHVzIDwtIDBMCmNhdChvdXQsIHNlcCA9ICJcbiIpCmNhdCgiY2hpbGQgZXhpdCBzdGF0dXM6Iiwgc3RhdHVzLCAiXG4iKSAgIyAxMzMgKFNJR1RSQVApIG9uIG1hY09TIHdpdGhvdXQgdGhlIGZpeApzdG9waWZub3Qoc3RhdHVzID09IDBMKQo=",
+          "creator": "kevinushey"
+        }
+      ]
+    }
+  },
+  "source_changed": "2026-11-22 20:14:18"
+}

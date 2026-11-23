@@ -96,6 +96,7 @@ These Triage Team patches should be looked at next.
 * [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
 * [Bug 19356](https://bugs.r-project.org/show_bug.cgi?id=19356) — Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1) (2026-11-21)
+* [Bug 19361](https://bugs.r-project.org/show_bug.cgi?id=19361) — parse_Rd(): keep syntax error messages for long tokens within their buffer (2026-11-22)
 
 #### S4methods
 
@@ -127,6 +128,7 @@ These Triage Team patches can wait their turn.
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19314](https://bugs.r-project.org/show_bug.cgi?id=19314) — speed up integer and mixed integer/double arithmetic loops (2026-11-13)
+* [Bug 19360](https://bugs.r-project.org/show_bug.cgi?id=19360) — parse_Rd(): free the lexer's token buffer on errors raised mid-token (2026-11-22)
 
 #### Mac GUI / Mac specific
 
