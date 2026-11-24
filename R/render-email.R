@@ -1,5 +1,7 @@
 source("R/common.R")
 
+report_date <- read_report_date("README.md")
+
 triaged <- read_csv("data/triaged-bugs.csv", show_col_types = FALSE)
 
 patches <- read_csv("data/team-patches.csv", show_col_types = FALSE)
@@ -9,4 +11,4 @@ readme_url <- Sys.getenv(
   "https://github.com/r-devel/triage-report"
 )
 
-write_plain_text_report(triaged, patches, readme_url)
+write_plain_text_report(triaged, patches, readme_url, report_date)
