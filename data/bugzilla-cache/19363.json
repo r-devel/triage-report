@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "component": "Models",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "assigned_to": "R-core",
+        "cc": [],
+        "qa_contact": "",
+        "id": 19363,
+        "deadline": {},
+        "dupe_of": {},
+        "severity": "normal",
+        "whiteboard": "",
+        "creation_time": "2026-11-23T17:41:58Z",
+        "version": "R-devel (trunk)",
+        "priority": "P3",
+        "product": "R",
+        "creator_detail": {
+          "id": 1044,
+          "name": "kevinushey",
+          "real_name": "Kevin Ushey"
+        },
+        "resolution": "",
+        "status": "NEW",
+        "creator": "kevinushey",
+        "is_creator_accessible": true,
+        "alias": [],
+        "is_confirmed": true,
+        "op_sys": "All",
+        "platform": "All",
+        "flags": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-23T17:43:21Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "summary": "model.matrix() writes past its column name buffer once a name fills it",
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "is_cc_accessible": true,
+        "blocks": [],
+        "url": ""
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19363": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "time": "2026-11-23T17:41:58Z",
+            "creator": "kevinushey",
+            "is_markdown": true,
+            "tags": [],
+            "is_private": false,
+            "id": 104451,
+            "creation_time": "2026-11-23T17:41:58Z",
+            "count": 0,
+            "text": "## Summary\n\n`model.matrix()` writes past a stack buffer when a column name fills its 4096-byte name buffer and the term has more variables, which aborts R 4.6.1 on macOS. Fixes a reproducible crash, and a column that took the previous column's name.\n\n## Details\n\n`modelmatrix()` in `src/library/stats/src/model.c` appends a name to the buffer only when it fits, warning otherwise, but appends the `:` between a term's variables unchecked: once a name is 4095 bytes long, each further variable writes one byte past the end. Separately, the buffer is not emptied between columns while the checks use `strlen(buf)`, so after a long name the next column's first name can be skipped, and the column keeps the previous name.\n\nReproducible example: attached as `model-matrix-colnames-buffer-repro.R`; in R 4.6.1, `~ A + B` with two 2100-byte names calls both columns `A`, and a child R running a 65-variable term aborts instead of printing a 4095-byte name.\n\nProposed patch: attached as `model-matrix-colnames-buffer.diff` (against r90968). It empties the buffer for each column and checks the separator like the names, with a test in `tests/reg-tests-1e.R`. `make check` passes, and the reproducer runs clean under ASan.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/528, where CI results can be seen.\n\n## AI Disclosure\n\nThis patch was prepared with the assistance of Claude Code. The issue was discovered while investigating PR#19362.",
+            "bug_id": 19363
+          },
+          {
+            "is_private": false,
+            "id": 104454,
+            "time": "2026-11-23T17:43:13Z",
+            "tags": [],
+            "attachment_id": 4156,
+            "is_markdown": false,
+            "count": 1,
+            "bug_id": 19363,
+            "text": "Created attachment 4156\npatch: keep model.matrix() column names within the name buffer (against r90968)",
+            "creation_time": "2026-11-23T17:43:13Z",
+            "creator": "kevinushey"
+          },
+          {
+            "attachment_id": 4157,
+            "time": "2026-11-23T17:43:21Z",
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "tags": [],
+            "id": 104455,
+            "is_private": false,
+            "creation_time": "2026-11-23T17:43:21Z",
+            "bug_id": 19363,
+            "text": "Created attachment 4157\nreproducer: wrong column name, and an abort in a child R",
+            "count": 2
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19363": [
+        {
+          "size": 1777,
+          "last_change_time": "2026-11-23T17:43:13Z",
+          "id": 4156,
+          "is_private": false,
+          "summary": "patch: keep model.matrix() column names within the name buffer (against r90968)",
+          "creation_time": "2026-11-23T17:43:13Z",
+          "bug_id": 19363,
+          "file_name": "model-matrix-colnames-buffer.diff",
+          "is_patch": true,
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCShyZXZpc2lvbiA5MDk2OCkKKysrIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCSh3b3JraW5nIGNvcHkpCkBAIC02MDQsMTIgKzYwNCwxNyBAQCBTRVhQIG1vZGVsbWF0cml4KFNFWFAgY2FsbCwgU0VYUCBvcCwgU0VYUCBhcmdzLCBTRVhQIHJobykKIAkgICAgZmlyc3QgPSAxOwogCSAgICBpbmR4ID0ga2s7CiAJICAgIGJ1ZnAgPSAmYnVmWzBdOworCSAgICBidWZbMF0gPSAnXDAnOyAvLyB0aGUgY2hlY2tzIGJlbG93IHVzZSBzdHJsZW4oYnVmKQogCSAgICBmb3IgKGkgPSAwOyBpIDwgblZhcjsgaSsrKSB7CiAJCWxsID0gSU5URUdFUihmYWN0b3JzKVtpICsgaiAqIG5WYXJdOwogCQlpZiAobGwpIHsKIAkJICAgIHZhcl9pID0gVkVDVE9SX0VMVCh2YXJpYWJsZSwgaSk7Ci0JCSAgICBpZiAoIWZpcnN0KQotCQkJYnVmcCA9IEFwcGVuZFN0cmluZyhidWZwLCAiOiIpOworCQkgICAgaWYgKCFmaXJzdCkgeworCQkJaWYoc3RybGVuKGJ1ZikgKyAxIDwgQlVGU0laRSkKKwkJCSAgICBidWZwID0gQXBwZW5kU3RyaW5nKGJ1ZnAsICI6Iik7CisJCQllbHNlCisJCQkgICAgd2FybmluZyhfKCJ0ZXJtIG5hbWVzIHdpbGwgYmUgdHJ1bmNhdGVkIikpOworCQkgICAgfQogCQkgICAgZmlyc3QgPSAwOwogCQkgICAgaWYgKGlzRmFjdG9yKHZhcl9pKSB8fCBpc0xvZ2ljYWwodmFyX2kpKSB7CiAJCQlpZiAobGwgPT0gMSkgewpJbmRleDogdGVzdHMvcmVnLXRlc3RzLTFlLlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHJldmlzaW9uIDkwOTY4KQorKysgdGVzdHMvcmVnLXRlc3RzLTFlLlIJKHdvcmtpbmcgY29weSkKQEAgLTQ1OTIsNiArNDU5MiwxOSBAQCBsb2NhbCh7CiAjIyB3cm90ZSBwYXN0IHRoZSBlbmQgb2YgdGhlIGNvdW50cyAoQykgb3IgZHJvcHBlZCBwb2ludHMgKFIpLCBpbiBSIDw9IDQuNi4yCiAKIAorIyMgbW9kZWwubWF0cml4KCkgY29sdW1uIG5hbWVzIGZpbGxpbmcgaXRzIG5hbWUgYnVmZmVyIC0tIFBSIzE5MzYzCitsb2NhbCh7CisgICAgQSA8LSBzdHJyZXAoIkEiLCAyMTAwTCk7IEIgPC0gc3RycmVwKCJCIiwgMjEwMEwpOyBMIDwtIHN0cnJlcCgiTCIsIDQwOTVMKQorICAgIGQgPC0gYXMuZGF0YS5mcmFtZShtYXRyaXgoMSwgMkwsIDVMLAorICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGltbmFtZXMgPSBsaXN0KE5VTEwsIGMoQSwgQiwgTCwgIngiLCAieSIpKSkpCisgICAgY24gPC0gZnVuY3Rpb24ocmhzKSBjb2xuYW1lcyhtb2RlbC5tYXRyaXgoYXMuZm9ybXVsYShwYXN0ZSgifiIsIHJocykpLCBkKSkKKyAgICBhc3NlcnRXYXJuVihjbkwgPC0gY24ocGFzdGUoTCwgIngiLCAieSIsIHNlcCA9ICI6IikpKQorICAgIHN0b3BpZm5vdChpZGVudGljYWwoY24ocGFzdGUoQSwgIisiLCBCKSksIGMoIihJbnRlcmNlcHQpIiwgQSwgQikpLAorICAgICAgICAgICAgICBpZGVudGljYWwoY25MLCBjKCIoSW50ZXJjZXB0KSIsIEwpKSkKK30pCisjIyBCJ3MgY29sdW1uIHdhcyBuYW1lZCBBLCB3aXRoIGEgd2FybmluZzsgTDp4Onkgb3ZlcmZsb3dlZCB0aGUgYnVmZmVyLCBpbiBSIDw9IDQuNi4yCisKKwogCiAKICMjIGtlZXAgYXQgZW5kCg==",
+          "creator": "kevinushey",
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain"
+        },
+        {
+          "is_patch": false,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "IyMgbW9kZWwubWF0cml4KCkgYXNzZW1ibGVzIGVhY2ggY29sdW1uIG5hbWUgaW4gYSA0MDk2LWJ5dGUgYnVmZmVyLgoKIyMgMS4gQSBjb2x1bW4gdGFrZXMgdGhlIG5hbWUgb2YgdGhlIHByZXZpb3VzIG9uZSB3aGVuIGJvdGggYXJlIGxvbmcuCkEgPC0gc3RycmVwKCJBIiwgMjEwMCkKQiA8LSBzdHJyZXAoIkIiLCAyMTAwKQpkIDwtIGRhdGEuZnJhbWUoMTozLCBjKDIsIDUsIDMpKQpuYW1lcyhkKSA8LSBjKEEsIEIpCmNuIDwtIGNvbG5hbWVzKG1vZGVsLm1hdHJpeChhcy5mb3JtdWxhKHBhc3RlKCJ+IiwgQSwgIisiLCBCKSksIGQpKQpwcmludChzdWJzdHIoY24sIDEsIDMpKQojIyBleHBlY3RlZDogIihJbiIgIkFBQSIgIkJCQiIKIyMgUiA0LjYuMTogICIoSW4iICJBQUEiICJBQUEiLCB3aXRoIGEgInRlcm0gbmFtZXMgd2lsbCBiZSB0cnVuY2F0ZWQiIHdhcm5pbmcKCiMjIDIuIEEgbmFtZSB0aGF0IGZpbGxzIHRoZSBidWZmZXIsIGluIGEgdGVybSB3aXRoIDY0IG1vcmUgdmFyaWFibGVzLAojIyAgICB3cml0ZXMgcGFzdCBpdC4gIFJ1biBpbiBhIGNoaWxkIFIsIHdoaWNoIG1heSBub3Qgc3Vydml2ZS4KY29kZSA8LSAnCnYgPC0gYyhzdHJyZXAoIkwiLCA0MDk1KSwgcGFzdGUwKCJ4IiwgMTo2NCkpCmQgPC0gYXMuZGF0YS5mcmFtZShtYXRyaXgoMSwgMiwgNjUsIGRpbW5hbWVzID0gbGlzdChOVUxMLCB2KSkpCmYgPC0gYXMuZm9ybXVsYShwYXN0ZSgifiIsIHBhc3RlKHYsIGNvbGxhcHNlID0gIjoiKSkpCm1tIDwtIHN1cHByZXNzV2FybmluZ3MobW9kZWwubWF0cml4KGYsIGQpKQpjYXQoImNvbHVtbiBuYW1lIG9mIiwgbmNoYXIoY29sbmFtZXMobW0pWzJdKSwgImJ5dGVzXG4iKQonCnNjcmlwdCA8LSB0ZW1wZmlsZShmaWxlZXh0ID0gIi5SIikKd3JpdGVMaW5lcyhjb2RlLCBzY3JpcHQpCnN0YXR1cyA8LSBzeXN0ZW0yKGZpbGUucGF0aChSLmhvbWUoImJpbiIpLCAiUnNjcmlwdCIpLCBjKCItLXZhbmlsbGEiLCBzY3JpcHQpKQpjYXQoImNoaWxkIFIgc3RhdHVzOiIsIHN0YXR1cywgIlxuIikKIyMgZXhwZWN0ZWQ6ICJjb2x1bW4gbmFtZSBvZiA0MDk1IGJ5dGVzIiwgc3RhdHVzIDAKIyMgUiA0LjYuMSAobWFjT1MgYXJtNjQpOiB0aGUgY2hpbGQgYWJvcnRzLCBzdGF0dXMgNiAoU0lHQUJSVCkK",
+          "creator": "kevinushey",
+          "id": 4157,
+          "is_private": false,
+          "size": 1137,
+          "last_change_time": "2026-11-23T17:43:21Z",
+          "bug_id": 19363,
+          "file_name": "model-matrix-colnames-buffer-repro.R",
+          "summary": "reproducer: wrong column name, and an abort in a child R",
+          "creation_time": "2026-11-23T17:43:21Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-23 17:43:21"
+}

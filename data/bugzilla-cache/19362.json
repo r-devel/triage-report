@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "status": "NEW",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "id": 1044,
+          "name": "kevinushey"
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
+        "is_creator_accessible": true,
+        "creator": "kevinushey",
+        "alias": [],
+        "see_also": [],
+        "target_milestone": "---",
+        "cc_detail": [],
+        "last_change_time": "2026-11-23T17:43:03Z",
+        "blocks": [],
+        "url": "",
+        "summary": "terms() writes one byte past its label buffer for a term starting with the empty symbol",
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "component": "Models",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 19362,
+        "deadline": {},
+        "cc": [],
+        "qa_contact": "",
+        "priority": "P4",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-11-23T17:41:45Z"
+      }
+    ]
+  },
+  "comments": {
+    "bugs": {
+      "19362": {
+        "comments": [
+          {
+            "attachment_id": {},
+            "tags": [],
+            "id": 104450,
+            "time": "2026-11-23T17:41:45Z",
+            "is_private": false,
+            "creation_time": "2026-11-23T17:41:45Z",
+            "creator": "kevinushey",
+            "bug_id": 19362,
+            "text": "## Summary\n\n`terms()` writes one byte past a stack buffer when a model term starts with the empty symbol (a missing argument). Fixes a reproducible stack buffer overflow, low impact: only a sanitizer shows it.\n\n## Details\n\nStep 5 of `termsform()` in `src/library/stats/src/model.c` sizes each term label counting a `:` separator only when the length so far is positive, then writes one before every variable after the first. The empty symbol has a zero-length name, so a term starting with it gets a buffer one byte short, and the terminating NUL lands past it. OSS-Fuzz reached it in R-devel r90940 through `update.formula()`; a formula built with `substitute()` from a missing argument has the same term.\n\nReproducible example: attached as `terms-label-buffer-repro.R`; an ASan build reports a dynamic-stack-buffer-overflow in `termsform()`, while a regular build returns the label `:b` with no visible effect.\n\nProposed patch: attached as `terms-label-buffer.diff` (against r90968). It counts each name plus one byte, so the labels do not change, and adds a test to `tests/reg-fuzz.R`. `make check` passes, and the reproducer runs clean under ASan.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/527, where CI results can be seen.\n\n## AI Disclosure\n\nThis patch was prepared with the assistance of Claude Code. The issue was discovered while fuzzing model formulas with OSS-Fuzz.",
+            "count": 0,
+            "is_markdown": true
+          },
+          {
+            "tags": [],
+            "attachment_id": 4154,
+            "time": "2026-11-23T17:42:55Z",
+            "id": 104452,
+            "is_private": false,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-23T17:42:55Z",
+            "text": "Created attachment 4154\npatch: count every separator in the terms() label buffer (against r90968)",
+            "bug_id": 19362,
+            "count": 1,
+            "is_markdown": false
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-23T17:43:03Z",
+            "count": 2,
+            "is_markdown": false,
+            "text": "Created attachment 4155\nreproducer: overflow reported by an ASan build",
+            "bug_id": 19362,
+            "tags": [],
+            "attachment_id": 4155,
+            "is_private": false,
+            "time": "2026-11-23T17:43:03Z",
+            "id": 104453
+          }
+        ]
+      }
+    },
+    "comments": {}
+  },
+  "attachments": {
+    "bugs": {
+      "19362": [
+        {
+          "is_patch": true,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "SW5kZXg6IHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCShyZXZpc2lvbiA5MDk2OCkKKysrIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCSh3b3JraW5nIGNvcHkpCkBAIC0yMDUzLDkgKzIwNTMsOSBAQCBTRVhQIHRlcm1zZm9ybShTRVhQIGFyZ3MpCiAjZW5kaWYKIAlmb3IgKGludCBpID0gMTsgaSA8PSBudmFyOyBpKyspIHsKIAkgICAgaWYgKEdldEJpdChDQVIoY2FsbCksIGkpKSB7Ci0JCWlmIChsID4gMCkKLQkJICAgIGwgKz0gMTsKLQkJbCArPSAoaW50KSBzdHJsZW4oQ0hBUihTVFJJTkdfRUxUKHZhcm5hbWVzLCBpIC0gMSkpKTsKKwkJLyogKyAxIGZvciB0aGUgJzonIGJlZm9yZSB0aGUgbmV4dCB2YXJpYWJsZTsgbm90IGNvbmRpdGlvbmFsCisJCSAgIG9uIGwgPiAwLCBhcyB0aGUgZW1wdHkgc3ltYm9sIGhhcyBhIHplcm8tbGVuZ3RoIG5hbWUgKi8KKwkJbCArPSBzdHJsZW4oQ0hBUihTVFJJTkdfRUxUKHZhcm5hbWVzLCBpIC0gMSkpKSArIDE7CiAJICAgIH0KIAl9CiAjaWZkZWYgREVCVUdfdGVybXMKSW5kZXg6IHRlc3RzL3JlZy1mdXp6LlIKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gdGVzdHMvcmVnLWZ1enouUgkocmV2aXNpb24gOTA5NjgpCisrKyB0ZXN0cy9yZWctZnV6ei5SCSh3b3JraW5nIGNvcHkpCkBAIC00NjAsNiArNDYwLDEyIEBAIGZvciAoc3QgaW4gbGlzdChjKC0xMCwgMSwgMSksIDEwLCBjKDEwLCAxKSwgYygxMCwgMSwgMiksIGMoTmFOLCAxLCAxKSwKICMjIGdhdmUgbmVnYXRpdmUgbGVuZ3RocywgaW50ZWdlciBvdmVyZmxvdyBvciBvdXQtb2YtYm91bmRzIHJlYWRzIGluIFIgPD0gNC42LjIKIAogCisjIyB0ZXJtcygpIG9mIGEgdGVybSBzdGFydGluZyB3aXRoIHRoZSBlbXB0eSBzeW1ib2wgLS0gUFIjMTkzNjIKK3R0IDwtIHRlcm1zKGV2YWwoY2FsbCgifiIsIGNhbGwoIjoiLCBxdW90ZShleHByID0gKSwgcXVvdGUoYikpKSkpCitzdG9waWZub3QoaWRlbnRpY2FsKGF0dHIodHQsICJ0ZXJtLmxhYmVscyIpLCAiOmIiKSkKKyMjIHdyb3RlIG9uZSBieXRlIHBhc3QgdGhlIGxhYmVsIGJ1ZmZlciBpbiBSIDw9IDQuNi4yICh2aXNpYmxlIHVuZGVyIEFTYW4pCisKKwogCiAjIyBrZWVwIGF0IGVuZAogcmJpbmQobGFzdCA9ICBwcm9jLnRpbWUoKSAtIC5wdCwK",
+          "creator": "kevinushey",
+          "id": 4154,
+          "is_private": false,
+          "size": 1290,
+          "last_change_time": "2026-11-23T17:42:55Z",
+          "bug_id": 19362,
+          "file_name": "terms-label-buffer.diff",
+          "summary": "patch: count every separator in the terms() label buffer (against r90968)",
+          "creation_time": "2026-11-23T17:42:55Z"
+        },
+        {
+          "is_patch": false,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgdGVybXMoKSB3cml0ZXMgb25lIGJ5dGUgcGFzdCBpdHMgbGFiZWwgYnVmZmVyIHdoZW4gYSBtb2RlbCB0ZXJtIHN0YXJ0cwojIyB3aXRoIHRoZSBlbXB0eSBzeW1ib2wuICBUaGUgbGFiZWwgaXRzZWxmIGNvbWVzIG91dCByaWdodCwgc28gcnVuIHRoaXMKIyMgd2l0aCBhbiBBZGRyZXNzU2FuaXRpemVyIGJ1aWxkIG9mIFIgdG8gc2VlIGl0OgojIyAgIEVSUk9SOiBBZGRyZXNzU2FuaXRpemVyOiBkeW5hbWljLXN0YWNrLWJ1ZmZlci1vdmVyZmxvdwojIyAgIFdSSVRFIG9mIHNpemUgMiAuLi4gaW4gdGVybXNmb3JtKCksIHNyYy9saWJyYXJ5L3N0YXRzL3NyYy9tb2RlbC5jCiMjIEEgcmVndWxhciBidWlsZCwgYW5kIGEgcGF0Y2hlZCBvbmUsIHByaW50IHRoZSBsYWJlbCBhbmQgImRvbmUiLgoKZiA8LSBldmFsKGNhbGwoIn4iLCBjYWxsKCI6IiwgcXVvdGUoZXhwciA9ICksIHF1b3RlKGIpKSkpCnByaW50KGYpCgp0dCA8LSB0ZXJtcyhmKQpwcmludChhdHRyKHR0LCAidGVybS5sYWJlbHMiKSkKc3RvcGlmbm90KGlkZW50aWNhbChhdHRyKHR0LCAidGVybS5sYWJlbHMiKSwgIjpiIikpCmNhdCgiZG9uZVxuIikK",
+          "creator": "kevinushey",
+          "id": 4155,
+          "is_private": false,
+          "size": 576,
+          "last_change_time": "2026-11-23T17:43:03Z",
+          "bug_id": 19362,
+          "file_name": "terms-label-buffer-repro.R",
+          "summary": "reproducer: overflow reported by an ASan build",
+          "creation_time": "2026-11-23T17:43:03Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-23 17:43:03"
+}

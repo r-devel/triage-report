@@ -16,7 +16,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19337,toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs),Low-level,kevinushey,NEW,2026-11-18 04:04:17 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19337
 19339,toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4),Low-level,kevinushey,NEW,2026-11-18 04:11:54 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19339
 19356,"Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",Low-level,kevinushey,NEW,2026-11-21 06:54:57 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19356
-19361,parse_Rd(): keep syntax error messages for long tokens within their buffer,Low-level,kevinushey,NEW,2026-11-22 20:12:54 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19361
+19363,model.matrix() writes past its column name buffer once a name fills it,Models,kevinushey,NEW,2026-11-23 17:43:13 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19363
 19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19244
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19143
 19103,choose.dir() returns NA without showing a dialog in Rterm/Rscript,Windows GUI / Window specific,kevinushey,NEW,2026-10-30 00:58:58 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19103
@@ -32,8 +32,8 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19157,unserialize() leaks the CHARSXP read buffer when the stream errors mid-string,Low-level,kevinushey,NEW,2026-09-03 21:10:43 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19157
 19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19209
 19314,speed up integer and mixed integer/double arithmetic loops,Low-level,kevinushey,NEW,2026-11-13 17:54:13 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19314
-19360,parse_Rd(): free the lexer's token buffer on errors raised mid-token,Low-level,kevinushey,NEW,2026-11-22 19:58:30 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19360
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19092
+19362,terms() writes one byte past its label buffer for a term starting with the empty symbol,Models,kevinushey,NEW,2026-11-23 17:42:55 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19362
 18039,Wishlist: allow Sys.setenv() to accept named vector,Wishlist,kevinushey,UNCONFIRMED,2021-01-27 05:50:20 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18039
 19028,Should object.size() be ALTREP aware?,Wishlist,kevinushey,NEW,2026-03-24 19:00:53 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19028
 19030,Enable constant folding of paste / paste0?,Wishlist,kevinushey,NEW,2026-03-26 22:51:02 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19030
@@ -48,6 +48,7 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19322,Improve `$` and `[[` performance on lists: match names without translating each one,Wishlist,kevinushey,NEW,2026-11-14 22:09:26 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19322
 19297,"C implementation of the byte code compiler, about 90x faster than compiler::cmpfun()",Wishlist,kevinushey,NEW,2026-11-14 22:14:00 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19297
 19334,Speed up named-argument matching by comparing symbols instead of strings,Wishlist,kevinushey,NEW,2026-11-17 19:20:06 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19334
+19365,Improve vectorized operator performance: x > 0.5 runs 1.6 to 3.1 times as fast,Wishlist,kevinushey,NEW,2026-11-24 02:32:30 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19365
 18705,"Document (lack of) include.only= behavior under ""reattachment"", and suggested workaround",Documentation,michaelchirico4,UNCONFIRMED,2024-04-16 05:28:37 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18705
 18583,cbind.ts does not respect 'deparse.level',Language,jaganmn2,CONFIRMED,2024-02-08 06:53:07 +0000,3,P5,P5,maechler,https://bugs.r-project.org/show_bug.cgi?id=18583
 18096,[patch] sort() did not return ALTREP for already increasing int vectors,Low-level,gabembecker,UNCONFIRMED,2021-05-06 02:07:11 +0000,1,P5,P5,,https://bugs.r-project.org/show_bug.cgi?id=18096

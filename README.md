@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-22._
+_Automatically generated from the R Bugzilla dump updated 2026-11-24._
 
 ## Triaged bugs
 
@@ -36,6 +36,7 @@ _None._
 
 * [Bug 17928](https://bugs.r-project.org/show_bug.cgi?id=17928) — NextMethod does not appear to dispatch to group generic methods from specific methods. (2026-04-08)
 * [Bug 17702](https://bugs.r-project.org/show_bug.cgi?id=17702) — Assignment to data.frame column (`$<-` or `[[<-`) should convert POSIXlt to POSIXct (2026-04-13, in CC: turner)
+* [Bug 17225](https://bugs.r-project.org/show_bug.cgi?id=17225) — Adding named element to nested element of recursive object does not add the name for pairlists, calls, and expressions. (2026-06-26, in CC: maechler, meyer)
 
 ## Additional Triage Team patches awaiting review
 
@@ -96,7 +97,10 @@ These Triage Team patches should be looked at next.
 * [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
 * [Bug 19356](https://bugs.r-project.org/show_bug.cgi?id=19356) — Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1) (2026-11-21)
-* [Bug 19361](https://bugs.r-project.org/show_bug.cgi?id=19361) — parse_Rd(): keep syntax error messages for long tokens within their buffer (2026-11-22)
+
+#### Models
+
+* [Bug 19363](https://bugs.r-project.org/show_bug.cgi?id=19363) — model.matrix() writes past its column name buffer once a name fills it (2026-11-23)
 
 #### S4methods
 
@@ -128,11 +132,14 @@ These Triage Team patches can wait their turn.
 * [Bug 19157](https://bugs.r-project.org/show_bug.cgi?id=19157) — unserialize() leaks the CHARSXP read buffer when the stream errors mid-string (2026-09-03)
 * [Bug 19209](https://bugs.r-project.org/show_bug.cgi?id=19209) — R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks (2026-10-09)
 * [Bug 19314](https://bugs.r-project.org/show_bug.cgi?id=19314) — speed up integer and mixed integer/double arithmetic loops (2026-11-13)
-* [Bug 19360](https://bugs.r-project.org/show_bug.cgi?id=19360) — parse_Rd(): free the lexer's token buffer on errors raised mid-token (2026-11-22)
 
 #### Mac GUI / Mac specific
 
 * [Bug 19092](https://bugs.r-project.org/show_bug.cgi?id=19092) — `R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS (2026-06-23)
+
+#### Models
+
+* [Bug 19362](https://bugs.r-project.org/show_bug.cgi?id=19362) — terms() writes one byte past its label buffer for a term starting with the empty symbol (2026-11-23)
 
 #### Wishlist
 
@@ -150,6 +157,7 @@ These Triage Team patches can wait their turn.
 * [Bug 19322](https://bugs.r-project.org/show_bug.cgi?id=19322) — Improve `$` and `[[` performance on lists: match names without translating each one (2026-11-14)
 * [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-14)
 * [Bug 19334](https://bugs.r-project.org/show_bug.cgi?id=19334) — Speed up named-argument matching by comparing symbols instead of strings (2026-11-17)
+* [Bug 19365](https://bugs.r-project.org/show_bug.cgi?id=19365) — Improve vectorized operator performance: x > 0.5 runs 1.6 to 3.1 times as fast (2026-11-24)
 
 ### P5
 

@@ -1,0 +1,129 @@
+{
+  "bug": {
+    "faults": [],
+    "bugs": [
+      {
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": [],
+        "summary": "Adding named element to nested element of recursive object does not add the name for pairlists, calls, and expressions.",
+        "url": "",
+        "blocks": [],
+        "last_change_time": "2026-11-23T20:16:13Z",
+        "cc_detail": [
+          {
+            "real_name": "Gabriel Becker",
+            "id": 1299,
+            "name": "gabembecker"
+          },
+          {
+            "id": 18,
+            "name": "maechler",
+            "real_name": "Martin Maechler"
+          },
+          {
+            "name": "seb.meyer",
+            "id": 274,
+            "real_name": "Sebastian Meyer"
+          }
+        ],
+        "target_milestone": "---",
+        "see_also": [],
+        "alias": [],
+        "is_creator_accessible": true,
+        "creator": "williamwdunlap",
+        "flags": [],
+        "platform": "Other",
+        "op_sys": "Other",
+        "is_confirmed": true,
+        "resolution": "",
+        "creator_detail": {
+          "id": 1056,
+          "name": "williamwdunlap",
+          "real_name": "Bill Dunlap"
+        },
+        "status": "TRIAGED",
+        "version": "R-devel (trunk)",
+        "creation_time": "2017-02-18T19:28:08Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "cc": [
+          "gabembecker",
+          "maechler",
+          "seb.meyer"
+        ],
+        "qa_contact": "",
+        "severity": "normal",
+        "dupe_of": {},
+        "id": 17225,
+        "deadline": {},
+        "assigned_to": "R-core",
+        "keywords": [],
+        "depends_on": [],
+        "is_open": true,
+        "classification": "Unclassified",
+        "component": "Language"
+      }
+    ]
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "17225": {
+        "comments": [
+          {
+            "count": 0,
+            "bug_id": 17225,
+            "text": "If I add an element to an interior element of a recursive object by\nusing a character vector with length more than 1 in [[<-, then the name\nat end of the vector is added for lists but not for other recursive\ntypes like pairlists, expressions, and calls.\n\n{\n   aList <- list(A=list(A1=11,A2=12),B=2)\n   aList[[c(\"A\",\"A3\")]] <- list(C1=13)\n   str(aList)\n}\n#List of 2\n# $ A:List of 3\n#  ..$ A1: num 11\n#  ..$ A2: num 12\n#  ..$ A3:List of 1\n#  .. ..$ C1: num 13\n# $ B: num 2\n{\n   aPairlist <- pairlist(A=pairlist(A1=11,A2=12),B=2)\n   aPairlist[[c(\"A\",\"A3\")]] <- pairlist(A31=131)\n   str(aPairlist)\n}\n#Dotted pair list of 2\n# $ A:Dotted pair list of 3\n#  ..$ A1: num 11\n#  ..$ A2: num 12\n#  ..$   :Dotted pair list of 1\n#  .. ..$ A31: num 131\n# $ B: num 2\n{\n   aCall <- quote(foo(A=bar(A1=11,A2=12),B=2))\n   aCall[[c(\"A\",\"A3\")]] <- quote(baz(A31=131))\n   str(aCall)\n}\n# language foo(A = bar(A1 = 11, A2 = 12, baz(A31 = 131)), B = 2)\n{\n   anExpression <- expression(A=foo(A1=11,A2=12),B=2)\n   anExpression[[c(\"A\",\"A3\")]] <- quote(baz(A31=131))\n   str(anExpression)\n}\n# structure(expression(A = foo(A1 = 11, A2 = 12, baz(A31 = 131)), B = 2), .Names = c(\"A\", \"B\"))\n\nIf I replace x[[v]] with x[[v[1]]][[v[2]]]...[[v[length(v)]]]\nthe the new name, v[length(v)], is added. E.g.,\n   aPairlist <- pairlist(A=pairlist(A1=11,A2=12),B=2)\n   aPairlist[[\"A\"]][[\"A3\"]] <- pairlist(A31=131)\n   str(aPairlist)\n   #Dotted pair list of 2\n   # $ A:Dotted pair list of 3\n   #  ..$ A1: num 11\n   #  ..$ A2: num 12\n   #  ..$ A3:Dotted pair list of 1\n   #  .. ..$ A31: num 131\n   # $ B: num 2\n\n> sessionInfo()\nR Under development (unstable) (2017-02-15 r72177)\nPlatform: x86_64-pc-linux-gnu (64-bit)\nRunning under: Ubuntu 14.04.5 LTS\n\nlocale:\n [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C\n [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8\n [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8\n [7] LC_PAPER=en_US.UTF-8       LC_NAME=C\n [9] LC_ADDRESS=C               LC_TELEPHONE=C\n[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C\n\nattached base packages:\n[1] stats     graphics  grDevices utils     datasets  methods   base\n\nloaded via a namespace (and not attached):\n[1] compiler_3.4.0",
+            "creation_time": "2017-02-18T19:28:08Z",
+            "is_private": false,
+            "id": 92968,
+            "tags": [],
+            "is_markdown": false,
+            "creator": "williamwdunlap",
+            "time": "2017-02-18T19:28:08Z",
+            "attachment_id": {}
+          },
+          {
+            "time": "2020-08-11T09:49:05Z",
+            "id": 96267,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": [],
+            "text": "For the record, this bug has been considered previously but the changes to src/main/subassign.c were reverted shortly afterwards:\n\n------------------------------------------------------------------------\nr74142 | maechler | 2018-01-20 09:55:26 +0100 (Sa, 20 Jan 2018) | 1 line\n\nsubassign2_dflt(), varsL declare where defined; preparing for PR#17225 - part 1\n------------------------------------------------------------------------\nr74143 | maechler | 2018-01-20 16:22:54 +0100 (Sa, 20 Jan 2018) | 1 line\n\nsubassign2_dflt(), \"re-shuffled\"; preparing for PR#17225 - part 2\n------------------------------------------------------------------------\nr74144 | maechler | 2018-01-20 17:24:49 +0100 (Sa, 20 Jan 2018) | 1 line\n\namend -c74143\n------------------------------------------------------------------------\nr74149 | maechler | 2018-01-22 11:32:57 +0100 (Mo, 22 Jan 2018) | 1 line\n\nrevert r74142-4\n------------------------------------------------------------------------",
+            "bug_id": 17225,
+            "is_markdown": false,
+            "count": 1,
+            "creator": "seb.meyer",
+            "creation_time": "2020-08-11T09:49:05Z"
+          },
+          {
+            "is_private": false,
+            "id": 103238,
+            "tags": [],
+            "count": 2,
+            "bug_id": 17225,
+            "text": "Should this be closed as WONTFIX, then?",
+            "creation_time": "2026-06-26T04:42:20Z",
+            "time": "2026-06-26T04:42:20Z",
+            "attachment_id": {},
+            "is_markdown": true,
+            "creator": "gabembecker"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "attachments": {},
+    "bugs": {
+      "17225": []
+    }
+  },
+  "source_changed": "2026-11-23 20:16:13"
+}
