@@ -8,15 +8,15 @@ library(tibble)
 library(xml2)
 
 TEAM_LOGINS <- c(
-  "gabembecker",
-  "kuwisdelu",
-  "jaganmn2",
-  "jeroenooms",
-  "michaelchirico4",
-  "cgmossa",
-  "kevinushey",
-  "lluis.revilla",
-  "ikrylov"
+  "Gabriel Becker" = "gabembecker",
+  "Kylie Bemis" = "kuwisdelu",
+  "Mikael Jagan" = "jaganmn2",
+  "Jeroen Ooms" = "jeroenooms",
+  "Michael Chirico" = "michaelchirico4",
+  "Mossa Reimert" = "cgmossa",
+  "Kevin Ushey" = "kevinushey",
+  "Lluís Revilla" = "lluis.revilla",
+  "Ivan Krylov" = "ikrylov"
 )
 
 CORE_LOGINS <- c(
