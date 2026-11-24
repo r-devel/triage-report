@@ -1,5 +1,7 @@
 library(curl)
 
+report_date <- read_report_date("README.md")
+
 body <- readLines("monthly-email.txt", warn = FALSE, encoding = "UTF-8")
 
 from <- Sys.getenv("EMAIL_FROM")
@@ -9,7 +11,8 @@ message <- paste(
   c(
     paste0("From: ", from),
     paste0("To: ", to),
-    "Subject: Current TRIAGED bugs and patches from Triage Team",
+    paste0("Subject: Current TRIAGED bugs and patches from Triage Team (",
+           next_month_name(report_date), ")"),
     "Content-Type: text/plain; charset=UTF-8",
     "",
     body

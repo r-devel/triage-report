@@ -839,7 +839,181 @@ markdown_bug <- function(id, summary, date, cc = "") {
   paste0("* ", link, " — ", summary, format_bug_details(date, cc))
 }
 
+previous_month_date <- function(date) {
+  date <- as.Date(date)
+  first_this_month <- as.Date(format(date, "%Y-%m-01"))
+  last_previous_month <- first_this_month - 1
+  first_previous_month <- as.Date(format(last_previous_month, "%Y-%m-01"))
+  
+  first_previous_month +
+    min(
+      as.integer(format(date, "%d")),
+      as.integer(format(last_previous_month, "%d"))
+    ) - 1L
+}
+
+next_month_name <- function(date) {
+  first_next_month <- as.Date(format(as.Date(date), "%Y-%m-01")) + 32
+  format(first_next_month, "%B")
+}
+
+read_report_date <- function(path = "README.md") {
+  lines <- readLines(path, warn = FALSE, encoding = "UTF-8")
+  
+  pattern <- paste0(
+    "^_Automatically generated from the R Bugzilla dump updated ",
+    "([0-9]{4}-[0-9]{2}-[0-9]{2})\\._$"
+  )
+  
+  matches <- regmatches(lines, regexec(pattern, lines))
+  matches <- Filter(length, matches)
+  
+  if (length(matches) != 1) {
+    stop("Could not uniquely find the report date in ", path, ".")
+  }
+  
+  as.Date(matches[[1]][2])
+}
+
+git_file_at <- function(commit, path) {
+  output <- suppressWarnings(system2(
+    "git",
+    c("show", paste0(commit, ":", path)),
+    stdout = TRUE,
+    stderr = FALSE
+  ))
+  
+  status <- attr(output, "status")
+  
+  if ((!is.null(status) && status != 0) || length(output) == 0) {
+    return(NULL)
+  }
+  
+  read_csv(I(paste(output, collapse = "\n")), show_col_types = FALSE)
+}
+
+previous_report_snapshot <- function(report_date) {
+  cutoff <- previous_month_date(report_date)
+  before <- paste0(as.character(cutoff + 1), "T00:00:00Z")
+  
+  commit <- tryCatch(
+    suppressWarnings(system2(
+      "git",
+      c("log", "-1", "--format=%H", paste0("--before=", before), "HEAD"),
+      stdout = TRUE,
+      stderr = FALSE
+    )),
+    error = function(e) character()
+  )
+  
+  if (length(commit) == 0 || !nzchar(commit[[1]])) {
+    return(NULL)
+  }
+  
+  triaged <- git_file_at(commit[[1]], "data/triaged-bugs.csv")
+  patches <- git_file_at(commit[[1]], "data/team-patches.csv")
+  
+  if (is.null(triaged) || is.null(patches)) {
+    return(NULL)
+  }
+  
+  list(
+    triaged = triaged,
+    patches = patches,
+    since_date = cutoff
+  )
+}
+
+report_change_summary <- function(triaged, patches, report_date) {
+  previous <- previous_report_snapshot(report_date)
+  
+  if (is.null(previous)) {
+    return(list(
+      available = FALSE,
+      since_date = previous_month_date(report_date)
+    ))
+  }
+  
+  current_triaged_ids <- unique(triaged$bug_id)
+  previous_triaged_ids <- unique(previous$triaged$bug_id)
+  
+  current_patch_ids <- unique(patches$bug_id)
+  previous_patch_ids <- unique(previous$patches$bug_id)
+  
+  list(
+    available = TRUE,
+    since_date = previous$since_date,
+    
+    triaged_added = length(setdiff(
+      current_triaged_ids, previous_triaged_ids
+    )),
+    triaged_removed = length(setdiff(
+      previous_triaged_ids, current_triaged_ids
+    )),
+    
+    patches_added = length(setdiff(
+      current_patch_ids, previous_patch_ids
+    )),
+    patches_removed = length(setdiff(
+      previous_patch_ids, current_patch_ids
+    ))
+  )
+}
+
+write_change_summary <- function(summary, write, markdown = TRUE) {
+  heading <- if (markdown) {
+    "## Changes in past month"
+  } else {
+    "Changes in past month"
+  }
+  
+  write(
+    heading,
+    if (markdown) "" else "----------------------"
+  )
+  
+  if (!summary$available) {
+    write("No previous report available for comparison.", "")
+    return(invisible())
+  }
+  
+  if (markdown) {
+    write(
+      "| | Added | Removed |",
+      "|---|---:|---:|",
+      paste0(
+        "| Triaged bugs | ", summary$triaged_added,
+        " | ", summary$triaged_removed, " |"
+      ),
+      paste0(
+        "| Additional team patches | ", summary$patches_added,
+        " | ", summary$patches_removed, " |"
+      ),
+      ""
+    )
+  } else {
+    write(
+      sprintf("%-25s %5s %7s", "", "Added", "Removed"),
+      sprintf(
+        "%-25s %5d %7d",
+        "Triaged bugs",
+        summary$triaged_added,
+        summary$triaged_removed
+      ),
+      sprintf(
+        "%-25s %5d %7d",
+        "Additional team patches",
+        summary$patches_added,
+        summary$patches_removed
+      ),
+      ""
+    )
+  }
+}
+
 write_readme <- function(triaged, patches, dump_date, path = "README.md") {
+  changes <- report_change_summary(triaged, patches, dump_date)
+  
   con <- file(path, open = "wt", encoding = "UTF-8")
   on.exit(close(con))
   
@@ -850,10 +1024,15 @@ write_readme <- function(triaged, patches, dump_date, path = "README.md") {
     "",
     paste0(
       "_Automatically generated from the R Bugzilla dump updated ",
-      format(as.POSIXct(dump_date, tz = "UTC"), "%Y-%m-%d"),
+      format(as.Date(dump_date), "%Y-%m-%d"),
       "._"
     ),
-    "",
+    ""
+  )
+  
+  write_change_summary(changes, write)
+  
+  write(
     "## Triaged bugs",
     "",
     "_Dates show the most recent triager comment on the bug._",
@@ -932,8 +1111,11 @@ write_plain_text_report <- function(
     triaged,
     patches,
     readme_url,
+    report_date,
     path = "monthly-email.txt"
 ) {
+  changes <- report_change_summary(triaged, patches, report_date)
+  
   con <- file(path, open = "wt", encoding = "UTF-8")
   on.exit(close(con))
   
@@ -942,7 +1124,12 @@ write_plain_text_report <- function(
   write(
     "Current TRIAGED bugs and patches from Triage Team",
     "=================================================",
-    "",
+    ""
+  )
+  
+  write_change_summary(changes, write, markdown = FALSE)
+  
+  write(
     "Triaged bugs",
     "-------------",
     "",
@@ -987,7 +1174,8 @@ write_plain_text_report <- function(
         filter(.data$component == .env$component) |>
         arrange(patch_date, bug_id)
       write(paste0("  ", component, " (", nrow(x), ")"), "",
-            plain_bug(x$bug_id, x$summary, x$patch_date, x$core_cc),
+            paste0("  ", 
+                   plain_bug(x$bug_id, x$summary, x$patch_date, x$core_cc)),
             "")
     }
   }
