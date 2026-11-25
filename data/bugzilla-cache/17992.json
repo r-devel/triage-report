@@ -2,59 +2,67 @@
   "bug": {
     "bugs": [
       {
-        "assigned_to": "R-core",
         "component": "Misc",
-        "classification": "Unclassified",
         "keywords": [],
-        "is_open": true,
-        "depends_on": [],
-        "whiteboard": "",
-        "creation_time": "2020-11-30T21:32:11Z",
-        "version": "R 4.0.x",
-        "priority": "P5",
-        "product": "R",
-        "qa_contact": "",
-        "cc": [
-          "tomas.kalibera"
+        "depends_on": [
+          19331
         ],
+        "is_open": true,
+        "classification": "Unclassified",
+        "assigned_to": "R-core",
+        "dupe_of": {},
+        "severity": "normal",
         "id": 17992,
         "deadline": {},
-        "severity": "normal",
-        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [
+          "seb.meyer",
+          "tomas.kalibera"
+        ],
+        "priority": "P5",
+        "product": "R",
+        "whiteboard": "",
+        "version": "R 4.0.x",
+        "creation_time": "2020-11-30T21:32:11Z",
+        "status": "REOPENED",
+        "creator_detail": {
+          "id": 3405,
+          "name": "julian",
+          "real_name": "Julian Gilbey"
+        },
+        "resolution": "",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "flags": [],
+        "platform": "All",
         "creator": "julian",
         "is_creator_accessible": true,
         "alias": [],
-        "op_sys": "All",
-        "is_confirmed": true,
-        "platform": "All",
-        "flags": [],
-        "creator_detail": {
-          "real_name": "Julian Gilbey",
-          "id": 3405,
-          "name": "julian"
-        },
-        "resolution": "",
-        "status": "REOPENED",
-        "summary": "The POSIX regex parser fails to parse (^|\\b) correctly but succeeds on (\\b|^) - bug in the TRE library",
-        "assigned_to_detail": {
-          "name": "R-core",
-          "id": 16,
-          "real_name": "R-core"
-        },
-        "groups": [],
-        "is_cc_accessible": true,
-        "blocks": [],
-        "url": "",
+        "target_milestone": "---",
+        "see_also": [],
+        "last_change_time": "2026-11-25T02:42:05Z",
         "cc_detail": [
           {
-            "id": 2442,
+            "real_name": "Sebastian Meyer",
+            "name": "seb.meyer",
+            "id": 274
+          },
+          {
+            "real_name": "Tomas Kalibera",
             "name": "tomas.kalibera",
-            "real_name": "Tomas Kalibera"
+            "id": 2442
           }
         ],
-        "last_change_time": "2026-11-22T01:41:59Z",
-        "target_milestone": "---",
-        "see_also": []
+        "blocks": [],
+        "url": "",
+        "summary": "The POSIX regex parser fails to parse (^|\\b) correctly but succeeds on (\\b|^) - bug in the TRE library",
+        "is_cc_accessible": true,
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "name": "R-core",
+          "id": 16
+        },
+        "groups": []
       }
     ],
     "faults": []
@@ -65,15 +73,15 @@
         "comments": [
           {
             "tags": [],
-            "id": 96833,
-            "is_private": false,
-            "creation_time": "2020-11-30T21:32:11Z",
-            "bug_id": 17992,
-            "text": "The following code gives unexpected (and incorrect) results:\n\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\")\n[1] FALSE\n> grepl(\"(\\\\b|^)a\", \"this is a sentence\")\n[1] TRUE\n\n(the correct result should be TRUE for both).\n\nMartin Maechler kindly pointed out to me a comment in the help page for grep which reads:\n\n  The POSIX 1003.2 mode of ‘gsub’ and ‘gregexpr’ does not work\n  correctly with repeated word-boundaries (e.g., ‘pattern = \"\\b\"’).\n\nThis might relate to my situation, but unfortunately I don't understand what a \"repeated word-boundary\" is or how this example demonstrates it.\n\nAnyway, I've located the source of the bug: it is in the TRE library, and I have just reported it there (https://github.com/laurikari/tre/issues/78).  Unfortunately, the library seems to be almost entirely unmaintained: there are 60 open bug reports but only two closed ones, though the author is responsive to pull requests.  There has only been one substantive code change since 2009.\n\nOne possible way to handle this is to use the PCRE2 library for the POSIX-mode (extended) regular expressions instead of TRE: it has a header file called pcre2posix.h which provides drop-in replacements for the standard libc versions of the regex functions.  It is a well-maintained library, so should provide for the needs of R.\n\nBest wishes,\n\nJulian",
-            "count": 0,
             "attachment_id": {},
             "time": "2020-11-30T21:32:11Z",
+            "id": 96833,
+            "is_private": false,
             "creator": "julian",
+            "creation_time": "2020-11-30T21:32:11Z",
+            "text": "The following code gives unexpected (and incorrect) results:\n\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\")\n[1] FALSE\n> grepl(\"(\\\\b|^)a\", \"this is a sentence\")\n[1] TRUE\n\n(the correct result should be TRUE for both).\n\nMartin Maechler kindly pointed out to me a comment in the help page for grep which reads:\n\n  The POSIX 1003.2 mode of ‘gsub’ and ‘gregexpr’ does not work\n  correctly with repeated word-boundaries (e.g., ‘pattern = \"\\b\"’).\n\nThis might relate to my situation, but unfortunately I don't understand what a \"repeated word-boundary\" is or how this example demonstrates it.\n\nAnyway, I've located the source of the bug: it is in the TRE library, and I have just reported it there (https://github.com/laurikari/tre/issues/78).  Unfortunately, the library seems to be almost entirely unmaintained: there are 60 open bug reports but only two closed ones, though the author is responsive to pull requests.  There has only been one substantive code change since 2009.\n\nOne possible way to handle this is to use the PCRE2 library for the POSIX-mode (extended) regular expressions instead of TRE: it has a header file called pcre2posix.h which provides drop-in replacements for the standard libc versions of the regex functions.  It is a well-maintained library, so should provide for the needs of R.\n\nBest wishes,\n\nJulian",
+            "bug_id": 17992,
+            "count": 0,
             "is_markdown": true
           },
           {
@@ -90,82 +98,108 @@
             "attachment_id": 2767
           },
           {
-            "creator": "julian",
-            "is_markdown": true,
-            "attachment_id": 2768,
-            "time": "2020-12-01T06:59:11Z",
-            "creation_time": "2020-12-01T06:59:11Z",
-            "bug_id": 17992,
-            "text": "Created attachment 2768\nTest file showing that PCRE POSIX mode works correctly\n\nCompile on a Linux/macOS system with (for example):\n\n    gcc -o testpcre testpcre.c -lpcre2-posix",
             "count": 2,
-            "tags": [],
+            "text": "Created attachment 2768\nTest file showing that PCRE POSIX mode works correctly\n\nCompile on a Linux/macOS system with (for example):\n\n    gcc -o testpcre testpcre.c -lpcre2-posix",
+            "bug_id": 17992,
+            "creation_time": "2020-12-01T06:59:11Z",
+            "is_private": false,
             "id": 96838,
-            "is_private": false
-          },
-          {
             "tags": [],
-            "attachment_id": {},
-            "id": 96841,
-            "time": "2020-12-01T10:05:23Z",
-            "is_private": false,
-            "creation_time": "2020-12-01T10:05:23Z",
-            "creator": "tomas.kalibera",
-            "bug_id": 17992,
-            "text": "R already uses PCRE, one just needs to specify perl=TRUE.\n\nR documentation says it (since 2005), in the paragraph Martin pointed you to, pattern=\"\\b\" does not work correctly unless perl=TRUE. To clarify what is meant by repeated word-boundary, there is the \"e.g. pattern=\"\\b\") part.\n\nIn your example, don't forget about the extra backslash:\n\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\", perl=TRUE)\n[1] TRUE # correct (PCRE)\n\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\", perl=FALSE)\n[1] FALSE # bug (TRE)",
-            "is_markdown": false,
-            "count": 3
-          },
-          {
-            "is_private": false,
-            "time": "2020-12-01T11:24:33Z",
-            "id": 96842,
-            "attachment_id": {},
-            "tags": [],
-            "count": 4,
             "is_markdown": true,
-            "text": "Thanks for your comments.\n\nIn my bug report, the Bugzilla formatter swallowed the doubled backslash and I didn't notice; apologies for that.\n\nI am surprised you think my bug report is incorrect: having broken code with a warning at the end of the documentation saying \"don't use this broken code\" is not good practice!  It would be far, far better to correct the broken code, or at least to issue a warning if people use it.  Switching to PCRE2 for this would be a very simple solution, retaining TRE only for agrep.\n\nRegarding the warning note in the help page, I can only repeat that to a native English speaker, the note about \"repeated word-boundary\" together with the example does not make sense.  Better wording would perhaps be \"The POSIX 1003.2 mode of ‘gsub’ and ‘gregexpr’ does not always work correctly if the pattern contains word-boundaries (e.g., ‘pattern = \"\\b\"’).\"  Reading it again, it is also unclear whether the final comment \"(but that may not work...)\" refers specifically to the perl=TRUE mode or to both modes.\n\nI won't re-open this bug report myself, as that is your decision to make (you are the maintainers!).\n\nBest wishes, Julian",
-            "bug_id": 17992,
             "creator": "julian",
-            "creation_time": "2020-12-01T11:24:33Z"
+            "time": "2020-12-01T06:59:11Z",
+            "attachment_id": 2768
           },
           {
-            "id": 96858,
-            "time": "2020-12-04T18:13:29Z",
             "is_private": false,
+            "id": 96841,
             "tags": [],
-            "attachment_id": {},
+            "count": 3,
+            "text": "R already uses PCRE, one just needs to specify perl=TRUE.\n\nR documentation says it (since 2005), in the paragraph Martin pointed you to, pattern=\"\\b\" does not work correctly unless perl=TRUE. To clarify what is meant by repeated word-boundary, there is the \"e.g. pattern=\"\\b\") part.\n\nIn your example, don't forget about the extra backslash:\n\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\", perl=TRUE)\n[1] TRUE # correct (PCRE)\n\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\", perl=FALSE)\n[1] FALSE # bug (TRE)",
             "bug_id": 17992,
-            "text": "\"Works as documented\" here was to mean \"broken as documented\", but we don't have a state for that. On a much closer look, it seems to be that TRE creates incorrect automata for regular expressions including a union with multiple assertion-only elements. These examples also provide incorrect results:\n\ngsub(\"(^|\\\\<)a\", \"A\", \" a\", perl=FALSE)\ngsub(\"(\\\\>|\\\\<)a\", \"A\", \" a\", perl=FALSE)\ngsub(\"($|^)a\", \"A\", \"a\", perl=FALSE)\n\nThe automaton should have two initial states for the two assertions, but it only has one for the first, which is the one failing. Some of these examples don't make sense, and e.g. \"^\" is already included in \"\\b\", but of course they should work.\n\nAs the problem is bigger than word boundaries, the documentation should be improved to better warn against related TRE bugs ($ and ^ are not a word boundary). Of course, it would be much better to get it fixed in TRE. A hack for TRE to refuse such expressions would also be possible in principle.\n\nSwitching to PCRE for \"perl=FALSE\" is not possible without changing documented, intended behavior. The regular expressions supported by PCRE are not a strict superset of TRE (i.e. \\> and \\< are not supported), as also documented in R documentation. Such a change would potentially break correct code in packages, etc, it is also an option, but not a simple one, and then there is still the approximate matching.",
+            "creation_time": "2020-12-01T10:05:23Z",
+            "time": "2020-12-01T10:05:23Z",
+            "attachment_id": {},
             "is_markdown": false,
-            "count": 5,
-            "creation_time": "2020-12-04T18:13:29Z",
             "creator": "tomas.kalibera"
           },
           {
+            "attachment_id": {},
+            "tags": [],
+            "id": 96842,
+            "time": "2020-12-01T11:24:33Z",
+            "is_private": false,
+            "creation_time": "2020-12-01T11:24:33Z",
+            "creator": "julian",
+            "bug_id": 17992,
+            "text": "Thanks for your comments.\n\nIn my bug report, the Bugzilla formatter swallowed the doubled backslash and I didn't notice; apologies for that.\n\nI am surprised you think my bug report is incorrect: having broken code with a warning at the end of the documentation saying \"don't use this broken code\" is not good practice!  It would be far, far better to correct the broken code, or at least to issue a warning if people use it.  Switching to PCRE2 for this would be a very simple solution, retaining TRE only for agrep.\n\nRegarding the warning note in the help page, I can only repeat that to a native English speaker, the note about \"repeated word-boundary\" together with the example does not make sense.  Better wording would perhaps be \"The POSIX 1003.2 mode of ‘gsub’ and ‘gregexpr’ does not always work correctly if the pattern contains word-boundaries (e.g., ‘pattern = \"\\b\"’).\"  Reading it again, it is also unclear whether the final comment \"(but that may not work...)\" refers specifically to the perl=TRUE mode or to both modes.\n\nI won't re-open this bug report myself, as that is your decision to make (you are the maintainers!).\n\nBest wishes, Julian",
+            "count": 4,
+            "is_markdown": true
+          },
+          {
+            "creator": "tomas.kalibera",
+            "creation_time": "2020-12-04T18:13:29Z",
+            "text": "\"Works as documented\" here was to mean \"broken as documented\", but we don't have a state for that. On a much closer look, it seems to be that TRE creates incorrect automata for regular expressions including a union with multiple assertion-only elements. These examples also provide incorrect results:\n\ngsub(\"(^|\\\\<)a\", \"A\", \" a\", perl=FALSE)\ngsub(\"(\\\\>|\\\\<)a\", \"A\", \" a\", perl=FALSE)\ngsub(\"($|^)a\", \"A\", \"a\", perl=FALSE)\n\nThe automaton should have two initial states for the two assertions, but it only has one for the first, which is the one failing. Some of these examples don't make sense, and e.g. \"^\" is already included in \"\\b\", but of course they should work.\n\nAs the problem is bigger than word boundaries, the documentation should be improved to better warn against related TRE bugs ($ and ^ are not a word boundary). Of course, it would be much better to get it fixed in TRE. A hack for TRE to refuse such expressions would also be possible in principle.\n\nSwitching to PCRE for \"perl=FALSE\" is not possible without changing documented, intended behavior. The regular expressions supported by PCRE are not a strict superset of TRE (i.e. \\> and \\< are not supported), as also documented in R documentation. Such a change would potentially break correct code in packages, etc, it is also an option, but not a simple one, and then there is still the approximate matching.",
+            "bug_id": 17992,
+            "is_markdown": false,
+            "count": 5,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2020-12-04T18:13:29Z",
+            "id": 96858,
+            "is_private": false
+          },
+          {
+            "is_private": false,
+            "id": 96859,
+            "tags": [],
+            "count": 6,
+            "bug_id": 17992,
+            "text": "Here is a case where `\\b` is not included in `^`: the regular expression `(^|\\b):` matches the string `:this`, but the regular expression `\\b:` does not.  My original example could indeed be simplified to `\\ba`.\n\nThe TRE library is sadly not being actively maintained.  The author does seem to be responsive to patches (submitted as pull requests), so having identified the source of the bug, if you are able to provide a patch to fix it, that would probably be accepted into the TRE library.  (And in such a case, it may well be worth requesting the author to bump the version number so that this change is picked up by software package distributors.)\n\nLooking further at the R source code and the PCRE2 documentation, it turns out that my earlier suggestion is wrong: the pcre2-posix.h header file just creates thin wrappers around the standard PCRE2 8-bit functions, so giving them a POSIX regex that has a different meaning as a PCRE would give incorrect results.  Also, the TRE library has a way of handling wide characters, and R uses this; PCRE2 does too, but then the patterns are treated as PCRE patterns.  The latest PCRE2 has an experimental conversion feature for converting POSIX basic or extended regexes into PCRE patterns (see pcre2convert(3) for details); perhaps this code could be used by R?\n\nIt does seem to be a fair bit of work, though.\n\nThank you for all your work on maintaining R!",
+            "creation_time": "2020-12-05T19:13:55Z",
             "time": "2020-12-05T19:13:55Z",
             "attachment_id": {},
             "is_markdown": true,
-            "creator": "julian",
-            "id": 96859,
-            "is_private": false,
-            "tags": [],
-            "bug_id": 17992,
-            "text": "Here is a case where `\\b` is not included in `^`: the regular expression `(^|\\b):` matches the string `:this`, but the regular expression `\\b:` does not.  My original example could indeed be simplified to `\\ba`.\n\nThe TRE library is sadly not being actively maintained.  The author does seem to be responsive to patches (submitted as pull requests), so having identified the source of the bug, if you are able to provide a patch to fix it, that would probably be accepted into the TRE library.  (And in such a case, it may well be worth requesting the author to bump the version number so that this change is picked up by software package distributors.)\n\nLooking further at the R source code and the PCRE2 documentation, it turns out that my earlier suggestion is wrong: the pcre2-posix.h header file just creates thin wrappers around the standard PCRE2 8-bit functions, so giving them a POSIX regex that has a different meaning as a PCRE would give incorrect results.  Also, the TRE library has a way of handling wide characters, and R uses this; PCRE2 does too, but then the patterns are treated as PCRE patterns.  The latest PCRE2 has an experimental conversion feature for converting POSIX basic or extended regexes into PCRE patterns (see pcre2convert(3) for details); perhaps this code could be used by R?\n\nIt does seem to be a fair bit of work, though.\n\nThank you for all your work on maintaining R!",
-            "count": 6,
-            "creation_time": "2020-12-05T19:13:55Z"
+            "creator": "julian"
           },
           {
-            "tags": [],
-            "is_private": false,
-            "id": 104424,
-            "creation_time": "2026-11-22T01:41:59Z",
             "count": 7,
+            "is_markdown": true,
             "bug_id": 17992,
             "text": "The patch in bug 19331, which updates the bundled TRE, fixes this. It includes https://github.com/laurikari/tre/pull/163, a pending and not yet reviewed upstream fix for Julian's report https://github.com/laurikari/tre/issues/78. As comment 5 found, only the first assertion-only alternative reached the automaton; the fix keeps every empty path through the group.\n\nWith it, in r90959, `grepl(\"(^|\\\\b)a\", \"this is a sentence\")` is TRUE and the three `gsub()` examples from comment 5 substitute as expected. `tests/reg-fuzz.R` gains these patterns. The `?grep` caveat about repeated word boundaries in `gsub()` (pattern `\"\\\\b\"`) is unchanged.\n\nPatch also at https://github.com/r-devel/r-svn/pull/302.",
-            "attachment_id": {},
-            "time": "2026-11-22T01:41:59Z",
+            "creation_time": "2026-11-22T01:41:59Z",
             "creator": "kevinushey",
-            "is_markdown": true
+            "is_private": false,
+            "id": 104424,
+            "time": "2026-11-22T01:41:59Z",
+            "attachment_id": {},
+            "tags": []
+          },
+          {
+            "is_markdown": true,
+            "creator": "seb.meyer",
+            "time": "2026-11-24T12:52:58Z",
+            "attachment_id": {},
+            "count": 8,
+            "bug_id": 17992,
+            "text": "The patch from Bug 19331 has been merged.\nUsing r90973, the two engines now agree on the initial example\n\n```\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\", perl=TRUE)\n[1] TRUE\n> grepl(\"(^|\\\\b)a\", \"this is a sentence\", perl=FALSE)\n[1] TRUE\n```\n\nand the three examples from Comment 5 now all apply the substitution:\n\n```\n> gsub(\"(^|\\\\<)a\", \"A\", \" a\", perl=FALSE)\n[1] \" A\"\n> gsub(\"(\\\\>|\\\\<)a\", \"A\", \" a\", perl=FALSE)\n[1] \" A\"\n> gsub(\"($|^)a\", \"A\", \"a\", perl=FALSE)\n[1] \"A\"\n```\n\n(Perl-mode does not support \\< as a word-boundary anchor, so would only substitute the last of these.)\n\nCan the corresponding `?grep` warning now be removed?\n\n     The POSIX 1003.2 mode of 'gsub' and 'gregexpr' does not work\n     correctly with repeated word-boundaries (e.g., 'pattern = \"\\b\"').\n     Use 'perl = TRUE' for such matches (but that may not work as\n     expected with non-ASCII inputs, as the meaning of 'word' is\n     system-dependent).",
+            "creation_time": "2026-11-24T12:52:58Z",
+            "is_private": false,
+            "id": 104472,
+            "tags": []
+          },
+          {
+            "creator": "kevinushey",
+            "creation_time": "2026-11-25T02:42:05Z",
+            "text": "I don't think so: that caveat is about how `gsub()` and `gregexpr()` restart, not about TRE's automaton, and r90973 doesn't change it. After each match they call TRE again on the rest of the string with `REG_NOTBOL`, and TRE takes the character before the restart point to be a non-word character, so every position after a match looks like the start of a word: `gsub(\"\\\\b\", \"|\", \"the quick  fox\")` gives `\"|t|h|e| |q|u|i|c|k| | |f|o|x|\"` (`perl = TRUE` gives `\"|the| |quick|  |fox|\"`), as in R 4.6.1. `\\\\<` and `\\\\B` go wrong the same way. TRE's API has no way to pass the preceding character (no `REG_STARTEND`), so the warning still holds.",
+            "bug_id": 17992,
+            "is_markdown": true,
+            "count": 9,
+            "tags": [],
+            "attachment_id": {},
+            "time": "2026-11-25T02:42:05Z",
+            "id": 104480,
+            "is_private": false
           }
         ]
       }
@@ -173,43 +207,43 @@
     "comments": {}
   },
   "attachments": {
+    "attachments": {},
     "bugs": {
       "17992": [
         {
-          "is_patch": false,
-          "creator": "julian",
-          "data": "I2luY2x1ZGUgPHN0ZGlvLmg+CiNpbmNsdWRlIDx0cmUvdHJlLmg+CgppbnQgbWFpbigpIHsKICByZWdleF90IHByZWc7CiAgaW50IHJldDsKCiAgdHJlX3JlZ2NvbXAoJnByZWcsICJcXGJhIiwgUkVHX0VYVEVOREVEKTsKICByZXQgPSB0cmVfcmVnZXhlYygmcHJlZywgInRoaXMgaXMgYSB3b3JkIiwgMCwgTlVMTCwgMCk7CiAgcHJpbnRmKCJyZXR1cm4gdmFsdWUgZm9yIFxcYmEgaXMgJWRcbiIsIHJldCk7CgogIHRyZV9yZWdjb21wKCZwcmVnLCAiXmEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHRyZV9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgXmEgaXMgJWRcbiIsIHJldCk7CgogIHRyZV9yZWdjb21wKCZwcmVnLCAiKF58XFxiKWEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHRyZV9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgKF58XFxiKWEgaXMgJWRcbiIsIHJldCk7CgogIHRyZV9yZWdjb21wKCZwcmVnLCAiKFxcYnxeKWEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHRyZV9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgKFxcYnxeKWEgaXMgJWRcbiIsIHJldCk7Cn0K",
-          "flags": [],
-          "content_type": "text/plain",
-          "is_obsolete": false,
-          "last_change_time": "2020-12-01T06:58:08Z",
-          "size": 699,
-          "is_private": false,
           "id": 2767,
-          "creation_time": "2020-12-01T06:58:08Z",
-          "summary": "Test file showing that TRE fails",
+          "is_private": false,
+          "size": 699,
+          "last_change_time": "2020-12-01T06:58:08Z",
+          "bug_id": 17992,
           "file_name": "testtre.c",
-          "bug_id": 17992
+          "summary": "Test file showing that TRE fails",
+          "creation_time": "2020-12-01T06:58:08Z",
+          "is_patch": false,
+          "is_obsolete": false,
+          "content_type": "text/plain",
+          "flags": [],
+          "data": "I2luY2x1ZGUgPHN0ZGlvLmg+CiNpbmNsdWRlIDx0cmUvdHJlLmg+CgppbnQgbWFpbigpIHsKICByZWdleF90IHByZWc7CiAgaW50IHJldDsKCiAgdHJlX3JlZ2NvbXAoJnByZWcsICJcXGJhIiwgUkVHX0VYVEVOREVEKTsKICByZXQgPSB0cmVfcmVnZXhlYygmcHJlZywgInRoaXMgaXMgYSB3b3JkIiwgMCwgTlVMTCwgMCk7CiAgcHJpbnRmKCJyZXR1cm4gdmFsdWUgZm9yIFxcYmEgaXMgJWRcbiIsIHJldCk7CgogIHRyZV9yZWdjb21wKCZwcmVnLCAiXmEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHRyZV9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgXmEgaXMgJWRcbiIsIHJldCk7CgogIHRyZV9yZWdjb21wKCZwcmVnLCAiKF58XFxiKWEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHRyZV9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgKF58XFxiKWEgaXMgJWRcbiIsIHJldCk7CgogIHRyZV9yZWdjb21wKCZwcmVnLCAiKFxcYnxeKWEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHRyZV9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgKFxcYnxeKWEgaXMgJWRcbiIsIHJldCk7Cn0K",
+          "creator": "julian"
         },
         {
           "is_patch": false,
-          "creator": "julian",
-          "data": "I2luY2x1ZGUgPHN0ZGlvLmg+CiNpbmNsdWRlIDxwY3JlMnBvc2l4Lmg+CgppbnQgbWFpbigpIHsKICByZWdleF90IHByZWc7CiAgaW50IHJldDsKCiAgcGNyZTJfcmVnY29tcCgmcHJlZywgIlxcYmEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHBjcmUyX3JlZ2V4ZWMoJnByZWcsICJ0aGlzIGlzIGEgd29yZCIsIDAsIE5VTEwsIDApOwogIHByaW50ZigicmV0dXJuIHZhbHVlIGZvciBcXGJhIGlzICVkXG4iLCByZXQpOwoKICBwY3JlMl9yZWdjb21wKCZwcmVnLCAiXmEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHBjcmUyX3JlZ2V4ZWMoJnByZWcsICJ0aGlzIGlzIGEgd29yZCIsIDAsIE5VTEwsIDApOwogIHByaW50ZigicmV0dXJuIHZhbHVlIGZvciBeYSBpcyAlZFxuIiwgcmV0KTsKCiAgcGNyZTJfcmVnY29tcCgmcHJlZywgIihefFxcYilhIiwgUkVHX0VYVEVOREVEKTsKICByZXQgPSBwY3JlMl9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgKF58XFxiKWEgaXMgJWRcbiIsIHJldCk7CgogIHBjcmUyX3JlZ2NvbXAoJnByZWcsICIoXFxifF4pYSIsIFJFR19FWFRFTkRFRCk7CiAgcmV0ID0gcGNyZTJfcmVnZXhlYygmcHJlZywgInRoaXMgaXMgYSB3b3JkIiwgMCwgTlVMTCwgMCk7CiAgcHJpbnRmKCJyZXR1cm4gdmFsdWUgZm9yIChcXGJ8XilhIGlzICVkXG4iLCByZXQpOwp9Cg==",
           "flags": [],
           "content_type": "text/plain",
           "is_obsolete": false,
-          "last_change_time": "2020-12-01T06:59:11Z",
-          "size": 718,
+          "creator": "julian",
+          "data": "I2luY2x1ZGUgPHN0ZGlvLmg+CiNpbmNsdWRlIDxwY3JlMnBvc2l4Lmg+CgppbnQgbWFpbigpIHsKICByZWdleF90IHByZWc7CiAgaW50IHJldDsKCiAgcGNyZTJfcmVnY29tcCgmcHJlZywgIlxcYmEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHBjcmUyX3JlZ2V4ZWMoJnByZWcsICJ0aGlzIGlzIGEgd29yZCIsIDAsIE5VTEwsIDApOwogIHByaW50ZigicmV0dXJuIHZhbHVlIGZvciBcXGJhIGlzICVkXG4iLCByZXQpOwoKICBwY3JlMl9yZWdjb21wKCZwcmVnLCAiXmEiLCBSRUdfRVhURU5ERUQpOwogIHJldCA9IHBjcmUyX3JlZ2V4ZWMoJnByZWcsICJ0aGlzIGlzIGEgd29yZCIsIDAsIE5VTEwsIDApOwogIHByaW50ZigicmV0dXJuIHZhbHVlIGZvciBeYSBpcyAlZFxuIiwgcmV0KTsKCiAgcGNyZTJfcmVnY29tcCgmcHJlZywgIihefFxcYilhIiwgUkVHX0VYVEVOREVEKTsKICByZXQgPSBwY3JlMl9yZWdleGVjKCZwcmVnLCAidGhpcyBpcyBhIHdvcmQiLCAwLCBOVUxMLCAwKTsKICBwcmludGYoInJldHVybiB2YWx1ZSBmb3IgKF58XFxiKWEgaXMgJWRcbiIsIHJldCk7CgogIHBjcmUyX3JlZ2NvbXAoJnByZWcsICIoXFxifF4pYSIsIFJFR19FWFRFTkRFRCk7CiAgcmV0ID0gcGNyZTJfcmVnZXhlYygmcHJlZywgInRoaXMgaXMgYSB3b3JkIiwgMCwgTlVMTCwgMCk7CiAgcHJpbnRmKCJyZXR1cm4gdmFsdWUgZm9yIChcXGJ8XilhIGlzICVkXG4iLCByZXQpOwp9Cg==",
           "is_private": false,
           "id": 2768,
-          "creation_time": "2020-12-01T06:59:11Z",
-          "summary": "Test file showing that PCRE POSIX mode works correctly",
+          "last_change_time": "2020-12-01T06:59:11Z",
+          "size": 718,
           "file_name": "testpcre.c",
-          "bug_id": 17992
+          "bug_id": 17992,
+          "creation_time": "2020-12-01T06:59:11Z",
+          "summary": "Test file showing that PCRE POSIX mode works correctly"
         }
       ]
-    },
-    "attachments": {}
+    }
   },
-  "source_changed": "2026-11-22 01:41:59"
+  "source_changed": "2026-11-25 02:42:05"
 }

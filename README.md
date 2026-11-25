@@ -1,6 +1,13 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-24._
+_Automatically generated from the R Bugzilla dump updated 2026-11-25._
+
+## Changes in past month
+
+| | Added | Removed |
+|---|---:|---:|
+| Triaged bugs | 6 | 0 |
+| Additional team patches | 24 | 10 |
 
 ## Triaged bugs
 
@@ -82,10 +89,6 @@ These Triage Team patches should be looked at next.
 
 * [Bug 19335](https://bugs.r-project.org/show_bug.cgi?id=19335) — Graphics device stays locked after an error in a clipping path, mask or pattern function (2026-11-17)
 
-#### Language
-
-* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-22, in CC: hornik)
-
 #### Low-level
 
 * [Bug 19051](https://bugs.r-project.org/show_bug.cgi?id=19051) — casts from double to R_xlen_t can trigger undefined behaviour (2026-04-14)
@@ -97,10 +100,6 @@ These Triage Team patches should be looked at next.
 * [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
 * [Bug 19356](https://bugs.r-project.org/show_bug.cgi?id=19356) — Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1) (2026-11-21)
-
-#### Models
-
-* [Bug 19363](https://bugs.r-project.org/show_bug.cgi?id=19363) — model.matrix() writes past its column name buffer once a name fills it (2026-11-23)
 
 #### S4methods
 
@@ -136,10 +135,6 @@ These Triage Team patches can wait their turn.
 #### Mac GUI / Mac specific
 
 * [Bug 19092](https://bugs.r-project.org/show_bug.cgi?id=19092) — `R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS (2026-06-23)
-
-#### Models
-
-* [Bug 19362](https://bugs.r-project.org/show_bug.cgi?id=19362) — terms() writes one byte past its label buffer for a term starting with the empty symbol (2026-11-23)
 
 #### Wishlist
 

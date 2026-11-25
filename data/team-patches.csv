@@ -6,7 +6,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19198,Rprof(NULL) on Windows closes the profile file and handles while the sampling thread may still be writing,Windows GUI / Window specific,kevinushey,NEW,2026-10-01 21:59:55 +0000,1,P2,P2,,https://bugs.r-project.org/show_bug.cgi?id=19198
 19277,sample() without replacement draws zero-weight and least likely items with wrong probabilities,Accuracy,kevinushey,NEW,2026-11-02 18:22:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19277
 19335,"Graphics device stays locked after an error in a clipping path, mask or pattern function",Graphics,kevinushey,NEW,2026-11-17 19:22:13 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19335
-19331,sync with upstream TRE + apply R patches,Language,kevinushey,NEW,2026-11-22 01:41:38 +0000,4,P3,P3,hornik,https://bugs.r-project.org/show_bug.cgi?id=19331
 19051,casts from double to R_xlen_t can trigger undefined behaviour,Low-level,kevinushey,NEW,2026-04-14 21:41:26 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19051
 19119,`writeChar()` on Windows counts supplementary characters twice,Low-level,kevinushey,NEW,2026-08-03 18:06:50 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19119
 19158,env.profile() reports a wrong number of chains; hashed environments count bindings and occupied chains inconsistently,Low-level,kevinushey,NEW,2026-09-04 00:20:25 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19158
@@ -16,7 +15,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19337,toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs),Low-level,kevinushey,NEW,2026-11-18 04:04:17 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19337
 19339,toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4),Low-level,kevinushey,NEW,2026-11-18 04:11:54 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19339
 19356,"Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1)",Low-level,kevinushey,NEW,2026-11-21 06:54:57 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19356
-19363,model.matrix() writes past its column name buffer once a name fills it,Models,kevinushey,NEW,2026-11-23 17:43:13 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19363
 19244,setRefClass(): avoidable costs in method processing and object creation; $methods(name = NULL) fails to remove a method,S4methods,kevinushey,NEW,2026-10-23 01:12:36 +0000,2,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19244
 19143,`Sys.getlocale()` does not mark non-ASCII Windows locale names as UTF-8,Windows GUI / Window specific,kevinushey,NEW,2026-08-28 19:43:43 +0000,5,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19143
 19103,choose.dir() returns NA without showing a dialog in Rterm/Rscript,Windows GUI / Window specific,kevinushey,NEW,2026-10-30 00:58:58 +0000,1,P3,P3,,https://bugs.r-project.org/show_bug.cgi?id=19103
@@ -33,7 +31,6 @@ bug_id,summary,component,reporter,status,patch_date,patch_count,importance,prior
 19209,R_realloc(): resizable R_alloc()-style transient memory that preserves vmaxget() marks,Low-level,kevinushey,NEW,2026-10-09 20:00:09 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19209
 19314,speed up integer and mixed integer/double arithmetic loops,Low-level,kevinushey,NEW,2026-11-13 17:54:13 +0000,2,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19314
 19092,`R CMD config --ldflags` is incomplete for `--enable-R-static-lib` on macOS,Mac GUI / Mac specific,kevinushey,NEW,2026-06-23 02:21:18 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19092
-19362,terms() writes one byte past its label buffer for a term starting with the empty symbol,Models,kevinushey,NEW,2026-11-23 17:42:55 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19362
 18039,Wishlist: allow Sys.setenv() to accept named vector,Wishlist,kevinushey,UNCONFIRMED,2021-01-27 05:50:20 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=18039
 19028,Should object.size() be ALTREP aware?,Wishlist,kevinushey,NEW,2026-03-24 19:00:53 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19028
 19030,Enable constant folding of paste / paste0?,Wishlist,kevinushey,NEW,2026-03-26 22:51:02 +0000,1,P4,P4,,https://bugs.r-project.org/show_bug.cgi?id=19030
