@@ -1,0 +1,142 @@
+{
+  "bug": {
+    "bugs": [
+      {
+        "status": "NEW",
+        "resolution": "",
+        "creator_detail": {
+          "real_name": "Kevin Ushey",
+          "name": "kevinushey",
+          "id": 1044
+        },
+        "platform": "All",
+        "flags": [],
+        "op_sys": "All",
+        "is_confirmed": true,
+        "is_creator_accessible": true,
+        "alias": [],
+        "creator": "kevinushey",
+        "target_milestone": "---",
+        "see_also": [],
+        "cc_detail": [],
+        "last_change_time": "2026-11-26T01:21:07Z",
+        "url": "",
+        "blocks": [],
+        "assigned_to_detail": {
+          "id": 16,
+          "name": "R-core",
+          "real_name": "R-core"
+        },
+        "groups": [],
+        "is_cc_accessible": true,
+        "summary": "Avoid an out-of-bounds write in x[names] <- value past INT_MAX",
+        "classification": "Unclassified",
+        "keywords": [],
+        "is_open": true,
+        "depends_on": [],
+        "component": "Low-level",
+        "assigned_to": "R-core",
+        "id": 19367,
+        "deadline": {},
+        "severity": "normal",
+        "dupe_of": {},
+        "qa_contact": "",
+        "cc": [],
+        "product": "R",
+        "priority": "P3",
+        "creation_time": "2026-11-26T01:20:35Z",
+        "version": "R-devel (trunk)",
+        "whiteboard": ""
+      }
+    ],
+    "faults": []
+  },
+  "comments": {
+    "comments": {},
+    "bugs": {
+      "19367": {
+        "comments": [
+          {
+            "is_private": false,
+            "time": "2026-11-26T01:20:35Z",
+            "id": 104504,
+            "attachment_id": {},
+            "tags": [],
+            "count": 0,
+            "is_markdown": true,
+            "text": "## Summary\n\nOn a vector of length 2^31 - 1 or more, `x[c(\"a\", \"b\")] <- v` with new names and a single value writes `v` 2^31 elements before the vector, and only then fails. Fixes a reproducible out-of-bounds write: memory corruption from plain R code, though only with such large vectors.\n\n## Details\n\n`stringSubscript()` (`src/main/subscript.c`) gives each new name the next position past the end, counting in `R_xlen_t` but storing the positions in an `int` index. Past `INT_MAX` they wrap: 2^31 becomes `NA_INTEGER` and 2^31 + 1 becomes -2^31 + 1, so `VectorAssign()` writes at offset -2^31. On a long vector, `x <- raw(2^31); x[\"a\"] <- as.raw(1)` writes out of bounds too. Tested at r90991.\n\nReproducible example: attached as `string-subscript-overflow-repro.R` (about 20 GB without the patch). On macOS, a separate vector `y` gets a nonzero byte and the assignment fails in `SET_STRING_ELT()`; expected: `y` stays zero.\n\nProposed patch: attached as `string-subscript-overflow.diff`. `stringSubscript()` stores `NA` for positions past `INT_MAX`, so `x[names]` reads keep giving `NA`, and `VectorAssign()` raises \"long vectors not supported yet\" for such an index before it changes `x`. Adds a 2 GB test to `tests/reg-large.R`; `make check` passes on macOS arm64.\n\nThe patch is also submitted as https://github.com/r-devel/r-svn/pull/546, where CI results can be seen.\n\n## AI Disclosure\n\nThis patch was prepared with the assistance of Claude Code. The issue was discovered while reviewing a separate patch to `VectorAssign()`, https://github.com/r-devel/r-svn/pull/541.",
+            "bug_id": 19367,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-26T01:20:35Z"
+          },
+          {
+            "count": 1,
+            "is_markdown": false,
+            "text": "Created attachment 4172\npatch: store NA for name positions past INT_MAX, refuse them in VectorAssign() (against r90991)",
+            "bug_id": 19367,
+            "creator": "kevinushey",
+            "creation_time": "2026-11-26T01:20:53Z",
+            "is_private": false,
+            "time": "2026-11-26T01:20:53Z",
+            "id": 104505,
+            "attachment_id": 4172,
+            "tags": []
+          },
+          {
+            "creation_time": "2026-11-26T01:21:07Z",
+            "bug_id": 19367,
+            "text": "Created attachment 4173\nreproducer (about 20 GB without the patch)",
+            "count": 2,
+            "tags": [],
+            "id": 104506,
+            "is_private": false,
+            "creator": "kevinushey",
+            "is_markdown": false,
+            "attachment_id": 4173,
+            "time": "2026-11-26T01:21:07Z"
+          }
+        ]
+      }
+    }
+  },
+  "attachments": {
+    "bugs": {
+      "19367": [
+        {
+          "is_patch": true,
+          "flags": [],
+          "content_type": "text/plain",
+          "is_obsolete": false,
+          "creator": "kevinushey",
+          "data": "SW5kZXg6IHNyYy9tYWluL3N1YmFzc2lnbi5jCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KLS0tIHNyYy9tYWluL3N1YmFzc2lnbi5jCShyZXZpc2lvbiA5MDk5MSkKKysrIHNyYy9tYWluL3N1YmFzc2lnbi5jCSh3b3JraW5nIGNvcHkpCkBAIC02NzEsNiArNjcxLDExIEBAIHN0YXRpYyBTRVhQIFZlY3RvckFzc2lnbihTRVhQIGNhbGwsIFNFWFAgcmhvLCBTRVhQIHgsIFNFWFAgcywgU0VYUCB5KQogCiAgICAgUl94bGVuX3Qgc3RyZXRjaCA9IDE7CiAgICAgU0VYUCBpbmR4ID0gUFJPVEVDVChtYWtlU3Vic2NyaXB0KHgsIHMsICZzdHJldGNoLCBSX05pbFZhbHVlKSk7CisjaWZkZWYgTE9OR19WRUNUT1JfU1VQUE9SVAorICAgIC8qIHN0cmluZ1N1YnNjcmlwdCgpIGdpdmVzIE5BIGZvciBuZXcgbmFtZXMgcGFzdCBJTlRfTUFYICovCisgICAgaWYgKHN0cmV0Y2ggPiBJTlRfTUFYICYmIFRZUEVPRihpbmR4KSA9PSBJTlRTWFApCisJUl9CYWRMb25nVmVjdG9yKHgsIF9fRklMRV9fLCBfX0xJTkVfXyk7CisjZW5kaWYKICAgICBSX3hsZW5fdCBpLCBpaSwgbiA9IHhsZW5ndGgoaW5keCk7CiAgICAgaWYoeGxlbmd0aCh5KSA+IDEpCiAJZm9yKGkgPSAwOyBpIDwgbjsgaSsrKQpJbmRleDogc3JjL21haW4vc3Vic2NyaXB0LmMKPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PQotLS0gc3JjL21haW4vc3Vic2NyaXB0LmMJKHJldmlzaW9uIDkwOTkxKQorKysgc3JjL21haW4vc3Vic2NyaXB0LmMJKHdvcmtpbmcgY29weSkKQEAgLTk4MCw3ICs5ODAsOSBAQCBzdHJpbmdTdWJzY3JpcHQoU0VYUCBzLCBSX3hsZW5fdCBucyAvKiA9IHhsZW5ndGgocykgKi8sIFJfeGxlbl90IG54IC8qID0geGxlbmd0aAogCSAgICBzdWIgPSBleHRyYTsKIAkgICAgU0VUX1ZFQ1RPUl9FTFQoaW5kZXhuYW1lcywgaSwgU1RSSU5HX0VMVChzLCBpKSk7CiAJfQotCXBpbmR4W2ldID0gKGludCkgc3ViOworCS8qIGluZHggc3RvcmVzIHBvc2l0aW9ucyBhcyBpbnQ6IHBhc3QgSU5UX01BWCwgcmVhZHMgZ2l2ZSBOQSwgYW5kCisJICAgVmVjdG9yQXNzaWduKCkgcmVmdXNlcyB0aGUgc3RyZXRjaCAqLworCXBpbmR4W2ldID0gc3ViIDw9IElOVF9NQVggPyAoaW50KSBzdWIgOiBOQV9JTlRFR0VSOwogICAgIH0KICAgICAvKiBXZSByZXR1cm4gdGhlIG5ldyBuYW1lcyBhcyB0aGUgbmFtZXMgYXR0cmlidXRlIG9mIHRoZSByZXR1cm5lZAogICAgICAgIHN1YnNjcmlwdCB2ZWN0b3IuICovCkluZGV4OiB0ZXN0cy9yZWctbGFyZ2UuUgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09Ci0tLSB0ZXN0cy9yZWctbGFyZ2UuUgkocmV2aXNpb24gOTA5OTEpCisrKyB0ZXN0cy9yZWctbGFyZ2UuUgkod29ya2luZyBjb3B5KQpAQCAtNDE4LDYgKzQxOCwyMSBAQCBoZWFkKHJhbmtzLCAxMSkKIHN0b3BpZm5vdChyYW5rc1sxOjExXSA9PSAxOjExLCBtaW4ocmFua3MpID09IDEpCiAjIyBtaW4ocmFua3MpIHdhcyAtMTA3Mzc0MTgyNCwgaW4gUiA8PSA0LjMuMgogCisjIyB4WzxuZXcgbmFtZXM+XSA8LSB2IHdpdGggcG9zaXRpb25zIHBhc3QgMl4zMSAtIDEgLS0gbmVlZHMgMiBHQgoreCA8LSByYXcoMl4zMSAtIDIpCittIDwtIGNvbmRpdGlvbk1lc3NhZ2UodHJ5Q2F0Y2goeFtjKCJhIiwgImIiKV0gPC0gYXMucmF3KDEpLCBlcnJvciA9IGlkZW50aXR5KSkKK3N0b3BpZm5vdChncmVwbCgibG9uZyB2ZWN0b3JzIG5vdCBzdXBwb3J0ZWQiLCBtLCBmaXhlZCA9IFRSVUUpLAorICAgICAgICAgIGxlbmd0aCh4KSA9PSAyXjMxIC0gMiwgaXMubnVsbChuYW1lcyh4KSkpCitybSh4KQoreCA8LSByYXcoMl4zMSkKK20gPC0gY29uZGl0aW9uTWVzc2FnZSh0cnlDYXRjaCh4WyJhIl0gPC0gYXMucmF3KDEpLCBlcnJvciA9IGlkZW50aXR5KSkKK3N0b3BpZm5vdChncmVwbCgibG9uZyB2ZWN0b3JzIG5vdCBzdXBwb3J0ZWQiLCBtLCBmaXhlZCA9IFRSVUUpLAorICAgICAgICAgIGxlbmd0aCh4KSA9PSAyXjMxLCBpcy5udWxsKG5hbWVzKHgpKSkKK3JtKHgpCitzdG9waWZub3QoaWRlbnRpY2FsKHNlcV9sZW4oLk1hY2hpbmUkaW50ZWdlci5tYXgpWyJhIl0sIE5BX2ludGVnZXJfKSwKKyAgICAgICAgICBpZGVudGljYWwoc2VxX2xlbigyXjMxKVtjKCJhIiwgImIiKV0sIGMoTkFfcmVhbF8sIE5BX3JlYWxfKSkpCisjIyB0aGUgcG9zaXRpb25zIHdyYXBwZWQsIGFuZCB0aGUgdmFsdWVzIHdlbnQgb3V0IG9mIGJvdW5kcywgaW4gUiA8PSA0LjYuMgorCiAKIAogZ2MoKSAjIE5CIHRoZSAibWF4IHVzZWQiCg==",
+          "is_private": false,
+          "id": 4172,
+          "last_change_time": "2026-11-26T01:20:53Z",
+          "size": 2362,
+          "file_name": "string-subscript-overflow.diff",
+          "bug_id": 19367,
+          "creation_time": "2026-11-26T01:20:53Z",
+          "summary": "patch: store NA for name positions past INT_MAX, refuse them in VectorAssign() (against r90991)"
+        },
+        {
+          "is_patch": false,
+          "is_obsolete": false,
+          "flags": [],
+          "content_type": "text/plain",
+          "data": "IyMgeFtjKDxuZXcgbmFtZXM+KV0gPC0gdiBvbiBhIHZlY3RvciBvZiBsZW5ndGggMl4zMSAtIDE6IHRoZSBuZXcgbmFtZXMgZ2V0CiMjIHBvc2l0aW9ucyAyXjMxIGFuZCAyXjMxICsgMSwgd2hpY2ggc3RyaW5nU3Vic2NyaXB0KCkgc3RvcmVzIGFzIGludCwgc28KIyMgdGhleSB3cmFwIHRvIE5BIGFuZCB0byAtMl4zMSArIDEuICBOZWVkcyBhYm91dCAyMCBHQi4KeSA8LSByYXcoMl4zMSAtIDEpICMgYWxsIDAwCnggPC0geSAgICAgICAgICAgICAjIHggaXMgZW5sYXJnZWQgaW50byBhIG5ldyB2ZWN0b3I7IHkga2VlcHMgdGhlIG9sZCBvbmUKciA8LSB0cnlDYXRjaCh4W2MoImEiLCAiYiIpXSA8LSBhcy5yYXcoMSksIGVycm9yID0gY29uZGl0aW9uTWVzc2FnZSkKcHJpbnQocikKIyMgeSBpcyBhIHNlcGFyYXRlIHZlY3RvciB0aGF0IHRoZSBhc3NpZ25tZW50IG11c3Qgbm90IHRvdWNoLgprIDwtIHdoaWNoKHkgIT0gYXMucmF3KDApKQpwcmludChrKQpzdG9waWZub3QobGVuZ3RoKGspID09IDBMKQo=",
+          "creator": "kevinushey",
+          "id": 4173,
+          "is_private": false,
+          "size": 512,
+          "last_change_time": "2026-11-26T01:21:07Z",
+          "bug_id": 19367,
+          "file_name": "string-subscript-overflow-repro.R",
+          "summary": "reproducer (about 20 GB without the patch)",
+          "creation_time": "2026-11-26T01:21:07Z"
+        }
+      ]
+    },
+    "attachments": {}
+  },
+  "source_changed": "2026-11-26 01:21:07"
+}

@@ -1,6 +1,6 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-25._
+_Automatically generated from the R Bugzilla dump updated 2026-11-26._
 
 ## Changes in past month
 
@@ -60,10 +60,6 @@ _None._
 
 These are the most important or urgent regular patches from the Triage Team and should be prioritised before others below.
 
-#### Graphics
-
-* [Bug 19340](https://bugs.r-project.org/show_bug.cgi?id=19340) — text() on pdf()/postscript() reads past strings with a truncated UTF-8 character, segfaulting on Windows (mbcsToSbcs) (2026-11-18)
-
 #### Low-level
 
 * [Bug 19313](https://bugs.r-project.org/show_bug.cgi?id=19313) — C stack checking silently disabled when stack limit > 100MB (FreeBSD default), causing segfaults (2026-11-13)
@@ -85,9 +81,9 @@ These Triage Team patches should be looked at next.
 
 * [Bug 19277](https://bugs.r-project.org/show_bug.cgi?id=19277) — sample() without replacement draws zero-weight and least likely items with wrong probabilities (2026-11-02)
 
-#### Graphics
+#### Language
 
-* [Bug 19335](https://bugs.r-project.org/show_bug.cgi?id=19335) — Graphics device stays locked after an error in a clipping path, mask or pattern function (2026-11-17)
+* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-25, in CC: hornik, meyer)
 
 #### Low-level
 
@@ -97,9 +93,9 @@ These Triage Team patches should be looked at next.
 * [Bug 19227](https://bugs.r-project.org/show_bug.cgi?id=19227) — Numeric ALTREP Elt/Get_region methods run with GC enabled: document that they must not allocate, or suspend GC (2026-10-16)
 * [Bug 19308](https://bugs.r-project.org/show_bug.cgi?id=19308) — JIT leaves a function uncompiled for good when another function with the same body is in the code cache (2026-11-12)
 * [Bug 19311](https://bugs.r-project.org/show_bug.cgi?id=19311) — Byte-compiled reads of active bindings call the binding function twice (2026-11-13)
-* [Bug 19337](https://bugs.r-project.org/show_bug.cgi?id=19337) — toupper() and tolower() accept overlong UTF-8 forms of surrogates and NUL (utf8toucs) (2026-11-18)
 * [Bug 19339](https://bugs.r-project.org/show_bug.cgi?id=19339) — toupper()/tolower() on Windows corrupt characters above U+FFFF after the first (utf8towcs4) (2026-11-18)
 * [Bug 19356](https://bugs.r-project.org/show_bug.cgi?id=19356) — Keep wrapper sortedness/no-NA metadata on read-only data access, restoring fast is.unsorted() and anyNA() (as in R 4.6.1) (2026-11-21)
+* [Bug 19367](https://bugs.r-project.org/show_bug.cgi?id=19367) — Avoid an out-of-bounds write in x[names] <- value past INT_MAX (2026-11-26)
 
 #### S4methods
 
@@ -153,6 +149,7 @@ These Triage Team patches can wait their turn.
 * [Bug 19297](https://bugs.r-project.org/show_bug.cgi?id=19297) — C implementation of the byte code compiler, about 90x faster than compiler::cmpfun() (2026-11-14)
 * [Bug 19334](https://bugs.r-project.org/show_bug.cgi?id=19334) — Speed up named-argument matching by comparing symbols instead of strings (2026-11-17)
 * [Bug 19365](https://bugs.r-project.org/show_bug.cgi?id=19365) — Improve vectorized operator performance: x > 0.5 runs 1.6 to 3.1 times as fast (2026-11-24)
+* [Bug 19368](https://bugs.r-project.org/show_bug.cgi?id=19368) — Improve subassignment performance: x[i] <- y runs 1.2 to 1.4 times as fast (2026-11-26)
 
 ### P5
 

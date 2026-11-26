@@ -3,59 +3,65 @@
     "faults": [],
     "bugs": [
       {
-        "priority": "P5",
-        "product": "R",
-        "whiteboard": "",
-        "creation_time": "2026-10-22T17:36:17Z",
-        "version": "R-devel (trunk)",
-        "deadline": {},
-        "id": 19243,
-        "dupe_of": {},
-        "severity": "minor",
-        "cc": [
-          "Kurt.Hornik"
-        ],
-        "qa_contact": "",
-        "assigned_to": "R-core",
-        "component": "S4methods",
-        "classification": "Unclassified",
-        "is_open": true,
-        "keywords": [],
-        "depends_on": [],
-        "blocks": [],
-        "url": "",
-        "summary": "R CMD check should flag incorrect S4 metadata when a plain function overwrites a generic",
-        "assigned_to_detail": {
-          "real_name": "R-core",
-          "name": "R-core",
-          "id": 16
-        },
-        "groups": [],
-        "is_cc_accessible": true,
-        "target_milestone": "---",
-        "see_also": [],
-        "last_change_time": "2026-10-29T10:59:35Z",
         "cc_detail": [
           {
-            "id": 308,
+            "id": 3462,
+            "name": "jaganmn2",
+            "real_name": "Mikael Jagan"
+          },
+          {
+            "real_name": "Kurt Hornik",
             "name": "Kurt.Hornik",
-            "real_name": "Kurt Hornik"
+            "id": 308
           }
         ],
-        "is_confirmed": true,
-        "op_sys": "All",
-        "platform": "All",
-        "flags": [],
-        "is_creator_accessible": true,
-        "creator": "michaelchirico4",
-        "alias": [],
-        "status": "NEW",
+        "last_change_time": "2026-11-25T17:11:01Z",
+        "target_milestone": "---",
+        "see_also": [],
+        "is_cc_accessible": true,
+        "groups": [],
+        "assigned_to_detail": {
+          "real_name": "R-core",
+          "id": 16,
+          "name": "R-core"
+        },
+        "summary": "R CMD check should flag incorrect S4 metadata when a plain function overwrites a generic",
+        "url": "",
+        "blocks": [],
+        "resolution": "",
         "creator_detail": {
           "real_name": "Michael Chirico",
           "id": 3256,
           "name": "michaelchirico4"
         },
-        "resolution": ""
+        "status": "CONFIRMED",
+        "creator": "michaelchirico4",
+        "is_creator_accessible": true,
+        "alias": [],
+        "flags": [],
+        "platform": "All",
+        "op_sys": "All",
+        "is_confirmed": true,
+        "cc": [
+          "jaganmn2",
+          "Kurt.Hornik"
+        ],
+        "qa_contact": "",
+        "severity": "minor",
+        "dupe_of": {},
+        "id": 19243,
+        "deadline": {},
+        "version": "R-devel (trunk)",
+        "creation_time": "2026-10-22T17:36:17Z",
+        "whiteboard": "",
+        "product": "R",
+        "priority": "P5",
+        "is_open": true,
+        "keywords": [],
+        "depends_on": [],
+        "classification": "Unclassified",
+        "component": "S4methods",
+        "assigned_to": "R-core"
       }
     ]
   },
@@ -65,30 +71,43 @@
       "19243": {
         "comments": [
           {
-            "time": "2026-10-22T17:36:17Z",
-            "attachment_id": {},
-            "is_markdown": true,
-            "creator": "michaelchirico4",
             "is_private": false,
             "id": 103938,
+            "time": "2026-10-22T17:36:17Z",
+            "attachment_id": {},
             "tags": [],
             "count": 0,
+            "is_markdown": true,
             "bug_id": 19243,
             "text": "I happened upon two packages, {raster} and {GenomicRanges}, where an S4 generic was accidentally overwritten by a plain function:\n\n```\n# in package PKG\nsetGeneric(\"foo\", \\(x) standardGeneric(\"foo\"))\nfoo <- function(x) x\n```\n\nThis creates a package whose S4 metadata is broken:\n\n```\nns = getNamespace(\"PKG\")\n\n\"foo\" %in% getGenerics(ns)\n#> [1] TRUE   (because .__T__foo:PKG exists)\n\nisGeneric(\"foo\", where=ns)\n#> [1] FALSE  (because ns$foo is a plain closure)\n\ngetGeneric(\"foo\", where=ns)\n#> NULL\n\nshowMethods(\"foo\", where=ns)\n#> Function \"foo\":\n#>  <not an S4 generic function>\n\nfindMethodSignatures(\"foo\", where=ns)\n# Error in methods@arguments : \n#   no applicable method for `@` applied to an object of class \"list\"\n# In addition: Warning message:\n# In findMethods(...) : non-generic function 'foo' given to findMethods()\n```\n\nThere are numerous other weird behaviors we can generate cascading from here, many of which would be smoked out quickly, but others can be subtle. I think it's unlikely that an _exported_ method with this problem would survive very long, so I would guess this is mainly restricted to internal generics.\n\nI'm not sure the best place in `R CMD check` to place such a consistency check (maybe `checking R code for possible problems`?), but it does seem like a good candidate to be flagged.\n\n[1] https://github.com/rspatial/raster/issues/342\n[2] https://github.com/Bioconductor/GenomicRanges/issues/101",
-            "creation_time": "2026-10-22T17:36:17Z"
+            "creation_time": "2026-10-22T17:36:17Z",
+            "creator": "michaelchirico4"
           },
           {
-            "tags": [],
-            "is_private": false,
-            "id": 103997,
-            "creation_time": "2026-10-29T10:59:35Z",
-            "count": 1,
-            "text": "I do not see an obvious way for adding such a check.\nPerhaps easiest to do in .check_code_usage_in_package().\nThis has\n\n    checkMethodUsageEnv <- function(env, ...) {\n        for(g in .get_S4_generics(env))\n            for(m in .get_S4_methods_list(g, env)) {\n\nand the last could get a length zero check before iterating etc?",
             "bug_id": 19243,
-            "attachment_id": {},
-            "time": "2026-10-29T10:59:35Z",
+            "text": "I do not see an obvious way for adding such a check.\nPerhaps easiest to do in .check_code_usage_in_package().\nThis has\n\n    checkMethodUsageEnv <- function(env, ...) {\n        for(g in .get_S4_generics(env))\n            for(m in .get_S4_methods_list(g, env)) {\n\nand the last could get a length zero check before iterating etc?",
+            "count": 1,
+            "creation_time": "2026-10-29T10:59:35Z",
+            "id": 103997,
+            "is_private": false,
+            "tags": [],
+            "is_markdown": true,
             "creator": "Kurt.Hornik",
-            "is_markdown": true
+            "time": "2026-10-29T10:59:35Z",
+            "attachment_id": {}
+          },
+          {
+            "text": "Hmm, if I add\n\n```\nfacmul <- function(x, factor, y, trans = FALSE, left = TRUE, ...) x\n```\n\nto **Matrix** after the corresponding `setGeneric` call, then installation fails with\n\n```\n** testing if installed package can be loaded from temporary location\nError: package or namespace load failed for 'Matrix':\n Function found when exporting methods from the namespace 'Matrix' which is not S4 generic: 'facmul'\nError: loading failed\nExecution halted\nERROR: loading failed\n```\n\nso it is already checked, but only partially; unexported generic functions are missed.  I'll look into amending the existing check and/or maybe modifying `methods::cacheMetaData` where I see\n\n```\n        if(!is(fdef, \"genericFunction\"))\n            next ## silently ignores all generics not visible from searchWhere\n```",
+            "bug_id": 19243,
+            "count": 2,
+            "is_markdown": true,
+            "creator": "jaganmn2",
+            "creation_time": "2026-11-25T17:11:01Z",
+            "time": "2026-11-25T17:11:01Z",
+            "id": 104495,
+            "is_private": false,
+            "attachment_id": {},
+            "tags": []
           }
         ]
       }
@@ -100,5 +119,5 @@
       "19243": []
     }
   },
-  "source_changed": "2026-10-29 10:59:35"
+  "source_changed": "2026-11-25 17:11:01"
 }
