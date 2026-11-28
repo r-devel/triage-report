@@ -1,13 +1,13 @@
 # Current TRIAGED bugs and patches from Triage Team
 
-_Automatically generated from the R Bugzilla dump updated 2026-11-26._
+_Automatically generated from the R Bugzilla dump updated 2026-11-27._
 
 ## Changes in past month
 
 | | Added | Removed |
 |---|---:|---:|
 | Triaged bugs | 6 | 0 |
-| Additional team patches | 24 | 10 |
+| Additional team patches | 21 | 14 |
 
 ## Triaged bugs
 
@@ -83,7 +83,7 @@ These Triage Team patches should be looked at next.
 
 #### Language
 
-* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-25, in CC: hornik, meyer)
+* [Bug 19331](https://bugs.r-project.org/show_bug.cgi?id=19331) — sync with upstream TRE + apply R patches (2026-11-27, in CC: hornik, meyer)
 
 #### Low-level
 
